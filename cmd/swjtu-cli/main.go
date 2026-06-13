@@ -30,6 +30,8 @@ func main() {
 		cmdDownload()
 	case "download-all":
 		cmdDownloadAll()
+	case "lib":
+		cmdLib()
 	case "sites":
 		cmdSites()
 	case "test-all":
@@ -53,6 +55,11 @@ func printUsage() {
 	fmt.Println("  swjtu-cli download-all <url> [dir]    下载文章全部附件")
 	fmt.Println("  swjtu-cli sites [分类]                列出所有站点")
 	fmt.Println("  swjtu-cli test-all                    测试所有站点")
+	fmt.Println()
+	fmt.Println("  swjtu-cli lib news [--page N]        图书馆新闻")
+	fmt.Println("  swjtu-cli lib db                     数据库导航")
+	fmt.Println("  swjtu-cli lib search <keyword>       检索文献")
+	fmt.Println("  swjtu-cli lib book <keyword>         检索图书")
 	fmt.Println()
 	fmt.Println("历史查询:")
 	fmt.Println("  --page N          查看第N页")
@@ -545,4 +552,78 @@ func downloadFileAs(fileURL, outDir, filename string) error {
 func toJSON(v interface{}) string {
 	b, _ := json.MarshalIndent(v, "", "  ")
 	return string(b)
+}
+
+// cmdLib handles library commands.
+func cmdLib() {
+	if len(os.Args) < 3 {
+		printUsage()
+		os.Exit(1)
+	}
+
+	client := scraper.NewLibClient()
+	sub := os.Args[2]
+
+	switch sub {
+	case "news":
+		// Library news from SWJTU news site (通知公告 + 学术活动)
+		page := 1
+		if len(os.Args) > 3 && os.Args[3] == "--page" && len(os.Args) > 4 {
+			fmt.Sscanf(os.Args[4], "%d", &page)
+		}
+		fmt.Printf("📚 图书馆新闻\n\n")
+		// Scrape from通知公告 category which includes library notices
+		items, err := scraper.LibNewsSite.ListNews("tzgg")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "❌ 获取失败: %v\n", err)
+			os.Exit(1)
+		}
+		// Filter for library-related items
+		var libItems []model.NewsItem
+		for _, item := range items {
+			if strings.Contains(item.Title, "图书馆") || strings.Contains(item.Title, "数据库") ||
+				strings.Contains(item.Title, "期刊") || strings.Contains(item.Title, "借阅") ||
+				strings.Contains(item.Title, "读书") || strings.Contains(item.Title, "文献") {
+				libItems = append(libItems, item)
+			}
+		}
+		if len(libItems) == 0 {
+			libItems = items // show all if no filter matches
+		}
+		scraper.PrintLibNews(libItems)
+
+	case "db":
+		fmt.Println("📚 数据库导航\n")
+		items, err := client.GetDatabases()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "❌ 获取失败: %v\n", err)
+			os.Exit(1)
+		}
+		scraper.PrintLibDatabases(items)
+
+	case "search":
+		if len(os.Args) < 4 {
+			fmt.Fprintln(os.Stderr, "❌ 请提供检索关键词")
+			os.Exit(1)
+		}
+		keyword := os.Args[3]
+		fmt.Printf("🔍 检索文献: %s\n", keyword)
+		fmt.Println("   ⚠️  文献检索需通过浏览器访问: https://lib.swjtu.edu.cn/opac/")
+		fmt.Println("   API端点因SPA动态加载暂未完全解析，后续版本将支持")
+
+	case "book":
+		if len(os.Args) < 4 {
+			fmt.Fprintln(os.Stderr, "❌ 请提供检索关键词")
+			os.Exit(1)
+		}
+		keyword := os.Args[3]
+		fmt.Printf("📖 检索图书: %s\n", keyword)
+		fmt.Println("   ⚠️  图书检索需通过浏览器访问: https://lib.swjtu.edu.cn/opac/")
+		fmt.Println("   API端点因SPA动态加载暂未完全解析，后续版本将支持")
+
+	default:
+		fmt.Fprintf(os.Stderr, "❌ 未知子命令: %s\n", sub)
+		fmt.Fprintln(os.Stderr, "   可用: news, db, search, book")
+		os.Exit(1)
+	}
 }
