@@ -1,0 +1,24 @@
+# Binaries
+/swjtu-cli
+/swjtu-cli.exe
+*.exe
+
+# Downloaded files
+downloads/
+test_downloads/
+
+# Go
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Codex skills (keep .codex)
+!.codex/
+
+# OS
+.DS_Store
+Thumbs.db
