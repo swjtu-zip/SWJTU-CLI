@@ -58,8 +58,11 @@ func printUsage() {
 	fmt.Println()
 	fmt.Println("  swjtu-cli lib news [--page N]        图书馆新闻")
 	fmt.Println("  swjtu-cli lib db                     数据库导航")
-	fmt.Println("  swjtu-cli lib search <keyword>       检索文献")
-	fmt.Println("  swjtu-cli lib book <keyword>         检索图书")
+	fmt.Println("  swjtu-cli lib search <keyword>       统一检索 (全文)")
+	fmt.Println("  swjtu-cli lib search <keyword> title 按题名检索")
+	fmt.Println("  swjtu-cli lib search <keyword> author 按作者检索")
+	fmt.Println("  swjtu-cli lib book <keyword>         馆藏图书检索")
+	fmt.Println("  swjtu-cli lib journal <keyword>      期刊论文检索")
 	fmt.Println()
 	fmt.Println("历史查询:")
 	fmt.Println("  --page N          查看第N页")
@@ -566,19 +569,13 @@ func cmdLib() {
 
 	switch sub {
 	case "news":
-		// Library news from SWJTU news site (通知公告 + 学术活动)
-		page := 1
-		if len(os.Args) > 3 && os.Args[3] == "--page" && len(os.Args) > 4 {
-			fmt.Sscanf(os.Args[4], "%d", &page)
-		}
+		// Library news from SWJTU news site
 		fmt.Printf("📚 图书馆新闻\n\n")
-		// Scrape from通知公告 category which includes library notices
 		items, err := scraper.LibNewsSite.ListNews("tzgg")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "❌ 获取失败: %v\n", err)
 			os.Exit(1)
 		}
-		// Filter for library-related items
 		var libItems []model.NewsItem
 		for _, item := range items {
 			if strings.Contains(item.Title, "图书馆") || strings.Contains(item.Title, "数据库") ||
@@ -588,7 +585,7 @@ func cmdLib() {
 			}
 		}
 		if len(libItems) == 0 {
-			libItems = items // show all if no filter matches
+			libItems = items
 		}
 		scraper.PrintLibNews(libItems)
 
@@ -607,9 +604,26 @@ func cmdLib() {
 			os.Exit(1)
 		}
 		keyword := os.Args[3]
-		fmt.Printf("🔍 检索文献: %s\n", keyword)
-		fmt.Println("   ⚠️  文献检索需通过浏览器访问: https://lib.swjtu.edu.cn/opac/")
-		fmt.Println("   API端点因SPA动态加载暂未完全解析，后续版本将支持")
+		searchType := scraper.SearchTypeFullText
+		if len(os.Args) > 4 {
+			switch os.Args[4] {
+			case "title":
+				searchType = scraper.SearchTypeTitle
+			case "author":
+				searchType = scraper.SearchTypeAuthor
+			case "keyword":
+				searchType = scraper.SearchTypeKeywords
+			case "journal":
+				searchType = scraper.SearchTypeJournal
+			}
+		}
+		fmt.Printf("🔍 统一检索: %s\n\n", keyword)
+		results, total, err := client.Search(keyword, searchType, 1, 20)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "❌ 检索失败: %v\n", err)
+			os.Exit(1)
+		}
+		scraper.PrintSearchResults(results, total, keyword)
 
 	case "book":
 		if len(os.Args) < 4 {
@@ -617,13 +631,32 @@ func cmdLib() {
 			os.Exit(1)
 		}
 		keyword := os.Args[3]
-		fmt.Printf("📖 检索图书: %s\n", keyword)
-		fmt.Println("   ⚠️  图书检索需通过浏览器访问: https://lib.swjtu.edu.cn/opac/")
-		fmt.Println("   API端点因SPA动态加载暂未完全解析，后续版本将支持")
+		fmt.Printf("📖 馆藏图书检索: %s\n\n", keyword)
+		// Use title search with type=163161 for books
+		results, total, err := client.Search(keyword, scraper.SearchTypeTitle, 1, 20)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "❌ 检索失败: %v\n", err)
+			os.Exit(1)
+		}
+		scraper.PrintSearchResults(results, total, keyword)
+
+	case "journal":
+		if len(os.Args) < 4 {
+			fmt.Fprintln(os.Stderr, "❌ 请提供检索关键词")
+			os.Exit(1)
+		}
+		keyword := os.Args[3]
+		fmt.Printf("📰 期刊论文检索: %s\n\n", keyword)
+		results, total, err := client.Search(keyword, scraper.SearchTypeJournal, 1, 20)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "❌ 检索失败: %v\n", err)
+			os.Exit(1)
+		}
+		scraper.PrintSearchResults(results, total, keyword)
 
 	default:
 		fmt.Fprintf(os.Stderr, "❌ 未知子命令: %s\n", sub)
-		fmt.Fprintln(os.Stderr, "   可用: news, db, search, book")
+		fmt.Fprintln(os.Stderr, "   可用: news, db, search, book, journal")
 		os.Exit(1)
 	}
 }
