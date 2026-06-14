@@ -215,6 +215,8 @@ var navSelectors = []string{
 	"header", "nav", "footer", ".header", ".nav", ".footer",
 	".menu", ".top", ".link", ".share", ".search", ".crumbs",
 	".swiper", ".slider", ".gotop", "script", "style",
+	".banner", ".slide", ".carousel", ".focus", ".hero",
+	".sidebar", ".side", ".widget", ".login", ".user-info",
 }
 
 // isValidNewsTitle filters out navigation items and too-short titles.
@@ -228,13 +230,65 @@ func isValidNewsTitle(title string) bool {
 		"学院简介", "现任领导", "组织机构", "教师名录", "本科生", "研究生",
 		"通知公告", "学院新闻", "学院动态", "新闻动态", "新闻公告",
 		"本科教育", "研究生教育", "实验平台", "系所介绍", "团委工作",
+		"查看详情>>", "详细>>", "详情>>", "更多>>", ">>",
+		"院务公开", "联系方式", "学院通知", "唐臣要闻", "基层动态",
+		"诚聘海内外英才", "设计艺术学院", "临床医学",
+		"新闻动态\\ NEWS INFORMATION", "新闻动态\\ NEWS",
 	}
 	for _, s := range skip {
-		if title == s {
+		if title == s || strings.Contains(title, s) {
 			return false
 		}
 	}
+	// Filter out titles that are just section headers
+	if strings.HasSuffix(title, ">>") || strings.HasSuffix(title, "》") {
+		return false
+	}
 	return true
+}
+
+// isValidNewsURL filters out non-news URLs.
+func isValidNewsURL(href string) bool {
+	// Skip external domains
+	if strings.Contains(href, "mp.weixin.qq.com") ||
+		strings.Contains(href, "jiuye.swjtu.edu.cn") ||
+		strings.Contains(href, "cas.swjtu.edu.cn") ||
+		strings.Contains(href, "one.swjtu.edu.cn") ||
+		strings.Contains(href, "i.swjtu.edu.cn") {
+		return false
+	}
+	// Skip OA login pages
+	if strings.Contains(href, "user/login") ||
+		strings.Contains(href, "login.html") ||
+		strings.Contains(href, "cas/login") {
+		return false
+	}
+	return true
+}
+
+// isExternalURL checks if a URL is from a different domain than the site.
+func isExternalURL(href, baseURL string) bool {
+	if !strings.HasPrefix(href, "http") {
+		return false
+	}
+	// Extract domain from baseURL
+	baseDomain := extractDomain(baseURL)
+	hrefDomain := extractDomain(href)
+	return baseDomain != hrefDomain && hrefDomain != ""
+}
+
+func extractDomain(u string) string {
+	// Simple domain extraction
+	u = strings.TrimPrefix(u, "http://")
+	u = strings.TrimPrefix(u, "https://")
+	if idx := strings.Index(u, "/"); idx > 0 {
+		u = u[:idx]
+	}
+	// Remove port
+	if idx := strings.Index(u, ":"); idx > 0 {
+		u = u[:idx]
+	}
+	return u
 }
 
 // cleanURL removes trailing %7D and other artifacts.
@@ -280,7 +334,7 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 			return
 		}
 		fullURL := cleanURL(resolveURL(baseURL, href))
-		if seen[fullURL] {
+		if seen[fullURL] || !isValidNewsURL(fullURL) {
 			return
 		}
 		seen[fullURL] = true
@@ -350,8 +404,12 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 			}
 			// Clean up date: remove newlines and extra spaces
 			date = strings.Join(strings.Fields(date), " ")
+			// Validate date format
+			if len(date) > 20 || strings.Count(date, " ") > 3 {
+				date = ""
+			}
 			fullURL := cleanURL(resolveURL(baseURL, href))
-			if seen[fullURL] {
+			if seen[fullURL] || !isValidNewsURL(fullURL) {
 				return
 			}
 			seen[fullURL] = true
@@ -386,7 +444,7 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 				return
 			}
 			fullURL := cleanURL(resolveURL(baseURL, href))
-			if seen[fullURL] {
+			if seen[fullURL] || !isValidNewsURL(fullURL) {
 				return
 			}
 			seen[fullURL] = true
@@ -395,6 +453,10 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 			parent := sel.Parent()
 			if parent.Length() > 0 {
 				date = strings.TrimSpace(parent.Find(".time, span.time, em, .date").Text())
+			}
+			// Validate date format
+			if len(date) > 20 || strings.Count(date, " ") > 3 {
+				date = ""
 			}
 
 			items = append(items, model.NewsItem{
@@ -425,7 +487,7 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 				return
 			}
 			fullURL := cleanURL(resolveURL(baseURL, href))
-			if seen[fullURL] {
+			if seen[fullURL] || !isValidNewsURL(fullURL) {
 				return
 			}
 			seen[fullURL] = true
@@ -443,6 +505,10 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 						date = yearMonth + "-" + day
 					}
 				}
+			}
+			// Validate date format
+			if len(date) > 20 || strings.Count(date, " ") > 3 {
+				date = ""
 			}
 
 			items = append(items, model.NewsItem{
@@ -469,7 +535,7 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 				return
 			}
 			fullURL := cleanURL(resolveURL(baseURL, href))
-			if seen[fullURL] {
+			if seen[fullURL] || !isValidNewsURL(fullURL) {
 				return
 			}
 			seen[fullURL] = true
@@ -478,6 +544,10 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 			parent := sel.Parent()
 			if parent.Length() > 0 {
 				date = strings.TrimSpace(parent.Find(".time, .date, em, span[class*='time']").Text())
+			}
+			// Validate date format
+			if len(date) > 20 || strings.Count(date, " ") > 3 {
+				date = ""
 			}
 
 			items = append(items, model.NewsItem{
