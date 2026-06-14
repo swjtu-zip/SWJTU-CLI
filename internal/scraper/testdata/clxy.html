@@ -1,0 +1,1726 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <META content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<meta http-equiv="X-UA-Compatible" content="IE=9">  
+
+   
+    
+     <meta content="width=device-width,minimum-scale=1,maximum-scale=1,user-scalable=1" name="viewport" />
+            <link href="apple-touch-icon.png" rel="apple-touch-icon" />
+              <!-- Place favicon.ico in the root directory -->
+              <title>西南交通大学材料科学与工程学院</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="西南交通大学材料科学与工程学院">
+<META Name="keywords" Content="西南交通大学材料科学与工程学院,首页" />
+
+              
+              <meta content="swjtu" name="description" />
+          
+<style>  
+                .weui-navbar a{
+                    text-decoration: none;
+                    color: #333;}
+                .weui_tab_bd_item {
+                    display: none;
+                    height: 100%;
+                    overflow: auto;}
+                .weui_tab_bd_item.weui_tab_bd_item_active {
+                    display: block;}
+            </style>
+
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1001,'/index.jsp',-1,1451357099)</script>
+</head>
+<body ontouchstart>
+<div id="pc">
+    <div class="header">
+        <div class="top">
+            <div class="box-s">
+                <div class="fr"><!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu0 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+        margin-top: -15px;
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu0 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu0"></div>
+<script type="text/html" id="htmlu0">
+    <div id="appu0">
+        <div v-if="!isError">
+        
+        
+         <a class="top-link" href="/lxwm/wxewm.htm">官方微信</a>
+                  
+                    <a class="top-link" href="/english/Home.htm">English</a>
+                    <div class="search"><em></em>
+                        <div class="search_con"><input type="text" placeholder="search"  class="search_text" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+                        <input type="submit" class="search_but" value="go" v-on:click="onSubmit()"></div>
+                    </div>
+        
+        
+        
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu0").html($("#htmlu0").text());
+</script>
+<script>
+    var appOwner = "1451357099";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu0",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu0 = document.querySelector("#appu0");
+   if (appElementu0 && appElementu0.__vue__) {
+
+   } else {
+      $("#divu0").html($("#htmlu0").text());
+      var appOwner = "1451357099";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou0 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu0(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu0();
+        }
+      };
+
+      function onSubmitu0(e) {
+        queryInfou0.query.keyWord= $("#appu0  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou0.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script></div>
+            </div>
+        </div>
+        <div class="box-b bg">
+            <div class="box-m">
+                <a class="logo" href=""></a>
+            </div>
+        </div>
+        
+    </div>
+       <script>
+function browserRedirect() {
+    var sUserAgent = navigator.userAgent.toLowerCase();
+    var bIsIpad = sUserAgent.match(/ipad/i) == "ipad";
+    var bIsIphoneOs = sUserAgent.match(/iphone os/i) == "iphone os";
+    var bIsMidp = sUserAgent.match(/midp/i) == "midp";
+    var bIsUc7 = sUserAgent.match(/rv:1.2.3.4/i) == "rv:1.2.3.4";
+    var bIsUc = sUserAgent.match(/ucweb/i) == "ucweb";
+    var bIsAndroid = sUserAgent.match(/android/i) == "android";
+    var bIsCE = sUserAgent.match(/windows ce/i) == "windows ce";
+    var bIsWM = sUserAgent.match(/windows mobile/i) == "windows mobile";
+    if (bIsIpad || bIsIphoneOs || bIsMidp || bIsUc7 || bIsUc || bIsAndroid || bIsCE || bIsWM) {
+        return true;
+    } else {
+        return false;
+    }
+}
+</script>
+<script>
+if(browserRedirect())
+{
+document.write("<link rel='stylesheet' type='text/css' href='/mobile/dfiles/12976/css/idangerous.swiper.css' \/>");
+document.write("<link rel='stylesheet' type='text/css' href='/mobile/dfiles/12976/css/style.css' \/>");
+    document.write("<script type='text/javascript' charset='utf-8' src='/mobile/dfiles/12976/js/zepto.min.js'><\/script>");
+    document.write("<script type='text/javascript' charset='utf-8' src='/mobile/dfiles/12976/js/weui.min.js'><\/script>");
+    document.write("<script type='text/javascript' charset='utf-8' src='/mobile/dfiles/12976/js/common.js'><\/script>");
+    document.write("<script type='text/javascript' charset='utf-8' src='/mobile/dfiles/12976/js/idangerous.swiper.min.js'><\/script>");
+    document.write("<script type='text/javascript' charset='utf-8' src='/mobile/dfiles/12976/js/index-common.js'><\/script>");
+    document.write("<script type='text/javascript' charset='utf-8' src='/mobile/dfiles/12976/js/index-navbar.js'><\/script>");
+}
+else
+{
+document.write("<link href='dfiles/8700/css/style.css' rel='stylesheet'><\/link>");
+document.write("<script src='dfiles/8700/js/jquery.min.js'><\/script>");
+document.write("<script src='dfiles/8700/js/jquery.easing.js'><\/script>");
+document.write("<script src='dfiles/8700/js/jquery.iosslider.js'><\/script>");
+}
+</script>
+    <div class="nav">
+    <ul>
+        <li><a href="index.htm">首页</a>
+        </li> 
+        <li><a href="xygk.htm">学院概况</a>
+            <div class="sub">
+            <a href="xygk/xyjj.htm">学院简介</a>
+            <a href="xygk/lsyg.htm">历史沿革</a>
+            <a href="xygk/ldtd.htm">领导团队</a>
+            <a href="xygk/zzjg.htm">组织机构</a>
+            <a href="xygk/jzgdw/jsdw.htm">教职工队伍</a>
+            </div>
+        </li> 
+        <li><a href="articleinfo.jsp?urltype=tree.TreeTempUrl&wbtreeid=1315">学科科研</a>
+            <div class="sub">
+            <a href="articleinfo.jsp?urltype=tree.TreeTempUrl&wbtreeid=1010">学科简介</a>
+            <a href="articleinfo.jsp?urltype=tree.TreeTempUrl&wbtreeid=1011">科研平台</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1208">科研团队</a>
+            </div>
+        </li> 
+        <li><a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1314">教育教学</a>
+            <div class="sub">
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1014">专业介绍</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1015">培养计划</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1016">规章制度</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1017">教学成果</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1103">创新创业</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1104">学生实习</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1081">成型专业认证</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1080">金材专业认证</a>
+            </div>
+        </li> 
+        <li><a href="articleinfo.jsp?urltype=tree.TreeTempUrl&wbtreeid=1313">实验平台</a>
+            <div class="sub">
+            <a href="articleinfo.jsp?urltype=tree.TreeTempUrl&wbtreeid=1022">总体情况</a>
+            <a href="articleinfo.jsp?urltype=tree.TreeTempUrl&wbtreeid=1023">师资队伍</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1024">管理办法</a>
+            <a href="https://clsyjx.swjtu.edu.cn/">材料科学与工程国家级实验教学示范中心</a>
+            </div>
+        </li> 
+        <li><a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1312">国际交流</a>
+            <div class="sub">
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1028">国际合作</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1029">留学生教育</a>
+            </div>
+        </li> 
+        <li><a href="articleinfo.jsp?urltype=tree.TreeTempUrl&wbtreeid=1311">党建工作</a>
+            <div class="sub">
+            <a href="articleinfo.jsp?urltype=tree.TreeTempUrl&wbtreeid=1031">机构人员</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1032">理论学习</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1033">保密工作</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1034">党建工作相关流程</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1035">党建制度</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1037">党务公开</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1039">资料下载</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1086">教工之家</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1141">纪委工作</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1345">党史学习教育</a>
+            </div>
+        </li> 
+        <li><a href="articleinfo.jsp?urltype=tree.TreeTempUrl&wbtreeid=1310">学生工作</a>
+            <div class="sub">
+            <a href="articleinfo.jsp?urltype=tree.TreeTempUrl&wbtreeid=1042">辅导员队伍</a>
+            <a href="articleinfo.jsp?urltype=tree.TreeTempUrl&wbtreeid=1044">团学组织介绍</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1045">学生工作制度</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1046">先进典型</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1047">警示教育</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1048">工作模版</a>
+            </div>
+        </li> 
+        <li><a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1309">校友专栏</a>
+            <div class="sub">
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1053">校友风采</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1131">校友名册</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1054">校友新闻</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1056">毕业生留影</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1055">校友捐赠</a>
+            </div>
+        </li> 
+        <li><a href="articleinfo.jsp?urltype=tree.TreeTempUrl&wbtreeid=1063">安全文化</a>
+            <div class="sub">
+            <a href="articleinfo.jsp?urltype=tree.TreeTempUrl&wbtreeid=1064">安全小组</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1065">规章制度</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1066">相关资源</a>
+            </div>
+        </li> 
+        <li><a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1211">材子佳人</a>
+            <div class="sub">
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1212">教师典型</a>
+            <a href="articlelist.jsp?urltype=tree.TreeTempUrl&wbtreeid=1213">优秀学生</a>
+            </div>
+        </li> 
+</ul>
+    
+</div>
+
+    <div class="iosSliderDemo">
+
+<script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script><div class="fluidHeight">
+            <div class="sliderContainer">
+                <div class="iosSlider">
+                    <div class="slider">
+                                            <div class="item item1">
+                            <div class="inner">
+                                <a href="info/1205/31356.htm" style="background:url(/__local/E/AC/36/4F02ED4FBFE2A94055CDC80887F_262A2C16_895AD.jpg) no-repeat center"></a>
+                                <div class="text1"><span>欢迎报考西南交通大学材料学院！</span></div>
+                            </div>
+                        </div>
+                        <div class="item item1">
+                            <div class="inner">
+                                <a href="info/1205/31146.htm" style="background:url(/__local/5/EB/E2/DF51C3C0B240D53BDC01D1AE4AF_96A94EB6_F6DAE.png) no-repeat center"></a>
+                                <div class="text1"><span>祝2026届全体毕业生毕业快乐！</span></div>
+                            </div>
+                        </div>
+                        <div class="item item1">
+                            <div class="inner">
+                                <a href="info/1205/30896.htm" style="background:url(/__local/C/6F/E1/B3CB7294DDCFE17B133D0C3B6FA_596C22FA_41BCB.jpg) no-repeat center"></a>
+                                <div class="text1"><span>竢实耀百卅 扬华铸未来</span></div>
+                            </div>
+                        </div>
+                        <div class="item item1">
+                            <div class="inner">
+                                <a href="info/1205/30696.htm" style="background:url(/__local/7/B2/C2/27696532624E8B1D6DAA5C2ED9B_9A88220E_66096.png) no-repeat center"></a>
+                                <div class="text1"><span>五一劳动节快乐！</span></div>
+                            </div>
+                        </div>
+                        <div class="item item1">
+                            <div class="inner">
+                                <a href="info/1205/29916.htm" style="background:url(/__local/A/97/6F/AE44967C88AD25A1019A24C553F_FC212E1B_20949.jpg) no-repeat center"></a>
+                                <div class="text1"><span>骐骥驰骋 马年大吉</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="slideSelectors">
+                    <div class="prev"></div>
+                         <a class="item selected"></a>
+                          <a class="item"></a>
+                          <a class="item"></a>
+                          <a class="item"></a>
+                          <a class="item"></a>
+                    <div class="next"></div>
+                </div>
+               <div class="leftbg"></div>
+               <div class="rightbg"></div>
+            </div>
+        </div><script>_showDynClickBatch(['dynclicks_u2_31356','dynclicks_u2_31146','dynclicks_u2_30896','dynclicks_u2_30696','dynclicks_u2_29916'],[31356,31146,30896,30696,29916],"wbnews", 1451357099)</script>
+</div>
+
+
+
+    <div class="box-s content">
+        <div class="item-long">
+        
+
+<h3 class="title">材料要闻<a class="more" href="sylm_xwgg/xyxw.htm">更多</a></h3>
+            <ul class="news-img">
+                <li class="news-img-item first">
+                    <a href="info/1145/31306.htm" class="pic-link">
+                        <img width="283" height="165" src="/__local/8/5A/AC/D9BDF93F53C9CC001D51F472029_4A2CB2A8_8475D.png" />
+                    </a>
+                    <a href="info/1145/31306.htm" class="text-link">材料学院在校企联合科研攻关方面取得重大进展</a>
+                </li>
+             <li class="news-img-item">
+                    <a href="info/1145/30796.htm" class="pic-link">
+                        <img width="283" height="165" src="/__local/3/C3/44/B9A096AD3D534AD135DCBF97E46_0A242363_2A064.jpg" />
+                    </a>
+                    <a href="info/1145/30796.htm" class="text-link">喜报！我院刘艳教授荣获全国五一劳动奖章</a>
+                </li>
+             <li class="news-img-item">
+                    <a href="info/1145/30816.htm" class="pic-link">
+                        <img width="283" height="165" src="/__local/D/13/43/E41EC15C1B72E9F184B1C79AFEC_16ECA389_70762.png" />
+                    </a>
+                    <a href="info/1145/30816.htm" class="text-link">百卅连根守初心 正观笃行担使命——四所交通大学材料学科研究生党支部举...</a>
+                </li>
+             <li class="news-img-item">
+                    <a href="info/1145/29836.htm" class="pic-link">
+                        <img width="283" height="165" src="/__local/7/A1/E0/AA4780959CE24D39DC9FFC61EFE_1BA74B0B_4F20A.jpg" />
+                    </a>
+                    <a href="info/1145/29836.htm" class="text-link">成都市政协委员陈辉：构建大科学装置建设与运行体系 引领未来战略发展</a>
+                </li>
+              
+                <li class="clearfix"></li>
+            </ul><script>_showDynClickBatch(['dynclicks_u3_31306','dynclicks_u3_30796','dynclicks_u3_30816','dynclicks_u3_29836'],[31306,30796,30816,29836],"wbnews", 1451357099)</script>
+
+        <ul class="four-nav">
+                <li class="first item"><a href="http://news.swjtu.edu.cn/shownews-16620-0-1.shtml"><i class="icon message"></i>诚聘英才</a></li>
+                <li class="item"><a href="https://clxyoa.swjtu.edu.cn/user/login.html"><i class="icon calender"></i>院务公开</a></li>
+                <li class="item"><a href="https://clxyoa.swjtu.edu.cn/user/login.html"><i class="icon email"></i>学术委员投票</a></li>
+                <li class="item"><a href="lxwm/lxfs.htm"><i class="icon phone"></i>联系方式</a></li>
+            </ul>
+
+        </div>
+        <div class="clearfix"></div>
+        <div class="item-s item-left">
+            
+
+<h3 class="title">学院新闻<a class="more" href="sylm_xwgg/xyxw.htm">更多</a></h3>
+            <ul class="">
+                <li class="list-item"><a href="info/1145/31306.htm">材料学院在校企联合科研攻关方面取得重大进展</a><span class="date">2026-06-06</span></li>
+                <li class="list-item"><a href="info/1145/31046.htm">再攀新高！西南交通大学材料科学ESI全球排名升至138位跻身全球前0.8...</a><span class="date">2026-05-14</span></li>
+                <li class="list-item"><a href="info/1145/30796.htm">喜报！我院刘艳教授荣获全国五一劳动奖章</a><span class="date">2026-04-29</span></li>
+                <li class="list-item"><a href="info/1145/30816.htm">百卅连根守初心 正观笃行担使命——四所交通大学材料学科研究生党支...</a><span class="date">2026-04-23</span></li>
+                <li class="list-item"><a href="info/1145/30486.htm">材料科学与工程学院召开专题会议深入学习贯彻习近平总书记给四所交...</a><span class="date">2026-04-09</span></li>
+                <li class="list-item"><a href="info/1145/31336.htm">党建共建聚合力 成果转化促发展——技术转移研究院党支部与金属材料...</a><span class="date">2026-06-11</span></li>
+                <li class="list-item"><a href="info/1145/31256.htm">四川省首届川渝大学生热处理创新创业竞赛决赛暨第十二届全国大学生...</a><span class="date">2026-06-05</span></li>
+            </ul><script>_showDynClickBatch(['dynclicks_u4_31306','dynclicks_u4_31046','dynclicks_u4_30796','dynclicks_u4_30816','dynclicks_u4_30486','dynclicks_u4_31336','dynclicks_u4_31256'],[31306,31046,30796,30816,30486,31336,31256],"wbnews", 1451357099)</script>
+
+            
+        </div>
+        <div class="item-s item-right">
+        
+
+<h3 class="title">学院公告<a class="more" href="sylm_xwgg/xygg.htm">更多</a></h3>
+            <ul class="">
+                <li class="list-item"><a href="info/1110/31136.htm">材料科学与工程学院2026年博士研究生招生 拟录取名单公示（第三批）</a><span class="date">2026-05-28</span></li>
+                <li class="list-item"><a href="info/1110/31096.htm">材料科学与工程学院2026年博士研究生招生 拟录取名单公示（第二批）</a><span class="date">2026-05-25</span></li>
+                <li class="list-item"><a href="info/1110/31066.htm">西南交通大学材料科学与工程学院2026年博士研究生招生 拟录取名单公...</a><span class="date">2026-05-22</span></li>
+                <li class="list-item"><a href="info/1110/31056.htm">国家级平台+国家重大项目！西南交通大学先进交通材料与激光加工团队...</a><span class="date">2026-05-19</span></li>
+                <li class="list-item"><a href="info/1110/30956.htm">材料科学与工程学院2026年博士研究生招生综合考核 面试分组及面试地...</a><span class="date">2026-05-18</span></li>
+                <li class="list-item"><a href="info/1110/30886.htm">2026年材料科学与工程学院博士研究生综合考核提交资料的通知</a><span class="date">2026-05-12</span></li>
+                <li class="list-item"><a href="info/1110/30856.htm">材料科学与工程学院2026年博士研究生招生 拟进入综合考核的材料评议...</a><span class="date">2026-05-11</span></li>
+            </ul><script>_showDynClickBatch(['dynclicks_u5_31136','dynclicks_u5_31096','dynclicks_u5_31066','dynclicks_u5_31056','dynclicks_u5_30956','dynclicks_u5_30886','dynclicks_u5_30856'],[31136,31096,31066,31056,30956,30886,30856],"wbnews", 1451357099)</script>
+
+            
+        </div>
+        <div class="clearfix"></div>
+        <div class="item-s item-left">
+        
+            <h3 class="title">教务公告<a class="more" href="jwgg.htm">更多</a></h3>
+            <div class="tabs-choose">
+                <a class="tab-choise on" href="##">本科生</a>
+                <a class="tab-choise" href="##">研究生</a>
+            </div>
+            <div class="tabs-content">
+            
+
+<ul class="visible" data-index="1">
+                    <li class="list-item"><a href="info/1111/31206.htm">材料学院关于2026-2027学年第一学期课程教材选用的公示</a><span class="date">2026-06-03</span></li>
+                    <li class="list-item"><a href="https://jwc.swjtu.edu.cn/vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=BE91C1E0322CACC8">【转发通知】@全体2026届乘客：毕业专列即将启程，请查收你的毕业路...</a><span class="date">2026-05-26</span></li>
+                    <li class="list-item"><a href="info/1111/31086.htm">材料学院关于公布2026年大学生创新创业训练计划（SRTP）项目拟推荐...</a><span class="date">2026-05-25</span></li>
+                    <li class="list-item"><a href="info/1111/31076.htm">材料学院2026—2028年校级（本科）教育教学研究与改革项目拟推荐项...</a><span class="date">2026-05-24</span></li>
+                    <li class="list-item"><a href="info/1111/30906.htm">材料学院关于开展2026年大学生创新创业训练计划（SRTP）项目立项答...</a><span class="date">2026-05-15</span></li>
+                    <li class="list-item"><a href="info/1111/30716.htm">材料学院2026届本科生毕业设计（论文）答辩及相关工作安排</a><span class="date">2026-05-06</span></li>
+                    <li class="list-item"><a href="info/1111/30686.htm">材料学院关于开展2026年大学生创新创业训练计划（SRTP）项目申报工...</a><span class="date">2026-04-30</span></li>
+                  
+                </ul><script>_showDynClickBatch(['dynclicks_u6_31206','dynclicks_u6_31106','dynclicks_u6_31086','dynclicks_u6_31076','dynclicks_u6_30906','dynclicks_u6_30716','dynclicks_u6_30686'],[31206,31106,31086,31076,30906,30716,30686],"wbnews", 1451357099)</script>
+
+              
+
+<ul class="hidden" data-index="2">
+                    <li class="list-item"><a href="info/1112/31296.htm">材料学院2027年博士、硕士研究生指导教师岗位任职资格遴选与招生资...</a><span class="date">2026-06-08</span></li>
+                    <li class="list-item"><a href="info/1112/29586.htm">2025-2026学年第二学期材料学院研究生教材选用公示</a><span class="date">2025-12-17</span></li>
+                    <li class="list-item"><a href="info/1112/27996.htm">2026年研究生指导教师岗位任职及上岗资格材料科学与工程学位评定分...</a><span class="date">2025-09-04</span></li>
+                    <li class="list-item"><a href="info/1112/27596.htm">2025-2026学年第一学期材料学院研究生教材选用公示</a><span class="date">2025-07-10</span></li>
+                    <li class="list-item"><a href="info/1112/27566.htm">2026年材料学院进行博士、硕士研究生指导教师岗位任职资格遴选与招...</a><span class="date">2025-07-04</span></li>
+                    <li class="list-item"><a href="info/1112/27556.htm">材料学院关于《材料科学与工程研究生导师选聘标准与管理办法（首次...</a><span class="date">2025-07-01</span></li>
+                    <li class="list-item"><a href="info/1112/27266.htm">材料科学与工程学院关于2025年博士研究生招生拟录取考生加群的通知</a><span class="date">2025-06-03</span></li>
+                    
+                </ul><script>_showDynClickBatch(['dynclicks_u7_31296','dynclicks_u7_29586','dynclicks_u7_27996','dynclicks_u7_27596','dynclicks_u7_27566','dynclicks_u7_27556','dynclicks_u7_27266'],[31296,29586,27996,27596,27566,27556,27266],"wbnews", 1451357099)</script>
+  
+                
+            </div>
+        </div>
+
+        <div class="item-s item-right">
+            <h3 class="title">党建工作<a class="more" href="https://clxy.swjtu.edu.cn/sylm_djgz.htm">更多</a></h3>
+            <div class="tabs-choose">
+                <a class="tab-choise on" href="##">通知公告</a>
+                <a class="tab-choise" href="##">党建新闻</a>
+            </div>
+            <div class="tabs-content">
+            
+
+<ul class="visible" data-index="1">
+                    <li class="list-item"><a href="info/1215/30656.htm">【党员发展】材料科学与工程学院党委2026-01期党员发展对象名单公示</a><span class="date">2026-04-28</span></li>
+                    <li class="list-item"><a href="info/1215/29986.htm">【党团中心】关于材料学院2025-2026学年第二学期开展推荐入党积极分...</a><span class="date">2026-03-05</span></li>
+                    <li class="list-item"><a href="info/1215/29976.htm">【党团中心】关于材料学院2025-2026学年第二学期开展推荐入党申请人...</a><span class="date">2026-03-05</span></li>
+                    <li class="list-item"><a href="info/1215/29956.htm">【党团中心】关于2026年春季学期递交入党申请书的通知</a><span class="date">2026-03-03</span></li>
+                    <li class="list-item"><a href="info/1215/29316.htm">【党员发展】材料科学与工程学院党委2025-02期党员发展对象（本科生...</a><span class="date">2025-11-24</span></li>
+                    <li class="list-item"><a href="info/1215/29296.htm">【党员发展】材料科学与工程学院党委2025-02期党员发展对象（研究生...</a><span class="date">2025-11-24</span></li>
+                    <li class="list-item"><a href="info/1215/29206.htm">【党员发展】材料科学与工程学院党委2025-02期研究生党员发展对象名...</a><span class="date">2025-11-11</span></li>
+                   
+                </ul><script>_showDynClickBatch(['dynclicks_u8_30656','dynclicks_u8_29986','dynclicks_u8_29976','dynclicks_u8_29956','dynclicks_u8_29316','dynclicks_u8_29296','dynclicks_u8_29206'],[30656,29986,29976,29956,29316,29296,29206],"wbnews", 1451357099)</script>
+
+                
+
+<ul class="hidden" data-index="2">
+                    <li class="list-item"><a href="info/1216/24846.htm">材料学院机关党支部深入学习习近平总书记在全国教育大会上的重要讲话</a><span class="date">2024-11-04</span></li>
+                    <li class="list-item"><a href="info/1216/31326.htm">校地合作探新路 产教融合育新才——西南交通大学材料科学与工程学院...</a><span class="date">2026-06-09</span></li>
+                    <li class="list-item"><a href="info/1216/31176.htm">强基固本练内功 互学互鉴提质效——材料科学与工程学院召开2026年度...</a><span class="date">2026-05-28</span></li>
+                    <li class="list-item"><a href="info/1216/31226.htm">百卅荣光薪火传·学思践悟当先锋——​材料学院研究生第三党支部“领...</a><span class="date">2026-05-26</span></li>
+                    <li class="list-item"><a href="info/1216/31236.htm">西南交大材料学院研究生第七党支部书记邰浩云赴西安交大参会并作主...</a><span class="date">2026-05-25</span></li>
+                    <li class="list-item"><a href="info/1216/30986.htm">校史寻根铸魂・材启新程领航 ——材料学院研究生第三党支部赴成飞航...</a><span class="date">2026-05-15</span></li>
+                    <li class="list-item"><a href="info/1216/30976.htm">校史寻根铸魂・材启新程领航——材料学院举办优秀校友党员交流分享会</a><span class="date">2026-05-13</span></li>
+                    
+                </ul><script>_showDynClickBatch(['dynclicks_u9_24846','dynclicks_u9_31326','dynclicks_u9_31176','dynclicks_u9_31226','dynclicks_u9_31236','dynclicks_u9_30986','dynclicks_u9_30976'],[24846,31326,31176,31226,31236,30986,30976],"wbnews", 1451357099)</script>
+
+                
+            </div>
+        </div>
+        <div class="clearfix"></div>
+
+        <div class="item-s item-left">
+            <h3 class="title">学生工作<a class="more" href="https://clxy.swjtu.edu.cn/sylm_xsgz.htm">更多</a></h3>
+            <div class="tabs-choose">
+                <a class="tab-choise on" href="##">公示公告</a>
+                <a class="tab-choise" href="##">团学快讯</a>
+                <a class="tab-choise" href="##">就业招聘</a>
+            </div>
+            <div class="tabs-content">
+            
+
+<ul class="visible" data-index="1">
+                    <li class="list-item"><a href="info/1116/31266.htm">材料科学与工程学院2025-2026学年学生组织换届名单公示</a><span class="date">2026-06-05</span></li>
+                    <li class="list-item"><a href="info/1116/31216.htm">【研】关于材料科学与工程学院博士生扬华新秀奖学金中期检查结果的公示</a><span class="date">2026-06-03</span></li>
+                    <li class="list-item"><a href="info/1116/31166.htm">关于开展西南交通大学2026年大学生暑期“三下乡”社会实践活动的通...</a><span class="date">2026-06-01</span></li>
+                    <li class="list-item"><a href="info/1116/30996.htm">关于材料学院青年志愿者协会换届的通知</a><span class="date">2026-05-20</span></li>
+                    <li class="list-item"><a href="info/1116/30636.htm">材料学院2026年暑期利兹大学国际夏校项目拟推荐人选公示</a><span class="date">2026-04-23</span></li>
+                    <li class="list-item"><a href="info/1116/30606.htm">高举思想旗帜 挺膺时代担当——关于召开共青团西南交通大学材料科学...</a><span class="date">2026-04-21</span></li>
+                    <li class="list-item"><a href="info/1116/30546.htm">材料学院2026年暑假“励研笃行”研究生出国（境）研学项目拟推荐人...</a><span class="date">2026-04-15</span></li>
+                    <li class="list-item"><a href="info/1116/30526.htm">关于开展第十三届“交通·公益”志愿服务季暨西南交通大学第四届志愿...</a><span class="date">2026-04-10</span></li>
+                    <li class="list-item"><a href="info/1116/30476.htm">关于2026年春季学期本研学生递交入团申请书的通知</a><span class="date">2026-04-09</span></li>
+                    <li class="list-item"><a href="info/1116/30346.htm">关于开展西南交通大学2025-2026年度星级志愿者评定工作的通知</a><span class="date">2026-04-01</span></li>
+                    <li class="list-item"><a href="info/1116/30326.htm">【团内评优】材料学院2025年度共青团工作表彰拟推荐名单公示</a><span class="date">2026-03-30</span></li>
+                    <li class="list-item"><a href="info/1116/30146.htm">材料科学与工程学院关于开展2025年度共青团工作表彰的通知</a><span class="date">2026-03-20</span></li>
+                    <li class="list-item"><a href="info/1116/30136.htm">【资助】材料学院2026年暑假“助梦启航”家庭经济困难优秀大学生出...</a><span class="date">2026-03-20</span></li>
+                   
+                </ul><script>_showDynClickBatch(['dynclicks_u10_31266','dynclicks_u10_31216','dynclicks_u10_31166','dynclicks_u10_30996','dynclicks_u10_30636','dynclicks_u10_30606','dynclicks_u10_30546','dynclicks_u10_30526','dynclicks_u10_30476','dynclicks_u10_30346','dynclicks_u10_30326','dynclicks_u10_30146','dynclicks_u10_30136'],[31266,31216,31166,30996,30636,30606,30546,30526,30476,30346,30326,30146,30136],"wbnews", 1451357099)</script>
+
+               
+               
+
+<ul class="hidden" data-index="2">
+                    <li class="list-item"><a href="info/1117/31346.htm">师生齐聚话成长，答疑解惑助远航---成型2023-02班“材子午餐会”成...</a><span class="date">2026-06-12</span></li>
+                    <li class="list-item"><a href="info/1117/31316.htm">材料学院2025级本科生2025-2026学年春季学期第二次年级大会顺利开展</a><span class="date">2026-06-08</span></li>
+                    <li class="list-item"><a href="info/1117/31156.htm">热血赛场逐锋芒 青春篮坛创佳绩  ——西南交通大学材料学院“材料杯...</a><span class="date">2026-05-29</span></li>
+                    <li class="list-item"><a href="info/1117/31126.htm">【研】材料科学与工程学院2026年研究生先锋宿舍评选结果公示</a><span class="date">2026-05-27</span></li>
+                    <li class="list-item"><a href="info/1117/30936.htm">材料学院“笃学正风·青春向学”毕业生专场午餐会搭建朋辈经验传承新...</a><span class="date">2026-05-18</span></li>
+                    <li class="list-item"><a href="info/1117/31196.htm">竢实扬华，材料报国——研究生党支部青年党员献礼130周年校庆倡议书</a><span class="date">2026-05-11</span></li>
+                    <li class="list-item"><a href="info/1117/30846.htm">竢实润心，材绘未来：材料科学与工程学院开展“竢实扬华・材绘未来...</a><span class="date">2026-05-08</span></li>
+                    <li class="list-item"><a href="info/1117/30836.htm">实验室安全协会顺利举办“平安实验·智趣闯关”游园会活动</a><span class="date">2026-05-08</span></li>
+                    <li class="list-item"><a href="info/1117/30646.htm">“弘扬五四精神 激扬青春力量”材料科学与工程学院研究生第七党支部...</a><span class="date">2026-04-23</span></li>
+                    <li class="list-item"><a href="info/1117/30516.htm">材料科学与工程学院关于开展2025-2026第二学年第1次本科生宿舍检查...</a><span class="date">2026-04-10</span></li>
+                    <li class="list-item"><a href="info/1117/30456.htm">​“‘材’尽其用·环保有‘料’”——材料学院“一站式”学生社区环...</a><span class="date">2026-04-08</span></li>
+                    <li class="list-item"><a href="info/1117/30466.htm">学风建设・四拳攻坚｜本科2024 级年级大会燃动学风</a><span class="date">2026-03-30</span></li>
+                    <li class="list-item"><a href="info/1117/30276.htm">心沐暖阳，‘材’熠芳华：材料科学与工程学院开展“3·25”善爱我心...</a><span class="date">2026-03-30</span></li>
+                    
+                </ul><script>_showDynClickBatch(['dynclicks_u11_31346','dynclicks_u11_31316','dynclicks_u11_31156','dynclicks_u11_31126','dynclicks_u11_30936','dynclicks_u11_31196','dynclicks_u11_30846','dynclicks_u11_30836','dynclicks_u11_30646','dynclicks_u11_30516','dynclicks_u11_30456','dynclicks_u11_30466','dynclicks_u11_30276'],[31346,31316,31156,31126,30936,31196,30846,30836,30646,30516,30456,30466,30276],"wbnews", 1451357099)</script>
+
+                
+
+<ul class="hidden" data-index="3">
+                    <li class="list-item"><a href="https://jiuye.swjtu.edu.cn/career/zpxx/view/zpxx/6895655996153135653">【招聘】贵阳轨道交通三号线一期工程建设管理有限公司 2022年秋季校...</a><span class="date">2022-10-08</span></li>
+                    <li class="list-item"><a href="https://jiuye.swjtu.edu.cn/career/zpxx/view/zpxx/6894341220764487266">【招聘】中铁二院2023届高校毕业生招聘启事</a><span class="date">2022-10-08</span></li>
+                    <li class="list-item"><a href="https://jiuye.swjtu.edu.cn/career/zpxx/view/zpxx/6894341220764489450">【招聘】中博会 高层次人才洽谈会 （2022年度）秋季巡回线上招聘会 ...</a><span class="date">2022-10-08</span></li>
+                    <li class="list-item"><a href="https://jiuye.swjtu.edu.cn/career/zpxx/view/zpxx/6894341220764487308">【招聘】中航国际2023届校园招聘正式启航！</a><span class="date">2022-10-08</span></li>
+                    <li class="list-item"><a href="https://jiuye.swjtu.edu.cn/career/zpxx/view/zpxx/6922656428318526783">【招聘】广州市市政工程设计研究总院有限公司 2023届校园招聘简章</a><span class="date">2022-10-08</span></li>
+                    <li class="list-item"><a href="https://jiuye.swjtu.edu.cn/career/zpxx/view/zpxx/6922656428318526783">广州市市政工程设计研究总院有限公司 2023届校园招聘简章</a><span class="date">2022-10-08</span></li>
+                    <li class="list-item"><a href="https://jiuye.swjtu.edu.cn/career/zpxx/view/zpxx/6895655996153138556">【招聘】新明宝2023届“启航计划”校园招聘</a><span class="date">2022-09-30</span></li>
+                    <li class="list-item"><a href="https://jiuye.swjtu.edu.cn/career/zpxx/view/zpxx/6895655996153138945">【招聘】索迪斯2023届应届生管理培训生招聘计划</a><span class="date">2022-09-30</span></li>
+                    <li class="list-item"><a href="https://jiuye.swjtu.edu.cn/career/zpxx/view/zpxx/6895655996153139913">【招聘】上海隧道工程有限公司盾构公司23届应届生招聘</a><span class="date">2022-09-30</span></li>
+                    <li class="list-item"><a href="https://jiuye.swjtu.edu.cn/career/zpxx/view/zpxx/6894341255124222556">【招聘】成都天府新区投资集团有限公司2023届校园招聘公告</a><span class="date">2022-09-30</span></li>
+                    <li class="list-item"><a href="https://jiuye.swjtu.edu.cn/career/zpxx/view/zpxx/6894341255124222556">【招聘】成都天府新区投资集团有限公司2023届校园招聘公告</a><span class="date">2022-09-30</span></li>
+                    <li class="list-item"><a href="https://jiuye.swjtu.edu.cn/career/zpxx/view/zpxx/6894341255124224704">【招聘】中国科学院长春应用化学研究所2022年度招聘启事</a><span class="date">2022-09-30</span></li>
+                    <li class="list-item"><a href="https://jiuye.swjtu.edu.cn/career/zpxx/view/zpxx/6894341255124224761">【招聘】华进知识产权2023秋季校招全国启动</a><span class="date">2022-09-30</span></li>
+                    
+                </ul><script>_showDynClickBatch(['dynclicks_u12_17236','dynclicks_u12_17232','dynclicks_u12_17231','dynclicks_u12_17228','dynclicks_u12_17222','dynclicks_u12_17220','dynclicks_u12_17246','dynclicks_u12_17245','dynclicks_u12_17244','dynclicks_u12_17242','dynclicks_u12_17243','dynclicks_u12_17241','dynclicks_u12_17240'],[17236,17232,17231,17228,17222,17220,17246,17245,17244,17242,17243,17241,17240],"wbnews", 1451357099)</script>
+
+            </div>
+        </div>
+
+        <div class="item-s item-right">
+            <h3 class="title">学术活动<a class="more" href="https://clxy.swjtu.edu.cn/sylm_xshd.htm">更多</a></h3>
+            <div class="tabs-choose">
+                <a class="tab-choise on" href="##">学术海报</a>
+                <a class="tab-choise" href="##">学术新闻</a>
+                <a class="tab-choise" href="##">科技动态</a>
+            </div>
+            <div class="tabs-content">
+            
+
+<ul class="visible" data-index="1">
+                    <li>
+                                            <a href="info/1209/15035.htm" class="post-img">
+                            <img src="/__local/4/B8/9B/67AC0ABF59EE322735144EBED21_D550AB74_29DE9C.jpg" width="262" height="387" title="【学术报告】骨质疏松的相关基础研究" />
+                        </a>
+                        <div class="post-content">
+                            <h3 class="post-title" title="【学术报告】骨质疏松的相关基础研究">
+                                【学术报告】骨质疏松的相关基础研究
+                            </h3>
+                            <ul class="post-list">
+                                <li class="post-item">
+                                    <a href="info/1209/14650.htm" title="【学术交流报告】NPIC核电用高性能锆合金的发展">【学术交流报告】NPIC核电用高性能锆合...</a>
+                                </li>
+                                <li class="post-item">
+                                    <a href="info/1209/13531.htm" title="仿贻贝多功能水凝胶">仿贻贝多功能水凝胶</a>
+                                </li>
+                                <li class="post-item">
+                                    <a href="info/1209/13112.htm" title="特定结构卟啉高分子的构建及其在光动力治疗中的应用">特定结构卟啉高分子的构建及其在光动力...</a>
+                                </li>
+                                <li class="post-item">
+                                    <a href="info/1209/12740.htm" title="固液界面浸润性的多维调控">固液界面浸润性的多维调控</a>
+                                </li>
+                                <li class="post-item">
+                                    <a href="info/1209/12635.htm" title="【学术报告】聚合物网络：多层次动态行为的调制和应用">【学术报告】聚合物网络：多层次动态行...</a>
+                                </li>
+                                <li class="post-item">
+                                    <a href="info/1209/12396.htm" title="High Performance of Ceramics and Manufacturing Process Innovation">High Performance of Ceramics and Manu...</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li class="clearfix"></li>
+                </ul><script>_showDynClickBatch(['dynclicks_u13_15035','dynclicks_u13_14650','dynclicks_u13_13531','dynclicks_u13_13112','dynclicks_u13_12740','dynclicks_u13_12635','dynclicks_u13_12396'],[15035,14650,13531,13112,12740,12635,12396],"wbnews", 1451357099)</script>
+
+                
+                
+
+<ul class="hidden" data-index="2">
+                    <li class="list-item"><a href="info/1210/31026.htm">学术专题|我院电磁功能材料团队博士生李天在《Nano Materials Scien...</a><span class="date">2026-05-20</span></li>
+                    <li class="list-item"><a href="info/1210/30876.htm">学术专题|学院李琦教授、芦丽珍博士生在期刊《Carbon Energy》上发...</a><span class="date">2026-05-11</span></li>
+                    <li class="list-item"><a href="info/1210/29856.htm">学术专题|我院电磁功能材料团队博士生李天在《Advanced Functional ...</a><span class="date">2026-01-08</span></li>
+                    <li class="list-item"><a href="info/1210/29306.htm">学术专题|学院尹冬弟教授、倪然博士生等在《Int. J. Plast.》发表最...</a><span class="date">2025-11-24</span></li>
+                    <li class="list-item"><a href="info/1210/28866.htm">学术专题|我院2022级本科生团队SRTP研究成果在《Journal of Alloys ...</a><span class="date">2025-09-19</span></li>
+                    <li class="list-item"><a href="info/1210/27686.htm">学术专题|我院电磁功能材料团队博士生李天在《Small》上发表最新研...</a><span class="date">2025-07-14</span></li>
+                    <li class="list-item"><a href="info/1210/27616.htm">学术专题|学院尹冬弟教授、倪然博士生等在高水平期刊《Acta Mater....</a><span class="date">2025-06-29</span></li>
+                    <li class="list-item"><a href="info/1210/27756.htm">学术专题|学院李琦教授、陈煦芬博士生等在期刊《Journal of Materia...</a><span class="date">2025-06-13</span></li>
+                    <li class="list-item"><a href="info/1210/27746.htm">学术专题|学院李琦教授、黄宗和博士生在高水平期刊《Composites Par...</a><span class="date">2025-06-13</span></li>
+                    <li class="list-item"><a href="info/1210/27306.htm">学院尹冬弟教授、倪然博士生等在高水平期刊《Int. J. Plast.》发表...</a><span class="date">2025-05-27</span></li>
+                    <li class="list-item"><a href="info/1210/27056.htm">我院纳米能源材料与功能器件研究团队在Nano-Micro Letters期刊上发...</a><span class="date">2025-05-16</span></li>
+                    <li class="list-item"><a href="info/1210/25716.htm">澳大利亚墨尔本理工大学邱冬博士来学院做学术报告</a><span class="date">2025-01-15</span></li>
+                    <li class="list-item"><a href="info/1210/25026.htm">材料学院马新凯副教授在《Acta Materialia》上发表最新研究成果</a><span class="date">2024-11-07</span></li>
+                    
+                </ul><script>_showDynClickBatch(['dynclicks_u14_31026','dynclicks_u14_30876','dynclicks_u14_29856','dynclicks_u14_29306','dynclicks_u14_28866','dynclicks_u14_27686','dynclicks_u14_27616','dynclicks_u14_27756','dynclicks_u14_27746','dynclicks_u14_27306','dynclicks_u14_27056','dynclicks_u14_25716','dynclicks_u14_25026'],[31026,30876,29856,29306,28866,27686,27616,27756,27746,27306,27056,25716,25026],"wbnews", 1451357099)</script>
+
+               
+
+<ul class="hidden" data-index="3">
+                    <li class="list-item"><a href="https://news.swjtu.edu.cn/shownews-20047.shtml">【科技】央视聚焦我院焊接技术设备助力川藏铁路建设</a><span class="date">2020-04-21</span></li>
+                    <li class="list-item"><a href="info/1207/10061.htm">我国学者在超稳定玻璃制备领域取得新进展</a><span class="date">2018-05-14</span></li>
+                    <li class="list-item"><a href="info/1207/10060.htm">碳基纳米发光材料室温长寿命发射调控与应用研究进展</a><span class="date">2018-05-14</span></li>
+                    <li class="list-item"><a href="info/1207/10062.htm">高性能碳纳米管透明导电薄膜研究取得进展</a><span class="date">2018-05-09</span></li>
+                    <li class="list-item"><a href="info/1207/10063.htm">纳米金属稳定性研究取得重要进展</a><span class="date">2018-05-07</span></li>
+                    <li class="list-item"><a href="info/1207/10065.htm">西南交大材料学院周绍兵教授在纳米材料领域顶级期刊发表最新成果</a><span class="date">2018-04-27</span></li>
+                    <li class="list-item"><a href="info/1207/10067.htm">氧化物类脑神经形态器件研究中取得进展</a><span class="date">2018-04-24</span></li>
+                    <li class="list-item"><a href="info/1207/10066.htm">二维材料自组装研究中取得进展</a><span class="date">2018-04-24</span></li>
+                    <li class="list-item"><a href="info/1207/10068.htm">新型结构和更高Tc的准一维Cr基超导体</a><span class="date">2018-04-17</span></li>
+                    <li class="list-item"><a href="info/1207/10070.htm">研究揭示磁场驱动三维阻挫磁性材料的量子临界现象</a><span class="date">2018-04-11</span></li>
+                    <li class="list-item"><a href="info/1207/10071.htm">红外光源研究获进展</a><span class="date">2018-04-09</span></li>
+                    <li class="list-item"><a href="info/1207/10072.htm">化学方法高效诱导多能干细胞</a><span class="date">2018-04-09</span></li>
+                    <li class="list-item"><a href="info/1207/10073.htm">石墨炔基高效储钠电极材料研究中取得进展</a><span class="date">2018-04-08</span></li>
+                    
+                </ul><script>_showDynClickBatch(['dynclicks_u15_13416','dynclicks_u15_10061','dynclicks_u15_10060','dynclicks_u15_10062','dynclicks_u15_10063','dynclicks_u15_10065','dynclicks_u15_10067','dynclicks_u15_10066','dynclicks_u15_10068','dynclicks_u15_10070','dynclicks_u15_10071','dynclicks_u15_10072','dynclicks_u15_10073'],[13416,10061,10060,10062,10063,10065,10067,10066,10068,10070,10071,10072,10073],"wbnews", 1451357099)</script>
+
+            </div>
+        </div>
+        <div class="clearfix"></div>
+    </div>
+    <div class="links">
+        <h2 class="link">LINK</h2>
+        <div class="box-s" style="width: 1220px">
+        <script language="javascript" src="/system/resource/js/openlink.js"></script><ul class="links-list">
+<li><a href="http://www.swjtu.edu.cn/">&#8226; 西南交通大学</a></li>
+<li><a href="http://news.swjtu.edu.cn/">&#8226; 西南交通大学新闻网</a></li>
+<li><a href="http://dean.swjtu.edu.cn/">&#8226; 教务处</a></li>
+<li><a href="http://yanghua.swjtu.edu.cn/">&#8226; 扬华素质网</a></li>
+<li><a href="http://gs.swjtu.edu.cn/">&#8226; 研究生院</a></li>
+<li><a href="http://fad.swjtu.edu.cn/">&#8226; 国际合作与交流处</a></li>
+<li><a href="http://jiuye.swjtu.edu.cn/eweb/jygl/index.so">&#8226; 就业网</a></li>
+<li><a href="http://www.most.gov.cn/">&#8226; 中华人民共和国科学技术部</a></li>
+<li><a href="http://www.nsfc.gov.cn/">&#8226; 国家自然科学基金委员会</a></li>
+<li><a href="http://www.cernet.edu.cn/">&#8226; 中国教育和科研计算机网</a></li>
+<li><a href="http://www.moe.gov.cn/">&#8226; 中华人民共和国教育部</a></li>
+<li><a href="http://www.ccdi.gov.cn/">&#8226; 中共中央纪律检查委员会</a></li>
+ </ul>
+<div class="clearfix"></div>
+            
+        </div>
+    </div>
+    
+    <!-- 版权内容请在本组件"内容配置-版权"处填写 -->
+<div class="footer">
+        <p>Copyright© 西南交通大学材料科学与工程学院</p>
+        <p>地址：四川省成都市高新区西南交通大学犀浦校区 邮编: 611756</p>
+    </div>
+  <script type="text/javascript" charset="utf-8" src="dfiles/8700/js/main.js"></script>
+
+
+    </div>
+
+<div id="mobile">
+<div class="page">
+        <!--页面头部-->
+            <div class="header">
+        <div class="logo">
+            <a href="index.htm">
+                <img src="mobile/dfiles/12976/images/logo.png" />
+            </a>
+        </div>
+        
+    </div>
+        <!--/页面头部-->
+         
+        <!--页面内容-->
+        <div class="page__bd">
+            <!--首页幻灯片-->
+           
+
+<div id="slider" class="swiper-container">
+                <div class="swiper-wrapper">
+                                    <div class="swiper-slide"><img src="/__local/E/AC/36/4F02ED4FBFE2A94055CDC80887F_262A2C16_895AD.jpg" width="860" height="380" /></div>
+                <div class="swiper-slide"><img src="/__local/5/EB/E2/DF51C3C0B240D53BDC01D1AE4AF_96A94EB6_F6DAE.png" width="860" height="380" /></div>
+                <div class="swiper-slide"><img src="/__local/C/6F/E1/B3CB7294DDCFE17B133D0C3B6FA_596C22FA_41BCB.jpg" width="860" height="380" /></div>
+                <div class="swiper-slide"><img src="/__local/7/B2/C2/27696532624E8B1D6DAA5C2ED9B_9A88220E_66096.png" width="860" height="380" /></div>
+                <div class="swiper-slide"><img src="/__local/A/97/6F/AE44967C88AD25A1019A24C553F_FC212E1B_20949.jpg" width="860" height="380" /></div>
+
+                </div>
+                <div class="pagination"></div>
+            </div><script>_showDynClickBatch(['dynclicks_u18_31356','dynclicks_u18_31146','dynclicks_u18_30896','dynclicks_u18_30696','dynclicks_u18_29916'],[31356,31146,30896,30696,29916],"wbnews", 1451357099)</script>
+
+           
+            <!--/首页幻灯片-->
+            <!--首页图标导航-->
+            <div class="weui-grids nav-list">
+                <a href="xygk.htm" class="weui-grid">
+                    <div class="weui-grid__icon">
+                        <i class="iconfont icon-news"></i>
+                    </div>
+                    <p class="weui-grid__label">学院概况</p>
+                </a>
+                <a href="yxkky.htm" class="weui-grid">
+                    <div class="weui-grid__icon">
+                        <i class="iconfont icon-shopping"></i>
+                    </div>
+                    <p class="weui-grid__label">学科科研</p>
+                </a>
+                <a href="yjyjx.htm" class="weui-grid">
+                    <div class="weui-grid__icon">
+                        <i class="iconfont icon-news"></i>
+                    </div>
+                    <p class="weui-grid__label">教育教学</p>
+                </a>
+                <a href="ysypt.htm" class="weui-grid">
+                    <div class="weui-grid__icon">
+                        <i class="iconfont icon-pic"></i>
+                    </div>
+                    <p class="weui-grid__label">实验平台</p>
+                </a>
+                <a href="ygjjl.htm" class="weui-grid">
+                    <div class="weui-grid__icon">
+                        <i class="iconfont icon-folder"></i>
+                    </div>
+                    <p class="weui-grid__label">国际交流</p>
+                </a>
+                <a href="ydjgz.htm" class="weui-grid">
+                    <div class="weui-grid__icon">
+                        <i class="iconfont icon-user"></i>
+                    </div>
+                    <p class="weui-grid__label">党建工作</p>
+                </a>
+                <a href="yxsgz.htm" class="weui-grid">
+                    <div class="weui-grid__icon">
+                        <i class="iconfont icon-book"></i>
+                    </div>
+                    <p class="weui-grid__label">学生工作</p>
+                </a>
+                <a href="yxyzl.htm" class="weui-grid">
+                    <div class="weui-grid__icon">
+                        <i class="iconfont icon-video"></i>
+                    </div>
+                    <p class="weui-grid__label">校友专栏</p>
+                </a>
+                <a href="yczjr.htm" class="weui-grid">
+                    <div class="weui-grid__icon">
+                        <i class="iconfont icon-info"></i>
+                    </div>
+                    <p class="weui-grid__label">材子佳人</p>
+                </a>
+
+            </div>
+            <!--/首页图标导航-->
+            <!--材料要闻-->
+            <div class="weui-panel weui-panel_access">
+               
+
+<div class="weui-panel__hd">学院要闻</div>
+            <div class="weui-panel__bd">
+                <div class="photo-list">
+                    <ul>
+                                                <li>
+                            <a href="info/1145/31306.htm" title="材料学院在校企联合科研攻关方面取得重大进展">
+                                <img src="/__local/8/5A/AC/D9BDF93F53C9CC001D51F472029_4A2CB2A8_8475D.png" />
+                                <h2>材料学院在校企联合科研攻关方面取得重大进展</h2>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="info/1145/30796.htm" title="喜报！我院刘艳教授荣获全国五一劳动奖章">
+                                <img src="/__local/3/C3/44/B9A096AD3D534AD135DCBF97E46_0A242363_2A064.jpg" />
+                                <h2>喜报！我院刘艳教授荣获全国五一劳动奖章</h2>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="info/1145/30816.htm" title="百卅连根守初心 正观笃行担使命——四所交通大学材料学科研究生党支部举行共建座谈会">
+                                <img src="/__local/D/13/43/E41EC15C1B72E9F184B1C79AFEC_16ECA389_70762.png" />
+                                <h2>百卅连根守初心 正观笃行担使命——四所交通大学材料学科研究生党支部举行共建座谈会</h2>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="info/1145/29836.htm" title="成都市政协委员陈辉：构建大科学装置建设与运行体系 引领未来战略发展">
+                                <img src="/__local/7/A1/E0/AA4780959CE24D39DC9FFC61EFE_1BA74B0B_4F20A.jpg" />
+                                <h2>成都市政协委员陈辉：构建大科学装置建设与运行体系 引领未来战略发展</h2>
+                            </a>
+                        </li>
+                        
+                    </ul>
+                </div>
+            </div>
+            <div class="weui-panel__ft">
+                <a class="weui-cell weui-cell_access weui-cell_link" href="sylm_xwgg/xyxw.htm">
+                    <div class="weui-cell__bd">查看更多</div>
+                    <span class="weui-cell__ft"></span>
+                </a>    
+            </div><script>_showDynClickBatch(['dynclicks_u19_31306','dynclicks_u19_30796','dynclicks_u19_30816','dynclicks_u19_29836'],[31306,30796,30816,29836],"wbnews", 1451357099)</script>
+   
+            </div>
+            <!--材料要闻-->
+           
+            <!--学院新闻-->
+            <div class="weui-panel weui-panel_access">
+                
+
+<div class="weui-panel__hd">学院新闻</div>
+<div class="weui-panel__bd">
+<div class="txt-list">
+                        <ul>
+                            <li>
+                                <a href="info/1145/31306.htm">
+                                
+<img src="/__local/8/5A/AC/D9BDF93F53C9CC001D51F472029_4A2CB2A8_8475D.png" />
+                                
+                                    <h2>材料学院在校企联合科研攻关方面取得重大进展</h2>
+                                    <p class="intro">近日，面向YX工程、高原铁路、南水北调西线工程等国家重大战略工程需求，西南交大材料学院陈辉教授团队与中国铁建重工集团股份有限公司智能制造院王霄腾特级研究员联合申报的国家重大专项项目“大直径硬岩隧道掘进机关重件并行化协同制造系统集成及示范应用”获批立项。项目围绕大型地下工程机械关重件制造的瓶颈问题，校企双方将联合开展智能柔性焊接基础理论、关键工艺及质量管控等核心技术攻关，并构建一体化推进机制。该项目的实施，...</p>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="info/1145/31046.htm">
+                                
+                                
+                                    <h2>再攀新高！西南交通大学材料科学ESI全球排名升至138位跻身全球前0.83‰</h2>
+                                    <p class="intro">近日，科睿唯安发布2026年5月最新ESI（基本科学指标数据库）排名数据，西南交通大学材料科学学科实力持续跃升，全球排名稳步攀升至第138位，成功跻身全球前0.83‰，学科国际影响力与核心竞争力实现再突破。根据最新数据统计，本期全球共有1659个机构的材料科学学科进入ESI全球前1％，西南交通大学位于全球138位，较上次前进13位，西南交大材料学科大步向前。学校材料科学学科发表在SCI和SSCI期刊上的论文共5994篇，总被引139694次，...</p>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="info/1145/30796.htm">
+                                
+<img src="/__local/3/C3/44/B9A096AD3D534AD135DCBF97E46_0A242363_2A064.jpg" />
+                                
+                                    <h2>喜报！我院刘艳教授荣获全国五一劳动奖章</h2>
+                                    <p class="intro">4月28日，中华全国总工会正式发布《关于表彰2026年全国五一劳动奖的决定》（总工发〔2026〕8号），西南交通大学材料科学与工程学院副院长刘艳教授荣获“全国五一劳动奖章”称号。全国五一劳动奖章是中国工人阶级的最高荣誉之一。本次全国共有1462名职工获此殊荣，其中四川省41人，刘艳教授是省教科文卫系统唯一获奖者，充分体现了学校在人才培养和科技创新方面的贡献。刘艳教授，中共党员，工学博士，国家级高层次人才，现任材料科学与工程学院副院长、...</p>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="info/1145/30816.htm">
+                                
+<img src="/__local/D/13/43/E41EC15C1B72E9F184B1C79AFEC_16ECA389_70762.png" />
+                                
+                                    <h2>百卅连根守初心 正观笃行担使命——四所交通大学材料学科研究生党支部举行共建座谈会</h2>
+                                    <p class="intro">      为深入学习贯彻习近平总书记给四所交通大学全体师生的重要回信精神，深化四校材料学科党建联建与学术交流合作，4月22日，西南交通大学材料科学与工程学院联合西安交通大学材料科学与工程学院、上海交通大学材料科学与工程学院、北京交通大学物理科学与工程学院，成功举办“百卅连根守初心，正观笃行担使命”四所交通大学材料学科研究生党支部共建座谈会。四校师生党员以线上线下相结合的方式参会，云端齐聚、线下联动，共话党建引领，...</p>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="info/1145/30486.htm">
+                                
+                                
+                                    <h2>材料科学与工程学院召开专题会议深入学习贯彻习近平总书记给四所交通大学全体师生回信精神</h2>
+                                    <p class="intro">为深入学习领会、全面贯彻落实习近平总书记给上海交通大学、西安交通大学、西南交通大学、北京交通大学全体师生的重要回信精神，4月8日上午，材料科学与工程学院召开党政联席（扩大）会议。学院领导班子成员、教工支部书记、内设机构负责人参加会议，学院党委书记沈哲主持会议。会上，沈哲领学了习近平总书记重要回信全文，深刻阐释了回信的重大意义、核心要义和实践要求。参会人员结合自身工作与学院发展实际，逐一交流学习体会、畅谈落实思路，...</p>
+                                </a>
+                            </li>
+                            
+                        </ul>
+                    </div>
+                    
+                    </div>
+
+                <div class="weui-panel__ft">
+                    <a class="weui-cell weui-cell_access weui-cell_link" href="sylm_xwgg/xyxw.htm">
+                        <div class="weui-cell__bd">查看更多</div>
+                        <span class="weui-cell__ft"></span>
+                    </a>
+                </div><script>_showDynClickBatch(['dynclicks_u20_31306','dynclicks_u20_31046','dynclicks_u20_30796','dynclicks_u20_30816','dynclicks_u20_30486'],[31306,31046,30796,30816,30486],"wbnews", 1451357099)</script>
+
+            </div>
+            <!--/学院新闻-->
+            
+<!--学院公告-->
+            <div class="weui-panel weui-panel_access">
+
+
+<div class="weui-panel__hd">学院公告</div>
+                <div class="weui-panel__bd">
+                    <div class="txt-list">
+                        <ul>
+                            <li>
+                                 <a href="info/1110/31136.htm">
+                                    <i class="date">05-28</i>
+                                    <span class="text">
+               材料科学与工程学院2026年博士研究生招生 拟录取名单公示（第三批）
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1110/31096.htm">
+                                    <i class="date">05-25</i>
+                                    <span class="text">
+               材料科学与工程学院2026年博士研究生招生 拟录取名单公示（第二批）
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1110/31066.htm">
+                                    <i class="date">05-22</i>
+                                    <span class="text">
+               西南交通大学材料科学与工程学院2026年博士研究生招生 拟录取名单公示(不含定向工程博士、直博生）
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1110/31056.htm">
+                                    <i class="date">05-19</i>
+                                    <span class="text">
+               国家级平台+国家重大项目！西南交通大学先进交通材料与激光加工团队诚聘科研助理
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1110/30956.htm">
+                                    <i class="date">05-18</i>
+                                    <span class="text">
+               材料科学与工程学院2026年博士研究生招生综合考核 面试分组及面试地点
+                                     </span>
+                                </a>
+                                
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="weui-panel__ft">
+                    <a class="weui-cell weui-cell_access weui-cell_link" href="sylm_xwgg/xygg.htm">
+                        <div class="weui-cell__bd">查看更多</div>
+                        <span class="weui-cell__ft"></span>
+                    </a>
+                </div><script>_showDynClickBatch(['dynclicks_u21_31136','dynclicks_u21_31096','dynclicks_u21_31066','dynclicks_u21_31056','dynclicks_u21_30956'],[31136,31096,31066,31056,30956],"wbnews", 1451357099)</script>
+
+            </div>
+<!--学院公告-->            
+            
+            <div class="weui-panel weui-panel_access">
+            <div class="weui-tab">
+                <div class="weui-navbar">
+                    <a class="weui-navbar__item weui-bar__item_on" href="#tab1">本科生教务公告</a>
+                    <a class="weui-navbar__item" href="#tab2">研究生教务公告</a>
+                </div>
+                <div class="weui-tab__panel">
+                    <div id="tab1" class="weui_tab_bd_item weui_tab_bd_item_active">
+                        
+
+<div class="weui-panel__bd">
+                            <div class="txt-list">
+                                <ul>
+                                    <li>
+                                        <a href="info/1111/31206.htm">
+                                            <i class="date">06-03</i>
+                                            <span class="text">材料学院关于2026-2027学年第一学期课程教材选用的公示</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="https://jwc.swjtu.edu.cn/vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=BE91C1E0322CACC8">
+                                            <i class="date">05-26</i>
+                                            <span class="text">【转发通知】@全体2026届乘客：毕业专列即将启程，请查收你的毕业路线图</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="info/1111/31086.htm">
+                                            <i class="date">05-25</i>
+                                            <span class="text">材料学院关于公布2026年大学生创新创业训练计划（SRTP）项目拟推荐立项结果的通知</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="info/1111/31076.htm">
+                                            <i class="date">05-24</i>
+                                            <span class="text">材料学院2026—2028年校级（本科）教育教学研究与改革项目拟推荐项目公示</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="info/1111/30906.htm">
+                                            <i class="date">05-15</i>
+                                            <span class="text">材料学院关于开展2026年大学生创新创业训练计划（SRTP）项目立项答辩的通知</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="weui-panel__ft">
+                            <a class="weui-cell weui-cell_access weui-cell_link" href="jwgg/bks.htm">
+                                <div class="weui-cell__bd">查看更多</div>
+                                <span class="weui-cell__ft"></span>
+                            </a>
+                        </div><script>_showDynClickBatch(['dynclicks_u22_31206','dynclicks_u22_31106','dynclicks_u22_31086','dynclicks_u22_31076','dynclicks_u22_30906'],[31206,31106,31086,31076,30906],"wbnews", 1451357099)</script>
+
+                    </div>
+                    <div id="tab2" class="weui_tab_bd_item">
+                        
+
+<div class="weui-panel__bd">
+                            <div class="txt-list">
+                                <ul>
+                                    <li>
+                                        <a href="info/1112/31296.htm">
+                                            <i class="date">06-08</i>
+                                            <span class="text">材料学院2027年博士、硕士研究生指导教师岗位任职资格遴选与招生资格审核工作的通知</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="info/1112/29586.htm">
+                                            <i class="date">12-17</i>
+                                            <span class="text">2025-2026学年第二学期材料学院研究生教材选用公示</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="info/1112/27996.htm">
+                                            <i class="date">09-04</i>
+                                            <span class="text">2026年研究生指导教师岗位任职及上岗资格材料科学与工程学位评定分委会初审通过人员名单公示</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="info/1112/27596.htm">
+                                            <i class="date">07-10</i>
+                                            <span class="text">2025-2026学年第一学期材料学院研究生教材选用公示</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="info/1112/27566.htm">
+                                            <i class="date">07-04</i>
+                                            <span class="text">2026年材料学院进行博士、硕士研究生指导教师岗位任职资格遴选与招生资格审核工作的通知</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="weui-panel__ft">
+                            <a class="weui-cell weui-cell_access weui-cell_link" href="jwgg/yjs.htm">
+                                <div class="weui-cell__bd">查看更多</div>
+                                <span class="weui-cell__ft"></span>
+                            </a>
+                        </div><script>_showDynClickBatch(['dynclicks_u23_31296','dynclicks_u23_29586','dynclicks_u23_27996','dynclicks_u23_27596','dynclicks_u23_27566'],[31296,29586,27996,27596,27566],"wbnews", 1451357099)</script>
+
+                        
+                    </div>
+                </div>
+            </div>
+                </div>
+            
+            <!--党建工作-->
+        <div class="weui-panel weui-panel_access">
+           
+           <div class="weui-tab">
+                <div class="weui-navbar">
+                    <a class="weui-navbar__item weui-bar__item_on" href="#tab11">党建工作通知公告</a>
+                    <a class="weui-navbar__item" href="#tab12">党建工作党建新闻</a>
+                </div>
+                <div class="weui-tab__panel">
+                    <div id="tab11" class="weui_tab_bd_item weui_tab_bd_item_active">
+                        
+
+<div class="weui-panel__bd">
+                            <div class="txt-list">
+                                <ul>
+                                    <li>
+                                        <a href="info/1215/30656.htm">
+                                            <i class="date">04-28</i>
+                                            <span class="text">【党员发展】材料科学与工程学院党委2026-01期党员发展对象名单公示</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="info/1215/29986.htm">
+                                            <i class="date">03-05</i>
+                                            <span class="text">【党团中心】关于材料学院2025-2026学年第二学期开展推荐入党积极分子作党员发展对象工作的通知</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="info/1215/29976.htm">
+                                            <i class="date">03-05</i>
+                                            <span class="text">【党团中心】关于材料学院2025-2026学年第二学期开展推荐入党申请人作入党积极分子工作的通知</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="info/1215/29956.htm">
+                                            <i class="date">03-03</i>
+                                            <span class="text">【党团中心】关于2026年春季学期递交入党申请书的通知</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="info/1215/29316.htm">
+                                            <i class="date">11-24</i>
+                                            <span class="text">【党员发展】材料科学与工程学院党委2025-02期党员发展对象（本科生）名单公示</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="weui-panel__ft">
+                            <a class="weui-cell weui-cell_access weui-cell_link" href="sylm_djgz/tzgg.htm">
+                                <div class="weui-cell__bd">查看更多</div>
+                                <span class="weui-cell__ft"></span>
+                            </a>
+                        </div><script>_showDynClickBatch(['dynclicks_u24_30656','dynclicks_u24_29986','dynclicks_u24_29976','dynclicks_u24_29956','dynclicks_u24_29316'],[30656,29986,29976,29956,29316],"wbnews", 1451357099)</script>
+
+                    </div>
+                    <div id="tab12" class="weui_tab_bd_item">
+                       
+
+<div class="weui-panel__bd">
+                            <div class="txt-list">
+                                <ul>
+                                    <li>
+                                        <a href="info/1216/24846.htm">
+                                            <i class="date">11-04</i>
+                                            <span class="text">材料学院机关党支部深入学习习近平总书记在全国教育大会上的重要讲话</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="info/1216/31326.htm">
+                                            <i class="date">06-09</i>
+                                            <span class="text">校地合作探新路 产教融合育新才——西南交通大学材料科学与工程学院师生赴成都中建材光电材料有限公司参观交流</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="info/1216/31176.htm">
+                                            <i class="date">05-28</i>
+                                            <span class="text">强基固本练内功 互学互鉴提质效——材料科学与工程学院召开2026年度党支部书记会议暨支部委员培训会</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="info/1216/31226.htm">
+                                            <i class="date">05-26</i>
+                                            <span class="text">百卅荣光薪火传·学思践悟当先锋——​材料学院研究生第三党支部“领航先锋”工程系列活动顺利开展</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="info/1216/31236.htm">
+                                            <i class="date">05-25</i>
+                                            <span class="text">西南交大材料学院研究生第七党支部书记邰浩云赴西安交大参会并作主题报告</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="weui-panel__ft">
+                            <a class="weui-cell weui-cell_access weui-cell_link" href="sylm_djgz/djxw.htm">
+                                <div class="weui-cell__bd">查看更多</div>
+                                <span class="weui-cell__ft"></span>
+                            </a>
+                        </div><script>_showDynClickBatch(['dynclicks_u25_24846','dynclicks_u25_31326','dynclicks_u25_31176','dynclicks_u25_31226','dynclicks_u25_31236'],[24846,31326,31176,31226,31236],"wbnews", 1451357099)</script>
+
+                    </div>
+                </div>
+            </div>
+           
+        </div>
+        <!--/党建工作-->
+        
+        <!--学生工作-->
+        <div class="weui-panel weui-panel_access">
+           
+           <div class="weui-tab">
+                <div class="weui-navbar">
+                    <a class="weui-navbar__item weui-bar__item_on" href="#tab21">公示公告</a>
+                    <a class="weui-navbar__item" href="#tab22">团学快讯</a>
+                    <a class="weui-navbar__item" href="#tab23">就业招聘</a>
+                </div>
+                <div class="weui-tab__panel">
+                    <div id="tab21" class="weui_tab_bd_item weui_tab_bd_item_active">
+                       
+
+<div class="weui-panel__bd">
+                            <div class="txt-list">
+                                <ul>
+                                    <li>
+                                        <a href="info/1116/31266.htm">
+                                            <i class="date">06-05</i>
+                                            <span class="text">材料科学与工程学院2025-2026学年学生组织换届名单公示</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="info/1116/31216.htm">
+                                            <i class="date">06-03</i>
+                                            <span class="text">【研】关于材料科学与工程学院博士生扬华新秀奖学金中期检查结果的公示</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="info/1116/31166.htm">
+                                            <i class="date">06-01</i>
+                                            <span class="text">关于开展西南交通大学2026年大学生暑期“三下乡”社会实践活动的通知</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="info/1116/30996.htm">
+                                            <i class="date">05-20</i>
+                                            <span class="text">关于材料学院青年志愿者协会换届的通知</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="info/1116/30636.htm">
+                                            <i class="date">04-23</i>
+                                            <span class="text">材料学院2026年暑期利兹大学国际夏校项目拟推荐人选公示</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="weui-panel__ft">
+                            <a class="weui-cell weui-cell_access weui-cell_link" href="sylm_xsgz/gsgg.htm">
+                                <div class="weui-cell__bd">查看更多</div>
+                                <span class="weui-cell__ft"></span>
+                            </a>
+                        </div><script>_showDynClickBatch(['dynclicks_u26_31266','dynclicks_u26_31216','dynclicks_u26_31166','dynclicks_u26_30996','dynclicks_u26_30636'],[31266,31216,31166,30996,30636],"wbnews", 1451357099)</script>
+
+                    </div>
+                    <div id="tab22" class="weui_tab_bd_item">
+                    
+
+<div class="weui-panel__hd">团学快讯</div>
+                <div class="weui-panel__bd">
+                    <div class="txt-list">
+                        <ul>
+                            <li>
+                                 <a href="info/1117/31346.htm">
+                                    <i class="date">06-12</i>
+                                    <span class="text">
+               师生齐聚话成长，答疑解惑助远航---成型2023-02班“材子午餐会”成功举办
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1117/31316.htm">
+                                    <i class="date">06-08</i>
+                                    <span class="text">
+               材料学院2025级本科生2025-2026学年春季学期第二次年级大会顺利开展
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1117/31156.htm">
+                                    <i class="date">05-29</i>
+                                    <span class="text">
+               热血赛场逐锋芒 青春篮坛创佳绩  ——西南交通大学材料学院“材料杯”篮球赛圆满收官
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1117/31126.htm">
+                                    <i class="date">05-27</i>
+                                    <span class="text">
+               【研】材料科学与工程学院2026年研究生先锋宿舍评选结果公示
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1117/30936.htm">
+                                    <i class="date">05-18</i>
+                                    <span class="text">
+               材料学院“笃学正风·青春向学”毕业生专场午餐会搭建朋辈经验传承新桥梁
+                                     </span>
+                                </a>
+                                
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="weui-panel__ft">
+                    <a class="weui-cell weui-cell_access weui-cell_link" href="sylm_xsgz/txkx.htm">
+                        <div class="weui-cell__bd">查看更多</div>
+                        <span class="weui-cell__ft"></span>
+                    </a>
+                </div><script>_showDynClickBatch(['dynclicks_u27_31346','dynclicks_u27_31316','dynclicks_u27_31156','dynclicks_u27_31126','dynclicks_u27_30936'],[31346,31316,31156,31126,30936],"wbnews", 1451357099)</script>
+
+                       </div>
+                    <div id="tab23" class="weui_tab_bd_item">
+                    
+
+<div class="weui-panel__hd">就业招聘</div>
+                <div class="weui-panel__bd">
+                    <div class="txt-list">
+                        <ul>
+                            <li>
+                                 <a href="https://jiuye.swjtu.edu.cn/career/zpxx/view/zpxx/6895655996153135653">
+                                    <i class="date">10-08</i>
+                                    <span class="text">
+               【招聘】贵阳轨道交通三号线一期工程建设管理有限公司 2022年秋季校园招聘
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="https://jiuye.swjtu.edu.cn/career/zpxx/view/zpxx/6894341220764487266">
+                                    <i class="date">10-08</i>
+                                    <span class="text">
+               【招聘】中铁二院2023届高校毕业生招聘启事
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="https://jiuye.swjtu.edu.cn/career/zpxx/view/zpxx/6894341220764489450">
+                                    <i class="date">10-08</i>
+                                    <span class="text">
+               【招聘】中博会 高层次人才洽谈会 （2022年度）秋季巡回线上招聘会 ——西南交通大学硕博专场
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="https://jiuye.swjtu.edu.cn/career/zpxx/view/zpxx/6894341220764487308">
+                                    <i class="date">10-08</i>
+                                    <span class="text">
+               【招聘】中航国际2023届校园招聘正式启航！
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="https://jiuye.swjtu.edu.cn/career/zpxx/view/zpxx/6922656428318526783">
+                                    <i class="date">10-08</i>
+                                    <span class="text">
+               【招聘】广州市市政工程设计研究总院有限公司 2023届校园招聘简章
+                                     </span>
+                                </a>
+                                
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="weui-panel__ft">
+                    <a class="weui-cell weui-cell_access weui-cell_link" href="sylm_xsgz/jyzp.htm">
+                        <div class="weui-cell__bd">查看更多</div>
+                        <span class="weui-cell__ft"></span>
+                    </a>
+                </div><script>_showDynClickBatch(['dynclicks_u28_17236','dynclicks_u28_17232','dynclicks_u28_17231','dynclicks_u28_17228','dynclicks_u28_17222'],[17236,17232,17231,17228,17222],"wbnews", 1451357099)</script>
+
+                       </div>
+                </div>
+                
+            </div>
+           
+        </div>
+        <!--/学生工作-->
+        
+        
+        <!--学术活动-->
+        <div class="weui-panel weui-panel_access">
+           
+           <div class="weui-tab">
+                <div class="weui-navbar">
+                    <a class="weui-navbar__item weui-bar__item_on" href="#tab31">学术海报</a>
+                    <a class="weui-navbar__item" href="#tab32">学术新闻</a>
+                    <a class="weui-navbar__item" href="#tab33">科技动态</a>
+                </div>
+                <div class="weui-tab__panel">
+                    <div id="tab31" class="weui_tab_bd_item weui_tab_bd_item_active">
+                       
+
+
+                <div class="weui-panel__bd">
+                    <div class="txt-list">
+                        <ul>
+                                                        <li>
+                                 <a href="info/1209/15035.htm">
+                                    <i class="date">04-15</i>
+                                    <span class="text">
+               【学术报告】骨质疏松的相关基础研究
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1209/14650.htm">
+                                    <i class="date">01-25</i>
+                                    <span class="text">
+               【学术交流报告】NPIC核电用高性能锆合金的发展
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1209/13531.htm">
+                                    <i class="date">06-01</i>
+                                    <span class="text">
+               仿贻贝多功能水凝胶
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1209/13112.htm">
+                                    <i class="date">12-02</i>
+                                    <span class="text">
+               特定结构卟啉高分子的构建及其在光动力治疗中的应用
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1209/12740.htm">
+                                    <i class="date">10-23</i>
+                                    <span class="text">
+               固液界面浸润性的多维调控
+                                     </span>
+                                </a>
+                                
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="weui-panel__ft">
+                    <a class="weui-cell weui-cell_access weui-cell_link" href="sylm_xshd/xshb.htm">
+                        <div class="weui-cell__bd">查看更多</div>
+                        <span class="weui-cell__ft"></span>
+                    </a>
+                </div><script>_showDynClickBatch(['dynclicks_u29_15035','dynclicks_u29_14650','dynclicks_u29_13531','dynclicks_u29_13112','dynclicks_u29_12740'],[15035,14650,13531,13112,12740],"wbnews", 1451357099)</script>
+
+                    </div>
+                    <div id="tab32" class="weui_tab_bd_item">
+                    
+
+                <div class="weui-panel__bd">
+                    <div class="txt-list">
+                        <ul>
+                                                        <li>
+                                 <a href="info/1210/31026.htm">
+                                    <i class="date">05-20</i>
+                                    <span class="text">
+               学术专题|我院电磁功能材料团队博士生李天在《Nano Materials Science》上发表最新研究成果
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1210/30876.htm">
+                                    <i class="date">05-11</i>
+                                    <span class="text">
+               学术专题|学院李琦教授、芦丽珍博士生在期刊《Carbon Energy》上发表最新研究成果
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1210/29856.htm">
+                                    <i class="date">01-08</i>
+                                    <span class="text">
+               学术专题|我院电磁功能材料团队博士生李天在《Advanced Functional Materials》上发表最新研究成果
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1210/29306.htm">
+                                    <i class="date">11-24</i>
+                                    <span class="text">
+               学术专题|学院尹冬弟教授、倪然博士生等在《Int. J. Plast.》发表最新研究成果
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1210/28866.htm">
+                                    <i class="date">09-19</i>
+                                    <span class="text">
+               学术专题|我院2022级本科生团队SRTP研究成果在《Journal of Alloys and Compounds》上发表
+                                     </span>
+                                </a>
+                                
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="weui-panel__ft">
+                    <a class="weui-cell weui-cell_access weui-cell_link" href="sylm_xshd/xsxw.htm">
+                        <div class="weui-cell__bd">查看更多</div>
+                        <span class="weui-cell__ft"></span>
+                    </a>
+                </div><script>_showDynClickBatch(['dynclicks_u30_31026','dynclicks_u30_30876','dynclicks_u30_29856','dynclicks_u30_29306','dynclicks_u30_28866'],[31026,30876,29856,29306,28866],"wbnews", 1451357099)</script>
+
+                       </div>
+                    <div id="tab33" class="weui_tab_bd_item">
+                    
+
+                <div class="weui-panel__bd">
+                    <div class="txt-list">
+                        <ul>
+                                                        <li>
+                                 <a href="https://news.swjtu.edu.cn/shownews-20047.shtml">
+                                    <i class="date">04-21</i>
+                                    <span class="text">
+               【科技】央视聚焦我院焊接技术设备助力川藏铁路建设
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1207/10061.htm">
+                                    <i class="date">05-14</i>
+                                    <span class="text">
+               我国学者在超稳定玻璃制备领域取得新进展
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1207/10060.htm">
+                                    <i class="date">05-14</i>
+                                    <span class="text">
+               碳基纳米发光材料室温长寿命发射调控与应用研究进展
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1207/10062.htm">
+                                    <i class="date">05-09</i>
+                                    <span class="text">
+               高性能碳纳米管透明导电薄膜研究取得进展
+                                     </span>
+                                </a>
+                                
+                            </li>
+                            <li>
+                                 <a href="info/1207/10063.htm">
+                                    <i class="date">05-07</i>
+                                    <span class="text">
+               纳米金属稳定性研究取得重要进展
+                                     </span>
+                                </a>
+                                
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="weui-panel__ft">
+                    <a class="weui-cell weui-cell_access weui-cell_link" href="sylm_xshd/kjdt.htm">
+                        <div class="weui-cell__bd">查看更多</div>
+                        <span class="weui-cell__ft"></span>
+                    </a>
+                </div><script>_showDynClickBatch(['dynclicks_u31_13416','dynclicks_u31_10061','dynclicks_u31_10060','dynclicks_u31_10062','dynclicks_u31_10063'],[13416,10061,10060,10062,10063],"wbnews", 1451357099)</script>
+
+                       </div>
+                </div>
+                
+            </div>
+           
+        </div>
+        <!--/学术活动-->
+            
+
+            <!--页脚-->
+ <!--版权信息-->
+                <div class="weui-footer footer">
+           <!--
+             <p class="weui-footer__links">
+                <a href="http://fdc.swjtu.edu.cn?m2w" class="weui-footer__link">触屏版</a>
+                <a href="/index.html" class="weui-footer__link">电脑版</a>
+            </p>
+               -->
+            <p class="weui-footer__text">西南交通大学材料科学与工程学院</p>
+        </div>
+        <!--/版权信息-->
+
+        <!--底部导航-->
+        
+                <div class="weui-tab foot-nav">
+            
+            <div class="weui-tabbar">
+                
+               <a href="/index.htm" class="weui-tabbar__item">
+                    <i class="iconfont icon-home weui-tabbar__icon"></i>
+                    <p class="weui-tabbar__label">首页</p>
+                </a>
+                <a href="https://clxy.swjtu.edu.cn/lxwm/wxewm.htm" class="weui-tabbar__item">
+                    <span class="item-box">
+                        <i class="iconfont icon-msg weui-tabbar__icon"></i>
+                    </span>
+                    <p class="weui-tabbar__label">官微</p>
+                </a>
+               
+                <a href="https://clxy.swjtu.edu.cn/lxwm/lxfs.htm" class="weui-tabbar__item">
+                    <i class="iconfont  icon-tel weui-tabbar__icon"></i>
+                    <p class="weui-tabbar__label">联系</p>
+                </a>
+            </div>
+        </div>
+        
+
+        <!--/底部导航-->
+        <!--页脚-->
+                    
+        </div>
+        <!--/页面内容-->
+    </div>
+</div>
+
+</script>
+<script type="text/javascript">
+if(browserRedirect())
+{
+document.getElementById("mobile").style.display = "block"; 
+    document.getElementById("pc").style.display = "none"; 
+}
+else
+{
+document.getElementById("pc").style.display = "block"; 
+    document.getElementById("mobile").style.display = "none"; 
+}
+
+</script>
+    
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

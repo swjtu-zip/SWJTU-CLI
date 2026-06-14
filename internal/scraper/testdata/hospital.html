@@ -1,0 +1,556 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="">
+    
+ 
+    <!-- Place favicon.ico in the root directory -->
+    <title>西南交通大学校医院</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="西南交通大学校医院">
+<META Name="keywords" Content="校医院" />
+
+    <link rel="stylesheet" href="dfiles/4481/css/main.css">
+ 
+    
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1001,'/index.jsp',-1,1502697702)</script>
+</head>
+<body>
+    <!--[if lte IE 7]>
+        <p style="text-align: center;line-height: 50px;">请升级您的浏览器以获取更好的体验！</p>
+    <![endif]-->
+
+    <!-- header -->
+    <div class="header">
+        <div class="box">
+            <a class="logo" href=""></a>
+<!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu0 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+        margin-top: -15px;
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu0 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu0"></div>
+<script type="text/html" id="htmlu0">
+    <div id="appu0">
+        <div v-if="!isError">
+          
+            
+            
+            <div class="search">
+                <span class="search-text"></span>
+                <div class="search-box">
+                    <span class="icon search"></span>
+
+                    <input type="text" placeholder="输入搜索关键字" class="search-input" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit" />
+<input class="search-link" type="submit"  v-on:click="onSubmit()" value="搜索"></input>
+                </div>
+            </div>
+            
+            
+            
+            
+            
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu0").html($("#htmlu0").text());
+</script>
+<script>
+    var appOwner = "1502697702";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu0",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu0 = document.querySelector("#appu0");
+   if (appElementu0 && appElementu0.__vue__) {
+
+   } else {
+      $("#divu0").html($("#htmlu0").text());
+      var appOwner = "1502697702";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou0 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu0(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu0();
+        }
+      };
+
+      function onSubmitu0(e) {
+        queryInfou0.query.keyWord= $("#appu0  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou0.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+            
+        </div>
+    </div>
+
+    <!-- 导航 -->
+    <div class="nav">
+        <div class="box">
+            <ul class="nav-links">
+      <li>
+        <a href="index.htm">首页</a>
+      </li>
+      <li>
+        <a href="yygk.htm">医院概况</a>
+      </li>
+      <li>
+        <a href="ddjs.htm">党的建设</a>
+      </li>
+      <li>
+        <a href="yydt.htm">医院动态</a>
+      </li>
+      <li>
+        <a href="tzgg.htm">通知公告</a>
+      </li>
+      <li>
+        <a href="jkjy.htm">健康教育</a>
+      </li>
+      <li>
+        <a href="ylbx.htm">医疗保险</a>
+      </li>
+      <li>
+        <a href="jkgl.htm">健康管理</a>
+      </li>
+      <li>
+        <a href="hszh.htm">红十字会</a>
+      </li>
+      <li>
+        <a href="lxwm.htm">联系我们</a>
+      </li>
+         </ul>
+        </div>
+    </div>
+
+     <!-- picture-flow -->
+    
+
+<script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script><div class="visual-slider visual-slider1">
+        <div class="flicking-con">
+            <div class="flicking-inner">
+                <a href="javascript:void(0)"></a>
+                
+                <a href="javascript:void(0)"></a>
+                
+                <a href="javascript:void(0)"></a>
+                
+                <a href="javascript:void(0)"></a>
+                
+                <a href="javascript:void(0)"></a>
+                
+            </div>
+        </div>
+        <div class="main-image main-image1">
+            <ul>          
+                <li><a href="info/1019/6698.htm" style="background:url(/__local/B/2B/B0/24C2BDA4B250FB0B9030E9AE9C4_CA51CEE5_11B3B.jpg) no-repeat center;background-size: cover;"></a></li>
+                
+                <li><a href="info/1019/6678.htm" style="background:url(/__local/B/F3/AF/AF5D4B8085E9F0B24E8BAE0C416_CD41679E_2A14B.jpg) no-repeat center;background-size: cover;"></a></li>
+                
+                <li><a href="info/1019/6668.htm" style="background:url(/__local/2/5C/DB/82551EAAFBBF3760942B89365CC_65D904E6_1AE5D.jpg) no-repeat center;background-size: cover;"></a></li>
+                
+                <li><a href="info/1019/1438.htm" style="background:url(/__local/A/65/B3/DED874A95A31EEC46B5B8499879_67E3BD9E_B13FF.jpg) no-repeat center;background-size: cover;"></a></li>
+                
+                <li><a href="info/1019/1426.htm" style="background:url(/__local/C/FE/FE/CEDBF39A758F7D5172A4888BF72_3BD28E31_57DBE.jpg) no-repeat center;background-size: cover;"></a></li>
+                
+            </ul>
+        </div> 
+        <a href="javascript:;" id="btn-prev" class="btn-prev1"></a>
+        <a href="javascript:;" id="btn-next" class="btn-next1"></a>   
+    </div>
+<script>_showDynClickBatch(['dynclicks_u2_6698','dynclicks_u2_6678','dynclicks_u2_6668','dynclicks_u2_1438','dynclicks_u2_1426'],[6698,6678,6668,1438,1426],"wbnews", 1502697702)</script>
+
+    <!-- picture-flow end -->
+    <!-- content -->
+    <div class="content">
+        <div class="box">
+            <!-- 1 -->
+            
+
+<div class="first">
+                <div class="left half">
+                    <div class="visual-slider visual-slider2">
+                        <div class="flicking-con">
+                            <div class="flicking-inner">
+<a href="javascript:void(0)"></a>
+<a href="javascript:void(0)"></a>
+<a href="javascript:void(0)"></a>
+<a href="javascript:void(0)"></a>
+<a href="javascript:void(0)"></a>
+                                
+                               
+                            </div>
+                        </div>
+                        <div class="main-image main-image2">
+                            <ul>        
+                                <li>
+                                    <a href="https://mp.weixin.qq.com/s/dc5tZVcelLMRkCGfOysxgg" style="background:url(/__local/E/B3/C9/D13D17FF302C0AFD2CF6A567355_C917D5B3_3819A.jpg) no-repeat center;background-size: cover;"></a>
+                                    <p class="pic-title">“急救地摊”——练“救”真本领，守“护”校园平安</p>
+                                </li>
+                                <li>
+                                    <a href="https://mp.weixin.qq.com/s/sfllgp19J9bYWNzcGWdfWg" style="background:url(/__local/F/5E/6B/B479303A183C9150DEBADF457C1_DAABF365_701AC.jpg) no-repeat center;background-size: cover;"></a>
+                                    <p class="pic-title">以平凡坚守，守护校园健康</p>
+                                </li>
+                                <li>
+                                    <a href="info/1006/6618.htm" style="background:url(/__local/D/6E/6A/55F2373E7B06DE3934E0EE3AE74_4AC86C35_E18C0.png) no-repeat center;background-size: cover;"></a>
+                                    <p class="pic-title">西南交通大学开展2026年食品安全突发事件应急演练</p>
+                                </li>
+                                <li>
+                                    <a href="info/1006/6598.htm" style="background:url(/__local/B/8F/34/9999E5B5D841F7F707C509BBC2A_D4C55D3E_5EC62.jpg) no-repeat center;background-size: cover;"></a>
+                                    <p class="pic-title">医疗有温度 锦旗寄真情——校医院再获两面患者致谢锦旗</p>
+                                </li>
+                                <li>
+                                    <a href="info/1006/6578.htm" style="background:url(/__local/D/B3/C3/A71189A7AFA06B74EB23C4E12B9_E198E2E8_A4885.png) no-repeat center;background-size: cover;"></a>
+                                    <p class="pic-title">救在身边—2026年西南交通大学红十字救护员第一期培训开班</p>
+                                </li>
+
+                            </ul>
+                        </div>  
+                    </div>
+                </div>
+<script>_showDynClickBatch(['dynclicks_u3_6688','dynclicks_u3_6648','dynclicks_u3_6618','dynclicks_u3_6598','dynclicks_u3_6578'],[6688,6648,6618,6598,6578],"wbnews", 1502697702)</script>
+
+                
+
+<div class="left list half">
+                    <h3 class="title-text">医院动态<span class="sub">NEWS</span></h3>
+                    <ul class="list-1">
+<li><span class="date">05-09</span><a href="https://mp.weixin.qq.com/s/dc5tZVcelLMRkCGfOysxgg">“急救地摊”——练“救”真本领，守“护”校园平安</a></li>
+<li><span class="date">05-06</span><a href="https://mp.weixin.qq.com/s/sfllgp19J9bYWNzcGWdfWg">以平凡坚守，守护校园健康</a></li>
+<li><span class="date">04-24</span><a href="info/1006/6618.htm">西南交通大学开展2026年食品安全突发事件应急演练</a></li>
+<li><span class="date">04-23</span><a href="info/1006/6598.htm">医疗有温度 锦旗寄真情——校医院再获两面患者致谢锦旗</a></li>
+<li><span class="date">04-01</span><a href="info/1006/6578.htm">救在身边—2026年西南交通大学红十字救护员第一期培训开...</a></li>
+<li><span class="date">03-31</span><a href="info/1006/6538.htm">“全面行动 全力投入 全民参与 终结结核”学校开展3.24世...</a></li>
+                       
+                    </ul>
+                    <div class="more"><a class="more-content" href="yydt.htm">More +</a></div>
+                </div>
+<script>_showDynClickBatch(['dynclicks_u4_6688','dynclicks_u4_6648','dynclicks_u4_6618','dynclicks_u4_6598','dynclicks_u4_6578','dynclicks_u4_6538'],[6688,6648,6618,6598,6578,6538],"wbnews", 1502697702)</script>
+
+            </div>
+            
+
+            <!-- 2 -->
+           
+            
+
+            <!-- 3 -->
+            <div class="third box" style="padding-bottom: 0">
+                <ul class="list-3">
+                    <li>
+                        
+
+<div class="title blue"><span class="h3">党的建设</span><span class="sub">NOTICE</span><a href="ddjs.htm" class="more">More +</a></div>
+                        <ul class="common-list">
+<li><a href="info/1012/6738.htm">校医院党支部开展2026年5月主题党日活动<span class="date">06-01</span></a></li> 
+<li><a href="info/1012/6748.htm">校医院党支部开展2026年第三次教职工政...<span class="date">06-01</span></a></li> 
+<li><a href="info/1012/6558.htm">校医院党支部开展4月主题党日活动<span class="date">04-10</span></a></li> 
+<li><a href="info/1012/6548.htm">校医院党支部专题学习习近平总书记给四...<span class="date">04-10</span></a></li> 
+<li><a href="info/1012/6488.htm">校医院党支部开展“3.24世界防治结核病...<span class="date">03-31</span></a></li> 
+<li><a href="info/1012/6478.htm">校医院党支部开展2026年第一次教职工政...<span class="date">03-30</span></a></li> 
+<li><a href="info/1012/6378.htm">校医院党支部召开2025年度组织生活会暨...<span class="date">03-16</span></a></li> 
+                        </ul>
+<script>_showDynClickBatch(['dynclicks_u5_6738','dynclicks_u5_6748','dynclicks_u5_6558','dynclicks_u5_6548','dynclicks_u5_6488','dynclicks_u5_6478','dynclicks_u5_6378'],[6738,6748,6558,6548,6488,6478,6378],"wbnews", 1502697702)</script>
+
+                    </li>
+                    <li>
+                        
+
+<div class="title blue"><span class="h3">通知公告</span><span class="sub">HEALTH EDU</span><a href="tzgg.htm" class="more">More +</a></div>
+                        <ul class="common-list">
+ <li><a href="info/1009/6588.htm">关于开展2026年度教职工健康体检工作的...<span class="date">04-16</span></a></li>
+ <li><a href="info/1009/6758.htm">关于西南交通大学红十字会第五届学生分...<span class="date">06-04</span></a></li>
+ <li><a href="info/1009/6718.htm">关于延迟第二届“救在身边·校园守护”应...<span class="date">05-29</span></a></li>
+ <li><a href="info/1009/6708.htm">关于举办第二届“救在身边·校园守护”应...<span class="date">05-22</span></a></li>
+ <li><a href="info/1009/6638.htm">关于校医院救护车暂停服务的通知<span class="date">04-30</span></a></li>
+ <li><a href="info/1009/6398.htm">关于九里校区2026年度毕业生体检工作的...<span class="date">03-19</span></a></li>
+ <li><a href="info/1009/6358.htm">关于开展2026年度毕业生体检工作的通知<span class="date">03-16</span></a></li>
+                        </ul>
+<script>_showDynClickBatch(['dynclicks_u6_6588','dynclicks_u6_6758','dynclicks_u6_6718','dynclicks_u6_6708','dynclicks_u6_6638','dynclicks_u6_6398','dynclicks_u6_6358'],[6588,6758,6718,6708,6638,6398,6358],"wbnews", 1502697702)</script>
+
+                    </li>
+                    <li>
+                        
+
+<div class="title blue"><span class="h3">医疗保险</span><span class="sub">HEALTH POLICY</span><a href="##" class="more">More +</a></div>
+                        <ul class="common-list">
+                            <li><a href="info/1013/6728.htm">关于及时报销2025年度大学生医保医疗票...<span class="date">06-03</span></a></li>
+                            <li><a href="info/1013/3898.htm">医保诊疗项目和服务设施目录<span class="date">01-29</span></a></li>
+                            <li><a href="info/1013/6568.htm">关于2026年度大学生医疗保险退费的通知<span class="date">04-10</span></a></li>
+                            <li><a href="info/1013/6388.htm">关于西南交通大学2026年度城乡居民医疗...<span class="date">03-18</span></a></li>
+                            <li><a href="info/1013/6328.htm">关于2026年度大学生医保费退费的通知<span class="date">03-05</span></a></li>
+                            <li><a href="info/1013/6278.htm">关于2026年度大学生医疗保险缴费的通知<span class="date">02-26</span></a></li>
+                            <li><a href="info/1013/6238.htm">关于医保暂停报销事宜的通知<span class="date">01-08</span></a></li>
+                        </ul>
+<script>_showDynClickBatch(['dynclicks_u7_6728','dynclicks_u7_3898','dynclicks_u7_6568','dynclicks_u7_6388','dynclicks_u7_6328','dynclicks_u7_6278','dynclicks_u7_6238'],[6728,3898,6568,6388,6328,6278,6238],"wbnews", 1502697702)</script>
+
+                    </li>
+                    
+                </ul>
+
+            </div>
+
+           
+        </div>
+
+         <div class="forth">
+            <div class="box">
+                
+
+<div class="title"><p class="h3 center">科室介绍</p><p class="sub center">Department introduction</p></div>
+                <div class="visual-slider visual-slider3">
+                    <div class="main-image main-image3">
+                        <ul class="main-image3-list" style="left: 0px;"> 
+<li><a href="info/1020/1327.htm">
+                                <img src="/__local/9/D6/48/403390E0747DFB0BC5FF3C240BF_19B8C713_84A05.png" width="254" height="150" />
+                                <p class="type">内科</p>
+                            </a></li>
+<li><a href="info/1020/1328.htm">
+                                <img src="/__local/9/71/6B/36A48B05CABBA367107294EC533_BC705AF9_85AA1.png" width="254" height="150" />
+                                <p class="type">外科</p>
+                            </a></li>
+<li><a href="info/1020/4148.htm">
+                                <img src="/__local/B/81/DE/A5862ED682E40D77FF1C6AC09A7_E98F0DE8_83353.png" width="254" height="150" />
+                                <p class="type">皮肤科</p>
+                            </a></li>
+<li><a href="info/1020/4908.htm">
+                                <img src="/__local/A/E6/BD/926B230AA579811ED9E18030562_45F16C07_78527.png" width="254" height="150" />
+                                <p class="type">眼耳鼻喉科</p>
+                            </a></li>
+<li><a href="info/1020/1364.htm">
+                                <img src="/__local/7/6E/36/9030A5CDD401CB1DAAD73A4B4BF_9D123B00_94E2F.png" width="254" height="150" />
+                                <p class="type">口腔科</p>
+                            </a></li>
+<li><a href="info/1020/1363.htm">
+                                <img src="/__local/5/8E/FE/3A1AEDCF971957559951D3A00BB_94C8C2DF_8E31B.png" width="254" height="150" />
+                                <p class="type">中医康复科</p>
+                            </a></li>
+<li><a href="info/1020/4918.htm">
+                                <img src="/__local/E/48/70/F19F7177DB3B08A4EE761AD1723_3B313A3E_81DAA.png" width="254" height="150" />
+                                <p class="type">影像科</p>
+                            </a></li>
+<li><a href="info/1020/1341.htm">
+                                <img src="/__local/2/C4/CB/286B953E7550286D3E6077AD7A2_1BB2B23B_84A28.png" width="254" height="150" />
+                                <p class="type">检验科</p>
+                            </a></li>
+                            
+                           
+                        </ul>
+                    </div> 
+                    <a href="javascript:;" id="btn-prev2" class="btn-prev2"></a>
+                    <a href="javascript:;" id="btn-next2" class="btn-next2"></a>
+                </div>
+<script>_showDynClickBatch(['dynclicks_u8_1327','dynclicks_u8_1328','dynclicks_u8_4148','dynclicks_u8_4908','dynclicks_u8_1364','dynclicks_u8_1363','dynclicks_u8_4918','dynclicks_u8_1341'],[1327,1328,4148,4908,1364,1363,4918,1341],"wbnews", 1502697702)</script>
+
+            </div>
+            
+        </div>
+        <div class="friend-link">
+            <div class="box">
+                
+                <script language="javascript" src="/system/resource/js/openlink.js"></script>友情链接：
+<ul>
+
+                   
+                   
+                </ul>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- footer -->
+    
+    <div class="bottom">
+
+        <div class="box">
+            <a class="logo"></a>
+            <div class="address">
+                <table>
+                    <tr>
+                        <td class="em">咨询电话：</td>
+                        <td>028-87600480（九里校区）</td>
+                        <td class="em"></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>028-66366480（犀浦校区）</td>
+                        <td></td>
+                    </tr>
+                   
+                </table>
+                <p>地址：中国四川成都市二环路北一段111号 邮编：610031</p>
+                <p style="margin-top: 20px">Copyright 2018西南交通大学校医院. All Rights Reserved.</p>
+                <p>蜀ICP备05026985 <img src="dfiles/4481/images/icon_police.jpg" class="icon" />川公网安备 5101060200000061</p>
+            </div>
+            <div class="qr">
+                <div class="section">
+                   <!-- <img src="/dfiles/4481/images/qr1.jpg" alt="##" />
+                    <p>扫码关注微信公众号</p>-->
+                </div>
+                <div class="section">
+                   <!--  <img src="/dfiles/4481/images/qr2.jpg" alt="##" />
+                    <p>扫码关注官方微博</p>-->
+                </div>
+            </div>    
+        </div>
+    </div>
+
+   <script src="dfiles/4481/js/jquery.min.js"></script>
+    <script src="dfiles/4481/js/homeban.js"></script>
+    <script src="dfiles/4481/js/jquery.touchslider.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+

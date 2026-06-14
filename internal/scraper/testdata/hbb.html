@@ -1,0 +1,995 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="renderer" content="webkit" />
+    <meta name="force-rendering" content="webkit" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1" />
+    <title>后勤保障部</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="后勤保障部">
+<META Name="keywords" Content="后勤保障部,首页" />
+
+    <meta name="description" content="" />
+    
+    <meta name="viewport" content="width=device-width, maximum-scale=1, initial-scale=1, user-scalable=no, viewport-fit=cover">
+    <link rel="stylesheet" type="text/css" href="static/css/normalize.css" />
+    <link rel="stylesheet" type="text/css" href="static/css/swiper.min.css" />
+    <link rel="stylesheet" type="text/css" href="static/css/style.css" />
+    <link rel="stylesheet" type="text/css" href="static/css/responsive.css" />
+    <script src="static/js/jquery.min.js" type="text/javascript" charset="utf-8"></script>
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1001,'/index.jsp',-1,1447716430)</script>
+</head>
+
+<body>
+    <header class="header home-header">
+        <div class="container">
+            <div class="logo">
+               
+                   <a href="index.htm" target="">
+                    <img src="static/images/logo_bai.png" alt="">
+                </a>
+               
+            </div>
+            <nav class="nav">
+                <div class="nav-box">
+                    <div class="search">
+                        <div class="language">
+                            <a href="javascript:void(0);">EN</a>
+                        </div>
+                       
+                           <!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu0 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+  
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu0 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu0"></div>
+<script type="text/html" id="htmlu0">
+    <div id="appu0">
+        <div v-if="!isError" class="form">
+        
+         <button id="search_btn" class="search_btn" v-on:click="onSubmit()"></button>
+ <input type="text" placeholder="请输入关键字"  autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit" >
+        
+        
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu0").html($("#htmlu0").text());
+</script>
+<script>
+    var appOwner = "1447716430";
+    var token = 'tourist';
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu0",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu0 = document.querySelector("#appu0");
+   if (appElementu0 && appElementu0.__vue__) {
+
+   } else {
+      $("#divu0").html($("#htmlu0").text());
+      var appOwner = "1447716430";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou0 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu0(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu0();
+        }
+      };
+
+      function onSubmitu0(e) {
+        queryInfou0.query.keyWord= $("#appu0  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou0.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+                       
+                    </div>
+                    <ul>
+  
+    
+                        <li>
+                            <a href="bmjs/gk.htm">部门介绍</a>
+                            <i class="arrow"></i>
+                              <div class="dropdown">
+                                <div class="box">
+                                    <div class="img" style="background-image: url(static/images/2022032208462603.jpg);"></div>
+                                    <dl class="list">
+                                         <dd>
+                                            <a target="_blank" href="bmjs/gk.htm" title="概况"><span></span>概况</a>
+                                        </dd>
+                                         <dd>
+                                            <a target="_blank" href="bmjs/zzjg.htm" title="组织架构"><span></span>组织架构</a>
+                                        </dd>
+                                         <dd>
+                                            <a target="_blank" href="bmjs/xrld.htm" title="现任领导"><span></span>现任领导</a>
+                                        </dd>
+                                         <dd>
+                                            <a target="_blank" href="bmjs/jgks1/zhk.htm" title="机关科室"><span></span>机关科室</a>
+                                        </dd>
+                                         <dd>
+                                            <a target="_blank" href="bmjs/gzx/gyglyfwzx.htm" title="各中心"><span></span>各中心</a>
+                                        </dd>
+                            
+                                     </dl>
+                                   </div>
+                                 </div>
+                          
+                                       
+                          
+                        </li>
+                      
+               
+        
+
+
+  
+    
+                        <li>
+                            <a href="hqfw.htm">后勤服务</a>
+                            <i class="arrow"></i>
+                              <div class="dropdown">
+                                <div class="box">
+                                    <div class="img" style="background-image: url(static/images/2022032214483709.jpg);"></div>
+                                    <dl class="list">
+                                         <dd>
+                                            <a target="_blank" href="hqfw.htm" title="后勤服务索引"><span></span>后勤服务索引</a>
+                                        </dd>
+                                         <dd>
+                                            <a target="_blank" href="hqfw/zsbgxz.htm" title="制式表格下载"><span></span>制式表格下载</a>
+                                        </dd>
+                                         <dd>
+                                            <a target="_blank" href="http://hqoa.swjtu.edu.cn/" title="后勤OA"><span></span>后勤OA</a>
+                                        </dd>
+                            
+                                     </dl>
+                                   </div>
+                                 </div>
+                          
+                                       
+                          
+                        </li>
+                      
+               
+        
+
+
+  
+    
+                        <li>
+                            <a href="cggl.htm">采购管理</a>
+                            <i class="arrow"></i>
+                              <div class="dropdown">
+                                <div class="box">
+                                    <div class="img" style="background-image: url(static/images/2022032215183401.jpg);"></div>
+                                    <dl class="list">
+                                         <dd>
+                                            <a target="_blank" href="cggl/cggg.htm" title="采购公告"><span></span>采购公告</a>
+                                        </dd>
+                                         <dd>
+                                            <a target="_blank" href="cggl/jggg.htm" title="结果公告"><span></span>结果公告</a>
+                                        </dd>
+                            
+                                     </dl>
+                                   </div>
+                                 </div>
+                          
+                                       
+                          
+                        </li>
+                      
+               
+        
+
+
+  
+    
+                        <li>
+                            <a href="zpxx.htm">招聘信息</a>
+                            <i class="arrow"></i>
+                              <div class="dropdown">
+                                <div class="box">
+                                    <div class="img" style="background-image: url(static/images/2022032214490103.jpg);"></div>
+                                    <dl class="list">
+                                         <dd>
+                                            <a target="_blank" href="zpxx/zpxx.htm" title="招聘信息"><span></span>招聘信息</a>
+                                        </dd>
+                                         <dd>
+                                            <a target="_blank" href="zpxx/npgs.htm" title="拟聘公示"><span></span>拟聘公示</a>
+                                        </dd>
+                            
+                                     </dl>
+                                   </div>
+                                 </div>
+                          
+                                       
+                          
+                        </li>
+                      
+               
+        
+
+   
+   
+
+  
+    
+                        <li>
+                            <a href="djgz1.htm">党建工作</a>
+                            <i class="arrow"></i>
+                              <div class="dropdown">
+                                <div class="box">
+                                    <div class="img" style="background-image: url(static/images/2022032208464504.jpg);"></div>
+                                    <dl class="list">
+                                         <dd>
+                                            <a target="_blank" href="https://news.swjtu.edu.cn/slhjxzqzjgxxjy.htm" title="学校专题网站"><span></span>学校专题网站</a>
+                                        </dd>
+                                         <dd>
+                                            <a target="_blank" href="djgz1/xxzl.htm" title="学习资料"><span></span>学习资料</a>
+                                        </dd>
+                                         <dd>
+                                            <a target="_blank" href="djgz1/xxdt.htm" title="学习动态"><span></span>学习动态</a>
+                                        </dd>
+                            
+                                     </dl>
+                                   </div>
+                                 </div>
+                          
+                                       
+                          
+                        </li>
+                      
+               
+        
+
+</ul>
+                </div>
+            </nav>
+            <div class="gh">
+                <a href="javascript:void(0);"></a>
+            </div>
+        </div>
+    </header>
+    <section class="banner-wrap">
+        <div class="swiper-container">
+            <ul class="swiper-wrapper">
+               
+
+<script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script>
+
+                  <li class="swiper-slide"> 
+                   <a href="#"><img src="/__local/B/61/14/C6EED084EB10ACF6363AE6E7D0A_42C71FAB_6680A.jpg" style="width:100%;height:100%;"></img>  <p>后勤保障部获学校八届四次教代会“提案承办先进单位” </p></a> 
+                </li>
+                
+
+
+
+                  <li class="swiper-slide"> 
+                   <a href="#"><img src="/__local/F/A4/CB/AC7B07F356DF3510DE10CF0C72B_A5467DFA_3FBE9.jpg" style="width:100%;height:100%;"></img>  <p>奋进“十五五” 百卅新风华 </p></a> 
+                </li>
+                
+
+
+
+                  <li class="swiper-slide"> 
+                   <a href="#"><img src="/__local/4/0F/3D/E99148ACCDAFC1F6C2D67354D72_F134BE0E_315AB.jpg" style="width:100%;height:100%;"></img>  <p>热烈庆祝西南交通大学建校130周年 </p></a> 
+                </li>
+                
+
+
+
+                  <li class="swiper-slide"> 
+                   <a href="#"><img src="/__local/4/96/B1/0CFFF5EFBBD3EE78755D8A9C832_3DDF64E3_21199.jpg" style="width:100%;height:100%;"></img>  <p>深入学习贯彻习近平总书记给四所交通大学全体师生重要回信精神 </p></a> 
+                </li>
+                
+
+
+
+                  <li class="swiper-slide"> 
+                   <a href="#"><img src="/__local/C/22/77/5D1C79D0A9EF760C089081FB398_FFC34330_2A3B6.jpg" style="width:100%;height:100%;"></img>  <p>扎实开展树立和践行正确政绩观学习教育 </p></a> 
+                </li>
+                
+
+
+
+                  <li class="swiper-slide"> 
+                   <a href="#"><img src="/__local/2/C1/D9/0E61B7FB168F9A4B561E1B17C75_6EAEC496_3590E.jpg" style="width:100%;height:100%;"></img>  <p>芒种 </p></a> 
+                </li>
+                
+
+<script>_showDynClickBatch(['dynclicks_u2_81062','dynclicks_u2_80752','dynclicks_u2_80732','dynclicks_u2_80142','dynclicks_u2_79552','dynclicks_u2_80782'],[81062,80752,80732,80142,79552,80782],"wbnews", 1447716430)</script>
+
+            </ul>
+            <div class="swiper-button-prev"></div>
+            <div class="swiper-button-next"></div>
+            <div class="swiper-pagination"></div>
+        </div>
+        <div class="list">
+            <div class="container">
+             
+            </div>
+        </div>
+    </section>
+    <section class="list-wrap">
+        <div class="container">
+            <div class="news-list">
+            <div class="title global-title">
+                    <h3><span>新闻动态 \ NEWS INFORMATION</span></h3>
+                    <p class="line"></p>
+                    <a class="more" href="hjxw/hqxw.htm" target="">更多&gt;</a>
+                </div>
+            
+
+              
+             
+                    
+
+  <div class="big">
+                    <a href="#">
+                        <div class="img">
+                            <img src="/__local/0/E3/25/AFA5A228BEDFA6CEABF17276890_509CF83C_23BF2.jpg" alt="" style="width:100%;height:100%;">
+                        </div>
+                        <h4 style="text-align:center;width:100%;">全方位展现自信自强、有为有位的后勤工作新面貌 </h4>
+                    </a>
+                </div>
+   <ul class="list">
+
+            
+
+     
+      <li>
+                        <a href="https://mp.weixin.qq.com/s/idEABUybgKuT2KWCXzpx_Q">
+                            <p> 学厨交大丨“自己做的就是好吃，香迷糊了 ! ”</p>
+                            <span>2026-06-03</span>
+                        </a>
+        </li>         
+
+            
+
+     
+      <li>
+                        <a href="info/1021/80842.htm">
+                            <p> 后勤保障部召开夏季防汛防火专项排查行前培训会</p>
+                            <span>2026-05-28</span>
+                        </a>
+        </li>         
+
+            
+
+     
+      <li>
+                        <a href="info/1021/80832.htm">
+                            <p> 后勤保障部组织召开2026年毕业季师生座谈会</p>
+                            <span>2026-05-26</span>
+                        </a>
+        </li>         
+
+            
+
+     
+      <li>
+                        <a href="https://news.swjtu.edu.cn/info/1011/103525.htm">
+                            <p> 学校“品味交大 共飨世界”国际美食文化节开幕</p>
+                            <span>2026-05-11</span>
+                        </a>
+        </li>         
+
+            
+
+     
+      <li>
+                        <a href="info/1021/80582.htm">
+                            <p> 后勤保障部组织学生代表参观大宗食品原材料生产基地</p>
+                            <span>2026-05-08</span>
+                        </a>
+        </li>         
+
+            
+
+     
+      <li>
+                        <a href="info/1021/80542.htm">
+                            <p> 后勤保障部切实抓好“五一”假期前安全工作</p>
+                            <span>2026-04-30</span>
+                        </a>
+        </li>         
+
+            
+
+     
+      <li>
+                        <a href="info/1021/80502.htm">
+                            <p> 四川省市场监管局来校开展食品安全体系检查</p>
+                            <span>2026-04-30</span>
+                        </a>
+        </li>         
+
+            
+  </ul>      <script>_showDynClickBatch(['dynclicks_u3_68322','dynclicks_u3_80962','dynclicks_u3_80842','dynclicks_u3_80832','dynclicks_u3_80662','dynclicks_u3_80582','dynclicks_u3_80542','dynclicks_u3_80502'],[68322,80962,80842,80832,80662,80582,80542,80502],"wbnews", 1447716430)</script>
+</div>
+            <div class="notice-list">
+                <div class="title global-title">
+                    <h3><span>通知公告 \NOTICE ANNOUNCEMENT</span></h3>
+                    <p class="line"></p>
+                    <a class="more" href="tzgg/tzgg.htm" target="">更多&gt;</a>
+                </div>
+                
+
+              
+             
+                    
+
+  <div class="big">
+                    <a href="info/1018/81002.htm">
+                        <div class="img">
+                          <img src="2022/static/images/img_02.jpg" alt="">   
+                        </div>
+                        <h4 style="text-align:center;width:100%;">关于九里校区游泳池开放的温馨提示 </h4>
+                    </a>
+                </div>
+   <ul class="list">
+
+            
+
+     
+      <li>
+                        <a href="info/1018/80992.htm">
+                            <p> 关于九里校区部分区域计划性停电的通知</p>
+                            <span>2026-06-04</span>
+                        </a>
+        </li>         
+
+            
+
+     
+      <li>
+                        <a href="info/1018/80982.htm">
+                            <p> 2026年上半年全国大学英语四、六级考试西南交通大学交通车时刻表</p>
+                            <span>2026-06-04</span>
+                        </a>
+        </li>         
+
+            
+
+     
+      <li>
+                        <a href="info/1018/80952.htm">
+                            <p> 关于犀浦校区北区计划停水的通知</p>
+                            <span>2026-06-03</span>
+                        </a>
+        </li>         
+
+            
+
+     
+      <li>
+                        <a href="info/1018/80792.htm">
+                            <p> 关于2026年毕业季免费开放部分活动场地的通知</p>
+                            <span>2026-05-25</span>
+                        </a>
+        </li>         
+
+            
+
+     
+      <li>
+                        <a href="info/1018/80722.htm">
+                            <p> 关于校庆期间成都两校区交通车免费乘坐的通知</p>
+                            <span>2026-05-12</span>
+                        </a>
+        </li>         
+
+            
+
+     
+      <li>
+                        <a href="info/1018/80642.htm">
+                            <p> 关于开启犀浦、九里校区中央空调夏季制冷模式的通知</p>
+                            <span>2026-05-08</span>
+                        </a>
+        </li>         
+
+            
+
+     
+      <li>
+                        <a href="info/1018/80532.htm">
+                            <p> 关于犀浦校区部分体育场馆临时停用的通知</p>
+                            <span>2026-05-06</span>
+                        </a>
+        </li>         
+
+            
+  </ul>      <script>_showDynClickBatch(['dynclicks_u4_81002','dynclicks_u4_80992','dynclicks_u4_80982','dynclicks_u4_80952','dynclicks_u4_80792','dynclicks_u4_80722','dynclicks_u4_80642','dynclicks_u4_80532'],[81002,80992,80982,80952,80792,80722,80642,80532],"wbnews", 1447716430)</script>
+
+              
+            </div>
+        </div>
+    </section>
+    <section class="media-wrap">
+        <div class="container">
+            <div class="left">
+                <div class="title global-title">
+                    <h3><img src="static/images/news_nav.png" alt=""> <span>社交媒体 \ NEW MEDIA</span></h3>
+                    <p class="line"></p>
+                    <a class="more" href="sjmt/wxgzh.htm" target="">更多&gt;</a>
+                </div>
+                <ul class="list">
+
+<li>
+                        <a href="https://mp.weixin.qq.com/s/idEABUybgKuT2KWCXzpx_Q">
+                            <div class="date">
+                                <p class="t1">03</p>
+                                <p class="t2">2026-06</p>
+                            </div>
+                            <div class="img">
+                                <img src="2022/static/images/wx.png" alt="">
+                            </div>
+                            <div class="txt">
+                                <p> 学厨交大丨“自己做的就是好吃，香迷糊了 ! ”</p>
+                            </div>
+                            <div class="btn"></div>
+                        </a>
+                    </li>
+                    
+<li>
+                        <a href="https://mp.weixin.qq.com/s/tTTCF6ITIkSgeALyaWC3fA">
+                            <div class="date">
+                                <p class="t1">27</p>
+                                <p class="t2">2026-05</p>
+                            </div>
+                            <div class="img">
+                                <img src="2022/static/images/wx.png" alt="">
+                            </div>
+                            <div class="txt">
+                                <p> 2026届交大人速码！毕业季后勤服务全攻略</p>
+                            </div>
+                            <div class="btn"></div>
+                        </a>
+                    </li>
+                    
+<li>
+                        <a href="https://mp.weixin.qq.com/s/5i8mAcdXWdjxp1kdo3Nj2A">
+                            <div class="date">
+                                <p class="t1">01</p>
+                                <p class="t2">2026-05</p>
+                            </div>
+                            <div class="img">
+                                <img src="2022/static/images/wx.png" alt="">
+                            </div>
+                            <div class="txt">
+                                <p> “五一”进行时，后勤带你解锁劳动新体验</p>
+                            </div>
+                            <div class="btn"></div>
+                        </a>
+                    </li>
+                    
+<li>
+                        <a href="https://mp.weixin.qq.com/s/OI5cRzvSyMogdjGbLOOzEw">
+                            <div class="date">
+                                <p class="t1">24</p>
+                                <p class="t2">2026-04</p>
+                            </div>
+                            <div class="img">
+                                <img src="2022/static/images/wx.png" alt="">
+                            </div>
+                            <div class="txt">
+                                <p> 世界读书日——翻开书页，遇见更好的自己</p>
+                            </div>
+                            <div class="btn"></div>
+                        </a>
+                    </li>
+                    
+<script>_showDynClickBatch(['dynclicks_u5_80972','dynclicks_u5_80852','dynclicks_u5_80522','dynclicks_u5_80392'],[80972,80852,80522,80392],"wbnews", 1447716430)</script>
+</ul>
+            </div>
+           
+        </div>
+    </section>
+   
+    
+    <section class="beauty-wrap">
+        <div class="container">
+            <div class="hd global-title items-center">
+                <div class="box">
+                    <h3><span>校园美景 \ CAMPUS BEAUTY</span></h3>
+                    <p class="line"></p>
+                </div>
+            </div>
+            <div class="bd">
+                <div class="swiper-container">
+                    <ul class="swiper-wrapper">
+                      
+
+
+<li class="swiper-slide">
+                            <a href="info/1141/8958.htm" style="background-image: url(/__local/8/62/A4/FF9E8A15C0ABACA237FAAA83D35_7BB38439_58DEC.jpg);">
+                            </a> </li>
+                        
+
+
+<li class="swiper-slide">
+                            <a href="info/1141/8801.htm" style="background-image: url(/__local/6/92/F1/DE976FFD130D7A7A52AF9569CAC_3BC38E78_38ABA.jpg?e=.jpg);">
+                            </a> </li>
+                        
+
+
+<li class="swiper-slide">
+                            <a href="info/1141/8800.htm" style="background-image: url(/__local/F/31/D9/4DD4888CB8D9B3D718B7FF14C95_9B2741B5_591CF.jpg?e=.jpg);">
+                            </a> </li>
+                        
+
+
+<li class="swiper-slide">
+                            <a href="info/1141/8799.htm" style="background-image: url(/__local/3/B0/7F/3A3662FF70DF29F28898EF12342_AC8BF02E_3E181.jpg?e=.jpg);">
+                            </a> </li>
+                        
+
+
+<li class="swiper-slide">
+                            <a href="info/1141/8790.htm" style="background-image: url(/__local/3/7C/A9/E537F8719C7A97D71A3F7A66D27_839418ED_37086.jpg?e=.jpg);">
+                            </a> </li>
+                        
+
+
+<li class="swiper-slide">
+                            <a href="info/1141/8793.htm" style="background-image: url(/__local/1/D0/60/4164B0422206ED570DBA01110F3_F90BEF35_2DD2A.jpg?e=.jpg);">
+                            </a> </li>
+                        
+
+
+<li class="swiper-slide">
+                            <a href="info/1141/8791.htm" style="background-image: url(/__local/1/34/52/EACE65C04D05042DE321E30F8C7_B3F73B4C_42042.jpg?e=.jpg);">
+                            </a> </li>
+                        
+
+
+<li class="swiper-slide">
+                            <a href="info/1141/8794.htm" style="background-image: url(/__local/E/9E/3C/8649ED4C9BCD76224BEC8591570_BB988E0C_304D3.jpg?e=.jpg);">
+                            </a> </li>
+                        
+
+
+<li class="swiper-slide">
+                            <a href="info/1141/8792.htm" style="background-image: url(/__local/D/D4/95/3D0693E62B03F6238CB141847DD_C72AC86E_48EA9.jpg?e=.jpg);">
+                            </a> </li>
+                        
+
+
+<li class="swiper-slide">
+                            <a href="info/1141/8797.htm" style="background-image: url(/__local/C/36/16/6A407270F22A9AF4A92767FD0A5_AAFAFE88_64050.jpg?e=.jpg);">
+                            </a> </li>
+                        
+
+
+<li class="swiper-slide">
+                            <a href="info/1141/8796.htm" style="background-image: url(/__local/8/70/C1/4B9DFF698F1256DE2A27FF96F7B_A58E5F2B_4E76A.jpg?e=.jpg);">
+                            </a> </li>
+                        
+
+
+<li class="swiper-slide">
+                            <a href="info/1141/8789.htm" style="background-image: url(/__local/F/D2/93/9604CB5679F842E3FDB45E10881_419DE176_29D4E.jpg?e=.jpg);">
+                            </a> </li>
+                        
+
+
+<li class="swiper-slide">
+                            <a href="info/1141/8788.htm" style="background-image: url(/__local/B/68/E7/4ED2DD559777E94373AEFDF287E_B157515A_46F13.jpg?e=.jpg);">
+                            </a> </li>
+                        
+
+
+<li class="swiper-slide">
+                            <a href="info/1141/8782.htm" style="background-image: url(/__local/3/E8/4C/6F42DB037254B7967704B122F94_4AEFC063_64275.jpg?e=.jpg);">
+                            </a> </li>
+                        
+
+
+<li class="swiper-slide">
+                            <a href="info/1141/8784.htm" style="background-image: url(/__local/4/BF/EB/D3A145D0987CE5910436CF5C30B_9D1549A4_4D229.jpg?e=.jpg);">
+                            </a> </li>
+                        
+
+
+<li class="swiper-slide">
+                            <a href="info/1141/8785.htm" style="background-image: url(/__local/7/8F/FC/D0E9551D2051C955A3BBD6DD627_B4307E16_51B63.jpg?e=.jpg);">
+                            </a> </li>
+                        
+
+
+<li class="swiper-slide">
+                            <a href="info/1141/8783.htm" style="background-image: url(/__local/B/96/31/377D9D3D60FB8B3C8A09E98EBE7_69447FC6_45445.jpg?e=.jpg);">
+                            </a> </li>
+                        
+
+
+<li class="swiper-slide">
+                            <a href="info/1141/8781.htm" style="background-image: url(/__local/4/B1/19/FD72E106867E38C898AD6CD37BA_904C3C28_43368.jpg?e=.jpg);">
+                            </a> </li>
+                        
+
+
+<li class="swiper-slide">
+                            <a href="info/1141/8786.htm" style="background-image: url(/__local/1/32/50/2F751C5487E9140400097A41C74_0C800536_563F9.jpg?e=.jpg);">
+                            </a> </li>
+                        
+
+<script>_showDynClickBatch(['dynclicks_u6_8958','dynclicks_u6_8801','dynclicks_u6_8800','dynclicks_u6_8799','dynclicks_u6_8790','dynclicks_u6_8793','dynclicks_u6_8791','dynclicks_u6_8794','dynclicks_u6_8792','dynclicks_u6_8797','dynclicks_u6_8796','dynclicks_u6_8789','dynclicks_u6_8788','dynclicks_u6_8782','dynclicks_u6_8784','dynclicks_u6_8785','dynclicks_u6_8783','dynclicks_u6_8781','dynclicks_u6_8786'],[8958,8801,8800,8799,8790,8793,8791,8794,8792,8797,8796,8789,8788,8782,8784,8785,8783,8781,8786],"wbnews", 1447716430)</script>
+
+                    </ul>
+                    <div class="swiper-button-prev"></div>
+                    <div class="swiper-button-next"></div>
+                </div>
+                <div class="swiper-pagination"></div>
+            </div>
+        </div>
+    </section>
+    <footer class="footer">
+        <div class="container">
+            <div id="go-top">
+                <a href="javascript:void(0);">
+                    <span>回到顶部</span>
+                    <span class="footer-arrow-top"></span>
+                </a>
+            </div>
+            <div class="bd">
+              
+                <div class="qr">
+                    <p>扫码关注</p>
+                    <div class="img">
+                            
+<img src="static/images/ewm.jpg" alt="">
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="address">
+            <div class="container">
+                <div class="logo">
+                    <a href="javascript:void(0);">
+                        <img src="static/images/logo_bai.png" alt="">
+                    </a>
+                </div>
+                <div class="text"><!-- 版权内容请在本组件"内容配置-版权"处填写 -->
+<p>地址：中国四川省成都市郫都区犀安路999号后勤服务楼</p><p>邮编：611756</p><p>邮箱：hbb@swjtu.edu.cn</p><p><br /></p></div>
+                <div class="go-top">
+                    <a href="javascript:void(0);">
+                        <img src="static/images/top.png" alt="">
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- 遮罩层 -->
+    <div class="shade"></div>
+    
+    <script src="static/js/swiper.min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="static/js/script.js" type="text/javascript" charset="utf-8"></script>
+    <script type="text/javascript">
+        $(function () {
+            var bannerSwiper = new Swiper('.banner-wrap .swiper-container', {
+                loop: true,
+                navigation: {
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                },
+                pagination: {
+                    el: '.swiper-pagination',
+                    clickable: true,
+                },
+                autoplay: { // 自动滑动
+                    delay: 3500, //1秒切换一次
+                    disableOnInteraction: false
+                },
+            });
+            var swiper1 = new Swiper('.data-wrap .swiper-container', {
+                slidesPerView: 5,
+                spaceBetween: 30,
+                slidesPerGroup: 5,
+                loop: true,
+                loopFillGroupWithBlank: true,
+                pagination: {
+                    el: ".swiper-pagination3",
+                    clickable: true,
+                },
+                autoplay: { // 自动滑动
+                    delay: 5000, //1秒切换一次
+                    disableOnInteraction: false
+                },
+                navigation: {
+                    nextEl: ".swiper-button-next3",
+                    prevEl: ".swiper-button-prev3",
+                },
+                breakpoints: { 
+                    767: {  //当屏幕宽度大于等于768 
+                        slidesPerView: 3,
+                        slidesPerGroup: 3,
+                    },
+                }
+            });
+            var swiper = new Swiper(".beauty-wrap .swiper-container", {
+                slidesPerView: 4,
+                spaceBetween: 8,
+                slidesPerGroup : 4,
+                pagination: {
+                    el: ".beauty-wrap .swiper-pagination",
+                    clickable: true,
+                },
+                autoplay: {// 自动滑动
+                    delay: 5000, //1秒切换一次
+                    disableOnInteraction: false
+                },
+                navigation: {
+                    nextEl: ".swiper-button-next",
+                    prevEl: ".swiper-button-prev",
+                },
+                breakpoints: { 
+                    767: {  //当屏幕宽度大于等于768 
+                        slidesPerView: 2,
+                        slidesPerGroup:2,
+                    },
+                }
+            });
+        })
+    </script>
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

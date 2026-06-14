@@ -1,0 +1,2163 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>西南交通大学数学学院</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="西南交通大学数学学院">
+<META Name="keywords" Content="西南交通大学数学学院" />
+
+    
+    <link rel="stylesheet" href="2021/css/style.css">
+    <link rel="stylesheet" href="2021/css/Swiper.css">
+    <!--页面样式-->
+    <link rel="stylesheet" href="2021/css/bootstrap.min.css">
+    <!--页面样式-->
+    <link rel="stylesheet" href="2021/css/bootstrap-theme.min.css">
+    <!--页面样式-->
+    <link rel="stylesheet" href="2021/css/animate.min.css">
+    <!--CSS3动画库-->
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1001,'/index.jsp',-1,1444056606)</script>
+</head>
+
+<body>
+    <div class="tops hidden-xs hidden-sm">
+        <div class="wid">
+            <div class="func fr">
+                <div class="link fl">
+                    <a href="http://www.swjtu.edu.cn" target="">交大主页</a>
+                    <a href="english/Home.htm" target="">English</a>
+                </div>
+               <!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu0 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+        margin-top: -15px;
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu0 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu0"></div>
+<script type="text/html" id="htmlu0">
+    <div id="appu0">
+        <div v-if="!isError">
+        
+         <div class="search fr">
+                    <div class="cont">
+   <input type="search"    class="search-content" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit" />
+        <button  v-on:click="onSubmit()"></button>
+ </div>
+                </div>
+         
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu0").html($("#htmlu0").text());
+</script>
+<script>
+    var appOwner = "1444056606";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu0",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu0 = document.querySelector("#appu0");
+   if (appElementu0 && appElementu0.__vue__) {
+
+   } else {
+      $("#divu0").html($("#htmlu0").text());
+      var appOwner = "1444056606";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou0 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu0(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu0();
+        }
+      };
+
+      function onSubmitu0(e) {
+        queryInfou0.query.keyWord= $("#appu0  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou0.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+               
+            </div>
+        </div>
+    </div>
+    <div class="head">
+        <div class="wid">
+            <div class="logo fl">
+              <a href="index.htm">  <img src="2021/img/ccb97d_502x88.png" alt=""></a>
+            </div>
+            <div class="menu fr  hidden-lg hidden-md">
+                <div class="box">
+                    <i></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="alerts">
+        <div class="cont">
+            <div class="menu">
+                <div class="language">
+                    <ul>
+                        <li class="acti"><a href="english/Home.htm" target="">English</a></li>
+                        <li><a href="index.htm">中文</a></li>
+                    </ul>
+                </div>
+                <div class="list">
+                    <ul>
+                                           
+<li>
+                        <h4>
+                            <a href="index.htm">首页</a>
+                        </h4>
+                       
+ </li>
+                    
+<li>
+                        <h4>
+                            <a href="xygk/xyjj.htm">学院概况</a>
+                        </h4>
+                         <div class="slide">
+                        
+                        
+                            <a href="xygk/xyjj.htm">学院简介</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xygk/xrld.htm">现任领导</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xygk/zzjg.htm">组织机构</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xygk/jswyh.htm">教授委员会</a>
+                         
+                        
+                        
+                        
+                        </div>
+                        
+                        
+                       
+ </li>
+                    
+<li>
+                        <h4>
+                            <a href="sztd/szjj.htm">师资团队</a>
+                        </h4>
+                         <div class="slide">
+                        
+                        
+                            <a href="sztd/szjj.htm">师资简介</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="sztd/sbds.htm">硕博导师</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="sztd/sxx.htm">数学系</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="sztd/tjx.htm">统计系</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="sztd/sjkxx.htm">数据科学系</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="sztd/ggsxjxyjb.htm">公共数学教学研究部</a>
+                         
+                        
+                        
+                        
+                        </div>
+                        
+                        
+                       
+ </li>
+                    
+<li>
+                        <h4>
+                            <a href="jyjx1.htm">教育教学</a>
+                        </h4>
+                         <div class="slide">
+                        
+                        
+                            <a href="jyjx1/bkjx1.htm">本科教学</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="jyjx1/yjsjx1.htm">研究生教学</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="jyjx1/zyjsjjyq.htm">本科专业介绍</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="jyjx1/sxxxzx.htm">数学学习中心</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="jyjx1/sxsyzx.htm">数学实验中心</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="jyjx1/sxjd.htm">实习基地</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="jyjx1/hzq.htm">合作企业</a>
+                         
+                        
+                        
+                        
+                        </div>
+                        
+                        
+                       
+ </li>
+                    
+<li>
+                        <h4>
+                            <a href="xsky/kytz.htm">学术科研</a>
+                        </h4>
+                         <div class="slide">
+                        
+                        
+                            <a href="xsky/kytz.htm">科研通知</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsky/xsjl.htm">学术交流</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsky/sjycx.htm">实践与创新</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsky/kycg.htm">科研成果</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsky/kypt/xtkxxzdyzgj_.htm">科研平台</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="#">Fuzzy Mathematics</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsky/scsxctjxh.htm">四川省现场统计学会</a>
+                         
+                        
+                        
+                        
+                        </div>
+                        
+                        
+                       
+ </li>
+                    
+<li>
+                        <h4>
+                            <a href="dwjw.htm">党委纪委</a>
+                        </h4>
+                         <div class="slide">
+                        
+                        
+                            <a href="dwjw/dwjj.htm">党委简介</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="dwjw/djdt.htm">党建动态</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="dwjw/djtz.htm">党建通知</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="#">数学纪委</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="dwjw/llxx.htm">理论学习</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="dwjw/rdzn.htm">入党指南</a>
+                         
+                        
+                        
+                        
+                        </div>
+                        
+                        
+                       
+ </li>
+                    
+<li>
+                        <h4>
+                            <a href="xsgz.htm">学生工作</a>
+                        </h4>
+                         <div class="slide">
+                        
+                        
+                            <a href="xsgz/xgtz.htm">学工通知</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsgz/xsgzz.htm">学生工作组</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsgz/xytw.htm">学院团委</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsgz/xszz.htm">学生组织</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsgz/xshd.htm">学生活动</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsgz/jyxx.htm">就业信息</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsgz/xsjzfw.htm">学生家长服务</a>
+                         
+                        
+                        
+                        
+                        </div>
+                        
+                        
+                       
+ </li>
+                    
+<li>
+                        <h4>
+                            <a href="ghgz.htm">工会工作</a>
+                        </h4>
+                         <div class="slide">
+                        
+                        
+                            <a href="ghgz/ghgk.htm">工会概况</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="ghgz/ghhd.htm">工会活动</a>
+                         
+                        
+                        
+                        
+                        </div>
+                        
+                        
+                       
+ </li>
+                    
+<li>
+                        <h4>
+                            <a href="xygz.htm">校友工作</a>
+                        </h4>
+                         <div class="slide">
+                        
+                        
+                            <a href="xygz/xyhd.htm">校友活动</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xygz/xyxx.htm">校友信箱</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xygz/xyfw.htm">校友服务</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xygz/sjxx.htm">书记信箱</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xygz/yzxx.htm">院长信箱</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xygz/xmtptspcm.htm">新媒体平台数派传媒</a>
+                         
+                        
+                        
+                        
+                        </div>
+                        
+                        
+                       
+ </li>
+                    
+
+                    </ul>
+                </div>
+            </div>
+          
+        </div>
+    </div>
+    <div class="wap-null  visible-xs"></div>
+    <div class="nav hidden-xs hidden-sm">
+        <div class="wid">
+            <div class="list">
+                <ul>                    
+<li>
+                        <h4>
+                            <a href="index.htm">首页</a>
+                        </h4>
+                       
+ </li>
+                    
+<li>
+                        <h4>
+                            <a href="xygk/xyjj.htm">学院概况</a>
+                        </h4>
+                         <div class="slide">
+                        
+                        
+                            <a href="xygk/xyjj.htm">学院简介</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xygk/xrld.htm">现任领导</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xygk/zzjg.htm">组织机构</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xygk/jswyh.htm">教授委员会</a>
+                         
+                        
+                        
+                        
+                        </div>
+                        
+                        
+                       
+ </li>
+                    
+<li>
+                        <h4>
+                            <a href="sztd/szjj.htm">师资团队</a>
+                        </h4>
+                         <div class="slide">
+                        
+                        
+                            <a href="sztd/szjj.htm">师资简介</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="sztd/sbds.htm">硕博导师</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="sztd/sxx.htm">数学系</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="sztd/tjx.htm">统计系</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="sztd/sjkxx.htm">数据科学系</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="sztd/ggsxjxyjb.htm">公共数学教学研究部</a>
+                         
+                        
+                        
+                        
+                        </div>
+                        
+                        
+                       
+ </li>
+                    
+<li>
+                        <h4>
+                            <a href="jyjx1.htm">教育教学</a>
+                        </h4>
+                         <div class="slide">
+                        
+                        
+                            <a href="jyjx1/bkjx1.htm">本科教学</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="jyjx1/yjsjx1.htm">研究生教学</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="jyjx1/zyjsjjyq.htm">本科专业介绍</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="jyjx1/sxxxzx.htm">数学学习中心</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="jyjx1/sxsyzx.htm">数学实验中心</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="jyjx1/sxjd.htm">实习基地</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="jyjx1/hzq.htm">合作企业</a>
+                         
+                        
+                        
+                        
+                        </div>
+                        
+                        
+                       
+ </li>
+                    
+<li>
+                        <h4>
+                            <a href="xsky/kytz.htm">学术科研</a>
+                        </h4>
+                         <div class="slide">
+                        
+                        
+                            <a href="xsky/kytz.htm">科研通知</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsky/xsjl.htm">学术交流</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsky/sjycx.htm">实践与创新</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsky/kycg.htm">科研成果</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsky/kypt/xtkxxzdyzgj_.htm">科研平台</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="#">Fuzzy Mathematics</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsky/scsxctjxh.htm">四川省现场统计学会</a>
+                         
+                        
+                        
+                        
+                        </div>
+                        
+                        
+                       
+ </li>
+                    
+<li>
+                        <h4>
+                            <a href="dwjw.htm">党委纪委</a>
+                        </h4>
+                         <div class="slide">
+                        
+                        
+                            <a href="dwjw/dwjj.htm">党委简介</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="dwjw/djdt.htm">党建动态</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="dwjw/djtz.htm">党建通知</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="#">数学纪委</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="dwjw/llxx.htm">理论学习</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="dwjw/rdzn.htm">入党指南</a>
+                         
+                        
+                        
+                        
+                        </div>
+                        
+                        
+                       
+ </li>
+                    
+<li>
+                        <h4>
+                            <a href="xsgz.htm">学生工作</a>
+                        </h4>
+                         <div class="slide">
+                        
+                        
+                            <a href="xsgz/xgtz.htm">学工通知</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsgz/xsgzz.htm">学生工作组</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsgz/xytw.htm">学院团委</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsgz/xszz.htm">学生组织</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsgz/xshd.htm">学生活动</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsgz/jyxx.htm">就业信息</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xsgz/xsjzfw.htm">学生家长服务</a>
+                         
+                        
+                        
+                        
+                        </div>
+                        
+                        
+                       
+ </li>
+                    
+<li>
+                        <h4>
+                            <a href="ghgz.htm">工会工作</a>
+                        </h4>
+                         <div class="slide">
+                        
+                        
+                            <a href="ghgz/ghgk.htm">工会概况</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="ghgz/ghhd.htm">工会活动</a>
+                         
+                        
+                        
+                        
+                        </div>
+                        
+                        
+                       
+ </li>
+                    
+<li>
+                        <h4>
+                            <a href="xygz.htm">校友工作</a>
+                        </h4>
+                         <div class="slide">
+                        
+                        
+                            <a href="xygz/xyhd.htm">校友活动</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xygz/xyxx.htm">校友信箱</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xygz/xyfw.htm">校友服务</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xygz/sjxx.htm">书记信箱</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xygz/yzxx.htm">院长信箱</a>
+                         
+                        
+                        
+                        
+                        
+                        
+                            <a href="xygz/xmtptspcm.htm">新媒体平台数派传媒</a>
+                         
+                        
+                        
+                        
+                        </div>
+                        
+                        
+                       
+ </li>
+                    
+</ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="swiper-container banner">
+        <ul class="swiper-wrapper">
+                <script language="javascript" src="/system/resource/js/dynclicks.js"></script>
+  <li class="swiper-slide">
+                <div class="imgs">
+                    <img src="2021/img/b2cdeb_1920x530.jpg" class="pc-img" alt="">
+                    <img src="2021/img/b2cdeb_1920x530.jpg" class="wap-img" alt="">
+                </div>
+            </li>
+           
+
+
+  <li class="swiper-slide">
+                <div class="imgs">
+                    <img src="images/shouyedatu2.jpg" class="pc-img" alt="">
+                    <img src="images/shouyedatu2.jpg" class="wap-img" alt="">
+                </div>
+            </li>
+           
+
+
+  <li class="swiper-slide">
+                <div class="imgs">
+                    <img src="images/zongshujihuixindatu_biaozhunban.jpg" class="pc-img" alt="">
+                    <img src="images/zongshujihuixindatu_biaozhunban.jpg" class="wap-img" alt="">
+                </div>
+            </li>
+           
+
+
+        </ul>
+        <div class="swiper-pagination"></div>
+        <div class="swiper-button-prev"></div>
+        <div class="swiper-button-next"></div>
+    </div>
+
+    <div class="news">
+        <div class="wid">
+            <div class="col-lg-6 col-md-6 col-sm-6">
+                <div class="row">
+                    <div class="bann">
+                        <div class="swiper-container  list">
+                            <ul class="swiper-wrapper">
+                                
+
+<script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script>
+
+                                      <li class="swiper-slide">
+                                   <a href="info/1296/26164.htm"> <div class="imgs">
+                                        <img src="/__local/4/45/66/2D50AFCD621802B499D53AEC5B3_424D9FDB_C31A0.png" alt="">
+                                    </div>
+                                    <div class="text">
+                                       数耀百卅，扬华致远——西南交通大学第十七届数学文化节隆重开幕
+                                    </div> </a>
+                                </li>
+                                    
+
+
+
+                                      <li class="swiper-slide">
+                                   <a href="info/1296/26014.htm"> <div class="imgs">
+                                        <img src="/__local/6/8D/D7/E03956E6FF945C8C12E9517E5EE_3CE92CC0_4BEA0.jpg" alt="">
+                                    </div>
+                                    <div class="text">
+                                       第十五届党委第六轮巡察第二巡察组巡察数学学院党委工作动员会召开
+                                    </div> </a>
+                                </li>
+                                    
+
+
+
+                                      <li class="swiper-slide">
+                                   <a href="info/1296/25574.htm"> <div class="imgs">
+                                        <img src="/__local/E/22/89/AB716B897F17F313F04073E9FDD_A0C6DA09_17432.jpeg" alt="">
+                                    </div>
+                                    <div class="text">
+                                       数学学院研究生易曾瑞荣登《人民日报》
+                                    </div> </a>
+                                </li>
+                                    
+
+
+
+                                      <li class="swiper-slide">
+                                   <a href="info/1296/25294.htm"> <div class="imgs">
+                                        <img src="/__local/B/9C/76/61897DFFDE0B418BE6CD9E62546_7FDADC69_23794.jpeg" alt="">
+                                    </div>
+                                    <div class="text">
+                                       我校在第十七届全国大学生数学竞赛中再创佳绩
+                                    </div> </a>
+                                </li>
+                                    
+
+
+
+                                      <li class="swiper-slide">
+                                   <a href="info/1296/25164.htm"> <div class="imgs">
+                                        <img src="/__local/D/95/C0/0EA63AD3717E56CBB7ECB32DDA2_A2935516_D035A.png" alt="">
+                                    </div>
+                                    <div class="text">
+                                       数学学院庆祝建校130周年校友返校活动暨人才培养高质量发展论坛成功举办
+                                    </div> </a>
+                                </li>
+                                    
+
+<script>_showDynClickBatch(['dynclicks_u4_26164','dynclicks_u4_26014','dynclicks_u4_25574','dynclicks_u4_25294','dynclicks_u4_25164'],[26164,26014,25574,25294,25164],"wbnews", 1444056606)</script>
+
+                            </ul>
+                            <div class="swiper-pagination"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 col-md-6 col-sm-6">
+                <div class="row">
+                    <div class="dynamic">
+                        <div class="titles">
+                            <div class="txts fl">
+                               
+                                <span>
+                                    新闻动态
+                                </span>
+                                <b>NEWS</b>
+                            </div>
+                            <div class="more fr">
+                                <a href="xyxw.htm" target="">MORE</a>
+                            </div>
+                        </div>
+                        <div class="conts">
+                            <div class="list">
+                                <ul>
+
+<li class="acti">
+                                   <a href="info/1149/26304.htm">     <div class="tits">
+                                            <div class="txts fl">
+                                               西南交大学子在全国大学生市场调查与分析大赛本科组竞赛中获6项国家一等奖
+                                            </div>
+                                            <div class="time fr">
+                                               2026-06-10
+                                            </div>
+                                        </div>
+                                        <div class="slide">
+                                            <p>
+                                                近日，由中国商业统计学会主办、正大集团冠名、大连理工大学承办的“正大杯”第十六届全国大学生市场调查与分析大赛本科组全国总决赛圆满落幕。本届大赛吸引了全国1259所高校、37.5万名学生参赛，最终304支团队、1300余名师生晋级总决赛。我校参赛团队凭借扎实的专业能力及出色的实践创新素养，斩获6项全国一等奖、1项国家二等奖，总成绩位列全国前列，再创历史新高，展现了学校实践育人和创新人才培养的丰硕成果。奖项学校名称获奖名称获奖学生国家级一等奖西南交通大学“...
+                                            </p>
+                                        </div> </a>
+                                    </li>
+                                    
+<li>
+                                   <a href="info/1149/26274.htm">     <div class="tits">
+                                            <div class="txts fl">
+                                               徐扬教授团队在机器自主发现知识领域取得重大进展
+                                            </div>
+                                            <div class="time fr">
+                                               2026-06-09
+                                            </div>
+                                        </div>
+                                        <div class="slide">
+                                            <p>
+                                                继2025年9月7日，以徐扬、郭海林、陈树伟（西南交通大学数学学院系统可信性自动验证国家地方联合工程实验室）和Jun Liu（英国Ulster大学计算机系）为共同第一作者在Github上发布自动定理生成器Δ1以来，该团队先后在Github上发布了都能自动生成命题逻辑定理、一阶逻辑定理和高阶逻辑定理的系列自动定理生成器Δ1、Δ2、Δ2.5、Δ3和Δ4，在机器自主发现知识领域取得重大进展。当分别给这些自动定理生成器输入任意多个、任意复杂的逻辑文字或闭公式后，...
+                                            </p>
+                                        </div> </a>
+                                    </li>
+                                    
+<li>
+                                   <a href="info/1149/26184.htm">     <div class="tits">
+                                            <div class="txts fl">
+                                               数学学院召开数学学科高质量学生党建赋能人才培养高质量发展论坛
+                                            </div>
+                                            <div class="time fr">
+                                               2026-06-07
+                                            </div>
+                                        </div>
+                                        <div class="slide">
+                                            <p>
+                                                6月5日下午，数学学院在犀浦校区双一流中心205会议室召开数学学科高质量学生党建赋能人才培养高质量发展论坛。数学学院党委书记李志辉、党委副书记黄祥，四川大学、电子科技大学、西南财经大学、四川师范大学、西南民族大学、西华大学、四川民族学院等多所川内高校数学学院领导、教师代表参加论坛。论坛由四川省现场统计学会秘书长王璐主持。李志辉为本次论坛致欢迎辞，代表学院对莅临参会的川内各高校数学学院同仁致以诚挚欢迎。李志辉系统介绍学院党建育人工作开展成效，...
+                                            </p>
+                                        </div> </a>
+                                    </li>
+                                    
+<li>
+                                   <a href="info/1149/26174.htm">     <div class="tits">
+                                            <div class="txts fl">
+                                               数耀百卅，扬华致远——西南交通大学第十七届数学文化节隆重开幕
+                                            </div>
+                                            <div class="time fr">
+                                               2026-06-07
+                                            </div>
+                                        </div>
+                                        <div class="slide">
+                                            <p>
+                                                6月5日下午，西南交通大学第十七届数学文化节开幕式在犀浦校区双一流中心中力报告厅隆重举行。西南交通大学团委书记武俊，本科生院副院长李静波，党委学生工作部副部长杨华，四川大学数学学院党委副书记张丹，电子科技大学数学科学学院党委副书记赵文丽、辅导员王溪浩，西南财经大学数学学院团委书记王蓉，四川师范大学数学科学学院党委副书记任茜，西南民族大学数学学院团委书记崔梦珂，西华大学理学院系主任夏安银、团委书记蒲小敏、...
+                                            </p>
+                                        </div> </a>
+                                    </li>
+                                    
+<li>
+                                   <a href="info/1149/26044.htm">     <div class="tits">
+                                            <div class="txts fl">
+                                               数学学院 “数学文化进中小学”系列活动走进西川汇锦都学校，探析概率奥秘、启迪科学思维
+                                            </div>
+                                            <div class="time fr">
+                                               2026-06-01
+                                            </div>
+                                        </div>
+                                        <div class="slide">
+                                            <p>
+                                                为弘扬数学文化，培育青少年科学思维与理性素养，深化高校科普与基础教育协同育人，5月28日，数学学院持续开展“数学文化进中小学”系列活动，组织学生志愿者走进西川汇锦都学校，为五年级8个班级共300余名学生带来“蒙提霍尔问题与概率奥秘”主题趣味科普课堂，以沉浸式体验解锁概率逻辑。本次科普课堂创新教学形式，以经典概率谜题为核心，构建“悬念导入—实验探究—原理解析—价值引领”的完整教学链条。课堂伊始，主讲人引入经典蒙提霍尔问题，...
+                                            </p>
+                                        </div> </a>
+                                    </li>
+                                    
+<script>_showDynClickBatch(['dynclicks_u5_26304','dynclicks_u5_26274','dynclicks_u5_26184','dynclicks_u5_26174','dynclicks_u5_26044'],[26304,26274,26184,26174,26044],"wbnews", 1444056606)</script>
+</ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 col-md-6 col-sm-6">
+                <div class="row">
+                    <div class="notice">
+                        <div class="titles">
+                            <div class="txts fl">
+                               
+                                <span>
+                                    通知公告
+                                </span>
+                                <b>NOTICE</b>
+                            </div>
+                            <div class="more fr">
+                                <a href="xygg.htm" target="">MORE</a>
+                            </div>
+                        </div>
+                        <div class="conts">
+                            <div class="tabs">
+                                <ul><li class="acti">
+                                        全 部
+                                    </li>
+                                    </ul>
+                            </div>
+                            <div class="list">
+                                <ul class="show">
+
+<li>
+                                        <a href="info/1150/25994.htm">
+                                            <div class="txts">
+                                                关于第十五届党委第六轮巡察第二巡察组巡察数学学院党委的公告
+                                            </div>
+                                            <div class="time">
+                                               2026-05-28
+                                            </div>
+                                        </a>
+                                    </li>
+                                    
+<li>
+                                        <a href="info/1150/25404.htm">
+                                            <div class="txts">
+                                                关于2026年大学生数学竞赛校赛报名的通知
+                                            </div>
+                                            <div class="time">
+                                               2026-04-29
+                                            </div>
+                                        </a>
+                                    </li>
+                                    
+<li>
+                                        <a href="info/1150/25134.htm">
+                                            <div class="txts">
+                                                关于成立数学学院招生工作组的通知​
+                                            </div>
+                                            <div class="time">
+                                               2026-04-17
+                                            </div>
+                                        </a>
+                                    </li>
+                                    
+<li>
+                                        <a href="info/1150/24654.htm">
+                                            <div class="txts">
+                                                2026年（第十二届）全国大学生统计建模大赛西南交通大学赛区初赛报名通知
+                                            </div>
+                                            <div class="time">
+                                               2026-03-12
+                                            </div>
+                                        </a>
+                                    </li>
+                                    
+<li>
+                                        <a href="info/1150/21884.htm">
+                                            <div class="txts">
+                                                关于第十七届全国大学生数学竞赛四川赛区竞赛报名的通知
+                                            </div>
+                                            <div class="time">
+                                               2025-09-12
+                                            </div>
+                                        </a>
+                                    </li>
+                                    
+<li>
+                                        <a href="info/1150/21224.htm">
+                                            <div class="txts">
+                                                数学学院关于2025年暑期实习相关工作的通知
+                                            </div>
+                                            <div class="time">
+                                               2025-06-18
+                                            </div>
+                                        </a>
+                                    </li>
+                                    
+<script>_showDynClickBatch(['dynclicks_u7_25994','dynclicks_u7_25404','dynclicks_u7_25134','dynclicks_u7_24654','dynclicks_u7_21884','dynclicks_u7_21224'],[25994,25404,25134,24654,21884,21224],"wbnews", 1444056606)</script>
+</ul>
+                                 
+                                  
+                                           
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 col-md-6 col-sm-6">
+                <div class="row">
+                    <div class="activity">
+                        <div class="titles">
+                            <div class="txts fl">
+                               
+                                <span>
+                                    学术活动
+                                </span>
+                                <b>academic</b>
+                            </div>
+                            <div class="more fr">
+                                <a href="xsky/xsjl.htm" target="">MORE</a>
+                            </div>
+                        </div>
+                        <div class="conts">
+                            <div class="list">
+                                <ul>
+
+<li>
+                                      <a href="info/1041/26394.htm">  <div class="time">
+                                            <h5> 22</h5>
+                                            <p>
+                                               2026-6
+                                            </p>
+                                        </div>
+                                        <div class="text">
+                                            <h5 style="color:black;">
+                                                【学术讲座】从平方和问题谈起
+                                            </h5>
+                                            <p>
+                                                <span>时间：14:30 </span>
+                                                <span>地点：图书馆二号报告厅 </span>
+                                                <span>主讲人：田野  </span>
+                                            </p>
+                                        </div> </a>
+                                    </li>
+                                    
+<li>
+                                      <a href="info/1041/26314.htm">  <div class="time">
+                                            <h5> 12</h5>
+                                            <p>
+                                               2026-6
+                                            </p>
+                                        </div>
+                                        <div class="text">
+                                            <h5 style="color:black;">
+                                                【学术讲座】密码函数两类密码学指标的关系
+                                            </h5>
+                                            <p>
+                                                <span>时间：10:00 </span>
+                                                <span>地点：X7150 </span>
+                                                <span>主讲人：周宇  </span>
+                                            </p>
+                                        </div> </a>
+                                    </li>
+                                    
+<li>
+                                      <a href="info/1041/26294.htm">  <div class="time">
+                                            <h5> 22</h5>
+                                            <p>
+                                               2026-6
+                                            </p>
+                                        </div>
+                                        <div class="text">
+                                            <h5 style="color:black;">
+                                                【学术讲座】学代数的乐趣——管它结合不结合
+                                            </h5>
+                                            <p>
+                                                <span>时间：16:00 </span>
+                                                <span>地点：X7150 </span>
+                                                <span>主讲人：郜云  </span>
+                                            </p>
+                                        </div> </a>
+                                    </li>
+                                    
+<li>
+                                      <a href="info/1041/26284.htm">  <div class="time">
+                                            <h5> 10</h5>
+                                            <p>
+                                               2026-6
+                                            </p>
+                                        </div>
+                                        <div class="text">
+                                            <h5 style="color:black;">
+                                                【学术讲座】面向无边信息系统的图学习方法研究：从多粒度构图到自适应模糊图推理
+                                            </h5>
+                                            <p>
+                                                <span>时间：18:30 </span>
+                                                <span>地点：腾讯会议：731-472-414 </span>
+                                                <span>主讲人：余斌  </span>
+                                            </p>
+                                        </div> </a>
+                                    </li>
+                                    
+<script>_showDynClickBatch(['dynclicks_u8_26394','dynclicks_u8_26314','dynclicks_u8_26294','dynclicks_u8_26284'],[26394,26314,26294,26284],"wbnews", 1444056606)</script>
+</ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="type">
+        <div class="wid">
+            <div class="row">
+                <div class="col-lg-4 col-md-4 col-sm-4">
+                    <div class="item">
+                        <div class="title">
+                            <b>党建工作</b>
+                            <a href="https://maths.swjtu.edu.cn/dwjw.htm" target="">MORE</a>
+                        </div>
+                        <div class="conts">
+                            <div class="list">
+                                <ul>
+                                   
+
+
+                                            
+<li>
+                                        <a href="info/1052/25854.htm">
+                                            <div class="txts">
+                                               数学学院召开2026年第三次党委中心组集体学习会
+                                            </div>
+                                            <div class="time">
+                                               05-22
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<li>
+                                        <a href="info/1053/25634.htm">
+                                            <div class="txts">
+                                               数学学院关于开展2026-01期（第二班）党员发展对象教育培训的通知
+                                            </div>
+                                            <div class="time">
+                                               05-12
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<li>
+                                        <a href="info/1053/25274.htm">
+                                            <div class="txts">
+                                               数学学院关于开展2026-01期（第一班）党员发展对象教育培训的通知
+                                            </div>
+                                            <div class="time">
+                                               04-21
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<li>
+                                        <a href="info/1052/25114.htm">
+                                            <div class="txts">
+                                               学史铸魂悟初心 薪火相传担使命——数学学院开展2026-01期入党积极分子专题培训第四期
+                                            </div>
+                                            <div class="time">
+                                               04-10
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<li>
+                                        <a href="info/1052/25104.htm">
+                                            <div class="txts">
+                                               深学回信悟使命 赓续血脉强信念——数学学院开展2026-01期入党积极分子专题培训第三期
+                                            </div>
+                                            <div class="time">
+                                               04-09
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<li>
+                                        <a href="info/1052/25014.htm">
+                                            <div class="txts">
+                                               数学学院党委开展习近平总书记重要回信精神专题学习
+                                            </div>
+                                            <div class="time">
+                                               04-09
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<li>
+                                        <a href="info/1053/24994.htm">
+                                            <div class="txts">
+                                               数学学院关于开展习近平总书记重要回信精神专题学习的通知
+                                            </div>
+                                            <div class="time">
+                                               04-08
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<script>_showDynClickBatch(['dynclicks_u9_25854','dynclicks_u9_25634','dynclicks_u9_25274','dynclicks_u9_25114','dynclicks_u9_25104','dynclicks_u9_25014','dynclicks_u9_24994'],[25854,25634,25274,25114,25104,25014,24994],"wbnews", 1444056606)</script>
+
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-4 col-sm-4">
+                    <div class="item item-2">
+                        <div class="title">
+                            <b>教学工作</b>
+                            <a href="https://maths.swjtu.edu.cn/jyjx1.htm" target="">MORE</a>
+                        </div>
+                        <div class="conts">
+                            <div class="list">
+                                <ul>
+                                    
+
+
+                                            
+<li>
+                                        <a href="info/1030/26374.htm">
+                                            <div class="txts">
+                                               2024级硕士研究生中期答辩公告（七）
+                                            </div>
+                                            <div class="time">
+                                               06-12
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<li>
+                                        <a href="info/1030/26364.htm">
+                                            <div class="txts">
+                                               2024级硕士研究生中期答辩公告（六）
+                                            </div>
+                                            <div class="time">
+                                               06-11
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<li>
+                                        <a href="info/1030/26354.htm">
+                                            <div class="txts">
+                                               2024级硕士研究生中期答辩公告（五）
+                                            </div>
+                                            <div class="time">
+                                               06-11
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<li>
+                                        <a href="info/1030/26334.htm">
+                                            <div class="txts">
+                                               第二十三届中国研究生数学建模竞赛报名及赛前培训通知
+                                            </div>
+                                            <div class="time">
+                                               06-11
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<li>
+                                        <a href="info/1027/26244.htm">
+                                            <div class="txts">
+                                               数学学院 关于2026年暑期实习相关工作的通知
+                                            </div>
+                                            <div class="time">
+                                               06-09
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<li>
+                                        <a href="info/1027/26204.htm">
+                                            <div class="txts">
+                                               数学学院关于选聘2026级本科生班导师工作的通知
+                                            </div>
+                                            <div class="time">
+                                               06-08
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<li>
+                                        <a href="info/1030/26144.htm">
+                                            <div class="txts">
+                                               2024级硕士研究生中期答辩公告（四）
+                                            </div>
+                                            <div class="time">
+                                               06-05
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<script>_showDynClickBatch(['dynclicks_u10_26374','dynclicks_u10_26364','dynclicks_u10_26354','dynclicks_u10_26334','dynclicks_u10_26244','dynclicks_u10_26204','dynclicks_u10_26144'],[26374,26364,26354,26334,26244,26204,26144],"wbnews", 1444056606)</script>
+
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-4 col-sm-4">
+                    <div class="item item-3">
+                        <div class="title">
+                            <b>学生工作</b>
+                            <a href="xsgz.htm" target="">MORE</a>
+                        </div>
+                        <div class="conts">
+                            <div class="list">
+                                <ul>
+                                   
+
+
+                                            
+<li>
+                                        <a href="info/1064/26224.htm">
+                                            <div class="txts">
+                                               【园区】关于开展数学学院“数苑・美居”研究生“潜力寝室”评选活动的通知
+                                            </div>
+                                            <div class="time">
+                                               06-09
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<li>
+                                        <a href="info/1064/26214.htm">
+                                            <div class="txts">
+                                               【团委】西南交通大学数学学院事务中心2026年换届通知
+                                            </div>
+                                            <div class="time">
+                                               06-08
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<li>
+                                        <a href="info/1064/26194.htm">
+                                            <div class="txts">
+                                               【迎新】数学学院关于选聘2026级本科生驻班党员、朋辈导师、年级助理的通知
+                                            </div>
+                                            <div class="time">
+                                               06-08
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<li>
+                                        <a href="info/1064/26124.htm">
+                                            <div class="txts">
+                                               【团务】关于公开选拔西南交通大学数学学院学生会主席团成员和部长的通知
+                                            </div>
+                                            <div class="time">
+                                               06-03
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<li>
+                                        <a href="info/1064/26024.htm">
+                                            <div class="txts">
+                                               【实践】关于组织开展西南交通大学数学学院2026年暑期“三下乡”社会实践活动报名的通知
+                                            </div>
+                                            <div class="time">
+                                               05-29
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<li>
+                                        <a href="info/1064/25984.htm">
+                                            <div class="txts">
+                                               【团务】西南交通大学数学学院新闻中心2026年换届通知
+                                            </div>
+                                            <div class="time">
+                                               05-29
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<li>
+                                        <a href="info/1064/26114.htm">
+                                            <div class="txts">
+                                               【团务】关于2026级研究生新生团员团组织关系接收工作的通知
+                                            </div>
+                                            <div class="time">
+                                               05-28
+                                            </div>
+                                        </a>
+                                    </li>
+                                            
+<script>_showDynClickBatch(['dynclicks_u11_26224','dynclicks_u11_26214','dynclicks_u11_26194','dynclicks_u11_26124','dynclicks_u11_26024','dynclicks_u11_25984','dynclicks_u11_26114'],[26224,26214,26194,26124,26024,25984,26114],"wbnews", 1444056606)</script>
+
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="links">
+        <div class="wid">
+            <div class="list">
+                <ul>
+                   
+                   <script language="javascript" src="/system/resource/js/openlink.js"></script>
+
+                 <li>       <a href="https://maths.swjtu.edu.cn/">金融大数据研究院</a>  </li>
+                    
+
+
+
+                 <li>       <a href="xsky/kypt/sxzx.htm">数学中心</a>  </li>
+                    
+
+
+
+                 <li>       <a href="info/1015/2049.htm">书记信箱</a>  </li>
+                    
+
+
+
+                 <li>       <a href="info/1014/2050.htm">院长信箱</a>  </li>
+                    
+
+
+
+                 <li>       <a href="info/1080/1002.htm">校友信箱</a>  </li>
+                    
+
+
+
+                 <li>       <a href="https://maths.swjtu.edu.cn/">系统可信性自动验证国家地方联合实验室</a>  </li>
+                    
+
+
+                 
+                   </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="wid">
+            <div class="row">
+                <div class="col-lg-5 col-md-5">
+                    <div class="intr">
+                        <div class="logo">
+                            <img src="2021/img/3988c1_434x76.png" alt="">
+                        </div>
+                        <div class="conts">
+                            <div class="imgs fl">
+                                    
+<img src="dfiles/16495/upload/201802/27/201802271121188118.jpg" alt="">
+
+
+                            </div>
+                            <div class="text fr"><!-- 版权内容请在本组件"内容配置-版权"处填写 -->
+<p>
+    版权所有 : 西南交通大学数学学院  新闻中心
+</p>
+<p>
+    地址：中国.四川.成都.郫都区犀安路 999 号西南交通大学
+</p>
+<p>
+    邮政编码：611756
+</p></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-7 col-md-7">
+                    <div class="contact">
+                        <div class="list">
+                            <ul>                                
+                                     <li>   
+                                  
+                                
+
+                                    <p><a href="https://maths.swjtu.edu.cn/">数学在线学习平台</a></p>
+                                   
+                                 
+                                 
+                                
+                                
+                                   
+                                  
+                                
+
+                                    <p><a href="http://dean.swjtu.edu.cn/">教务处</a></p>
+                                   
+                                 
+                                 
+                                
+                                
+                                   
+                                  
+                                
+
+                                    <p><a href="http://www.swjtu.edu.cn/">西南交通大学</a></p>
+                                   
+                                 
+                                 
+                                
+                                
+                                   
+                                  
+                                
+
+                                    <p><a href="https://maths.swjtu.edu.cn/">数学建模</a></p>
+                                   
+                                 
+                                 
+                                
+                                
+                                   
+                                  
+                                
+
+                                    <p><a href="https://gsnews.swjtu.edu.cn/">研究生院</a></p>
+                                   
+                                 
+                                 
+                                
+                                
+                                   
+                                  
+                                
+
+                                    <p><a href="http://zzb.swjtu.edu.cn/">党委组织部</a></p>
+                                   
+                                     </li> <li>  
+                                 
+                                
+                                
+                                   
+                                  
+                                
+
+                                    <p><a href="http://xg.swjtu.edu.cn/web">扬华素质网（学工部）</a></p>
+                                   
+                                 
+                                 
+                                
+                                
+                                   
+                                  
+                                
+
+                                    <p><a href="https://fdc.swjtu.edu.cn/">党委教师工作部</a></p>
+                                   
+                                 
+                                 
+                                
+                                
+                                   
+                                  
+                                
+
+                                    <p><a href="https://maths.swjtu.edu.cn/">精品课程</a></p>
+                                   
+                                 
+                                 
+                                
+                                
+                                   
+                                  
+                                
+
+                                    <p><a href="https://www.swjtu.edu.cn/zsjy_.htm">招生就业</a></p>
+                                   
+                                 
+                                 
+                                
+                                
+                                   
+                                  
+                                
+
+                                    <p><a href="https://rsc.swjtu.edu.cn/">人力资源部</a></p>
+                                   
+                                 
+                                 
+                                
+                                
+                                   
+                                  
+                                
+
+                                    <p><a href="https://maths.swjtu.edu.cn/">实验中心</a></p>
+                                   
+                                     </li> <li>  
+                                 
+                                
+                                
+                                   
+                                  
+                                
+
+                                    <p><a href="http://maths.swjtu.edu.cn/xsky/Fuzzy_Mathematics/Instructions.htm">Journal of Fuzzy Mathematics</a></p>
+                                   
+                                 
+                                 
+                                
+                                
+                                   
+                                  
+                                
+
+                                    <p><a href="http://youth.swjtu.edu.cn/">校团委</a></p>
+                                   
+                                 
+                                 
+                                
+                                
+                                   
+                                  
+                                
+
+                                    <p><a href="http://cwc.swjtu.edu.cn/">计划财务处</a></p>
+                                   
+                                 
+                                 
+                                
+                                
+                                   
+                                  
+                                
+
+                                    <p><a href="http://tianyuan.scu.edu.cn/portal/index/index.html">国家天元数学西南中心</a></p>
+                                   
+                                 
+                                 
+                                
+                                
+                                   
+                                  
+                                
+
+                                    <p><a href="http://www.lib.swjtu.edu.cn/">图书馆</a></p>
+                                   
+                                 
+                                 
+                                
+                                
+                                   
+                                  
+                                
+
+                                    <p><a href="http://xgh.swjtu.edu.cn/">校工会</a></p>
+                                   
+                                 
+                                 </li>
+                                
+</ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="2021/js/jquery.min.js"></script>
+    <!--jQuery库-->
+    <script src="2021/js/wow.min.js"></script>
+    <!--动画效果库-->
+    <script src="2021/js/swiper.min.js"></script>
+    <!-- swiper -->
+    <script src="2021/js/Epp-2.1.1.min.js"></script>
+    <!--Epp插件库-->
+
+     <script>
+        var swiper = new Swiper('.banner', {
+            loop: true,
+            pagination: {
+                el: '.banner .swiper-pagination',
+                clickable: true,
+            },
+            navigation: {
+                nextEl: '.banner .swiper-button-next',
+                prevEl: '.banner .swiper-button-prev',
+            },
+            autoplay: {
+                delay: 3000,
+                disableOnInteraction: false,
+            },
+        });
+        var swiper = new Swiper('.news .bann .list', {
+            loop: true,
+            pagination: {
+                el: '.news .bann .list .swiper-pagination',
+                clickable: true,
+            },
+            autoplay: {
+                delay: 3000,
+                disableOnInteraction: false,
+            },
+        });
+        $('.news .notice .conts .tabs ul li').hover(function() {
+            $(this).addClass('acti').siblings().removeClass('acti')
+            var m = $(this).index();
+            $('.news .notice .conts .list ul').eq(m).addClass('show').siblings().removeClass('show')
+        })
+        $('.news .dynamic .conts .list ul li').hover(function() {
+            $(this).addClass('acti').siblings().removeClass('acti')
+        })
+        $('.head .menu .box').attr('att', '1')
+        $('.head .menu .box').click(function() {
+            if ($(this).attr('att') == 1) {
+                $(this).addClass('acti');
+                $('.alerts').fadeIn();
+                $('.alerts .cont').slideDown();
+                $(this).attr('att', '0')
+            } else if ($(this).attr('att') == 0) {
+                $(this).removeClass('acti');
+                $('.alerts').fadeOut();
+                $('.alerts .cont').slideUp();
+                $(this).attr('att', '1')
+                $('.alerts .cont .menu .list ul li h4').attr('att', '1');
+                $('.alerts .cont .menu .list ul li').removeClass('acti');
+                $('.alerts .cont .menu .list ul li .slide').slideUp();
+            }
+        })
+        $('.alerts .cont .menu .list ul li h4').attr('att', '1');
+        $('.alerts .cont .menu .list ul li h4').click(function() {
+            if ($(this).attr('att') == 1) {
+                $('.alerts .cont .menu .list ul li h4').attr('att', '1');
+                $('.alerts .cont .menu .list ul li').removeClass('acti');
+                $('.alerts .cont .menu .list ul li .slide').slideUp();
+                $(this).parents('li').addClass('acti');
+                $(this).parents('li').find('.slide').slideDown();
+                $(this).attr('att', '0');
+            } else if ($(this).attr('att') == 0) {
+                $(this).parents('li').removeClass('acti');
+                $(this).parents('li').find('.slide').slideUp();
+                $(this).attr('att', '1');
+            }
+        })
+    </script>
+
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+

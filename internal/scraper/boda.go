@@ -3,6 +3,7 @@ package scraper
 import (
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -219,6 +220,29 @@ var navSelectors = []string{
 	".sidebar", ".side", ".widget", ".login", ".user-info",
 }
 
+// cleanTitle removes date prefixes and other noise from titles.
+func cleanTitle(title string) string {
+	// Remove date prefixes like "07/16", "2025-08-12", "06-01", "01 2026.06"
+	datePrefixes := []string{
+		`^\d{2}/\d{2}`,     // 07/16
+		`^\d{4}-\d{2}-\d{2}`, // 2025-08-12
+		`^\d{2}-\d{2}`,     // 06-01
+		`^\d{2}\s+\d{4}\.\d{2}`, // 01 2026.06
+	}
+	for _, pattern := range datePrefixes {
+		re := regexp.MustCompile(pattern)
+		title = re.ReplaceAllString(title, "")
+	}
+	// Remove trailing date patterns
+	trailingDate := regexp.MustCompile(`\s*\d{4}[-/年.]\d{1,2}[-/月.]\d{1,2}[日]?\s*$`)
+	title = trailingDate.ReplaceAllString(title, "")
+	// Remove ">>" suffix
+	title = strings.TrimSuffix(title, ">>")
+	// Clean up whitespace
+	title = strings.TrimSpace(title)
+	return title
+}
+
 // isValidNewsTitle filters out navigation items and too-short titles.
 func isValidNewsTitle(title string) bool {
 	if len(title) < 6 {
@@ -235,8 +259,18 @@ func isValidNewsTitle(title string) bool {
 		"诚聘海内外英才", "设计艺术学院", "临床医学",
 		"新闻动态\\ NEWS INFORMATION", "新闻动态\\ NEWS",
 	}
+	// Prefix-based skip patterns
+	skipPrefixes := []string{
+		"习近平给四所交通大学全体师生回信",
+		"习近平总书记给四所交通大学全体师生的回信",
+	}
 	for _, s := range skip {
 		if title == s || strings.Contains(title, s) {
+			return false
+		}
+	}
+	for _, p := range skipPrefixes {
+		if strings.HasPrefix(title, p) {
 			return false
 		}
 	}
@@ -363,25 +397,37 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 				href, _ = a.Attr("href")
 			}
 			// Try title from attribute first, then specific class, then link text
-			title := strings.TrimSpace(a.AttrOr("title", ""))
-			if title == "" {
-				// Clone the selection and remove known non-title elements before extracting text
-				titleSel := sel.Find(".xw-ul-tt, .line1, .txts, .a_block, .news-title, h3, h4, .info").First()
-				if titleSel.Length() > 0 {
-					// Remove category labels and other noise
-					titleSel.Find(".lanmu, .source, .date, .time").Remove()
-					title = strings.TrimSpace(titleSel.Text())
+		title := strings.TrimSpace(a.AttrOr("title", ""))
+		if title == "" {
+			// Clone the selection and remove known non-title elements before extracting text
+			titleSel := sel.Find(".xw-ul-tt, .line1, .txts, .a_block, .news-title, h3, h4, .info").First()
+			if titleSel.Length() > 0 {
+				// Remove category labels and other noise
+				titleSel.Find(".lanmu, .source, .date, .time").Remove()
+				title = strings.TrimSpace(titleSel.Text())
+			}
+		}
+		if title == "" {
+			title = strings.TrimSpace(a.Text())
+			if len(title) > 100 {
+				title = strings.TrimSpace(sel.Find(".xw-ul-tt, .line1, .txts, .a_block").Text())
+			}
+		}
+		// If still empty, try img title/alt attribute
+		if title == "" {
+			img := a.Find("img").First()
+			if img.Length() > 0 {
+				title = strings.TrimSpace(img.AttrOr("title", ""))
+				if title == "" {
+					title = strings.TrimSpace(img.AttrOr("alt", ""))
 				}
 			}
-			if title == "" {
-				title = strings.TrimSpace(a.Text())
-				if len(title) > 100 {
-					title = strings.TrimSpace(sel.Find(".xw-ul-tt, .line1, .txts, .a_block").Text())
-				}
-			}
-			if title == "" || href == "" || !isValidNewsTitle(title) {
-				return
-			}
+		}
+		// Clean title: remove date prefixes and other noise
+		title = cleanTitle(title)
+		if title == "" || href == "" || !isValidNewsTitle(title) {
+			return
+		}
 			if len(title) > 100 || strings.Contains(title, "来源") {
 				return
 			}
@@ -434,6 +480,18 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 			if title == "" {
 				title = strings.TrimSpace(sel.Text())
 			}
+			// If still empty, try img title/alt attribute
+			if title == "" {
+				img := sel.Find("img").First()
+				if img.Length() > 0 {
+					title = strings.TrimSpace(img.AttrOr("title", ""))
+					if title == "" {
+						title = strings.TrimSpace(img.AttrOr("alt", ""))
+					}
+				}
+			}
+			// Clean title: remove date prefixes and other noise
+			title = cleanTitle(title)
 			if title == "" || href == "" || !strings.Contains(href, ".htm") {
 				return
 			}

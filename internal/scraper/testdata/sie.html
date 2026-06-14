@@ -1,0 +1,631 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+    <title>西南交通大学国际教育学院</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="西南交通大学国际教育学院">
+<META Name="keywords" Content="西南交通大学国际教育学院" />
+
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/aos.css">
+
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/vsbscreen.min.js" id="_vsbscreen" devices="pc|pad"></script>
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1001,'/index.jsp',-1,1671064084)</script>
+</head>
+
+<body>
+    <div class="topbar">
+        <div class="wrap clearfix relative">
+       <div class="other"><script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/openlink.js"></script>
+     <a href="https://admission.swjtu.edu.cn/#/login" target="_blank" title="" onclick="_addDynClicks(&#34;wburl&#34;, 1671064084, 68547)"><p>在线申请</p></a>
+</div>
+            <div class="lang"></div>
+           <!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu1 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+        margin-top: -15px;
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu1 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu1"></div>
+<script type="text/html" id="htmlu1">
+    <div id="appu1">
+        <div v-if="!isError">
+          
+             <div class="search-box">
+                <input type="text" class="text" placeholder="检索" v-model=query.keyWord @keyup.enter="onSubmit">
+                <input type="image" class="btn" src="images/search-icon.png" v-on:click="onSubmit()" style="    width: 18px;">
+            </div>
+
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu1").html($("#htmlu1").text());
+</script>
+<script>
+    var appOwner = "1671064084";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu1",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu1 = document.querySelector("#appu1");
+   if (appElementu1 && appElementu1.__vue__) {
+
+   } else {
+      $("#divu1").html($("#htmlu1").text());
+      var appOwner = "1671064084";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou1 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu1(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu1();
+        }
+      };
+
+      function onSubmitu1(e) {
+        queryInfou1.query.keyWord= $("#appu1  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou1.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+            <div class="links"> 
+     <a href="English1/Home.htm" target="_blank" title="" onclick="_addDynClicks(&#34;wburl&#34;, 1671064084, 68548)">ENGLISH</a> 
+</div>
+        </div>
+    </div>
+    <div class="header">
+        <div class="wrap clearfix ">
+            <div class="r1 clearfix">
+                <div class="logo">
+<!-- 网站logo图片地址请在本组件"内容配置-网站logo"处填写 -->
+<a href="index.htm" title="国际教育学院（2020）"><img src="images/GUOJI02.png"></a></div>
+                
+                <div class="main-nav"><ul class="clearfix">
+
+		
+		<li><a href="gywm/xyjj.htm" title="关于我们">关于我们</a>
+
+                            <div class="dropdown">
+                                <ul>
+				<li><a href="gywm/xyjj.htm" title="学院简介">学院简介</a></li>
+				<li><a href="gywm/gzry.htm" title="工作人员">工作人员</a></li>
+                                </ul>
+                            </div>
+		</li>
+
+
+		
+		<li><a href="zsxx/xlxwxm.htm" title="招生信息">招生信息</a>
+
+                            <div class="dropdown">
+                                <ul>
+				<li><a href="zsxx/xlxwxm.htm" title="学历学位项目">学历学位项目</a></li>
+				<li><a href="zsxx/fxlxm.htm" title="非学历项目">非学历项目</a></li>
+				<li><a href="zsxx/jxj.htm" title="奖学金">奖学金</a></li>
+				<li><a href="zsxx/dsxx.htm" title="导师信息">导师信息</a></li>
+                                </ul>
+                            </div>
+		</li>
+
+
+		
+		<li><a href="jyjx/bks.htm" title="教育教学">教育教学</a>
+
+                            <div class="dropdown">
+                                <ul>
+				<li><a href="jyjx/bks.htm" title="本科生">本科生</a></li>
+				<li><a href="jyjx/yjs.htm" title="研究生">研究生</a></li>
+				<li><a href="jyjx/yys.htm" title="语言生">语言生</a></li>
+				<li><a href="jyjx/yywhxm.htm" title="语言文化项目">语言文化项目</a></li>
+                                </ul>
+                            </div>
+		</li>
+
+
+		
+		<li><a href="xysh/csjj.htm" title="校园生活">校园生活</a>
+
+                            <div class="dropdown">
+                                <ul>
+				<li><a href="xysh/csjj.htm" title="城市简介">城市简介</a></li>
+				<li><a href="xysh/jtxx.htm" title="交通信息">交通信息</a></li>
+				<li><a href="xysh/bdxz.htm" title="报到须知">报到须知</a></li>
+				<li><a href="xysh/zzbl.htm" title="证照办理">证照办理</a></li>
+				<li><a href="xysh/zszy.htm" title="住宿指引">住宿指引</a></li>
+				<li><a href="xysh/wltx.htm" title="网络通信">网络通信</a></li>
+				<li><a href="xysh/bxzn.htm" title="保险指南">保险指南</a></li>
+				<li><a href="xysh/shzn.htm" title="生活指南">生活指南</a></li>
+				<li><a href="xysh/gzzd.htm" title="规章制度">规章制度</a></li>
+				<li><a href="xysh/xshd.htm" title="学生活动">学生活动</a></li>
+                                </ul>
+                            </div>
+		</li>
+
+
+		
+		<li><a href="xqzb/dxqzn.htm" title="学前准备">学前准备</a>
+
+                            <div class="dropdown">
+                                <ul>
+				<li><a href="xqzb/dxqzn.htm" title="到校前指南">到校前指南</a></li>
+				<li><a href="xqzb/flfg.htm" title="法律法规">法律法规</a></li>
+                                </ul>
+                            </div>
+		</li>
+
+
+		
+		<li><a href="cglx/pxjj.htm" title="出国留学">出国留学</a>
+
+                            <div class="dropdown">
+                                <ul>
+				<li><a href="cglx/pxjj.htm" title="培训简介">培训简介</a></li>
+				<li><a href="cglx/pxxw.htm" title="培训新闻">培训新闻</a></li>
+                                </ul>
+                            </div>
+		</li>
+
+
+		
+		<li><a href="xywl/xywl.htm" title="校友网络">校友网络</a>
+
+                            <div class="dropdown">
+                                <ul>
+				<li><a href="xywl/xywl.htm" title="校友网络">校友网络</a></li>
+				<li><a href="xywl/yxxlj.htm" title="与学校链接">与学校链接</a></li>
+                                </ul>
+                            </div>
+		</li>
+
+
+		
+		<li><a href="xzzx/xqzb.htm" title="下载中心">下载中心</a>
+
+                            <div class="dropdown">
+                                <ul>
+				<li><a href="xzzx/xqzb.htm" title="行前准备">行前准备</a></li>
+				<li><a href="xzzx/jxxg.htm" title="教学相关">教学相关</a></li>
+				<li><a href="xzzx/by_jyxg.htm" title="毕业、结业相关">毕业、结业相关</a></li>
+				<li><a href="xzzx/qzxg.htm" title="签证相关">签证相关</a></li>
+				<li><a href="xzzx/zsxg.htm" title="住宿相关">住宿相关</a></li>
+                                </ul>
+                            </div>
+		</li>
+
+
+
+
+
+
+</ul></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="banner" data-aos="fade-up">
+        <div class="slide">
+            <div class="bd">    <ul>
+            
+                
+                    <li>
+                        <div class="pic"><a><img src="images/2023ganzhizhongguoshizhouniantebiehuodongwutaizhao.jpg" alt=""></a></div>
+                    
+                    </li>
+                
+                
+                    <li>
+                        <div class="pic"><a><img src="images/e22c347f-d3a8-4169-b07b-debc1a8c8f31.jpg" alt=""></a></div>
+                    
+                    </li>
+                
+        
+        
+                
+                    <li>
+                        <div class="pic"><a href="gywm/xyjj.htm" title="" onclick="_addDynClicks(&#34;wbimage&#34;, 1671064084, 58980)" target="_blank"><img src="images/zhongwenbanner_03.jpg" alt=""></a></div>
+                    
+                    </li> 
+                
+                
+                    <li>
+                        <div class="pic"><a href="images/0230414214814.jpg" title="" onclick="_addDynClicks(&#34;wbimage&#34;, 1671064084, 71562)" target="_blank"><img src="images/0230414214814.jpg" alt=""></a></div>
+                    
+                    </li> 
+                
+        
+</ul></div>
+        </div>
+
+    </div>
+    <div class="index-row1" data-aos="fade-up">
+        <div class="wrap clearfix">
+            <div class="c1">
+
+<script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script><div class="tit">新闻中心</div>
+                <div class="list">
+                    <ul class="clearfix">
+                        
+<li>
+                            <div class="inner"><a href="info/1013/2592.htm">
+                                <div class="pic"><img src="/__local/D/AC/1A/AA5C8BD5B85A87ED3F19C52A7A4_0CC232EC_2ECC8D.jpg"></div>
+                                <div class="text">
+                                    
+                                    <div class="date"><img src="images/date.png">2025-10-24</div>
+                                    <div class="desc">2026/2027学年学历项目一览表  List of Degree Program </div></a>
+                                     
+                                </div>
+                            </div>
+                        </li>
+                        
+<li>
+                            <div class="inner"><a href="info/1013/3332.htm">
+                                <div class="pic"><img src="/__local/D/3E/D2/0E7B37389C2459ED5966960D68C_D33EBADD_109A6.jpeg"></div>
+                                <div class="text">
+                                    
+                                    <div class="date"><img src="images/date.png">2026-06-10</div>
+                                    <div class="desc">我校国际学生代表参加2026世界交通运输大会 </div></a>
+                                     
+                                </div>
+                            </div>
+                        </li>
+                        
+<li>
+                            <div class="inner"><a href="info/1013/3312.htm">
+                                <div class="pic"><img src="/__local/C/61/F3/B53E2D5A4C0776F1A3978D2924B_65F2F325_21293.png"></div>
+                                <div class="text">
+                                    
+                                    <div class="date"><img src="images/date.png">2026-05-28</div>
+                                    <div class="desc">马来西亚留华同学会会长一行来访 </div></a>
+                                     
+                                </div>
+                            </div>
+                        </li>
+                        
+
+</ul>
+<div class="mores"><a href="xyxw.htm">更多...</a></div>
+                </div><script>_showDynClickBatch(['dynclicks_u6_2592','dynclicks_u6_3332','dynclicks_u6_3312'],[2592,3332,3312],"wbnews", 1671064084)</script>
+</div>
+            <div class="c2">
+
+<div class="tit">通知公告<a href="tzgg.htm" class="titmore">更多&gt;&gt;</a></div>
+                <div class="list">
+                    
+<dl class="tzgg1">
+                        <dt>
+                            <p class="d">2025/10</p>
+                            <p class="y">24</p>
+                        </dt>
+                        <dd><a href="info/1014/2602.htm" target="_blank" title="2026/2027学年学历项目一览表  List of Degree Program">2026/2027学年学历项目一览表  List of Degree Program</a></dd>
+                    </dl>
+                    
+<dl class="tzgg">
+                        <dt>
+                            <p class="d">2026/05</p>
+                            <p class="y">18</p>
+                        </dt>
+                        <dd><a href="info/1014/3242.htm" target="_blank" title="讲座：人工智能理论与实践">讲座：人工智能理论与实践</a></dd>
+                    </dl>
+                    
+<dl class="tzgg">
+                        <dt>
+                            <p class="d">2026/04</p>
+                            <p class="y">03</p>
+                        </dt>
+                        <dd><a href="info/1014/3182.htm" target="_blank" title="西南交通大学2026/2027学年“丝绸之路”中国政府奖学金项目招生简章（CSC Type B）  Southwest Jiaotong University Chinese Government Scholarship Program for the 2026/2027 Academic Year - Silk Road Scholarship Program（CSC Type B）">西南交通大学2026/2027学年“丝绸之路”中国政府奖学金项...</a></dd>
+                    </dl>
+                    
+<dl class="clearfix tzgg" class="tzgg" style="border:0px">
+                        <dt>
+                            <p class="d">2025/12</p>
+                            <p class="y">29</p>
+                        </dt>
+                        <dd><a href="info/1014/3172.htm" target="_blank" title="西南交通大学2025年国际学生优秀学术论文评审结果公示">西南交通大学2025年国际学生优秀学术论文评审结果公示</a></dd>
+                    </dl>
+                    
+</div><script>_showDynClickBatch(['dynclicks_u7_2602','dynclicks_u7_3242','dynclicks_u7_3182','dynclicks_u7_3172'],[2602,3242,3182,3172],"wbnews", 1671064084)</script>
+</div>
+        </div>
+    </div>
+    <div class="index-row2">
+        <div class="wrap">
+            <div class="list"><ul class="clearfix">
+                    <li>
+                        <a href="index/hdrl.htm" target="_blank" title="" onclick="_addDynClicks(&#34;wburl&#34;, 1671064084, 65977)">
+                            <div class="icon icon1"></div>
+                            <p>活动日历</p>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="xzzx/xqzb.htm" target="_blank" title="" onclick="_addDynClicks(&#34;wburl&#34;, 1671064084, 65978)">
+                            <div class="icon icon2"></div>
+                            <p>下载中心</p>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="xqzb/flfg.htm" target="_blank" title="" onclick="_addDynClicks(&#34;wburl&#34;, 1671064084, 65979)">
+                            <div class="icon icon3"></div>
+                            <p>法律法规</p>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="index/gzzd.htm" target="_blank" title="" onclick="_addDynClicks(&#34;wburl&#34;, 1671064084, 65980)">
+                            <div class="icon icon4"></div>
+                            <p>规章制度</p>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="lxwm.htm" target="_blank" title="" onclick="_addDynClicks(&#34;wburl&#34;, 1671064084, 65981)">
+                            <div class="icon icon5"></div>
+                            <p>联系我们</p>
+                        </a>
+                    </li>
+
+</ul></div>
+        </div>
+    </div>
+    <div class="index-row3 clearfix">        
+            <div class="c1">
+             <a href="index/bdwh.htm">     
+            <div class="item">
+            <div class="pic"><img src="images/pic1.png" alt=""></div>
+            <div class="text text1">本地文化</div>
+            <div class="cover cover1" ">
+                <p>本地文化</p>
+            </div>
+            </div>
+             </a>     
+         
+            
+             <a href="index/xsst.htm">     
+            <div class="item">
+            <div class="pic"><img src="images/20/08/25/1dcc9ydxpd/guojizhonhwen3.jpg" alt=""></div>
+            <div class="text text2">学生社团</div>
+            <div class="cover cover2" ">
+                <p>学生社团</p>
+            </div>
+            </div>
+             </a>     
+         </div> <div class="c2">
+
+            
+             <a href="https://sie.swjtu.edu.cn/xysh/shzn.htm">     
+            <div class="item">
+            <div class="pic"><img src="images/pic2.png" alt=""></div>
+            <div class="text text3">校园生活</div>
+            <div class="cover cover3" ">
+                <p>校园生活</p>
+            </div>
+            </div>
+             </a>     
+         </div> 
+            <div class="c1">
+             <a href="index/hywhxm.htm">     
+            <div class="item">
+            <div class="pic"><img src="images/20/08/25/1dcc9ydxpd/guojizhonhwen.jpg" alt=""></div>
+            <div class="text text2">汉语文化项目</div>
+            <div class="cover cover2" ">
+                <p>汉语文化项目</p>
+            </div>
+            </div>
+             </a>     
+         
+
+            
+             <a href="index/syxx.htm">     
+            <div class="item">
+            <div class="pic"><img src="images/20/08/25/1dcc9ydxpd/guojizhonhwen5.jpg" alt=""></div>
+            <div class="text text1">实用信息</div>
+            <div class="cover cover1" ">
+                <p>实用信息</p>
+            </div>
+            </div>
+             </a>     
+         </div> <div class="c2">
+            
+             <a href="index/tyzg.htm">     
+            <div class="item">
+            <div class="pic"><img src="images/20/08/25/1dcc9ydxpd/guojizhonhwen2.jpg.jpg" alt=""></div>
+            <div class="text text2">体验中国</div>
+            <div class="cover cover2" ">
+                <p>体验中国</p>
+            </div>
+            </div>
+             </a>     
+         </div> 
+
+</div>
+    <div class="footer" data-aos="fade-down">
+        <div class="wrap clearfix">
+            <div class="c1"><!-- 版权内容请在本组件"内容配置-版权"处填写 -->
+<p>版权所有：西南交通大学国际教育学院</p><p>地址：中国四川省成都市郫都区犀安路 999 号（邮编：611756）</p><p><br /></p><p><br /></p></div>
+            <div class="c2"><h6>相关链接</h6>
+                <div class="list"><ul class="link_ul">
+<li> <a href="https://www.swjtu.edu.cn/" title="" onclick="_addDynClicks(&#34;wburl&#34;, 1671064084, 68549)">西南交通大学</a> </li>               
+<li> <a href="http://fad.swjtu.edu.cn/" title="" onclick="_addDynClicks(&#34;wburl&#34;, 1671064084, 68552)">西南交通大学国际合作与交流处</a> </li>               
+<li> <a href="http://www.csc.edu.cn/" title="" onclick="_addDynClicks(&#34;wburl&#34;, 1671064084, 68553)">国家留学基金管理委员会</a> </li>               
+<li> <a href="http://www.cscse.edu.cn/" title="" onclick="_addDynClicks(&#34;wburl&#34;, 1671064084, 68550)">教育部留学服务中心</a> </li>               
+<li> <a href="http://cdcrj.chengdu.gov.cn/" title="" onclick="_addDynClicks(&#34;wburl&#34;, 1671064084, 68551)">成都市公安局出入境管理局</a> </li>               
+ </ul></div></div>
+        </div>
+    </div>
+        <script src="js/jquery.min.js"></script>
+    <script src="js/jsd.js"></script>
+    <script src="js/jquery.SuperSlide.js"></script>
+    <script src="js/aos.js"></script>
+    <script type="text/javascript">
+        $(function () {
+
+            $('.main-nav li').mouseenter(function () {
+                $(this).find('.dropdown').stop().slideDown()
+            })
+            $('.main-nav li').mouseleave(function () {
+                $(this).find('.dropdown').stop().slideUp()
+            })
+            $('.banner .slide').slide({
+                titCell: '.hd ul',
+                mainCell: ".bd ul",
+                autoPage: "<li></li>",
+                autoPlay: true,
+                trigger: "click",
+            })
+            $("#slide1").slide({
+                titCell: '.hd ul',
+                mainCell: ".bd ul",
+                autoPage: "<li></li>",
+                autoPlay: true,
+                trigger: "click",
+            })
+            AOS.init({
+                offset: 20,
+                duration: 400,
+                delay: 100,
+            });
+        })
+    </script>
+</body>
+
+</html>

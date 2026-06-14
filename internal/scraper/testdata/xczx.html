@@ -1,0 +1,770 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>西南交通大学乡村振兴与文化旅游发展研究院</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="西南交通大学乡村振兴与文化旅游发展研究院">
+<META Name="keywords" Content="西南交通大学,乡村振兴与文化旅游发展研究院" />
+
+
+<link rel="stylesheet" href="style/style.css?ver=18" type="text/css">
+<link rel="stylesheet" href="css/publice.css" type="text/css">
+<link href="css/zzsc.css" rel="stylesheet" type="text/css" />
+
+
+
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1150,'/index.jsp',-1,1684268308)</script>
+</head>
+<body>
+<div class="yb_conct">
+  <div class="yb_bar">
+    <ul>
+           <li class="yb_top">返回顶部</li>
+      <li class="yb_phone">028-67131991</li>
+      <li class="yb_ercode" style="height:53px;">微信二维码 <br>
+        <img class="hd_qr" src="images/wx_pic.jpg" width="125" alt=""> </li>
+    </ul>
+  </div>
+</div>
+<!--top s-->    
+<div class="topWrap clearfix">
+    <div class="topDiv">
+        
+<!-- 网站logo图片地址请在本组件"内容配置-网站logo"处填写 -->
+<div class="logo">
+<a href="">
+<!-- 网站logo图片地址请在本组件"内容配置-网站logo"处填写 -->
+<a href="index.htm" title="乡村振兴与文化旅游发展研究院"><img src="images/logo1.png" width="550" height="60" border="0" alt="乡村振兴与文化旅游发展研究院" title="乡村振兴与文化旅游发展研究院"></a></a>
+</div>
+        <div class="topR fr">
+            <script language="javascript" src="dfiles/16558/system/resource/js/dynclicks.js"></script><script language="javascript" src="dfiles/16558/system/resource/js/openlink.js"></script><div class="topR_t fr">
+     <a href="yjygk/jj.htm" onclick="_addDynClicks(&#34;wburl&#34;, 1451319075, 36190)" target="">研究院概况</a>
+     |
+     <a href="gywm/lxfs.htm" onclick="_addDynClicks(&#34;wburl&#34;, 1451319075, 36191)" target="">联系我们</a>
+     
+</div>
+
+
+<div><!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script>
+<div id="divu1"></div>
+<script type="text/html" id="htmlu1">
+    <div id="appu1">
+        <div v-if="!isError">
+     
+            
+            <div class="Search">
+
+<input autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit"   class="search_text">
+  <div class="fdj fr"> <input type="submit" class="button pngFix"  v-on:click="onSubmit()" value="" style="cursor: hand"></div>
+
+</div>
+            
+            
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu1").html($("#htmlu1").text());
+</script>
+<script>
+    var appOwner = "1684268308";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu1",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu1 = document.querySelector("#appu1");
+   if (appElementu1 && appElementu1.__vue__) {
+
+   } else {
+      $("#divu1").html($("#htmlu1").text());
+      var appOwner = "1684268308";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou1 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu1(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu1();
+        }
+      };
+
+      function onSubmitu1(e) {
+        queryInfou1.query.keyWord= $("#appu1  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou1.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script></div>
+        </div>
+    </div>
+</div>
+
+<!--nav-->
+<div class="navWrap  clearfix">
+    <div class="nav">    <ul>
+        <li class="mainmenu">
+            <a class="link" href="index.htm">首页</a>                       
+        </li>
+    </ul>
+    <ul>
+        <li class="mainmenu">
+            <a class="link" href="yjygk.htm">研究院概况</a>                       
+            <dl>
+                <dd><a href="yjygk/jj.htm">简介</a></dd>
+                <dd><a href="yjygk/zktd.htm">智库团队</a></dd>
+                <dd><a href="yjygk/zzjg.htm">组织架构</a></dd>
+            </dl>
+        </li>
+    </ul>
+    <ul>
+        <li class="mainmenu">
+            <a class="link" href="tzxw.htm">通知新闻</a>                       
+            <dl>
+                <dd><a href="tzxw/tzgg.htm">通知公告</a></dd>
+                <dd><a href="tzxw/xwdt.htm">新闻动态</a></dd>
+                <dd><a href="tzxw/xydt.htm">行业动态</a></dd>
+            </dl>
+        </li>
+    </ul>
+    <ul>
+        <li class="mainmenu">
+            <a class="link" href="ktyj.htm">课题研究</a>                       
+            <dl>
+                <dd><a href="ktyj/yjxm.htm">研究项目</a></dd>
+                <dd><a href="ktyj/yjcg.htm">研究成果</a></dd>
+                <dd><a href="ktyj/kfkt.htm">开放课题</a></dd>
+            </dl>
+        </li>
+    </ul>
+    <ul>
+        <li class="mainmenu">
+            <a class="link" href="xsyt.htm">学术研讨</a>                       
+            <dl>
+                <dd><a href="xsyt/zjtd.htm">专家团队</a></dd>
+                <dd><a href="xsyt/xsfx.htm">学术方向</a></dd>
+                <dd><a href="xsyt/xsjl.htm">学术交流</a></dd>
+            </dl>
+        </li>
+    </ul>
+    <ul>
+        <li class="mainmenu">
+            <a class="link" href="cyzx.htm">产业资讯</a>                       
+            <dl>
+                <dd><a href="cyzx/xmch.htm">项目策划</a></dd>
+                <dd><a href="cyzx/zxfw.htm">资讯服务</a></dd>
+            </dl>
+        </li>
+    </ul>
+    <ul>
+        <li class="mainmenu">
+            <a class="link" href="gywm.htm">关于我们</a>                       
+            <dl>
+                <dd><a href="gywm/dsj.htm">大事记</a></dd>
+                <dd><a href="gywm/hzdw.htm">合作单位</a></dd>
+                <dd><a href="gywm/lxfs.htm">联系方式</a></dd>
+            </dl>
+        </li>
+    </ul>
+    <ul>
+    </ul>
+    <ul>
+    </ul>
+</div>
+</div>
+<script type="text/javascript">
+
+    $(".mainmenu dl").hide();
+
+</script>
+
+<div style="margin:0 auto;width:1000px;">
+
+<script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script>    <div class="banner_three">
+            <div class="eachBox">
+                <div class="changeBox_a1" id="change_32">
+                                            <div class="changeDiv"><h3><a href="#" target="_blank"></a></h3> <a target="_blank" href="#" title=""><img width="1000" height="335" src="/__local/8/C9/17/EA5B6D54F2E63E1BB080FE75B49_11D0EFF1_20DC2.jpg" /></a></div>
+                        <div class="changeDiv"><h3><a href="#" target="_blank"></a></h3> <a target="_blank" href="#" title=""><img width="1000" height="335" src="/__local/0/22/D2/B69B52BE8C0F77FA807A7A46156_6023E4BB_256D1.jpg" /></a></div>
+                        <div class="changeDiv"><h3><a href="#" target="_blank"></a></h3> <a target="_blank" href="#" title=""><img width="1000" height="335" src="/__local/4/51/CE/BE09082925D92D80BAB26F35FBB_941F84AC_38029.jpg" /></a></div>
+                        <div class="changeDiv"><h3><a href="#" target="_blank"></a></h3> <a target="_blank" href="#" title=""><img width="1000" height="335" src="/__local/7/6B/26/D5B09F7F628C36D1E251A53218F_DD614C38_2A403.jpeg" /></a></div>
+                    <ul class="ul_change_a2">
+                        <li><span></span></li>
+                        <li><span></span></li>
+                        <li><span></span></li>
+                        <li><span></span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+<script>_showDynClickBatch(['dynclicks_u3_1064','dynclicks_u3_1049','dynclicks_u3_1048','dynclicks_u3_1047'],[1064,1049,1048,1047],"wbnews", 1684268308)</script>
+</div>
+
+<!--main--> <DIV class="vsb-container container clearfix" columns="6" containerid="2"></DIV>
+<DIV class="vsb-container container clearfix" columns="6" containerid="2"><!--新闻信息5-->
+<DIV class="vsb-space new_inforBox new_inforBoxb fl" columns="6">
+<DIV class="dynamic dynamicd">
+<H2>新闻动态 </H2><SPAN><A href="tzxw/xwdt.htm" onfocus="undefined" target=""><IMG src="dfiles/16558/img/more.png"></A></SPAN></DIV>
+<DIV class="newBox">
+<DIV class="new_pic new_pica"><LINK href="/system/resource/style/component/news/list/imagechangenews.css" type="text/css" rel="stylesheet">
+
+<DIV id="u_u4_ifocus" class="u_u4_divcc">
+    <DIV id="u_u4_ifocus_pic">
+        <DIV id="u_u4_ifocus_piclist" style="LEFT: 0px; TOP: -675px">
+            <UL>
+            
+            <LI><A href="info/1161/1173.htm" target="_blank"><IMG src="/__local/B/36/28/3D4B8AA5212A6483A4ECBD4B986_96A458C9_FE20.jpeg" border="0"></A> </LI>
+            
+            <LI><A href="info/1161/1163.htm" target="_blank"><IMG src="/__local/F/F3/E4/2D9D5DA836AEF3B82BA58C972D0_3EEFAFCA_AF46D.jpg" border="0"></A> </LI>
+            
+            <LI><A href="info/1161/1162.htm" target="_blank"><IMG src="/__local/1/CE/08/51EBF11C97FD273E64CF08FE4CF_5DCC99C9_15039.jpg" border="0"></A> </LI>
+            
+            <LI><A href="info/1161/1152.htm" target="_blank"><IMG src="/__local/B/69/84/511B2B548BBD538F8F4981ACBD2_0E35F63A_11749.jpg?e=.jpg" border="0"></A> </LI>
+            
+            </UL>
+        </DIV>
+        <DIV id="u_u4_ifocus_opdiv"></DIV>
+            <DIV id="u_u4_ifocus_tx">
+                <UL id="u_u4_ifocus_tx_ul">
+              
+                <LI class="normal"><span class="titlestyle274220">西南交通大学乡村振兴与文化旅游发展研究院赴白羊乡调研农特...</span></LI>
+             
+                <LI class="normal"><span class="titlestyle274220">研究院领导陪同日本福知山公立大学张明军教授一行调研考察五...</span></LI>
+             
+                <LI class="normal"><span class="titlestyle274220">西南交通大学乡村振兴与文化旅游发展研究院与株洲市委党校签...</span></LI>
+             
+                <LI class="normal"><span class="titlestyle274220">西南交通大学与四川省住房和城乡建设厅签署合作协议</span></LI>
+             
+                </UL>
+            </DIV>
+    </DIV>
+    <DIV id="u_u4_ifocus_btn">
+        <UL id="u_u4_ifocus_btn_ul">
+            
+          <LI class="current"><IMG alt="" src="/__local/7/BA/00/B52ADC56F4406E9115F0F67D902_55230762_2D0DE.jpeg"> 
+          </LI>
+          
+          <LI class="current"><IMG alt="" src="/__local/F/F3/E4/2D9D5DA836AEF3B82BA58C972D0_3EEFAFCA_AF46D.jpg"> 
+          </LI>
+          
+          <LI class="current"><IMG alt="" src="/__local/E/61/84/455FDFBD7C0A551D7F200E6F504_F3227903_143A9.jpg"> 
+          </LI>
+          
+          <LI class="current"><IMG alt="" src="/__local/B/69/84/511B2B548BBD538F8F4981ACBD2_0E35F63A_11749.jpg?e=.jpg"> 
+          </LI>
+          
+        </UL>
+    </DIV>
+</DIV>
+
+<style>
+A {
+    COLOR: #666666; TEXT-DECORATION: none
+;}
+A:hover {
+    COLOR: #ff3701; TEXT-DECORATION: underline
+;}
+div UL LI H2 H3 H4 {
+    PADDING-RIGHT: 0px; PADDING-LEFT: 0px; PADDING-BOTTOM: 0px; MARGIN: 0px; PADDING-TOP: 0px
+;}
+div UL LI {
+    LIST-STYLE-TYPE: none
+;}
+#u_u4_ifocus {
+    BORDER-RIGHT: #A6D89B 1px solid; BORDER-TOP: #A6D89B 1px solid; BACKGROUND: #FFFFFF; MARGIN-BOTTOM: 5px; BORDER-LEFT: #A6D89B 1px solid; WIDTH: 500px; BORDER-BOTTOM: #A6D89B 1px solid; HEIGHT: 245px
+;}
+#u_u4_ifocus_pic {
+    DISPLAY: inline; FLOAT: left; MARGIN: 10px 0px 0px 10px; OVERFLOW: hidden; WIDTH: 385px; POSITION: relative; HEIGHT: 225px
+;}
+#u_u4_ifocus_piclist {
+    POSITION: absolute;}
+#u_u4_ifocus_piclist UL{
+    PADDING-RIGHT: 0px; PADDING-LEFT: 0px; PADDING-BOTTOM: 0px; MARGIN: 0px; PADDING-TOP: 0px;}
+#u_u4_ifocus_piclist LI {
+    OVERFLOW: hidden; WIDTH: 385px; HEIGHT: 225px;
+    MARGIN-left: 0px;}
+#u_u4_ifocus_piclist IMG {
+    WIDTH: 385px; HEIGHT: 225px
+;}
+#u_u4_ifocus_btn {
+    DISPLAY: inline; FLOAT: right; MARGIN: 9px 9px 0px 0px; WIDTH: 91px
+;}
+#u_u4_ifocus_btn_ul {
+    MARGIN-left: 0px;MARGIN-top: 0px;padding-left:0px;}
+#u_u4_ifocus_btn LI {
+    FILTER: alpha(opacity=50); WIDTH: 91px; CURSOR: pointer; HEIGHT: 57px; opacity: 0.5; -moz-opacity: 0.5
+;}
+#u_u4_ifocus_btn IMG {
+    MARGIN: 7px 0px 0px 11px; WIDTH: 75px; HEIGHT: 45px
+;}
+#u_u4_ifocus_btn .current {
+    BACKGROUND: url(/system/resource/images/imagechangenews/ifocus_btn_bg.gif) no-repeat; FILTER: alpha(opacity=100); opacity: 1; -moz-opacity: 1
+;}
+#u_u4_ifocus_opdiv {
+    BACKGROUND: #000; FILTER: alpha(opacity=50); LEFT: 0px; WIDTH: 470px; BOTTOM: 0px; POSITION: absolute; HEIGHT: 35px; opacity: 0.5; -moz-opacity: 0.5
+;}
+#u_u4_ifocus_tx {
+    LEFT: 8px; COLOR: #fff; BOTTOM: 8px; POSITION: absolute;
+    PADDING-LEFT: 0px; PADDING-BOTTOM: 0px; MARGIN-left: 0px;}
+#u_u4_ifocus_tx_ul
+{
+    PADDING-RIGHT: 0px; PADDING-LEFT: 0px; PADDING-BOTTOM: 0px; MARGIN: 3px; PADDING-TOP: 0px;}
+#u_u4_ifocus_tx .normal {
+    DISPLAY: none
+;}
+</style>
+<script>
+function byid(id) { return document.getElementById(id); }
+
+function u_u4_addLoadEvent(func){
+    var oldonload = window.onload;
+    if (typeof window.onload != 'function') {
+        window.onload = func;
+    } else {
+        window.onload = function(){
+            oldonload();
+            func();
+        }
+    }
+}
+
+function u_u4_moveElement(elementID,final_x,final_y,interval) {
+  if (!document.getElementById) return false;
+  if (!document.getElementById(elementID)) return false;
+  var elem = document.getElementById(elementID);
+  if (elem.movement) {
+    clearTimeout(elem.movement);
+  }
+  if (!elem.style.left) {
+    elem.style.left = "0px";
+  }
+  if (!elem.style.top) {
+    elem.style.top = "0px";
+  }
+  var xpos = parseInt(elem.style.left);
+  var ypos = parseInt(elem.style.top);
+  if (xpos == final_x && ypos == final_y) {
+        return true;
+  }
+  if (xpos < final_x) {
+    var dist = Math.ceil((final_x - xpos)/10);
+    xpos = xpos + dist;
+  }
+  if (xpos > final_x) {
+    var dist = Math.ceil((xpos - final_x)/10);
+    xpos = xpos - dist;
+  }
+  if (ypos < final_y) {
+    var dist = Math.ceil((final_y - ypos)/10);
+    ypos = ypos + dist;
+  }
+  if (ypos > final_y) {
+    var dist = Math.ceil((ypos - final_y)/10);
+    ypos = ypos - dist;
+  }
+  elem.style.left = xpos + "px";
+  elem.style.top = ypos + "px";
+  var repeat = "u_u4_moveElement('"+elementID+"',"+final_x+","+final_y+","+interval+")";
+  elem.movement = setTimeout(repeat,interval);
+}
+
+function u_u4_classNormal(iFocusBtnID,iFocusTxID){
+    var iFocusBtns= byid(iFocusBtnID).getElementsByTagName('li');
+    var iFocusTxs = byid(iFocusTxID).getElementsByTagName('li');
+    for(var i=0; i<iFocusBtns.length; i++) {
+        iFocusBtns[i].className='normal';
+        iFocusTxs[i].className='normal';
+    }
+}
+
+function u_u4_classCurrent(iFocusBtnID,iFocusTxID,n){
+    var iFocusBtns= byid(iFocusBtnID).getElementsByTagName('li');
+    var iFocusTxs = byid(iFocusTxID).getElementsByTagName('li');
+    iFocusBtns[n].className='current';
+    iFocusTxs[n].className='current';
+}
+
+function u_u4_iFocusChange() {
+    if(!byid('u_u4_ifocus')) return false;
+    byid('u_u4_ifocus').onmouseover = function(){u_u4_atuokey = true};
+    byid('u_u4_ifocus').onmouseout = function(){u_u4_atuokey = false};
+    var iFocusBtns = byid('u_u4_ifocus_btn').getElementsByTagName('li');
+    var listLength = iFocusBtns.length;
+    iFocusBtns[0].onmouseover = function() {
+        u_u4_moveElement('u_u4_ifocus_piclist',0,0,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',0);
+    }
+    if (listLength>=2) {
+        iFocusBtns[1].onmouseover = function() {
+            u_u4_moveElement('u_u4_ifocus_piclist',0,-225,5);
+            u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+            u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',1);
+        }
+    }
+    if (listLength>=3) {
+        iFocusBtns[2].onmouseover = function() {
+            u_u4_moveElement('u_u4_ifocus_piclist',0,-450,5);
+            u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+            u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',2);
+        }
+    }
+    if (listLength>=4) {
+        iFocusBtns[3].onmouseover = function() {
+            u_u4_moveElement('u_u4_ifocus_piclist',0,-675,5);
+            u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+            u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',3);
+        }
+    }
+    if (listLength>=5) {
+        iFocusBtns[4].onmouseover = function() {
+            u_u4_moveElement('u_u4_ifocus_piclist',0,-900,5);
+            u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+            u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',4);
+        }
+    }
+    if (listLength>=6) {
+        iFocusBtns[5].onmouseover = function() {
+            u_u4_moveElement('u_u4_ifocus_piclist',0,-1125,5);
+            u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+            u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',5);
+        }
+    }
+}
+
+setInterval('u_u4_autoiFocus()',4000);
+var u_u4_atuokey = false;
+function u_u4_autoiFocus() {
+    if(!byid('u_u4_ifocus')) return false;
+    if(u_u4_atuokey) return false;
+    var focusBtnList = byid('u_u4_ifocus_btn').getElementsByTagName('li');
+    var listLength = focusBtnList.length;
+    for(var i=0; i<listLength; i++) {
+        if (focusBtnList[i].className == 'current') var currentNum = i;
+    }
+    if (currentNum==0&&listLength!=1 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,-225,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',1);
+    }
+    if (currentNum==1&&listLength!=2 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,-450,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',2);
+    }
+    if (currentNum==2&&listLength!=3 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,-675,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',3);
+    }
+    if (currentNum==3&&listLength!=4 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,-900,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',4);
+    }
+    if (currentNum==4&&listLength!=5 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,-1125,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',5);
+    }
+    if (currentNum==5 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,0,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',0);
+    }
+    if (currentNum==1&&listLength==2 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,0,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',0);
+    }
+    if (currentNum==2&&listLength==3 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,0,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',0);
+    }
+    if (currentNum==3&&listLength==4 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,0,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',0);
+    }
+    if (currentNum==4&&listLength==5 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,0,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',0);
+    }
+}
+u_u4_addLoadEvent(u_u4_iFocusChange);
+u_u4_autoiFocus();
+</script>
+</DIV>
+<DIV class="new_list new_lista new_lista1">
+
+<h3><a href="info/1161/1173.htm">西南交通大学乡村振兴与文化旅游发展研究院赴白羊乡调研农特...</a></h3>
+<p>​2025年3月21日，西南交通大学乡村振兴与文化旅游发展研究院秘书长秦靖受邀赴阿坝州...[<span><a href="info/1161/1173.htm">详细信息</a></span>]</p>
+
+<ul class="dynamic_list dynamic_lista fr">
+<li style="margin-top:10px;"><a href="info/1161/1163.htm"><span>09/23</span><em>研究院领导陪同日本福知山公立大学张明军教授一行调研考察五...</em></a></li>
+<li style="margin-top:10px;"><a href="info/1161/1162.htm"><span>07/14</span><em>西南交通大学乡村振兴与文化旅游发展研究院与株洲市委党校签...</em></a></li>
+<li style="margin-top:10px;"><a href="info/1161/1152.htm"><span>07/01</span><em>西南交通大学与四川省住房和城乡建设厅签署合作协议</em></a></li>
+<li style="margin-top:10px;"><a href="info/1161/1142.htm"><span>01/14</span><em>“乡村振兴·魅力天府”产业发展高峰论坛顺利召开！</em></a></li>
+</ul><!--script >_showDynClickBatch(['dynclicks_u6_1186','dynclicks_u6_1184','dynclicks_u6_1176','dynclicks_u6_1174','dynclicks_u6_1164','dynclicks_u6_1154','dynclicks_u6_1153','dynclicks_u6_1144'],[1186,1184,1176,1174,1164,1154,1153,1144],"wbnews", 1451319075)</script--><script>_showDynClickBatch(['dynclicks_u5_1173','dynclicks_u5_1163','dynclicks_u5_1162','dynclicks_u5_1152','dynclicks_u5_1142'],[1173,1163,1162,1152,1142],"wbnews", 1684268308)</script>
+</DIV></DIV></DIV><!--站内搜索-->
+</DIV>
+
+
+
+<DIV class="vsb-container container clearfix" columns="6" containerid="2"><!--通知公告-->
+<DIV class="vsb-space informBox informBoxd informBoxc1 fl" columns="6">                
+    <div class="dynamic dynamicb dynamice"><h2>通知公告</h2><span><a href="tzxw/tzgg.htm" target=""><img src="dfiles/16558/img/w_more.png"></a></span></div>
+    <div class="infor_list infor_lista">
+        
+
+<ul class="dynamic_list dynamic_listb dynamic_liste fr">
+
+<li style="margin-top:10px;"><a href="info/1160/1132.htm"><span>2021-11-25</span><em style="width:800px;">关于开展西南交通大学“光彩2021”宣传展示工作的通知</em></a>
+</li>    
+    
+<li style="margin-top:10px;"><a href="info/1160/1063.htm"><span>2021-04-22</span><em style="width:800px;">西南交通大学建校125周年校庆公告</em></a>
+</li>    
+    
+<li style="margin-top:10px;"><a href="info/1160/1062.htm"><span>2021-03-27</span><em style="width:800px;">关于举办西南交通大学第121届运动会暨西南交通大学125周年校庆运动会的通知</em></a>
+</li>    
+    
+<li style="margin-top:10px;"><a href="info/1160/1058.htm"><span>2020-09-25</span><em style="width:800px;">关于召开西南交通大学2020年中层干部大会的通知--西南交通大学新闻网</em></a>
+</li>    
+    
+<li style="margin-top:10px;"><a href="info/1160/1057.htm"><span>2020-09-25</span><em style="width:800px;">党委人民武装部关于转发《成都市人民政府防空警报试鸣演练公告》的通知--西南交通大学新闻网</em></a>
+</li>    
+    
+<li style="margin-top:10px;"><a href="info/1160/1056.htm"><span>2020-09-25</span><em style="width:800px;">西南交通大学“秋实晚晴”之“乐龄阳光健身走”活动的通知 （犀浦校区）--西南交通大学新闻网</em></a>
+</li>    
+    
+<li style="margin-top:10px;"><a href="info/1160/1055.htm"><span>2020-09-25</span><em style="width:800px;">关于举行“浓情中秋、欢乐国庆”喜迎双节缤纷嘉年华活动的通知--西南交通大学新闻网</em></a>
+</li>    
+    
+<li style="margin-top:10px;"><a href="info/1160/1051.htm"><span>2020-09-24</span><em style="width:800px;">关于犀浦校区西门恢复机动车正常通行的通知</em></a>
+</li>    
+    
+</ul><script>_showDynClickBatch(['dynclicks_u6_1132','dynclicks_u6_1063','dynclicks_u6_1062','dynclicks_u6_1058','dynclicks_u6_1057','dynclicks_u6_1056','dynclicks_u6_1055','dynclicks_u6_1051'],[1132,1063,1062,1058,1057,1056,1055,1051],"wbnews", 1684268308)</script>
+
+    </div>
+</DIV>
+</DIV><!--广告-->
+
+
+
+
+<!--link--> 
+<DIV class="vsb-container container clearfix" columns="6" containerid="2">
+<DIV class="vsb-space content contentf" columns="6">    <div class="link_tit">
+            <h3>友情链接<i>/LINK</i></h3>
+        </div>
+        <div class="link_two">
+           
+            <ul>
+
+                    <li>
+<a href="http://www.swjtu.edu.cn" target="_blank"><img src="images/link/logo.jpg"></a>
+</li>
+
+
+
+                    <li>
+<a href="https://www.wttexpert.com/" target="_blank"><img src="images/link/link2.png"></a>
+</li>
+
+
+
+ 
+            </ul>
+        
+
+
+</div>
+</DIV></DIV><!--广告--></DIV>
+<!--foot-->
+<DIV class="footWrap">
+<DIV class="footDiv_one">
+<DIV class="foot_one"><!-- 版权内容请在本组件"内容配置-版权"处填写 -->
+<p><!-- 版权内容请在本组件"内容配置-版权"处填写 -->
+<p>&nbsp;Copyright© 2020 All Rights Reserved. 西南交通大学乡村振兴与文化旅游发展研究院</p></p></DIV></DIV></DIV>
+
+
+
+<DIV></DIV>
+
+</BODY></HTML>
+<script type="text/javascript" src="js/jquery.js"></script>
+<script type="text/javascript" src="js/jsd.js"></script>
+<script type="text/javascript" src="js/dh.js"></script>
+
+
+<script>
+$(function() {
+    // 悬浮窗口
+    $(".yb_conct").hover(function() {
+        $(".yb_conct").css("right", "5px");
+        $(".yb_bar .yb_ercode").css('height', '200px');
+    }, function() {
+        $(".yb_conct").css("right", "-127px");
+        $(".yb_bar .yb_ercode").css('height', '53px');
+    });
+    // 返回顶部
+    $(".yb_top").click(function() {
+        $("html,body").animate({
+            'scrollTop': '0px'
+        }, 300)
+    });
+});
+</script>
+<script type="text/javascript">
+$(function(){
+    $(".mainmenu dl").hide();
+    $("li.mainmenu").hover(function(){
+        $(this).find("dl").stop(true,true);
+        $(this).find("dl").slideDown();
+    },function(){
+        $(this).find("dl").stop(true,true);
+        $(this).find("dl").slideUp();
+    });
+})
+</script>
+<script type="text/javascript">
+$(function () {
+
+//切换对象为其他，这里为包含图片和标题的层
+    $('#change_32 div.changeDiv').soChange({//对象指向层，层内包含图片及标题
+        thumbObj:'#change_32 .ul_change_a2 span',
+        thumbNowClass:'on'//自定义导航对象当前class为on
+    });
+
+});
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,993 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN" class="home">
+<head>
+    <meta name="format-detection" content="telephone=no" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,minimum-scale=1,maximum-scale=1,initial-scale=1,user-scalable=no" />
+    <title>西南交通大学经济管理学院官网</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="西南交通大学经济管理学院官网">
+<META Name="keywords" Content="西南交大经济管理学院" />
+
+    <link href="css/animate.min.css" rel="stylesheet">
+    <link href="css/bootstrap.css" rel="stylesheet" type="text/css" />
+    <link href="css/slick.css" rel="stylesheet" type="text/css" />
+    <link href="css/style.css" rel="stylesheet" type="text/css" />
+
+    <style>
+    html {
+        font-size: 5.2083vw;}
+    </style>
+
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1001,'/index.jsp',-1,1447721748)</script>
+</head>
+<body>
+  <div class="modal-box">
+    <div class="modal-back"></div>
+    <div>
+        <!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script>
+<style>
+    #appu0 .qwss{}
+    #appu0 .tj{
+        background: #1567b1 url(images/search.png) center no-repeat;}
+</style>
+<div id="divu0"></div>
+<script type="text/html" id="htmlu0">
+    <div id="appu0">
+        <div v-if="!isError" class="search-box-c">
+            <input type="text" class="qwss form-control" placeholder="搜索" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+            <input class="tj btn btn-search-c" name="submit_button" type="button" value="" v-on:click="onSubmit()"/>
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu0").html($("#htmlu0").text());
+</script>
+<script>
+    var appOwner = "1447721748";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu0",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+
+<script>
+   var appElementu0 = document.querySelector("#appu0");
+   if (appElementu0 && appElementu0.__vue__) {
+
+   } else {
+      $("#divu0").html($("#htmlu0").text());
+      var appOwner = "1447721748";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="false";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou0 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu0(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu0();
+        }
+      };
+
+      function onSubmitu0(e) {
+        queryInfou0.query.keyWord= $("#appu0  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou0.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+    </div>
+  </div>       
+
+  <div class="header clearfix">
+    <div class="logo pull-left"><a href="https://www.swjtu.edu.cn"><img src="images/logo.png"></a></div>
+    <div class="pull-right header-right">
+      <div class="header-top text-right">
+          <a role="button" class="search-a"><img src="images/search.png"></a><a href="English.htm" class="langer">EN</a>
+      </div>
+      <div class="nav-list-box">
+        <div>        <ul class="nav-list clearfix">
+          <li>
+                <a href="index.htm">首页</a>
+          </li>
+          <li>
+            <a class="down" href="xygk/xyjj.htm">学院概况</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="xygk/xyjj.htm"> <img src="images/menu/001.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="xygk/xyjj.htm">学院简介</a>
+                          <a href="xygk/xrld.htm">现任领导</a>
+                          <a href="xygk/zzjg.htm">组织架构</a>
+                          <a href="xygk/xkjs.htm">学科建设</a>
+                          <a href="xygk/lxwm.htm">联系我们</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <a class="down" href="sztd2.htm">师资团队</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="sztd2.htm"> <img src="images/menu/002.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="sztd2/jsml.htm">教师名录</a>
+                          <a href="sztd2/jzjs.htm">兼职教授</a>
+                          <a href="sztd2/tdjs.htm">团队建设</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <a class="down" href="kxyj2.htm">科学研究</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="kxyj2.htm"> <img src="images/menu/003.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="kxyj2/kytj.htm">科研统计</a>
+                          <a href="kxyj2/kyjg.htm">科研机构</a>
+                          <a href="kxyj2/kycg.htm">科研成果</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <a class="down" href="rcpy.htm">人才培养</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="rcpy.htm"> <img src="images/menu/004.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="rcpy/bksjy.htm">本科生教育</a>
+                          <a href="rcpy/sssjy.htm">硕士生教育</a>
+                          <a href="rcpy/bssjy.htm">博士生教育</a>
+                          <a href="rcpy/MEMjy.htm">MEM教育</a>
+                          <a href="rcpy/MBAjy.htm">MBA教育</a>
+                          <a href="rcpy/EMBAjy.htm">EMBA教育</a>
+                          <a href="rcpy/EDP.htm">EDP</a>
+                          <a href="rcpy/MPAcc.htm">MPAcc</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <a class="down" href="gjhz.htm">国际合作</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="gjhz.htm"> <img src="images/menu/005.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="gjhz/gjjl.htm">国际交流</a>
+                          <a href="gjhz/hzxm.htm">合作项目</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <a class="down" href="dqgz.htm">党群工作</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="dqgz.htm"> <img src="images/menu/006.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="dqgz/djgz/dwzc.htm">党建工作</a>
+                          <a href="dqgz/jwgz/jwzc.htm">纪委工作</a>
+                          <a href="dqgz/tzgz.htm">统战工作</a>
+                          <a href="dqgz/ghgz.htm">工会工作</a>
+                          <a href="dqgz/ltgz.htm">离退工作</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <a class="down" href="xsgz.htm">学生工作</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="xsgz.htm"> <img src="images/menu/007.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="xsgz/xgdw.htm">学工队伍</a>
+                          <a href="xsgz/txzz.htm">团学组织</a>
+                          <a href="xsgz/btkx.htm">班团快讯</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <a class="down" href="yyzj.htm">院友之家</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="yyzj.htm"> <img src="images/menu/008.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="yyzj/yyhd.htm">院友活动</a>
+                          <a href="yyzj/yyfc.htm">院友风采</a>
+                          <a href="yyzj/yyjz.htm">院友捐赠</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <a class="down" href="cpyc/zpxx.htm">诚聘英才</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="cpyc/zpxx.htm"> <img src="images/menu/001.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="cpyc/rctx.htm">人才体系</a>
+                          <a href="cpyc/zpxx.htm">招聘信息</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <a class="down" href="mkslj/cyxz.htm">快速链接</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="mkslj/cyxz.htm"> <img src="images/menu/008.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="mkslj/cyxz.htm">常用下载</a>
+                          <a href="https://thesis.swjtu.edu.cn/teacher/login">论文管理系统(教师)</a>
+                          <a href="https://thesis.swjtu.edu.cn/student/login">论文管理系统(学生)</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+        </ul>        </div></div>
+      <div class="header-top text-center">
+        <a href="English.htm" class="langer">EN</a>
+      </div>
+      </div>
+    </div>
+    <div class="menu-button">
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+    </div>
+  </div>
+  <div class="banner-box">
+            <script language="javascript" src="/system/resource/js/dynclicks.js"></script>    <div class="banner">
+      <div><a href=""><img src="images/banner/gewuzhizhi.png"></a></div>
+      <div><a href=""><img src="images/banner/zhengjiguan.jpg"></a></div>
+      <div><a href=""><img src="images/banner/chuanchengjiaodawenhua1.png"></a></div>
+      <div><a href=""><img src="images/banner/xingfujingguan01.png"></a></div>
+      <div><a href=""><img src="images/banner/huixin.jpg"></a></div>
+    </div>
+    <div class="banner-bottom">
+      <div class="container">
+        <ul class="banner-nav tabs-hover clearfix text-center">
+          <li class="active"><a href="rcpy/bksjy.htm">本科</a></li>
+          <li><a href="rcpy/sssjy.htm">硕士</a></li>
+          <li><a href="rcpy/bssjy.htm">博士</a></li>
+          <li><a href="rcpy/MBAjy.htm">MBA</a></li>
+          <li><a href="rcpy/EMBAjy.htm">EMBA</a></li>
+          <li><a href="rcpy/MEMjy.htm">MEM</a></li>
+          <li><a href="rcpy/MPAcc.htm">MPAcc</a></li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+  <div class="page-one">
+    <div class="container">
+        
+
+<script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script>          <ul class="one-list clearfix">
+            <li>
+              <a href="info/1338/59025.htm">
+                <div class="img-hide">
+                  <div class="one-img" style="background: url(/__local/9/34/F7/613509708EED76F8C1FAF6AD833_D58CA3AE_806E0.jpg) center no-repeat; background-size: cover;"></div>
+                </div>
+                <div class="one-list-bottom">
+                  <div class="one-list-tt">经济管理学院举行第三期专业学位研究生企业导师聘任仪式暨校企合作研讨会</div>
+                  <div class="one-date">2026/06/08</div>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a href="info/1341/59015.htm">
+                <div class="img-hide">
+                  <div class="one-img" style="background: url(/__local/6/A9/86/CF287868B8DEF833CB046858683_E4951E7D_8F8E6.jpg) center no-repeat; background-size: cover;"></div>
+                </div>
+                <div class="one-list-bottom">
+                  <div class="one-list-tt">中国化学工程第七建设有限公司来院合作交流</div>
+                  <div class="one-date">2026/06/08</div>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a href="info/1338/58895.htm">
+                <div class="img-hide">
+                  <div class="one-img" style="background: url(/__local/0/3C/89/557C355E748C6B9A6F7F1C0A6F0_D82D8B7C_721B9.jpg) center no-repeat; background-size: cover;"></div>
+                </div>
+                <div class="one-list-bottom">
+                  <div class="one-list-tt">经济管理学院举行第二期专业学位研究生企业导师聘任仪式暨校企合作研讨会</div>
+                  <div class="one-date">2026/06/03</div>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a href="info/1339/58825.htm">
+                <div class="img-hide">
+                  <div class="one-img" style="background: url(/__local/8/7E/2D/B57EB8B3FAB4209CB7572281BD9_7D8631FF_56197.png) center no-repeat; background-size: cover;"></div>
+                </div>
+                <div class="one-list-bottom">
+                  <div class="one-list-tt">百卅赓续 经世启航 | 西南交通大学经济管理学院举行本科2026届学生毕业典...</div>
+                  <div class="one-date">2026/06/02</div>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a href="info/1341/58785.htm">
+                <div class="img-hide">
+                  <div class="one-img" style="background: url(/__local/2/A2/70/F6A0A121EA8D86E30A64273E1D2_8EC1C065_7603E.jpg) center no-repeat; background-size: cover;"></div>
+                </div>
+                <div class="one-list-bottom">
+                  <div class="one-list-tt">西南交通大学城市智慧化学科群建设全面启动</div>
+                  <div class="one-date">2026/06/01</div>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a href="info/1338/58775.htm">
+                <div class="img-hide">
+                  <div class="one-img" style="background: url(/__local/6/41/EB/0D8F119A421604C8C5FF9E9BEB8_24E68AF9_34AC9.png) center no-repeat; background-size: cover;"></div>
+                </div>
+                <div class="one-list-bottom">
+                  <div class="one-list-tt">西南交通大学代表团访问威尔士三一圣大卫大学 深化中外交流合作</div>
+                  <div class="one-date">2026/06/01</div>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a href="info/1338/58705.htm">
+                <div class="img-hide">
+                  <div class="one-img" style="background: url(/__local/B/6D/53/670164BF1C264F21EF081F87DB1_9A19AD01_3B0A0.jpg) center no-repeat; background-size: cover;"></div>
+                </div>
+                <div class="one-list-bottom">
+                  <div class="one-list-tt">喜报：我院丁月老师荣获第八届四川省高校青年教师教学竞赛二等奖</div>
+                  <div class="one-date">2026/05/26</div>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a href="info/1338/58655.htm">
+                <div class="img-hide">
+                  <div class="one-img" style="background: url(/__local/E/E3/AB/2B982420DFB180BD46BCE71A3DD_1CCD809E_56B20.jpg) center no-repeat; background-size: cover;"></div>
+                </div>
+                <div class="one-list-bottom">
+                  <div class="one-list-tt">经济管理学院召开全院教职工大会</div>
+                  <div class="one-date">2026/05/25</div>
+                </div>
+              </a>
+            </li>
+          </ul>
+<div class="text-right"><a href="xwtz/xyxw.htm" class="one-more">更多</a></div>
+          
+<script>_showDynClickBatch(['dynclicks_u3_59025','dynclicks_u3_59015','dynclicks_u3_58895','dynclicks_u3_58825','dynclicks_u3_58785','dynclicks_u3_58775','dynclicks_u3_58705','dynclicks_u3_58655'],[59025,59015,58895,58825,58785,58775,58705,58655],"wbnews", 1447721748)</script>
+
+    </div>
+  </div>
+
+  <div class="page-tow">
+    <div class="container">
+      <ul class="banner-nav tabs-hover clearfix text-center">
+        <li class="active"><a href="#home01" aria-controls="home01" role="tab" data-toggle="tab">全部</a></li>
+        <li><a href="#home02" aria-controls="home02" role="tab" data-toggle="tab">党政办公</a></li>
+        <li><a href="#home03" aria-controls="home03" role="tab" data-toggle="tab">本科生</a></li>
+        <li><a href="#home04" aria-controls="home04" role="tab" data-toggle="tab">研究生</a></li>
+        <li><a href="#home05" aria-controls="home05" role="tab" data-toggle="tab">学生工作</a></li>
+        <li><a href="#home06" aria-controls="home06" role="tab" data-toggle="tab">科研工作</a></li>
+        <li><a href="#home07" aria-controls="home07" role="tab" data-toggle="tab">公示公告</a></li>
+        <li><a href="#home08" aria-controls="home08" role="tab" data-toggle="tab">其它</a></li>
+      </ul>
+      <!-- Tab panes -->
+      <div class="tab-content">
+        <div role="tabpanel" class="tab-pane active" id="home01">
+
+          <div class="clearfix">
+            <div class="pull-left tow-left">
+              <div class="tow-left-img" style="background: url(images/jiulixiaomen.jpg) center no-repeat; background-size: cover;"></div>
+            </div>
+            <div class="pull-right tow-right">
+              <div class="tow-right-title"><span>全部通知</span></div>
+              <ul class="tow-right-ul">
+                <li><a href="info/1336/59105.htm" class="txt-elise">关于2026-2027学年第一学期本科教材选用的公示<span>2026/06/10</span></a></li>
+                <li><a href="info/1333/58955.htm" class="txt-elise">经济管理学院关于2027年博士、硕士生指导教师岗位任职资格遴选与招生资格...<span>2026/06/04</span></a></li>
+                <li><a href="info/1336/58945.htm" class="txt-elise">【评优】经济管理学院2026届非全日制专硕优秀毕业生评审结果公示<span>2026/06/04</span></a></li>
+                <li><a href="info/1333/58845.htm" class="txt-elise">第14周MBA周末班课程补课与考试、及第15周MBA晚班课程考试通知<span>2026/06/02</span></a></li>
+                <li><a href="info/1333/58835.htm" class="txt-elise">全日制专硕第17周课程考试安排的通知<span>2026/06/02</span></a></li>
+                <li><a href="info/1334/58815.htm" class="txt-elise">【社会实践】经济管理学院关于开展2026年大学生暑假“三下乡”社会实践的...<span>2026/06/02</span></a></li>
+                <li><a href="info/1336/58685.htm" class="txt-elise">经济管理学院2026届本科毕业生专项表彰评审结果公示<span>2026/05/26</span></a></li>
+              </ul>
+              <div class="text-right"><a href="xwtz/tzgg.htm" class="one-more">更多</a></div>
+            </div>
+        </div>
+<script>_showDynClickBatch(['dynclicks_u4_59105','dynclicks_u4_58955','dynclicks_u4_58945','dynclicks_u4_58845','dynclicks_u4_58835','dynclicks_u4_58815','dynclicks_u4_58685'],[59105,58955,58945,58845,58835,58815,58685],"wbnews", 1447721748)</script>
+</div>
+        <div role="tabpanel" class="tab-pane" id="home02">
+
+          <div class="clearfix">
+            <div class="pull-left tow-left">
+              <div class="tow-left-img" style="background: url(images/02.png) center no-repeat; background-size: cover;"></div>
+            </div>
+            <div class="pull-right tow-right">
+              <div class="tow-right-title"><span>党政办公</span></div>
+              <ul class="tow-right-ul">
+                <li><a href="info/1331/57265.htm" class="txt-elise">关于开展2026年上半年教师资格认定工作的通知<span>2026/04/14</span></a></li>
+                <li><a href="info/1331/56765.htm" class="txt-elise">西南交通大学EMBA校友会理事会换届通知<span>2026/03/27</span></a></li>
+                <li><a href="info/1331/56385.htm" class="txt-elise">西南交通大学MBA校友会理事会换届通知<span>2026/03/16</span></a></li>
+                <li><a href="info/1331/55885.htm" class="txt-elise">关于广泛征求对经济管理学院领导班子及成员意见和建议的函<span>2026/01/06</span></a></li>
+                <li><a href="info/1331/52475.htm" class="txt-elise">关于开展2025年下半年教师资格认定工作的通知<span>2025/09/30</span></a></li>
+                <li><a href="info/1331/48105.htm" class="txt-elise">关于开展 2025 年上半年教师资格认定工作的通知<span>2025/03/31</span></a></li>
+                <li><a href="info/1331/43215.htm" class="txt-elise">关于开展2024年下半年教师资格认定工作的通知<span>2024/09/27</span></a></li>
+              </ul>
+              <div class="text-right"><a href="xwtz/tzgg/dzbg.htm" class="one-more">更多</a></div>
+            </div>
+        </div>
+<script>_showDynClickBatch(['dynclicks_u5_57265','dynclicks_u5_56765','dynclicks_u5_56385','dynclicks_u5_55885','dynclicks_u5_52475','dynclicks_u5_48105','dynclicks_u5_43215'],[57265,56765,56385,55885,52475,48105,43215],"wbnews", 1447721748)</script>
+</div>
+        <div role="tabpanel" class="tab-pane" id="home03">
+
+          <div class="clearfix">
+            <div class="pull-left tow-left">
+              <div class="tow-left-img" style="background: url(images/02.png) center no-repeat; background-size: cover;"></div>
+            </div>
+            <div class="pull-right tow-right">
+              <div class="tow-right-title"><span>本科生</span></div>
+              <ul class="tow-right-ul">
+                <li><a href="info/1332/58445.htm" class="txt-elise">经济管理学院关于2026年大学生创新训练计划（SRTP）项目立项答辩的通知<span>2026/05/19</span></a></li>
+                <li><a href="info/1332/58045.htm" class="txt-elise">2026届经济管理学院本科毕业设计（论文） 面上答辩分组及安排<span>2026/05/08</span></a></li>
+                <li><a href="info/1332/57345.htm" class="txt-elise">经济管理学院关于2025年大学生创新训练计划（SRTP）项目结题答辩的通知<span>2026/04/17</span></a></li>
+                <li><a href="info/1332/57205.htm" class="txt-elise">关于核对本科2025-2026学年第2学期期末考试数据的通知<span>2026/04/13</span></a></li>
+                <li><a href="info/1332/56755.htm" class="txt-elise">经济管理学院关于2026届本科生毕业设计（论文）中期检查的通知<span>2026/03/27</span></a></li>
+                <li><a href="info/1332/56885.htm" class="txt-elise">【竞赛】经济管理学院关于组织中国国际大学生创新大赛（2026）院级选拔赛...<span>2026/03/25</span></a></li>
+                <li><a href="info/1332/56345.htm" class="txt-elise">经济管理学院关于2025级本科生大类内分专业的通知<span>2026/03/11</span></a></li>
+              </ul>
+              <div class="text-right"><a href="xwtz/tzgg/bks.htm" class="one-more">更多</a></div>
+            </div>
+        </div>
+<script>_showDynClickBatch(['dynclicks_u6_58445','dynclicks_u6_58045','dynclicks_u6_57345','dynclicks_u6_57205','dynclicks_u6_56755','dynclicks_u6_56885','dynclicks_u6_56345'],[58445,58045,57345,57205,56755,56885,56345],"wbnews", 1447721748)</script>
+</div>
+        <div role="tabpanel" class="tab-pane" id="home04">
+
+          <div class="clearfix">
+            <div class="pull-left tow-left">
+              <div class="tow-left-img" style="background: url(images/02.png) center no-repeat; background-size: cover;"></div>
+            </div>
+            <div class="pull-right tow-right">
+              <div class="tow-right-title"><span>研究生</span></div>
+              <ul class="tow-right-ul">
+                <li><a href="info/1333/58955.htm" class="txt-elise">经济管理学院关于2027年博士、硕士生指导教师岗位任职资格遴选与招生资格...<span>2026/06/04</span></a></li>
+                <li><a href="info/1333/58845.htm" class="txt-elise">第14周MBA周末班课程补课与考试、及第15周MBA晚班课程考试通知<span>2026/06/02</span></a></li>
+                <li><a href="info/1333/58835.htm" class="txt-elise">全日制专硕第17周课程考试安排的通知<span>2026/06/02</span></a></li>
+                <li><a href="info/1333/58675.htm" class="txt-elise">经济管理学院关于开展2026届非全日制专硕优秀毕业生评选工作的通知<span>2026/05/26</span></a></li>
+                <li><a href="info/1333/58575.htm" class="txt-elise">关于2025-2026-2学期MBA晚班2班九里校区集中上课及考试的通知<span>2026/05/22</span></a></li>
+                <li><a href="info/1333/58565.htm" class="txt-elise">MEM教学周第13周课程考试安排的通知<span>2026/05/22</span></a></li>
+                <li><a href="info/1333/57915.htm" class="txt-elise">关于MEM（非全班）教学周第10周《项目管理》课程考试安排的通知<span>2026/05/06</span></a></li>
+              </ul>
+              <div class="text-right"><a href="xwtz/tzgg/yjs.htm" class="one-more">更多</a></div>
+            </div>
+        </div>
+<script>_showDynClickBatch(['dynclicks_u7_58955','dynclicks_u7_58845','dynclicks_u7_58835','dynclicks_u7_58675','dynclicks_u7_58575','dynclicks_u7_58565','dynclicks_u7_57915'],[58955,58845,58835,58675,58575,58565,57915],"wbnews", 1447721748)</script>
+</div>
+        <div role="tabpanel" class="tab-pane" id="home05">
+
+          <div class="clearfix">
+            <div class="pull-left tow-left">
+              <div class="tow-left-img" style="background: url(images/02.png) center no-repeat; background-size: cover;"></div>
+            </div>
+            <div class="pull-right tow-right">
+              <div class="tow-right-title"><span>学生工作</span></div>
+              <ul class="tow-right-ul">
+                <li><a href="info/1334/58815.htm" class="txt-elise">【社会实践】经济管理学院关于开展2026年大学生暑假“三下乡”社会实践的...<span>2026/06/02</span></a></li>
+                <li><a href="info/1334/58265.htm" class="txt-elise">经济管理学院2026届学生毕业典礼本科生发言代表选拔<span>2026/05/14</span></a></li>
+                <li><a href="info/1334/58245.htm" class="txt-elise">西南交通大学经济管理学院关于公开选聘校外生涯导师的通知<span>2026/05/13</span></a></li>
+                <li><a href="info/1334/58085.htm" class="txt-elise">西南交通大学经济管理学院2026届本科毕业生专项表彰评定通知<span>2026/05/11</span></a></li>
+                <li><a href="info/1334/58005.htm" class="txt-elise">经济管理学院第十七届优秀班团集体评选决赛通知<span>2026/05/07</span></a></li>
+                <li><a href="info/1334/57985.htm" class="txt-elise">经济管理学院2026届本科毕业生“我最喜爱的教师”评选通知<span>2026/05/07</span></a></li>
+                <li><a href="info/1334/57815.htm" class="txt-elise">关于组织参加第六届“守住钱袋子·护好幸福家”防范非法金融活动短视频征集...<span>2026/04/30</span></a></li>
+              </ul>
+              <div class="text-right"><a href="xwtz/tzgg/xsgz.htm" class="one-more">更多</a></div>
+            </div>
+        </div>
+<script>_showDynClickBatch(['dynclicks_u8_58815','dynclicks_u8_58265','dynclicks_u8_58245','dynclicks_u8_58085','dynclicks_u8_58005','dynclicks_u8_57985','dynclicks_u8_57815'],[58815,58265,58245,58085,58005,57985,57815],"wbnews", 1447721748)</script>
+</div>
+        <div role="tabpanel" class="tab-pane" id="home06">
+
+          <div class="clearfix">
+            <div class="pull-left tow-left">
+              <div class="tow-left-img" style="background: url(images/02.png) center no-repeat; background-size: cover;"></div>
+            </div>
+            <div class="pull-right tow-right">
+              <div class="tow-right-title"><span>科研工作</span></div>
+              <ul class="tow-right-ul">
+                <li><a href="info/1335/57745.htm" class="txt-elise">第二十三届金融系统工程与风险管理年会会议通知（第一轮）<span>2026/04/29</span></a></li>
+                <li><a href="info/1335/51475.htm" class="txt-elise">2025年“人工智能赋能与管理创新”联合论文工作坊征文启事<span>2025/09/08</span></a></li>
+                <li><a href="info/1335/48635.htm" class="txt-elise">2025年“四化同步、城乡融合、五区共兴”高质量发展论坛征文启事<span>2025/04/21</span></a></li>
+                <li><a href="info/1335/41735.htm" class="txt-elise">服务科学与创新四川省重点实验室2024年度开放课题申请指南<span>2024/07/04</span></a></li>
+                <li><a href="info/1335/36105.htm" class="txt-elise">首届成渝营销学术论坛 第一轮会议通知<span>2023/11/15</span></a></li>
+                <li><a href="info/1335/33582.htm" class="txt-elise">服务科学与创新四川省重点实验室2023年度开放课题申请指南<span>2023/06/29</span></a></li>
+                <li><a href="info/1335/33484.htm" class="txt-elise">会议日程丨2023气候风险与金融市场前沿论坛<span>2023/06/13</span></a></li>
+              </ul>
+              <div class="text-right"><a href="xwtz/tzgg/kygz.htm" class="one-more">更多</a></div>
+            </div>
+        </div>
+<script>_showDynClickBatch(['dynclicks_u9_57745','dynclicks_u9_51475','dynclicks_u9_48635','dynclicks_u9_41735','dynclicks_u9_36105','dynclicks_u9_33582','dynclicks_u9_33484'],[57745,51475,48635,41735,36105,33582,33484],"wbnews", 1447721748)</script>
+</div>
+        <div role="tabpanel" class="tab-pane" id="home07">
+
+          <div class="clearfix">
+            <div class="pull-left tow-left">
+              <div class="tow-left-img" style="background: url(images/02.png) center no-repeat; background-size: cover;"></div>
+            </div>
+            <div class="pull-right tow-right">
+              <div class="tow-right-title"><span>公示公告</span></div>
+              <ul class="tow-right-ul">
+                <li><a href="info/1336/59105.htm" class="txt-elise">关于2026-2027学年第一学期本科教材选用的公示<span>2026/06/10</span></a></li>
+                <li><a href="info/1336/58945.htm" class="txt-elise">【评优】经济管理学院2026届非全日制专硕优秀毕业生评审结果公示<span>2026/06/04</span></a></li>
+                <li><a href="info/1336/58685.htm" class="txt-elise">经济管理学院2026届本科毕业生专项表彰评审结果公示<span>2026/05/26</span></a></li>
+                <li><a href="info/1336/58645.htm" class="txt-elise">西南交通大学MBA联合会第28届主席团换届公示<span>2026/05/25</span></a></li>
+                <li><a href="info/1336/57615.htm" class="txt-elise">2024级MBA/EMBA/MEM（非全日制）优秀学生、优秀学生干部名单公示<span>2026/04/27</span></a></li>
+                <li><a href="info/1336/57135.htm" class="txt-elise">经济管理学院2026年专业型硕士研究生（工商管理EMBA）调剂拟录取名单<span>2026/04/09</span></a></li>
+                <li><a href="info/1336/56875.htm" class="txt-elise">经济管理学院2026年初审通过的专业型硕士研究生拟录取名单（第二批）<span>2026/03/31</span></a></li>
+              </ul>
+              <div class="text-right"><a href="xwtz/tzgg/gsgg.htm" class="one-more">更多</a></div>
+            </div>
+        </div>
+<script>_showDynClickBatch(['dynclicks_u10_59105','dynclicks_u10_58945','dynclicks_u10_58685','dynclicks_u10_58645','dynclicks_u10_57615','dynclicks_u10_57135','dynclicks_u10_56875'],[59105,58945,58685,58645,57615,57135,56875],"wbnews", 1447721748)</script>
+</div>
+        <div role="tabpanel" class="tab-pane" id="home08">
+
+          <div class="clearfix">
+            <div class="pull-left tow-left">
+              <div class="tow-left-img" style="background: url(images/02.png) center no-repeat; background-size: cover;"></div>
+            </div>
+            <div class="pull-right tow-right">
+              <div class="tow-right-title"><span>其它</span></div>
+              <ul class="tow-right-ul">
+                <li><a href="info/1337/33368.htm" class="txt-elise">2023年暑假新加坡管理大学访学项目宣讲会<span>2023/05/23</span></a></li>
+                <li><a href="info/1337/33008.htm" class="txt-elise">2023牛津大学奥利尔学院（线下）暑期学分课程通知<span>2023/03/24</span></a></li>
+                <li><a href="info/1337/33006.htm" class="txt-elise">2023年加拿大不列颠哥伦比亚大学（UBC）暑期课程报名通知<span>2023/03/24</span></a></li>
+                <li><a href="info/1337/33004.htm" class="txt-elise">2023年英国剑桥大学学术暑校项目报名通知<span>2023/03/24</span></a></li>
+              </ul>
+              <div class="text-right"><a href="xwtz/tzgg/qt.htm" class="one-more">更多</a></div>
+            </div>
+        </div>
+<script>_showDynClickBatch(['dynclicks_u11_33368','dynclicks_u11_33008','dynclicks_u11_33006','dynclicks_u11_33004'],[33368,33008,33006,33004],"wbnews", 1447721748)</script>
+</div>
+      </div>
+    </div>
+  </div>
+  <div class="page-three">
+    <div class="container">
+      <div class="title-phone">学术活动<a href="">更多></a></div>
+      <div class="clearfix three-box">
+        <div class="three-tt"><img src="images/title01.png"><a href="xwtz/xsdt.htm" class="tt-more">查看更多</a></div>
+            
+
+        <ul class="three-ul clearfix">
+
+
+          <li>
+            <a href="info/1075/59095.htm">
+              
+              <div class="img-hide"><div class="three-ul-img" style="background: url(/__local/5/E6/43/69AF05EE357FF896F3579BE2C28_D3665DFE_BC8E1.jpg) top no-repeat; background-size: cover;"></div></div>
+              <div class="three-ul-bottom">
+                <div class="three-ul-tt"><p>重庆邮电大学人工智能学院夏书银教授学术讲座</p></div>
+                <div class="three-ul-p">
+                  <p class="txt-elise"><span>时间:</span>2026年6月12日下午 16：00</p>
+                  <p class="txt-elise"><span>地点:</span>九里校区零号楼0218室</p>
+                  <p class="txt-elise"><span>主讲:</span>夏书银 教授</p>
+                </div>              
+              </div>
+            </a>
+          </li>
+          <li>
+            <a href="info/1075/59045.htm">
+              
+              <div class="img-hide"><div class="three-ul-img" style="background: url(/__local/0/17/7E/729278A00D7007C50E1094B9817_FB44BC32_C139C.jpg) top no-repeat; background-size: cover;"></div></div>
+              <div class="three-ul-bottom">
+                <div class="three-ul-tt"><p>踏新章，绽华光——新青年教师系列讲座</p></div>
+                <div class="three-ul-p">
+                  <p class="txt-elise"><span>时间:</span>2026年6月16日下午 15：00</p>
+                  <p class="txt-elise"><span>地点:</span>九里校区零号楼0218室</p>
+                  <p class="txt-elise"><span>主讲:</span>马成霖 助理教授</p>
+                </div>              
+              </div>
+            </a>
+          </li>
+          <li>
+            <a href="info/1075/59035.htm">
+              
+              <div class="img-hide"><div class="three-ul-img" style="background: url(/__local/4/29/98/075B0B8D46CFEE1624C99991BB3_B86DFC5F_B318D.jpg) top no-repeat; background-size: cover;"></div></div>
+              <div class="three-ul-bottom">
+                <div class="three-ul-tt"><p>南京航空航天大学经济与管理学院赵旭峰教授学术讲座</p></div>
+                <div class="three-ul-p">
+                  <p class="txt-elise"><span>时间:</span>2026年6月15日下午 15：30</p>
+                  <p class="txt-elise"><span>地点:</span>九里校区零号楼0411室</p>
+                  <p class="txt-elise"><span>主讲:</span>赵旭峰 教授</p>
+                </div>              
+              </div>
+            </a>
+          </li>
+<script>_showDynClickBatch(['dynclicks_u12_59095','dynclicks_u12_59045','dynclicks_u12_59035'],[59095,59045,59035],"wbnews", 1447721748)</script>
+
+      </div>
+    </div>
+  </div>
+  <div class="page-four">
+    <div class="container">
+      <div class="title-phone">科研成果<a href="">更多></a></div>
+      <div class="four-box">
+        <div class="three-tt"><img src="images/title02.png"><a href="kxyj2/kycg.htm" class="tt-more">查看更多</a></div>
+            
+
+        <ul class="four-list clearfix text-center">
+
+
+          <li>
+            <a href="info/1460/57785.htm">
+              <div class="four-list-img" style="background: url(/__local/0/12/61/0785C09342898D29AD2BA8527D2_37CB51EF_A9BE.png) center no-repeat; background-size: cover;"></div>
+              <div class="four-list-tt">我院胡书老师在Production and Operations Management期刊发表学术论文</div>
+              
+            </a>
+          </li>
+          <li>
+            <a href="info/1460/57675.htm">
+              <div class="four-list-img" style="background: url(/__local/6/4E/8C/B0C986A0FF2CF01FF62019BCA03_458C3AB8_941F.png) center no-repeat; background-size: cover;"></div>
+              <div class="four-list-tt">我院诸波老师在 The Accounting Review 期刊发表学术论文</div>
+              
+            </a>
+          </li>
+          <li>
+            <a href="info/1460/57665.htm">
+              <div class="four-list-img" style="background: url(/__local/1/02/7D/AF73574BFA6E5C93F23B2BB3B1E_08D9B3A1_DD9A.png) center no-repeat; background-size: cover;"></div>
+              <div class="four-list-tt">我院陈若然老师在 Management Science 期刊发表学术论文</div>
+              
+            </a>
+          </li>
+          <li>
+            <a href="info/1460/57645.htm">
+              <div class="four-list-img" style="background: url(/__local/6/63/E2/C985F7F1A79BADE4AD5D5BEA158_9E48A0FE_AC2E.png) center no-repeat; background-size: cover;"></div>
+              <div class="four-list-tt">我院张琦老师在 Journal of Marketing 期刊发表学术论文</div>
+              
+            </a>
+          </li>
+        </ul>
+<script>_showDynClickBatch(['dynclicks_u13_57785','dynclicks_u13_57675','dynclicks_u13_57665','dynclicks_u13_57645'],[57785,57675,57665,57645],"wbnews", 1447721748)</script>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="page-five">
+      
+
+    <div class="five-slick">
+      <div>
+        <div class="five-slick-box clearfix">
+          <div class="five-left pull-left">
+            <div class="five-date text-center"><span></span><br>2026年01月</div>
+            <div class="five-tt txt-elise">党建引领聚合力 培根铸魂润无声</div>
+            <div class="five-p">“十四五”以来，西南交通大学坚持以习近平新时代中国特色社会主义思想为指导，加强党对学校工作的全面领导，牢记为党育人、为国育才初心使命，落实立德树人根本任务，紧紧围绕“交通特色鲜明的高水平研究型一流大学”发展目标，秉持“以学生为中心，以教师为主体”的办学理念，一体推进教育科技人才发展，高质量完成既定目标任务。即日起，我们策划推出“回眸‘十四五’ 奋进‘十五五’”系列报道，系统梳理总结学校“十四五”期间取得的主要成绩，...</div>
+            <a href="zthd.htm" class="one-more">更多</a>
+          </div>
+          <div class="pull-right five-right" style="background: url(/__local/E/6C/67/7C22637AB3C43A6D086B58557DF_7408B5DC_29706.jpg) center no-repeat; background-size: cover;">
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="five-slick-box clearfix">
+          <div class="five-left pull-left">
+            <div class="five-date text-center"><span></span><br>2026年01月</div>
+            <div class="five-tt txt-elise">骐骥驰骋 智启新程</div>
+            <div class="five-p">1月17日，西南交通大学经济管理学院九里校区0号楼0218室暖意融融，主题为“骐骥驰骋，智启新程”的MBA校友会2026新年茶话会在此隆重举行。学院党委书记蒋佳、副处级组织员及工会主席晏理斌、MBA校友会会长蒋兴木、专业学位教育中心主任诸波、党政办公室主任何鹏、专业学位教育中心常务副主任李洪辉、专业学位教育中心校友负责人袁小容，与MBA校友会理事、校友代表齐聚一堂，共话情谊，共谋发展。</div>
+            <a href="zthd.htm" class="one-more">更多</a>
+          </div>
+          <div class="pull-right five-right" style="background: url(/__local/F/35/37/5FE1A75BE3563A045949CFF48CA_C123F2D4_7AAFE.jpg) center no-repeat; background-size: cover;">
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="five-slick-box clearfix">
+          <div class="five-left pull-left">
+            <div class="five-date text-center"><span></span><br>2026年01月</div>
+            <div class="five-tt txt-elise">竢实知来路，百卅启新程</div>
+            <div class="five-p">1月3日，“安逸号”熊猫专列从西昌西站缓缓启程返回成都，由西南交通大学校友工作办公室主办、经济管理学院承办的“竢实知来路，百卅启新程”重走成昆铁路跨年活动圆满落幕。来自西南交通大学经济管理学院MBA（EMBA）及电气工程学院、土木工程学院等院系专业的130名校友及家属，以“重走成昆线”的方式，在母校130周年华诞来临之际，完成了一次深沉而昂扬的精神寻根。学校党委副书记高平平，校友办公室主任阮波，经济管理学院党委书记蒋佳出席出征仪式。...</div>
+            <a href="zthd.htm" class="one-more">更多</a>
+          </div>
+          <div class="pull-right five-right" style="background: url(/__local/E/07/91/63426A08CA07C4536F101EAEC25_3F218061_7635B.jpg) center no-repeat; background-size: cover;">
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="five-slick-box clearfix">
+          <div class="five-left pull-left">
+            <div class="five-date text-center"><span></span><br>2026年01月</div>
+            <div class="five-tt txt-elise">循光而行，启梦新程！</div>
+            <div class="five-p">12月28日，2026西南交通大学经济管理学院“循光而行•启梦新程”EMBA年会在成都隆重举行。学校党委副书记高平平、学校职能部处相关领导、经济管理学院党政领导班子、师生代表、兄弟院校嘉宾及各界校友齐聚一堂，共叙同窗情谊，共话发展新篇，在欢声笑语中凝聚奋进力量，共启未来新程。</div>
+            <a href="zthd.htm" class="one-more">更多</a>
+          </div>
+          <div class="pull-right five-right" style="background: url(/__local/5/A9/9E/5395765B9D1F22D875E607EFCB9_06B5E8BE_58A68.jpg) center no-repeat; background-size: cover;">
+          </div>
+        </div>
+      </div>
+    </div>
+<script>_showDynClickBatch(['dynclicks_u14_57485','dynclicks_u14_57475','dynclicks_u14_57465','dynclicks_u14_57455'],[57485,57475,57465,57455],"wbnews", 1447721748)</script>
+
+  </div>
+
+  <div class="footer">
+    <div class="container">
+      <div class="logo-b">
+
+
+<a href=""><img src="https://glxy.swjtu.edu.cn/images/logo-b.png"></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://glxy.swjtu.edu.cn/images/xueyuangongzhonghaoerweima.png">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://glxy.swjtu.edu.cn/images/MBAgongzhonghao.png"></div>
+      <div class="clearfix">
+        <div class="pull-left footer-left">
+          <div class="footer-lj">友情链接：</div>
+          <div class="footer-link"><script language="javascript" src="/system/resource/js/openlink.js"></script>    <a href="http://www.swjtu.edu.cn" target="_blank">西南交通大学</a>
+        <span>｜</span>
+    <a href="http://news.swjtu.edu.cn" target="_blank">交大新闻网</a>
+        <span>｜</span>
+    <a href="http://xg.swjtu.edu.cn" target="_blank">扬华素质网</a>
+        <span>｜</span>
+    <a href="http://xinli.swjtu.edu.cn" target="_blank">交大心力网</a>
+        <span>｜</span>
+    <a href="http://youth.swjtu.edu.cn/" target="_blank">团委在线</a>
+        <span>｜</span>
+    <a href="http://dean.swjtu.edu.cn/" target="_blank">教务网</a>
+        <span>｜</span>
+    <a href="https://gsnews.swjtu.edu.cn/" target="_blank">研究生院</a>
+</div>
+          <div class="footer-lj"></div>
+        </div>
+        <div class="footer-right pull-right">
+           <div class="footer-dz"><!-- 版权内容请在本组件"内容配置-版权"处填写 -->
+<p>办公地址：四川省成都市二环路北一段111号西南交通大学（九里校区）零号教学楼0616&nbsp;&nbsp; &nbsp;<br /></p><p><br /></p><p>办公电话：028-87600822/87601403&nbsp; &nbsp;邮编：610031 &nbsp;<br /></p><p><br /></p><p>专硕招生：028-87601267/87634601（MBA/EMBA/MEM/MPAcc） &nbsp;<br /></p><p><br /></p><p>诚聘英才：028-87600543&nbsp; &nbsp;<br /></p><p><br /></p> </div>       
+        </div>
+      </div>
+      <div class="footer-p text-center">
+        <p>Copyright © 2025 经济管理学院 All rights reserved</p>
+        <p>本站内容未经我院授权，任何单位及个人可下载但不得转载</p>
+      </div>
+    </div>
+
+  </div>
+<script src="js/jquery.min3.6.0.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/slick.js"></script>
+<script src="js/wow.min.js"></script>
+<script src="js/common.js"></script>
+<script type="text/javascript">
+if (!(/msie [6|7|8|9]/i.test(navigator.userAgent))){
+  new WOW().init();
+};
+
+
+     $('.banner').slick({
+        infinite: true,
+        slidesToShow: 1,
+        slidesToScroll: 1,
+        autoplay: true,
+        centerMode: false,
+        arrows:true,
+        dots:true,  
+    });
+     $('.img-slick').slick({
+        infinite: true,
+        slidesToShow: 1,
+        slidesToScroll: 1,
+        autoplay: true,
+        centerMode: false,
+        arrows:true,
+        dots:false,  
+    });
+     $('.five-slick').slick({
+        infinite: true,
+        slidesToShow: 3,
+        slidesToScroll: 1,
+        autoplay: true,
+        centerMode: true,
+        arrows:true,
+        dots:true,   responsive: [
+
+    {
+      breakpoint: 991,
+      settings: {
+
+
+          slidesToShow: 1,
+          slidesToScroll: 1,
+      }
+    },
+  ]
+    });
+
+     $('.rc-right-slick').slick({
+        infinite: true,
+        slidesToShow: 3,
+        slidesToScroll: 1,
+        autoplay: false,
+        centerMode: false,
+        arrows:true,
+        dots:true, 
+ responsive: [
+
+    {
+      breakpoint: 767,
+      settings: {
+
+
+          slidesToShow: 2,
+          slidesToScroll: 1,
+      }
+    },
+  ]
+    });
+
+
+$(function(){
+var whdef = 100/1920;// 表示1920的设计图,使用100PX的默认值
+var wH = window.innerHeight;// 当前窗口的高度
+var wW = window.innerWidth;// 当前窗口的宽度
+var rem = wW * whdef;// 以默认比例值乘以当前窗口宽度,得到该宽度下的相应FONT-SIZE值
+$('html').css('font-size', rem + "px");
+});
+$(window).resize(function (){// 绑定到窗口的这个事件中
+var whdef = 100/1920;// 表示1920的设计图,使用100PX的默认值
+var wH = window.innerHeight;// 当前窗口的高度
+var wW = window.innerWidth;// 当前窗口的宽度
+var rem = wW * whdef;// 以默认比例值乘以当前窗口宽度,得到该宽度下的相应FONT-SIZE值
+$('html').css('font-size', rem + "px");
+});
+</script>
+
+
+</body>
+</html>
