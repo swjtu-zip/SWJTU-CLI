@@ -11,13 +11,20 @@
 | 应用心理学研究院 | psy.swjtu.edu.cn | DNS不存在 |
 | 交通安全技术研究院 | jtaq.swjtu.edu.cn | DNS不存在 |
 
-## SPA站点 (不支持爬取)
+## SPA站点 (返回空结果)
+
+以下站点注册在 `sites.go` 中但返回无结果，因为它们是 SPA 或需要认证：
 
 | 站点 | 域名 | 技术栈 |
 |------|------|--------|
-| 一网通办 | one.swjtu.edu.cn | Vue.js SPA |
-| 扬华智办 | i.swjtu.edu.cn | Vue.js SPA |
-| 图书馆 | lib.swjtu.edu.cn | Vue.js SPA |
+| 信息科学与技术学院 | sist.swjtu.edu.cn | SPA |
+| 党委学生工作部 | xg.swjtu.edu.cn | 众望升腾 CMS + 认证 |
+| 本科生院 | jwc.swjtu.edu.cn | VATUU + 认证 |
+| 科学技术发展研究院 | sro.swjtu.edu.cn | SPA |
+| 国际合作与交流处 | fad.swjtu.edu.cn | SPA |
+| 计划财务处 | cwc.swjtu.edu.cn | SPA |
+| 图书馆 | lib.swjtu.edu.cn | SPA (有独立API) |
+| 期刊社 | journals.swjtu.edu.cn | SPA |
 
 ## CAS认证保护
 
