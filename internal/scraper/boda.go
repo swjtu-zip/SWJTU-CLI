@@ -18,6 +18,34 @@ func (s *BodaSite) ListNews(slug string) ([]model.NewsItem, error) {
 	return s.ListNewsPage(slug, 1)
 }
 
+// ListNewsWithDates fetches news and fills in missing dates from detail pages.
+func (s *BodaSite) ListNewsWithDates(slug string) ([]model.NewsItem, error) {
+	items, err := s.ListNewsPage(slug, 1)
+	if err != nil {
+		return nil, err
+	}
+	fillMissingDates(items)
+	return items, nil
+}
+
+// fillMissingDates fetches detail pages for items missing dates.
+func fillMissingDates(items []model.NewsItem) {
+	for i := range items {
+		if items[i].Date != "" {
+			continue
+		}
+		body, err := fetch(items[i].URL)
+		if err != nil {
+			continue
+		}
+		art, err := parseBodaArticle(body, "")
+		if err != nil || art.Date == "" {
+			continue
+		}
+		items[i].Date = art.Date
+	}
+}
+
 // ListNewsPage fetches a specific page of news.
 // page 1 = first page (slug.htm), page 2+ = slug/{total-page+2-page}.htm
 func (s *BodaSite) ListNewsPage(slug string, page int) ([]model.NewsItem, error) {
@@ -685,6 +713,23 @@ func parseBodaArticle(html []byte, baseURL string) (*model.Article, error) {
 			art.Date = strings.TrimSpace(sel.Text())
 		}
 	})
+
+	// Fallback: top-info pattern (civil.swjtu.edu.cn etc.)
+	if art.Date == "" {
+		topInfo := doc.Find(".top-info")
+		if topInfo.Length() > 0 {
+			topInfo.Find("span").Each(func(i int, sel *goquery.Selection) {
+				text := strings.TrimSpace(sel.Text())
+				// Check for date pattern YYYY-MM-DD
+				if art.Date == "" && len(text) >= 10 && text[4] == '-' && text[7] == '-' {
+					art.Date = text[:10]
+				}
+				if strings.HasPrefix(text, "来源：") || strings.HasPrefix(text, "来源:") {
+					art.Source = strings.TrimPrefix(strings.TrimPrefix(text, "来源："), "来源:")
+				}
+			})
+		}
+	}
 
 	// Content body
 	contentSel := doc.Find("#vsb_content_501 .v_news_content")

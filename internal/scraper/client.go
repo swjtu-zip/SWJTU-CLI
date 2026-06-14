@@ -11,7 +11,14 @@ var defaultClient = &http.Client{
 	Timeout: 15 * time.Second,
 }
 
+// NoCache controls whether to bypass the cache.
+var NoCache bool
+
 func fetch(url string) ([]byte, error) {
+	return FetchWithCache(url, NoCache)
+}
+
+func fetchRaw(url string) ([]byte, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)

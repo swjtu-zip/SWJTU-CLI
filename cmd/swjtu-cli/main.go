@@ -69,6 +69,8 @@ func printUsage() {
 	fmt.Println("  --from YYYY-MM-DD 从指定日期开始")
 	fmt.Println("  --to   YYYY-MM-DD 到指定日期结束")
 	fmt.Println("  --max-pages N     最多翻N页 (默认10)")
+	fmt.Println("  --detail-date     从详情页补全缺失日期")
+	fmt.Println("  --nocache         绕过缓存，强制刷新")
 	fmt.Println()
 	fmt.Println("示例:")
 	fmt.Println("  swjtu-cli news --page 2               交大要闻第2页")
@@ -80,14 +82,16 @@ func printUsage() {
 	fmt.Println("用 'swjtu-cli sites' 查看全部站点ID和子分类")
 }
 
-// parseFlags extracts --page, --from, --to, --max-pages from args.
+// parseFlags extracts --page, --from, --to, --max-pages, --nocache, --detail-date from args.
 // Returns cleaned args (without flags) and flag values.
-func parseFlags(args []string) ([]string, int, string, string, int) {
+func parseFlags(args []string) ([]string, int, string, string, int, bool, bool) {
 	var cleaned []string
 	page := 1
 	from := ""
 	to := ""
 	maxPages := 10
+	nocache := false
+	detailDate := false
 
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
@@ -111,16 +115,21 @@ func parseFlags(args []string) ([]string, int, string, string, int) {
 				fmt.Sscanf(args[i+1], "%d", &maxPages)
 				i++
 			}
+		case "--nocache":
+			nocache = true
+		case "--detail-date":
+			detailDate = true
 		default:
 			cleaned = append(cleaned, args[i])
 		}
 	}
-	return cleaned, page, from, to, maxPages
+	return cleaned, page, from, to, maxPages, nocache, detailDate
 }
 
 // cmdNews handles all listing.
 func cmdNews() {
-	args, page, from, to, maxPages := parseFlags(os.Args[1:])
+	args, page, from, to, maxPages, nocache, detailDate := parseFlags(os.Args[1:])
+	scraper.NoCache = nocache
 
 	// No args: aggregate all sites
 	if len(args) < 2 {
@@ -158,7 +167,13 @@ func cmdNews() {
 			printNewsList(items)
 		} else {
 			fmt.Printf("📰 %s\n\n", catName)
-			items, err := scraper.NewsSite.ListNews(arg)
+			var items []model.NewsItem
+			var err error
+			if detailDate {
+				items, err = scraper.NewsSite.ListNewsWithDates(arg)
+			} else {
+				items, err = scraper.NewsSite.ListNews(arg)
+			}
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "❌ 获取失败: %v\n", err)
 				os.Exit(1)
@@ -206,7 +221,13 @@ func cmdNews() {
 			printNewsList(items)
 		} else {
 			fmt.Printf("📰 %s [%s]\n\n", site.Name, slug)
-			items, err := site.ListNews(slug)
+			var items []model.NewsItem
+			var err error
+			if detailDate {
+				items, err = site.ListNewsWithDates(slug)
+			} else {
+				items, err = site.ListNews(slug)
+			}
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "❌ 获取失败: %v\n", err)
 				os.Exit(1)
