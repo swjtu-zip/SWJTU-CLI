@@ -1,0 +1,463 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"> 
+
+<meta name="description" content="信息化网络管理处，西南交通大学">
+<title>信息化与网络管理处</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="信息化与网络管理处">
+<META Name="keywords" Content="信息化与网络管理处" />
+
+<link rel="stylesheet" type="text/css" href="style/css.css" />
+
+
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1001,'/index.jsp',-1,1339963777)</script>
+</head>
+
+<body>
+
+
+<div class="header">
+  <h1>
+<!-- 网站logo图片地址请在本组件"内容配置-网站logo"处填写 -->
+<a href="index.htm" title="信息化与网络管理处"><img src="images/logo.png" width="433" height="52" border="0" alt="信息化与网络管理处" title="信息化与网络管理处"></a></h1>
+
+ <div class="search"><!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu1 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+        margin-top: -15px;
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu1 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu1"></div>
+<script type="text/html" id="htmlu1">
+    <div id="appu1">
+        <div v-if="!isError">
+        
+        <input type="text"  placeholder="请输入内容"  autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit" class="text" />
+ 
+         <input type="submit" value="" class="btn"  v-on:click="onSubmit()" />
+         
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu1").html($("#htmlu1").text());
+</script>
+<script>
+    var appOwner = "1339963777";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu1",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu1 = document.querySelector("#appu1");
+   if (appElementu1 && appElementu1.__vue__) {
+
+   } else {
+      $("#divu1").html($("#htmlu1").text());
+      var appOwner = "1339963777";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou1 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu1(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu1();
+        }
+      };
+
+      function onSubmitu1(e) {
+        queryInfou1.query.keyWord= $("#appu1  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou1.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script></div>
+
+  <p><script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/openlink.js"></script><A href="http://www.swjtu.edu.cn">交大主页</A>|
+
+<A href="english.htm">English</A>
+</p>
+</div>
+
+<div class="nav"><UL>
+
+<LI><A href="index.htm">首页</A></LI>
+
+<LI><A href="zzjg/bmjj.htm">组织机构</A></LI>
+
+<LI><A href="wlaq.htm">网络安全</A></LI>
+
+<LI><A href="zbrj.htm">正版软件</A></LI>
+
+<LI><A href="xxhfw/tysfrz.htm">信息化服务</A></LI>
+
+<LI><A href="wlfw/xywzh.htm">网络服务</A></LI>
+
+<LI><A href="info/1161/2227.htm">高算中心</A></LI>
+
+<LI><A href="djgz.htm">党建工作</A></LI>
+
+<LI><A href="zcfg.htm">政策法规</A></LI>
+
+</UL></div>
+
+
+<div class="flexslider">    <UL class="slides">
+
+<LI style="background:url(images/2025wangluoanquanxuanchuanzhouxinwangchuzhuyetu.jpg) no-repeat 50% 0px"><a href="https://inc.swjtu.edu.cn/info/1022/4809.htm">   <img src="images/2025wangluoanquanxuanchuanzhouxinwangchuzhuyetu.jpg" border="0"></a> </LI>
+
+<LI style="background:url(images/banner-ysjd.jpg) no-repeat 50% 0px"><a href="#">   <img src="images/banner-ysjd.jpg" border="0"></a> </LI>
+
+<LI style="background:url(images/ywtb.jpg) no-repeat 50% 0px"><a href="https://one.swjtu.edu.cn">   <img src="images/ywtb.jpg" border="0"></a> </LI>
+
+<LI style="background:url(images/17352.jpg) no-repeat 50% 0px"><a href="#">   <img src="images/17352.jpg" border="0"></a> </LI>
+
+</UL></div>
+
+<div class="con con_1">
+  <div class="m_box">
+    <div class="ys1">
+
+<script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script><H3 class="con_bt_1"><B>新闻动态</B><EM><A href="xwdt.htm">更多...</A></EM></H3>
+<DIV class="new_text"><I><A href="info/1021/5169.htm"><IMG src="/__local/4/48/EF/E62A61654E73520D1DCE742F8AD_B15B7C0F_27E7D.jpeg"></A></I> 
+<DIV class="new_text_min"><B><A href="info/1021/5169.htm">学校召开2026年第三次网络安全和</A></B> 
+<P>4月29日，学校召开2026年第三次网络安全和信息化领导小组工作会议暨网信工作</P><SPAN>2026-05-07</SPAN> </DIV></DIV>
+<UL class="list_1">
+
+<LI><SPAN><A href="info/1021/5189.htm">信网处全力护航学校建校130周年校庆信息化保障</A></SPAN><EM> 2026-05-20</EM></LI>
+<LI><SPAN><A href="info/1021/5159.htm">四川省高等教育学会教育信息化专委会AI模型赋能</A></SPAN><EM> 2026-05-07</EM></LI>
+<LI><SPAN><A href="info/1021/5119.htm">信网处党支部传达学习习近平总书记重要回信精神</A></SPAN><EM> 2026-04-08</EM></LI>
+<LI><SPAN><A href="info/1021/5099.htm">学校召开2026年第二次网络安全和信息化领导小组</A></SPAN><EM> 2026-03-30</EM></LI>
+<LI><SPAN><A href="info/1021/5079.htm">信网处召开树立和践行正确政绩观学习教育部署会</A></SPAN><EM> 2026-03-20</EM></LI>
+</UL><script>_showDynClickBatch(['dynclicks_u5_5169','dynclicks_u5_5189','dynclicks_u5_5159','dynclicks_u5_5119','dynclicks_u5_5099','dynclicks_u5_5079'],[5169,5189,5159,5119,5099,5079],"wbnews", 1339963777)</script>
+</div>
+    <div class="ys2">
+
+<H3 class="con_bt_1"><B>通知公告</B><EM><A href="tzgg.htm">更多...</A></EM></H3>
+<UL class="list_1">
+
+<LI><SPAN><A title="关于西南交通大学电子邮件系统升级的通知" href="info/1022/5029.htm" target="_blank">关于西南交通大学电子邮件系统升级的通知</A></SPAN><EM>2025-12-03</EM></LI>
+
+<LI><SPAN><A title="关于举办2025年国家网络安全宣传周网络安全线上竞答活动的通知" href="info/1022/4829.htm" target="_blank">关于举办2025年国家网络安全宣传周网络安全线上竞</A></SPAN><EM>2025-09-16</EM></LI>
+
+<LI><SPAN><A title="关于举办西南交通大学2025年国家网络安全宣传周系列活动的通知" href="info/1022/4809.htm" target="_blank">关于举办西南交通大学2025年国家网络安全宣传周系</A></SPAN><EM>2025-09-16</EM></LI>
+
+<LI><SPAN><A title="转发2025第二届教育信息技术应用创新大赛西南区校园宣讲会相关通知" href="info/1022/4749.htm" target="_blank">转发2025第二届教育信息技术应用创新大赛西南区校</A></SPAN><EM>2025-06-19</EM></LI>
+
+<LI><SPAN><A title="关于西南交通大学企业微信升级维护的通知" href="info/1022/4559.htm" target="_blank">关于西南交通大学企业微信升级维护的通知</A></SPAN><EM>2025-04-25</EM></LI>
+
+<LI><SPAN><A title="关于全国硕士研究生招生考试期间关闭考点无线网络的通知" href="info/1022/4139.htm" target="_blank">关于全国硕士研究生招生考试期间关闭考点无线网络</A></SPAN><EM>2024-12-19</EM></LI>
+
+<LI><SPAN><A title="关于四、六级考试期间关闭考点无线网络的通知" href="info/1022/4119.htm" target="_blank">关于四、六级考试期间关闭考点无线网络的通知</A></SPAN><EM>2024-12-13</EM></LI>
+
+<LI><SPAN><A title="关于学生电子邮箱启用二次验证的通知" href="info/1022/4059.htm" target="_blank">关于学生电子邮箱启用二次验证的通知</A></SPAN><EM>2024-10-31</EM></LI>
+
+</UL><script>_showDynClickBatch(['dynclicks_u6_5029','dynclicks_u6_4829','dynclicks_u6_4809','dynclicks_u6_4749','dynclicks_u6_4559','dynclicks_u6_4139','dynclicks_u6_4119','dynclicks_u6_4059'],[5029,4829,4809,4749,4559,4139,4119,4059],"wbnews", 1339963777)</script>
+</div>
+    <div class="ys3"><script language="javascript" src="/system/resource/js/news/mp4video.js"></script>
+<dl class="fwdh"> 
+ <dt> 
+  <b>统一服务电话</b> 
+ </dt> 
+ <dd> 
+  <p><b>犀浦校区</b>028-66366560 028-66366561</p> 
+ </dd> 
+ <dd> 
+  <p><b>九里校区</b>028-87600223 028-87600978</p> 
+ </dd> 
+ <dd> 
+  <p><b>峨眉校区</b>0833-5198393 0833-5198112 </p> 
+ </dd> 
+</dl></div>
+  </div>
+</div>
+
+<div class="con_2">    <DIV class="m_1176">
+<DIV id="marquee1">
+<UL>
+
+<LI class="ys1"><I><A href="http://service.swjtu.edu.cn/" onclick="_addDynClicks(&#34;wbimage&#34;, 1339963777, 1004)"></A></I><SPAN><A href="http://service.swjtu.edu.cn/" onclick="_addDynClicks(&#34;wbimage&#34;, 1339963777, 1004)">网上报修</A></SPAN></LI>
+
+<LI class="ys2"><I><A href="https://card.swjtu.edu.cn/" onclick="_addDynClicks(&#34;wbimage&#34;, 1339963777, 1005)"></A></I><SPAN><A href="https://card.swjtu.edu.cn/" onclick="_addDynClicks(&#34;wbimage&#34;, 1339963777, 1005)">校园一卡通</A></SPAN></LI>
+
+<LI class="ys3"><I><A href="http://mail.swjtu.edu.cn/" onclick="_addDynClicks(&#34;wbimage&#34;, 1339963777, 1006)"></A></I><SPAN><A href="http://mail.swjtu.edu.cn/" onclick="_addDynClicks(&#34;wbimage&#34;, 1339963777, 1006)">电子邮箱</A></SPAN></LI>
+
+<LI class="ys4"><I><A href="wxwl.htm" onclick="_addDynClicks(&#34;wbimage&#34;, 1339963777, 1010)"></A></I><SPAN><A href="wxwl.htm" onclick="_addDynClicks(&#34;wbimage&#34;, 1339963777, 1010)">校园无线网</A></SPAN></LI>
+
+<LI class="ys5"><I><A href="wlaq.htm" onclick="_addDynClicks(&#34;wbimage&#34;, 1339963777, 1009)"></A></I><SPAN><A href="wlaq.htm" onclick="_addDynClicks(&#34;wbimage&#34;, 1339963777, 1009)">网络安全</A></SPAN></LI>
+
+<LI class="ys6"><I><A href="zbrj.htm" onclick="_addDynClicks(&#34;wbimage&#34;, 1339963777, 40802)"></A></I><SPAN><A href="zbrj.htm" onclick="_addDynClicks(&#34;wbimage&#34;, 1339963777, 40802)">正版软件</A></SPAN></LI>
+
+<LI class="ys7"><I><A href="https://yzblp.swjtu.edu.cn/fe/ai" onclick="_addDynClicks(&#34;wbimage&#34;, 1339963777, 1007)"></A></I><SPAN><A href="https://yzblp.swjtu.edu.cn/fe/ai" onclick="_addDynClicks(&#34;wbimage&#34;, 1339963777, 1007)">智能问答</A></SPAN></LI>
+
+<LI class="ys8"><I><A href="wlfw/VPNfw.htm" onclick="_addDynClicks(&#34;wbimage&#34;, 1339963777, 65209)"></A></I><SPAN><A href="wlfw/VPNfw.htm" onclick="_addDynClicks(&#34;wbimage&#34;, 1339963777, 65209)">VPN软件</A></SPAN></LI>
+
+</UL></DIV>
+<DIV class="control"><A class="gol" id="goL" href="javascript:void(0);"></A><A class="gor" id="goR" href="javascript:void(0);"></A></DIV></DIV></div>
+
+<div class="con_3 m_box">
+  <div class="ys ys1">
+
+<H3 class="con_bt_2"><B>学生服务</B><EM><A href="xsfw.htm">more&gt;&gt;</A></EM></H3>
+<UL>
+
+<LI><A title="新生交大ID账号激活流程" href="info/1023/5199.htm" target="_blank">新生交大ID账号激活流程</A></LI>
+
+<LI><A title="企业微信" href="info/1150/2260.htm" target="_blank">企业微信</A></LI>
+
+<LI><A title="一卡通延期申请" href="info/1023/2989.htm" target="_blank">一卡通延期申请</A></LI>
+
+<LI><A title="网络自助服务" href="http://192.168.189.140:8080/selfservice/" target="_blank">网络自助服务</A></LI>
+
+<LI><A title="一网通办服务大厅" href="http://one.swjtu.edu.cn/" target="_blank">一网通办服务大厅</A></LI>
+
+<LI><A title="VPN服务" href="https://vpn.swjtu.edu.cn" target="_blank">VPN服务</A></LI>
+
+<LI><A title="上网预注册" href="http://service.swjtu.edu.cn/" target="_blank">上网预注册</A></LI>
+
+<LI><A title="邮件注册" href="http://mailreg.swjtu.edu.cn/" target="_blank">邮件注册</A></LI>
+
+</UL><script>_showDynClickBatch(['dynclicks_u9_5199','dynclicks_u9_3629','dynclicks_u9_2989','dynclicks_u9_1465','dynclicks_u9_1463','dynclicks_u9_1461','dynclicks_u9_1466','dynclicks_u9_1460'],[5199,3629,2989,1465,1463,1461,1466,1460],"wbnews", 1339963777)</script>
+</div>
+
+  <div class="ys ys2">
+
+<H3 class="con_bt_2"><B>教师服务</B><EM><A href="jsfw.htm">more&gt;&gt;</A></EM></H3>
+<UL>
+
+<LI><A title="企业微信" href="info/1150/2260.htm" target="_blank">企业微信</A></LI>
+
+<LI><A title="一卡通" href="https://card.swjtu.edu.cn" target="_blank">一卡通</A></LI>
+
+<LI><A title="vpn服务" href="https://vpn.swjtu.edu.cn" target="_blank">vpn服务</A></LI>
+
+<LI><A title="教师个人主页" href="http://faculty.swjtu.edu.cn" target="_blank">教师个人主页</A></LI>
+
+<LI><A title="OA办公平台" href="https://one.swjtu.edu.cn/new/index.html" target="_blank">OA办公平台</A></LI>
+
+<LI><A title="网络自助服务" href="http://192.168.189.140:8080/selfservice/" target="_blank">网络自助服务</A></LI>
+
+<LI><A title="一网通办服务大厅" href="http://one.swjtu.edu.cn/" target="_blank">一网通办服务大厅</A></LI>
+
+<LI><A title="邮件注册" href="http://mailreg.swjtu.edu.cn/" target="_blank">邮件注册</A></LI>
+
+</UL><script>_showDynClickBatch(['dynclicks_u10_3639','dynclicks_u10_2949','dynclicks_u10_2488','dynclicks_u10_1470','dynclicks_u10_1472','dynclicks_u10_1483','dynclicks_u10_1474','dynclicks_u10_1469'],[3639,2949,2488,1470,1472,1483,1474,1469],"wbnews", 1339963777)</script>
+</div>
+
+  <div class="ys ys3">
+
+<H3 class="con_bt_2"><B>各单位服务</B><EM><A href="gdwfw.htm">more&gt;&gt;</A></EM></H3>
+<UL>
+
+<LI><A title="二级单位临时人员办卡申请" href="info/1025/2960.htm" target="_blank">二级单位临时人员办卡申请</A></LI>
+
+<LI><A title="临时卡办理申请及使用承诺书" href="info/1025/2813.htm" target="_blank">临时卡办理申请及使用承诺书</A></LI>
+
+<LI><A title="交大云盘" href="http://yunpan.swjtu.edu.cn" target="_blank">交大云盘</A></LI>
+
+<LI><A title="办公邮件系统群发申请" href="http://one.swjtu.edu.cn/" target="_blank">办公邮件系统群发申请</A></LI>
+
+<LI><A title="企业微信" href="info/1150/2260.htm" target="_blank">企业微信</A></LI>
+
+<LI><A title="服务器端口开通流程" href="https://inc.swjtu.edu.cn/wlfw/jywgdIP.htm" target="_blank">服务器端口开通流程</A></LI>
+
+<LI><A title="办公邮箱申请流程" href="https://inc.swjtu.edu.cn/wlfw/jdyx.htm" target="_blank">办公邮箱申请流程</A></LI>
+
+<LI><A title="OA办公平台" href="http://apphall.swjtu.edu.cn" target="_blank">OA办公平台</A></LI>
+
+</UL><script>_showDynClickBatch(['dynclicks_u11_2960','dynclicks_u11_2813','dynclicks_u11_2025','dynclicks_u11_1656','dynclicks_u11_1644','dynclicks_u11_1515','dynclicks_u11_1478','dynclicks_u11_1477'],[2960,2813,2025,1656,1644,1515,1478,1477],"wbnews", 1339963777)</script>
+</div>
+</div>
+
+
+<div class="footer">
+  <div class="m_box">
+    <div class="footer_l">
+      <p><!-- 版权内容请在本组件"内容配置-版权"处填写 -->
+<p>Copyright©2016 四川省成都市西南交通大学信息化与网络管理处</p><p>办公地点：信息化与网络管理处（九里校区） 图书馆一楼大厅（犀浦校区）</p><p>联系电话：028-87600223 028-66366561 网络服务QQ群:1043566925</p></p>
+    </div>
+    <div class="footer_r">          <ul class="footer_fx">
+        <li class="ys1"><a href="info/1150/2260.htm"></a></li>        <li class="ys2"><a href="http://weibo.com/inmoswjtu"></a></li>
+
+      </ul></div>
+  </div>
+</div>
+
+<script src="js/jquery.min.js"></script>
+<script src="js/jquery.flexslider-min.js"></script>
+<script>
+$(function(){
+    $('.flexslider').flexslider({
+        directionNav: true,
+        pauseOnAction: false
+    });
+});
+</script>
+
+<script type="text/javascript" src="js/marquee.js"></script>
+<script type="text/javascript">
+$(function(){
+    //一次横向滚动一个
+    $('#marquee1').kxbdSuperMarquee({
+        distance:130,
+        time:3,
+        btnGo:{left:'#goL',right:'#goR'},
+        direction:'left'
+    });
+});
+
+</script>
+
+
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,627 @@
+﻿<!DOCTYPE html>
+<html lang="zh">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>西南交通大学基建规划与校园管理处</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="西南交通大学基建规划与校园管理处">
+<META Name="keywords" Content="西南交通大学基建规划与校园管理处,首页" />
+
+        <link href="2023/static/css/bootstrap.css" rel="stylesheet">
+        <link href="2023/static/css/style.css" rel="stylesheet">
+        <link href="2023/static/css/swiper-bundle.min.css" rel="stylesheet">
+      
+    <!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1001,'/index.jsp',-1,1965584405)</script>
+</head>
+    <body>
+        <header class="whole-bgt">
+            <div class="container flex-center flex-hc">
+                <div class="logo">
+<!-- 网站logo图片地址请在本组件"内容配置-网站logo"处填写 -->
+<a href="index.htm" title="基建规划与校园管理处"><img src="images/xiaohui.png" width="270" height="70" border="0" alt="基建规划与校园管理处" title="基建规划与校园管理处"></a></div>
+                <div class="head-p">基建规划与校园管理处</div>
+                <!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu1 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+        margin-top: -15px;
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu1 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu1"></div>
+<script type="text/html" id="htmlu1">
+    <div id="appu1">
+        <div v-if="!isError">
+        
+         <div class="search flex-center">
+ <input   type="text" class="input flex-bd"  placeholder="请输入关键词进行搜索"  autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+<button class="btn search_btn"  v-on:click="onSubmit()"><img src=2023/static/images/search.png alt=""></button>
+ </div>
+        
+         
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu1").html($("#htmlu1").text());
+</script>
+<script>
+    var appOwner = "1965584405";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu1",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu1 = document.querySelector("#appu1");
+   if (appElementu1 && appElementu1.__vue__) {
+
+   } else {
+      $("#divu1").html($("#htmlu1").text());
+      var appOwner = "1965584405";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou1 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu1(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu1();
+        }
+      };
+
+      function onSubmitu1(e) {
+        queryInfou1.query.keyWord= $("#appu1  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou1.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+            </div>
+        </header>
+        <nav>
+            <ul class="flex-center flex-hc"><li class="active">
+                    <a href="index.htm">
+                        <div class="nav-icon"><img src="2023/static/images/icon1.png" alt=""></div>
+                        <div class="nav-tt">首页</div>
+                    </a>
+                </li>
+                
+<li class="active">
+                    <a href="jgsz/bmjj.htm">
+                        <div class="nav-icon"><img src="2023/static/images/icon2.png" alt=""></div>
+                        <div class="nav-tt">机构设置</div>
+                    </a>
+                </li>
+                
+<li class="active">
+                    <a href="zbjs.htm">
+                        <div class="nav-icon"><img src="2023/static/images/icon3.png" alt=""></div>
+                        <div class="nav-tt">支部建设</div>
+                    </a>
+                </li>
+                
+<li class="active">
+                    <a href="zcfg/gjxgfgzd.htm">
+                        <div class="nav-icon"><img src="2023/static/images/icon8.png" alt=""></div>
+                        <div class="nav-tt">政策法规</div>
+                    </a>
+                </li>
+                
+<li class="active">
+                    <a href="gggs.htm">
+                        <div class="nav-icon"><img src="2023/static/images/icon4.png" alt=""></div>
+                        <div class="nav-tt">公告公示</div>
+                    </a>
+                </li>
+                
+<li class="active">
+                    <a href="gzcx/gcxm.htm">
+                        <div class="nav-icon"><img src="2023/static/images/icon6.png" alt=""></div>
+                        <div class="nav-tt">工作程序</div>
+                    </a>
+                </li>
+                
+<li class="active">
+                    <a href="<span style='color:red;font-size:9pt'>转换链接错误</span>">
+                        <div class="nav-icon"><img src="2023/static/images/icon9.png" alt=""></div>
+                        <div class="nav-tt">资料下载</div>
+                    </a>
+                </li>
+                
+<li class="active">
+                    <a href="xxyd.htm">
+                        <div class="nav-icon"><img src="2023/static/images/icon10.png" alt=""></div>
+                        <div class="nav-tt">学习园地</div>
+                    </a>
+                </li>
+                
+<li class="active">
+                    <a href="tszs.htm">
+                        <div class="nav-icon"><img src="2023/static/images/icon6.png" alt=""></div>
+                        <div class="nav-tt">他山之石</div>
+                    </a>
+                </li>
+                
+</ul>
+        </nav>
+        <div class="warp">
+            <div class="container">
+                <div class="index-head flex">
+                    <div class="index-banner">
+                        <div class="swiper mySwiper">
+                            <div class="swiper-wrapper">
+
+<script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script><div class="swiper-slide">
+                                    <div class="index_ban">
+                                        <img src="/__local/E/0E/A4/33DD6680F2F18C3314BC74AA7E0_C1C78B39_6DA26.jpg" alt="" class="index-ban-pic">
+                                        <div class="index-ban-tt"><a href="info/1025/4761.htm">成都建工集团2026年“安全生产月”启动仪式在我校犀浦校区环境与生物材料交叉技术创新中心项目举行</a></div>
+                                    </div>
+                                </div>
+                                
+<div class="swiper-slide">
+                                    <div class="index_ban">
+                                        <img src="/__local/3/77/AF/76E5F07AEF89C7E6FF2DD852460_CACA1CB3_3AA01.jpg" alt="" class="index-ban-pic">
+                                        <div class="index-ban-tt"><a href="info/1025/4731.htm">基建规划与校园管理处组织开展基建领域意识形态风险防范与应对专题培训</a></div>
+                                    </div>
+                                </div>
+                                
+<div class="swiper-slide">
+                                    <div class="index_ban">
+                                        <img src="/__local/6/E2/6C/05CE872DB7E76544C14CED63BE6_33E71BBC_5F5DF.jpg" alt="" class="index-ban-pic">
+                                        <div class="index-ban-tt"><a href="info/1025/4751.htm">基建规划与校园管理处开展五月在建项目安全文明施工检查工作</a></div>
+                                    </div>
+                                </div>
+                                
+<div class="swiper-slide">
+                                    <div class="index_ban">
+                                        <img src="/__local/5/F3/1A/68A4D13073A98DBC640FBDEBAF6_B95BBAFC_38F74.jpg" alt="" class="index-ban-pic">
+                                        <div class="index-ban-tt"><a href="info/1025/4721.htm">基建规划与校园管理处组织召开2026年第三次在建项目安全生产文明施工工作布置会</a></div>
+                                    </div>
+                                </div>
+                                
+<div class="swiper-slide">
+                                    <div class="index_ban">
+                                        <img src="/__local/F/8A/8B/7BDB5744B76FE1F9DCC1EC07690_76B387C3_5D27F.jpg" alt="" class="index-ban-pic">
+                                        <div class="index-ban-tt"><a href="info/1025/4741.htm">教育部专家组来校对“九里校区学生公寓”项目建议书开展评估</a></div>
+                                    </div>
+                                </div>
+                                
+<script>_showDynClickBatch(['dynclicks_u3_4761','dynclicks_u3_4731','dynclicks_u3_4751','dynclicks_u3_4721','dynclicks_u3_4741'],[4761,4731,4751,4721,4741],"wbnews", 1965584405)</script>
+</div>
+                            <div class="swiper-pagination"></div>
+                        </div>
+                    </div>
+                    <div class="index-tabs flex-bd">
+                        <ul class="nav nav-tabs" role="tablist">
+                            <li role="presentation" class="active"><a href="#index" aria-controls="index" role="tab" data-toggle="tab">基建动态</a></li>
+                            <li role="presentation"><a href="#index1" aria-controls="index1" role="tab" data-toggle="tab">基建视野</a></li>
+                            <a href="index/xwdt.htm" class="index-tabs-more" target="">更多 +</a>
+                        </ul>
+                        <div class="tab-content">
+                            <div role="tabpanel" class="tab-pane active" id="index">
+                                <div class="index_grid">
+
+<div class="index-tabs-cell flex-center">
+                                        <div class="index-tabs-time">
+                                            <div class="index-tabs-day">10</div>
+                                            <div class="index-tabs-year">2026.06</div>
+                                        </div>
+                                        <div class="index-tabs-bd flex-bd">
+                                            <a href="info/1025/4761.htm" class="index-tabs-tt">成都建工集团2026年“安全生产月”启动仪式在我校犀浦校区环境与生物材料交叉技术创新中心项目举行</a>
+                                            <div class="index-tabs-text">2026年6月5日，成都建工集团2026年“安全生产月”启动仪式在我校犀浦校区环境与生物材料交叉技术创新中...</div>
+                                        </div>
+                                    </div>
+                                    
+<div class="index-tabs-cell flex-center">
+                                        <div class="index-tabs-time">
+                                            <div class="index-tabs-day">28</div>
+                                            <div class="index-tabs-year">2026.05</div>
+                                        </div>
+                                        <div class="index-tabs-bd flex-bd">
+                                            <a href="info/1025/4731.htm" class="index-tabs-tt">基建规划与校园管理处组织开展基建领域意识形态风险防范与应对专题培训</a>
+                                            <div class="index-tabs-text">为筑牢基建领域意识形态安全防线，提升风险防范与舆情应对能力，5月26日下午，基建规划与校园管理处邀请...</div>
+                                        </div>
+                                    </div>
+                                    
+<div class="index-tabs-cell flex-center">
+                                        <div class="index-tabs-time">
+                                            <div class="index-tabs-day">27</div>
+                                            <div class="index-tabs-year">2026.05</div>
+                                        </div>
+                                        <div class="index-tabs-bd flex-bd">
+                                            <a href="info/1025/4751.htm" class="index-tabs-tt">基建规划与校园管理处开展五月在建项目安全文明施工检查工作</a>
+                                            <div class="index-tabs-text">为进一步强化安全生产责任落实，持续巩固校园建设领域安全稳定基础，2026年5月25日，基建规划与校园管理...</div>
+                                        </div>
+                                    </div>
+                                    
+<div class="index-tabs-cell flex-center">
+                                        <div class="index-tabs-time">
+                                            <div class="index-tabs-day">26</div>
+                                            <div class="index-tabs-year">2026.05</div>
+                                        </div>
+                                        <div class="index-tabs-bd flex-bd">
+                                            <a href="info/1025/4721.htm" class="index-tabs-tt">基建规划与校园管理处组织召开2026年第三次在建项目安全生产文明施工工作布置会</a>
+                                            <div class="index-tabs-text">为切实保障校园在建项目施工安全，坚决防范和化解各种安全生产文明施工风险，2026年5月25日，基建规划与...</div>
+                                        </div>
+                                    </div>
+                                    
+<div class="index-tabs-cell flex-center">
+                                        <div class="index-tabs-time">
+                                            <div class="index-tabs-day">22</div>
+                                            <div class="index-tabs-year">2026.05</div>
+                                        </div>
+                                        <div class="index-tabs-bd flex-bd">
+                                            <a href="info/1025/4741.htm" class="index-tabs-tt">教育部专家组来校对“九里校区学生公寓”项目建议书开展评估</a>
+                                            <div class="index-tabs-text">2026年5月21日上午，西南交通大学九里校区学生公寓项目建议书评估会在九里校区学术交流中心举行。教育部...</div>
+                                        </div>
+                                    </div>
+                                    
+<script>_showDynClickBatch(['dynclicks_u4_4761','dynclicks_u4_4731','dynclicks_u4_4751','dynclicks_u4_4721','dynclicks_u4_4741'],[4761,4731,4751,4721,4741],"wbnews", 1965584405)</script>
+</div>
+                            </div>
+                            <div role="tabpanel" class="tab-pane" id="index1">
+                                <div class="index_grid">
+                                   
+
+<div class="index-tabs-cell flex-center">
+                                        <div class="index-tabs-time">
+                                            <div class="index-tabs-day">29</div>
+                                            <div class="index-tabs-year">2016.04</div>
+                                        </div>
+                                        <div class="index-tabs-bd flex-bd">
+                                            <a href="info/1057/1181.htm" class="index-tabs-tt">初探信息技术在高校工程审计项目管理中的应用</a>
+                                            <div class="index-tabs-text">随着我国教育事业的快速发展，国家对教育经费投入逐年增加，高校建设步伐逐步加大，同时，学校对经济活...</div>
+                                        </div>
+                                    </div>
+                                    
+<script>_showDynClickBatch(['dynclicks_u5_1181'],[1181],"wbnews", 1965584405)</script>
+
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="index-col flex">
+                    <div class="index-news flex flex-zBetween flex-bd">
+                        <div class="index-tell">
+
+<div class="list-head"><img src="2023/static/images/list1.png" alt=""><p>工程公告</p></div>
+                            
+                                
+<div class="list-cell">
+                                <a href="info/1005/4711.htm" class="list-cell-tt">西南交通大学犀浦校区川藏铁路研究中心项目水土保持验收成交公告</a>
+                                <div class="list-text">西南交通大学基建规划与校园管理处已就犀浦校区川藏铁路研究中心项目水土保持验收组织自行采购...<span onclick="javascript:window.open('info/1005/4711.htm')" ">[详情]</span></div>
+                                <div class="list-time">2026-05-20</div>
+                            </div>
+                            <div class="list-box">
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1005/4681.htm" class="list-col-tt">西南交通大学犀浦校区川藏铁路研究中心项目水土保持竣工验收技术评估服务比价邀请</a>
+                                    <div class="list-col-time">2026-05-07</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1005/4671.htm" class="list-col-tt">西南交通大学犀浦校区六食堂室内环境污染检测、雷电防护装置检测、消防设施检测及电气防火检测委托成交公告</a>
+                                    <div class="list-col-time">2026-05-06</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1005/4631.htm" class="list-col-tt">西南交通大学犀浦校区大学生创新创业教育中心项目测绘服务</a>
+                                    <div class="list-col-time">2026-04-20</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1005/4691.htm" class="list-col-tt">西南交通大学犀浦校区六食堂配电设施运维保养（一年）成交公告</a>
+                                    <div class="list-col-time">2026-03-30</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1005/4451.htm" class="list-col-tt">西南交通大学九里校区电力改造（二期）设计比选（第二次）成交公告</a>
+                                    <div class="list-col-time">2026-03-06</div>
+                                </div>
+                                
+                                
+                                
+</div><script>_showDynClickBatch(['dynclicks_u6_4711','dynclicks_u6_4681','dynclicks_u6_4671','dynclicks_u6_4631','dynclicks_u6_4691','dynclicks_u6_4451'],[4711,4681,4671,4631,4691,4451],"wbnews", 1965584405)</script>
+</div>
+                        <div class="index-tell">
+
+<div class="list-head"><img src="2023/static/images/list1.png" alt=""><p>支部建设</p></div>
+                            
+                                
+<div class="list-cell">
+                                <a href="info/1024/4771.htm" class="list-cell-tt">基建规划与校园管理处开展2026年第三次教职...</a>
+                                <div class="list-text">5月28日下午，基建规划与校园管理处在135会议室组织召开2026年第三次教职工政治理论学习会。会议由基建...<span onclick="javascript:window.open('info/1024/4771.htm')" ">[详情]</span></div>
+                                <div class="list-time">2026-06-12</div>
+                            </div>
+                            <div class="list-box">
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1024/4621.htm" class="list-col-tt">基建规划与校园管理处开展2026年第二次教职...</a>
+                                    <div class="list-col-time">2026-04-16</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1024/4591.htm" class="list-col-tt">基建规划与校园管理处党支部学习习近平总书...</a>
+                                    <div class="list-col-time">2026-04-10</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1024/4501.htm" class="list-col-tt">基建规划与校园管理处党支部召开组织生活会...</a>
+                                    <div class="list-col-time">2026-03-10</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1024/4491.htm" class="list-col-tt">基建规划与校园管理处党支部召开主题党日活动</a>
+                                    <div class="list-col-time">2026-03-09</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1024/4091.htm" class="list-col-tt">基建规划与校园管理处开展2025年第七次教职...</a>
+                                    <div class="list-col-time">2025-11-24</div>
+                                </div>
+                                
+                                
+                                
+</div><script>_showDynClickBatch(['dynclicks_u7_4771','dynclicks_u7_4621','dynclicks_u7_4591','dynclicks_u7_4501','dynclicks_u7_4491','dynclicks_u7_4091'],[4771,4621,4591,4501,4491,4091],"wbnews", 1965584405)</script>
+</div>
+                        <div class="index-tell">
+
+<div class="list-head"><img src="2023/static/images/list1.png" alt=""><p>他山之石</p></div>
+                            
+                                
+<div class="list-cell">
+                                <a href="info/1057/1181.htm" class="list-cell-tt">初探信息技术在高校工程审计项目管理中的应用</a>
+                                   <div class="list-text">随着我国教育事业的快速发展，国家对教育经费投入逐年增加，高校建设步伐逐步加大，同时，学校对经济活...<span onclick="javascript:window.open('info/1057/1181.htm')" ">[详情]</span></div>
+                                <div class="list-time">2016-04-29</div>
+                            </div>
+                            <div class="list-box">
+                                
+</div><script>_showDynClickBatch(['dynclicks_u8_1181'],[1181],"wbnews", 1965584405)</script>
+</div>
+                        <div class="index-tell">
+
+<div class="list-head"><img src="2023/static/images/list1.png" alt=""><p>政策法规</p></div>
+                            
+                                
+<div class="list-cell">
+                                <a href="info/1020/2401.htm" class="list-cell-tt">西南交通大学公有房屋装修改造管理办法（试...</a>
+                                  <div class="list-text">请查阅附件。<span onclick="javascript:window.open('info/1020/2401.htm')" ">[详情]</span></div>
+                                <div class="list-time">2024-06-03</div>
+                            </div>
+                            <div class="list-box">
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1020/1601.htm" class="list-col-tt">【安全生产】转发西南交通大学关于印发《西...</a>
+                                    <div class="list-col-time">2019-01-04</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1020/1591.htm" class="list-col-tt">【安全生产】转发西南交通大学关于印发《西...</a>
+                                    <div class="list-col-time">2019-01-04</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1020/1581.htm" class="list-col-tt">【安全生产】转发西南交通大学关于印发《西...</a>
+                                    <div class="list-col-time">2019-01-04</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1020/1571.htm" class="list-col-tt">【安全生产】转发西南交通大学关于印发《西...</a>
+                                    <div class="list-col-time">2019-01-04</div>
+                                </div>
+                                
+                                
+                                
+</div><script>_showDynClickBatch(['dynclicks_u9_2401','dynclicks_u9_1601','dynclicks_u9_1591','dynclicks_u9_1581','dynclicks_u9_1571'],[2401,1601,1591,1581,1571],"wbnews", 1965584405)</script>
+</div>
+                    </div>
+                    <div class="index-grid">
+                        <div class="index-sj flex"><a href="http://192.168.187.118:8888/" class="index-sj-col whole-bgt" target=""></a>
+                            <a href="https://one.swjtu.edu.cn" class="index-sj-col index-sj-col1 whole-bgt" target=""></a></div>
+                        <div class="index-zn">
+                            <div class="list-head"> <p>服务指南</p></div>
+                            <div class="index-zn-col">    </div>
+                        </div>
+                        <div class="index-add">
+                            <div class="index-add-c whole-bgt flex-center">
+                                <div class="index-add-l"><img src="2023/static/images/index4.png" alt=""></div>
+                                <div class="index-add-r">
+                                   <a href="czxx.htm" target=""> <div class="index-add-r_tt">处长信箱</div>
+                                    <div class="index-add-r_text">Director's mailbox</div></a>
+                                </div>
+                               
+                            </div>
+                            <div class="index-add-c index-add-c1 whole-bgt flex-center">
+                                <div class="index-add-l index-add-l-l"><img src="2023/static/images/index5.png" alt=""></div>
+                                <div class="index-add-r">
+                                   <a href="lxwm.htm" target=""> <div class="index-add-r_tt">联系我们</div>
+                                    <div class="index-add-r_text">contact us</div></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <footer class="whole-bgt">
+            <div class="container flex-center flex-hc">
+                <div class="foot-logo"><img src="images/xiaohuizuizhong.png">" alt=""></div>
+                <div class="foot-copy"><!-- 版权内容请在本组件"内容配置-版权"处填写 -->
+<p>版权所有©西南交通大学基建规划与校园管理处</p><p>地址：四川省成都市郫都区犀安路999号</p><p>西南交大犀浦校区综合楼132-142房间</p><p>邮编：611756</p></div>
+                <div class="foot-ewm">
+                    <img src="images/erweima.jpg" alt="">
+                    <p>西南交大建管处</p>
+                </div>
+                <div class="foot-label flex-center"><script language="javascript" src="/system/resource/js/openlink.js"></script></div>
+            </div>
+        </footer>
+        <script src="2023/static/js/jquery.min.js"></script>
+        <script src="2023/static/js/bootstrap.min.js"></script>
+        <script src="2023/static/js/swiper-bundle.min.js"></script>
+    </body>
+</html>
+<script>
+    var swiper = new Swiper(".mySwiper", {
+        pagination: {
+            el: ".swiper-pagination",
+            clickable :true,
+        },
+        loop : true,
+        autoplay : true,
+    });
+</script>

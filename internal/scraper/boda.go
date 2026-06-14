@@ -43,6 +43,9 @@ func (s *BodaSite) ListNewsPage(slug string, page int) ([]model.NewsItem, error)
 			return nil, fmt.Errorf("tried .htm and .html: %w", err)
 		}
 	}
+	if s.ParseFunc != nil {
+		return s.ParseFunc(body, s.BaseURL)
+	}
 	return parseBodaNewsList(body, s.BaseURL)
 }
 
@@ -262,15 +265,15 @@ func isValidNewsTitle(title string) bool {
 		"学院简介", "现任领导", "组织机构", "教师名录", "本科生", "研究生",
 		"通知公告", "学院新闻", "学院动态", "新闻动态", "新闻公告",
 		"本科教育", "研究生教育", "实验平台", "系所介绍", "团委工作",
-		"查看详情>>", "详细>>", "详情>>", "更多>>", ">>",
-		"院务公开", "联系方式", "学院通知", "唐臣要闻", "基层动态",
+		"查看详情", "详细>>", "详情>>", "更多>>", ">>",
+		"院务公开", "联系方式", "学院通知", "唐臣要闻", "基层动态", "学院要闻",
 		"诚聘海内外英才", "设计艺术学院", "临床医学",
 		"新闻动态\\ NEWS INFORMATION", "新闻动态\\ NEWS",
 	}
 	// Prefix-based skip patterns
 	skipPrefixes := []string{
-		"习近平给四所交通大学全体师生回信",
-		"习近平总书记给四所交通大学全体师生的回信",
+		"习近平给四所交通大学全体师生",
+		"习近平总书记给四所交通大学全体师生",
 	}
 	for _, s := range skip {
 		if title == s || strings.Contains(title, s) {
@@ -408,11 +411,18 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 		title := strings.TrimSpace(a.AttrOr("title", ""))
 		if title == "" {
 			// Clone the selection and remove known non-title elements before extracting text
-			titleSel := sel.Find(".xw-ul-tt, .line1, .txts, .a_block, .news-title, h3, h4, .info").First()
+			titleSel := sel.Find(".xw-ul-tt, .line1, .txts, .a_block, .news-title, h3, h4, .info, p.line2").First()
 			if titleSel.Length() > 0 {
 				// Remove category labels and other noise
 				titleSel.Find(".lanmu, .source, .date, .time").Remove()
 				title = strings.TrimSpace(titleSel.Text())
+			}
+		}
+		// Try <p> tag inside <a> (ese.swjtu.edu.cn pattern)
+		if title == "" {
+			pTag := a.Find("p").First()
+			if pTag.Length() > 0 {
+				title = strings.TrimSpace(pTag.Text())
 			}
 		}
 		if title == "" {
@@ -436,22 +446,42 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 		if title == "" || href == "" || !isValidNewsTitle(title) {
 			return
 		}
-			if len(title) > 100 || strings.Contains(title, "来源") {
-				return
+		if len(title) > 100 || strings.Contains(title, "来源") {
+			return
+		}
+		// Try multiple date selectors
+		date := ""
+		dateSelectors := []string{".time", ".time span", "span.time", "em", ".date", ".xw-ul-date font", ".xw-ul-date span", ".calendar .date", ".date-label", ".time-box", "time"}
+		for _, dateSel := range dateSelectors {
+			date = strings.TrimSpace(sel.Find(dateSel).Text())
+			if date != "" {
+				break
 			}
-			// Try multiple date selectors
-			date := ""
-			dateSelectors := []string{".time", ".time span", "span.time", "em", ".date", ".xw-ul-date font", ".xw-ul-date span", ".calendar .date", ".date-label", ".time-box"}
-			for _, dateSel := range dateSelectors {
-				date = strings.TrimSpace(sel.Find(dateSel).Text())
-				if date != "" {
-					break
+		}
+		// Try <time> sibling (sports.swjtu.edu.cn pattern)
+		if date == "" {
+			parent := sel.Parent()
+			if parent.Length() > 0 {
+				date = strings.TrimSpace(parent.Find("time").Text())
+			}
+		}
+		// Special handling for ese date format: <div class="s2-date"><b>06-09</b><span>/ 2026</span></div>
+		if date == "" {
+			s2date := a.Find(".s2-date, .s3-date, .s1-date")
+			if s2date.Length() > 0 {
+				day := strings.TrimSpace(s2date.Find("b").Text())
+				year := strings.TrimSpace(s2date.Find("span").Text())
+				year = strings.TrimPrefix(year, "/")
+				year = strings.TrimSpace(year)
+				if day != "" && year != "" {
+					date = year + "-" + day
 				}
 			}
-			// Special handling for ctt date format: <div class="news-time"><div class="day">24</div><div class="month">2025.11</div></div>
-			if date == "" {
-				day := strings.TrimSpace(sel.Find(".news-time .day, .xw-ul-date span").Text())
-				ym := strings.TrimSpace(sel.Find(".news-time .month, .xw-ul-date font").Text())
+		}
+		// Special handling for ctt date format: <div class="news-time"><div class="day">24</div><div class="month">2025.11</div></div>
+		if date == "" {
+			day := strings.TrimSpace(sel.Find(".news-time .day, .xw-ul-date span").Text())
+			ym := strings.TrimSpace(sel.Find(".news-time .month, .xw-ul-date font").Text())
 				if day != "" && ym != "" {
 					date = ym + "/" + day
 				}

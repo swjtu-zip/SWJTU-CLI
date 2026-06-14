@@ -1,0 +1,535 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width,minimum-scale=1,maximum-scale=1,user-scalable=1">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  
+    <title>西南交大离退休处</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="西南交大离退休处">
+<META Name="keywords" Content="西南交大离退休处,首页" />
+
+    <link rel="stylesheet" href="dfiles/4481/css/style.css">
+    <link rel="stylesheet" href="dfiles/4481/css/slider.css">
+    
+
+    
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1001,'/index.jsp',-1,1440185272)</script>
+</head>
+<body>
+
+    <!--[if lte IE 7]>
+        <p style="text-align: center;line-height: 50px;">请升级您的浏览器以获取更好的体验！</p>
+    <![endif]-->
+
+    <!-- header -->
+    <div class="header">
+        <div class="box">
+             <div class="logo"><a>离退处</a></div>
+            <div class="search">
+            <!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu0 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+        margin-top: -15px;
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu0 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu0"></div>
+<script type="text/html" id="htmlu0">
+    <div id="appu0">
+        <div v-if="!isError">
+        
+        <input type="search" class="search-content" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit" />
+        <span class="divider">|</span><input type="button" class="search-btn" v-on:click="onSubmit()" />
+        
+         
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu0").html($("#htmlu0").text());
+</script>
+<script>
+    var appOwner = "1440185272";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu0",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu0 = document.querySelector("#appu0");
+   if (appElementu0 && appElementu0.__vue__) {
+
+   } else {
+      $("#divu0").html($("#htmlu0").text());
+      var appOwner = "1440185272";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou0 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu0(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu0();
+        }
+      };
+
+      function onSubmitu0(e) {
+        queryInfou0.query.keyWord= $("#appu0  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou0.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导航 -->
+    
+<div class="nav">
+        <div class="box">
+            <ul class="nav-links">
+        <li><a href="index.htm">首页</a>
+        </li> 
+        <li><a href="bmgk1.htm">部门概况</a>
+        </li> 
+        <li><a href="djgz.htm">党建工作</a>
+        </li> 
+        <li><a href="lzhgz.htm">老字号工作</a>
+        </li> 
+        <li><a href="ggw.htm">关工委</a>
+        </li> 
+        <li><a href="lltd.htm">乐龄天地</a>
+        </li> 
+        <li><a href="jkzc.htm">健康之窗</a>
+        </li> 
+        <li><a href="fwzn.htm">服务指南</a>
+        </li> 
+        <li><a href="jcfc.htm">基层风采</a>
+        </li> 
+        <li><a href="czxx.htm">处长信箱</a>
+        </li> 
+        <li><a href="https://wqy.swjtu.edu.cn">管理系统</a>
+        </li> 
+</ul> </div>
+    </div>
+
+<!-- 导航 -->
+
+    
+     <!-- picture-flow -->
+    
+
+<script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script><div class="iosSliderDemo">
+        <div class="fluidHeight">
+            <div class="sliderContainer">
+                <div class="iosSlider">
+                    <div class="slider">
+                                                <div class="item item1">
+                            <div class="inner">
+                                <a href="info/1056/8356.htm" style="background:url(/__local/D/B3/16/059DC78F22745EEC360E43170A4_645D3643_4C5D1.png) no-repeat center"></a>
+                                                     <div class="text1"><span>离退休工作处党委开展树立和践行正确政绩观学习教育</span></div>
+
+                                                            </div>
+                        </div>
+                        <div class="item item1">
+                            <div class="inner">
+                                <a href="info/1056/4076.htm" style="background:url(/__local/4/43/31/C3C833545CB7487DBBED52E1245_652AAD48_632A8.jpg) no-repeat center"></a>
+                                                     <div class="text1"><span>爱老敬老情暖重阳，助老利老爱满校园</span></div>
+
+                                                            </div>
+                        </div>
+                        <div class="item item1">
+                            <div class="inner">
+                                <a href="info/1056/3757.htm" style="background:url(/__local/8/AE/2D/DE83EF2FAA6BAD0B05E47A3AF10_19EA2F33_1DD8E.jpg) no-repeat center"></a>
+                                                     <div class="text1"><span>年年次日礼赞时光  岁岁寿诞乐享晚晴</span></div>
+
+                                                            </div>
+                        </div>
+                        <div class="item item1">
+                            <div class="inner">
+                                <a href="info/1056/11126.htm" style="background:url(/__local/1/F1/7A/45269D7E3DD4389F41A24B50889_BCE12A9C_68265.png) no-repeat center"></a>
+                                                     <div class="text1"><span>深入学习贯彻习近平总书记给四所交通大学全体师生重要回信精神</span></div>
+
+                                                            </div>
+                        </div>
+                        <div class="item item1">
+                            <div class="inner">
+                                <a href="info/1056/11116.htm" style="background:url(/__local/5/92/C0/611E1D3E126AD8EA8383C7041C2_B5031560_396CD.jpg) no-repeat center"></a>
+                                                     <div class="text1"><span>春日寻芳</span></div>
+
+                                                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="slideSelectors">
+                    <div class="prev"></div>
+                    
+                         <a class="item selected"></a>
+                          <a class="item"></a>
+                          <a class="item"></a>
+                          <a class="item"></a>
+                          <a class="item"></a>
+                    <div class="next"></div>
+                </div>
+                <div class="leftbg"></div>
+                <div class="rightbg"></div>
+            </div>
+        </div>
+    </div>
+<script>_showDynClickBatch(['dynclicks_u2_8356','dynclicks_u2_4076','dynclicks_u2_3757','dynclicks_u2_11126','dynclicks_u2_11116'],[8356,4076,3757,11126,11116],"wbnews", 1440185272)</script>
+
+
+    <!-- picture-flow end -->
+
+
+    <!-- content -->
+    <div class="content">
+        <div class="second">
+            <div class="box">
+                <div class="l">
+                
+
+<div class="title news">
+                        <span class="h3">晚晴动态</span><a class="more" href="wqdt.htm">MORE</a></span>
+
+                    </div>
+                    <div class="section">
+                        <a href="info/1042/11306.htm"><img src="/__local/7/28/26/C6934460FDF9C8F53AD76696C52_499D8E22_5729B.jpg" width="185" height="102" /></a>
+                        <a href="info/1042/11306.htm">
+                            <p class="title-link">西南交通大学举办“光影交大，百卅弥新“老照片展暨离退休教职工庆祝建校130周年游园活动</p>
+                        </a>
+                        <p class="desc">为迎接西南交通大学建校130周年，传承“竢实扬华、自强不息”的交大精神，进一步丰...</p>
+                    </div>
+                    <ul class="common-list">
+                     <li><a href="info/1042/11396.htm">第十五届党委第六轮巡察第三巡察组巡察离退休工作处党委工作动员会召开</a><span class="date">2026/05/29</span></li>
+                     <li><a href="info/1042/11366.htm">学习重要回信精神 淬炼初心使命 ——离退处党委在职党支部走进校史馆开展主题党日活动</a><span class="date">2026/05/25</span></li>
+                     <li><a href="info/1042/11226.htm">西南交通大学召开2026年关心下一代工作会议</a><span class="date">2026/04/29</span></li>
+                     <li><a href="info/1042/11216.htm">西南交通大学举办离退休工作队伍履职能力提升专题培训</a><span class="date">2026/04/27</span></li>
+                               </ul>
+<script>_showDynClickBatch(['dynclicks_u3_11306','dynclicks_u3_11396','dynclicks_u3_11366','dynclicks_u3_11226','dynclicks_u3_11216'],[11306,11396,11366,11226,11216],"wbnews", 1440185272)</script>
+
+
+                                    </div>
+                <div class="r">
+                
+
+<div class="title notice">
+ <span class="h3">晚晴通知</span><span><a class="more" href="wqtz.htm">MORE</a></span></div>
+                    <ul class="common-list1">
+ <li><span class="date">2026/06/09</span><a href="info/1055/11416.htm">晚晴爱心驿站（九里）关于开展端午主题活动的通知</a></li>
+
+ <li><span class="date">2026/05/20</span><a href="info/1055/11326.htm">关于九里校区晚晴爱心驿站开展手工活动的通知</a></li>
+
+ <li><span class="date">2026/05/19</span><a href="info/1055/11316.htm">西南交通大学离退休工作处2026年“春华晚晴”之集体生日会报名通知</a></li>
+
+ <li><span class="date">2026/05/12</span><a href="info/1055/11296.htm">关于发放离退处直管离退休教职工主题文化衫及纪念品的通知</a></li>
+
+ <li><span class="date">2026/05/08</span><a href="info/1055/11276.htm">关于组织“光影交大，百卅弥新”老照片展暨西南交通大学  离退休教职工庆祝建校130周年游园活动的通知</a></li>
+
+ <li><span class="date">2026/05/06</span><a href="info/1055/11266.htm">九里校区晚晴爱心驿站开展“'帽'美如花 .邂逅初夏“手工活动的通知</a></li>
+
+                                                                 </ul>
+<script>_showDynClickBatch(['dynclicks_u4_11416','dynclicks_u4_11326','dynclicks_u4_11316','dynclicks_u4_11296','dynclicks_u4_11276','dynclicks_u4_11266'],[11416,11326,11316,11296,11276,11266],"wbnews", 1440185272)</script>
+
+
+                                    </div>
+            </div>
+        </div>
+
+       
+        <div class="bgeee">
+    <div class="bebox">
+        <div class="fl_l dtbox">
+                         
+    
+
+<h3 class="title">基层风采<span></span><a class="more" href="jcfc.htm">MORE</a></h3>
+<ul class="list">
+            <li><em>2026-06-04</em><a href="info/1062/11406.htm">赓续薪火同忆校史  共话初心砥砺青春     ——马克思主义学院...</a></li>
+            <li><em>2026-05-27</em><a href="info/1062/11386.htm">奋进十五五  巾帼建新功 ——计算机学院天府农博园三八节踏青...</a></li>
+            <li><em>2026-05-25</em><a href="info/1062/11356.htm">七秩风华 交通天下｜交运学院恢复建院（系）70周年大会隆重举...</a></li>
+            <li><em>2026-05-25</em><a href="info/1062/11346.htm">荣归百卅母校 初心寄语青年——潘启敬教授出席西南交大建校13...</a></li>
+                       
+            </ul>
+<script>_showDynClickBatch(['dynclicks_u5_11406','dynclicks_u5_11386','dynclicks_u5_11356','dynclicks_u5_11346'],[11406,11386,11356,11346],"wbnews", 1440185272)</script>
+
+
+                    </div>
+        <div class="fl_r dtbox">
+            
+
+<h3 class="title">关心下一代<span></span><a class="more" href="ggw/gzdt.htm">MORE</a></h3>
+<ul class="list">
+            <li><em>2026-04-29</em><a href="info/1076/11236.htm">西南交通大学召开2026年关心下一代工作会议</a></li>
+            <li><em>2026-04-27</em><a href="info/1076/11206.htm">薪火相传铸信仰——设计艺术学院邀请晚晴讲师团成员苏小桦为...</a></li>
+            <li><em>2026-04-23</em><a href="info/1076/11186.htm">关于召开西南交通大学2026年关心下一代工作会议的通知</a></li>
+            <li><em>2025-11-28</em><a href="info/1076/10226.htm">我校召开关工委工作研讨会</a></li>
+                       
+            </ul>
+<script>_showDynClickBatch(['dynclicks_u6_11236','dynclicks_u6_11206','dynclicks_u6_11186','dynclicks_u6_10226'],[11236,11206,11186,10226],"wbnews", 1440185272)</script>
+
+             </div>
+            
+        </div>
+    </div>
+
+        <div class="third">
+            <div class="box">
+                <div class="title border-bottom"><p class="h3 center">乐龄天地</p><p class="sub center">Wonderful Moment</p></div>
+                <div class="visual-slider visual-slider3">
+                    <div class="main-image main-image3">
+                    
+
+ <ul class="main-image3-list" style="left: 0px;"> 
+ <li><a href="info/1060/11176.htm">
+                                <img src="/__local/B/4A/E2/28DD57B4797471ABC51DE1FD5D6_4FCA1CC8_FB8DB.jpg" />
+                                <p class="type">春日寻芳</p>
+                            </a></li>
+<li><a href="info/1060/9676.htm">
+                                <img src="/__local/C/A0/E4/57C1DADC88E783ED3D4981213E7_9AA4E11F_5D769.jpg" />
+                                <p class="type">重阳佳节乐融融</p>
+                            </a></li>
+<li><a href="info/1060/9686.htm">
+                                <img src="/__local/3/16/0C/55363E1271EA734CEADADEDE010_3C45875C_982C5.jpg" />
+                                <p class="type">寻芳揽趣话温情</p>
+                            </a></li>
+<li><a href="info/1060/9716.htm">
+                                <img src="/__local/4/35/64/FE251B1F6D47EB05918D345F927_7CCF5AFC_8C6DD.jpg" />
+                                <p class="type">2026年春华晚晴之乐龄阳光健...</p>
+                            </a></li>
+<li><a href="info/1060/8526.htm">
+                                <img src="/__local/F/4D/8A/69AC6F6D2C1CEC0F016DF9F9460_4CCA004F_BE471.jpg" />
+                                <p class="type">春华映晚晴  暖阳照桑榆  —...</p>
+                            </a></li>
+<li><a href="info/1060/5796.htm">
+                                <img src="/__local/D/7B/7F/8F9C195EE211CC3988B4E2BADEF_23B0AD73_7BA52.jpg" />
+                                <p class="type">2024年春华晚晴之参观工农业...</p>
+                            </a></li>
+<li><a href="info/1060/3756.htm">
+                                <img src="/__local/3/CE/77/75A28EC8D3DBFF0169D31FB9FB6_2C5A405E_8949A.jpg" />
+                                <p class="type">西南交通大学圆满举行2023年...</p>
+                            </a></li>
+<li><a href="info/1060/3747.htm">
+                                <img src="/__local/1/29/82/07F651120B2E13E6B5503A80C4E_5066D556_11EF16.jpg" />
+                                <p class="type">西南交大2023年老年大学文艺...</p>
+                            </a></li>
+                                 </ul>
+<script>_showDynClickBatch(['dynclicks_u7_11176','dynclicks_u7_9676','dynclicks_u7_9686','dynclicks_u7_9716','dynclicks_u7_8526','dynclicks_u7_5796','dynclicks_u7_3756','dynclicks_u7_3747'],[11176,9676,9686,9716,8526,5796,3756,3747],"wbnews", 1440185272)</script>
+
+
+                                           </div> 
+                    <a href="javascript:;" id="btn-prev2" class="btn-prev2"></a>
+                    <a href="javascript:;" id="btn-next2" class="btn-next2"></a>
+                </div>
+            </div>
+            
+        </div>
+
+        <div class="forth" style="padding: 0;padding-bottom: 30px;">
+            <div class="box">
+                <ul class="link-icon">
+                    <li><a href="fwzn/lxkbslc.htm" class="icon_1">老干部工作</a></li>
+                    <li><a href="fwzn/txkbslc.htm" class="icon_2">退休工作</a></li>
+                    <li><a href="ggw/jgjj.htm" class="icon_3">关工委</a></li>
+                    <li><a href="lzhgz.htm" class="icon_4">老字号工作</a></li>
+                    <li><a href="fwzn/ylxx.htm" class="icon_5">养老信息</a></li>
+                    <li><a href="fwzn/hdzx.htm" class="icon_6">活动中心</a></li>
+                    <li><a href="fwzn/cyyyjdh.htm" class="icon_7">应急电话</a></li>
+                </ul>
+            </div>
+                
+        </div>
+
+    </div>
+
+    <!-- footer -->
+    
+    <!-- footer -->
+    <div class="links">
+        <div class="w1200">
+       
+
+                    </div>
+    </div>
+
+    
+<!-- 版权内容请在本组件"内容配置-版权"处填写 -->
+<div class="footer white">
+        <div class="box fat">
+            <ul class="footer__links">
+                
+                <li class="footer__links__item last"></li>
+            </ul>
+            <p>copyright @ 2019-2023 西南交通大学离退处 youth.swjtu.edu.cn. All Rrights   Reserved</p>
+            <p>地址：中国四川省成都市高新区西部园区西南交通大学</p>
+            <p>蜀ICP备05026985号 <a href="http://192.168.183.206:8080/system/login.jsp">管理登陆</a></p>
+            <div class="son qr">
+                <img class="qr__img" src="dfiles/4481/images/qr2.png" />
+              
+            </div>
+        </div>
+
+    </div>
+
+
+
+
+
+<script src="dfiles/4481/js/jquery-min.js"></script>
+<script src="dfiles/4481/js/jquery-migrate.min.js" type="text/javascript"></script>
+    <script src="dfiles/4481/js/slider.js" type="text/javascript"></script>
+    <script src="dfiles/4481/js/jquery.easing.js" type="text/javascript"></script>
+    <script src="dfiles/4481/js/jquery.iosslider.js" type="text/javascript"></script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,11 +1,14 @@
 package scraper
 
+import "swjtu-cli/internal/model"
+
 // BodaSite represents a site built on 博达 Visual SiteBuilder 9 CMS.
 type BodaSite struct {
 	Name      string
 	BaseURL   string
 	Category  string   // "college", "party", "admin", "unit", "institute"
 	SubPages  []string // known sub-page slugs (e.g. "tzgg", "xyxw")
+	ParseFunc func(html []byte, baseURL string) ([]model.NewsItem, error) // optional site-specific parser
 }
 
 // AllSites contains every accessible SWJTU secondary unit website.
@@ -22,7 +25,7 @@ var AllSites = map[string]*BodaSite{
 	"ctt":     {Name: "交通运输与物流学院", BaseURL: "http://ctt.swjtu.edu.cn", Category: "college", SubPages: []string{"tzgg/xytz", "xyywlist/jyyw", "bkjxnew/jxgg", "yjsjxnew/tzgg"}},
 	"clxy":    {Name: "材料科学与工程学院", BaseURL: "http://clxy.swjtu.edu.cn", Category: "college", SubPages: []string{"sylm_xwgg/xyxw", "sylm_xwgg/xygg", "sylm_djgz", "sylm_xsgz", "sylm_xshd", "jwgg"}},
 	"gsee":    {Name: "地球科学与工程学院", BaseURL: "http://gsee.swjtu.edu.cn", Category: "college"},
-	"ese":     {Name: "环境科学与工程学院", BaseURL: "https://ese.swjtu.edu.cn", Category: "college"},
+	"ese":     {Name: "环境科学与工程学院", BaseURL: "https://ese.swjtu.edu.cn", Category: "college", ParseFunc: parseEseNews},
 	"jzxy":    {Name: "建筑学院", BaseURL: "http://jzxy.swjtu.edu.cn", Category: "college"},
 	"design":  {Name: "设计艺术学院", BaseURL: "https://design.swjtu.edu.cn", Category: "college"},
 	"phys":    {Name: "物理科学与技术学院", BaseURL: "http://phys.swjtu.edu.cn", Category: "college"},
@@ -34,7 +37,7 @@ var AllSites = map[string]*BodaSite{
 	"lixue":   {Name: "力学与航空航天学院", BaseURL: "http://lixue.swjtu.edu.cn", Category: "college"},
 	"maths":   {Name: "数学学院", BaseURL: "http://maths.swjtu.edu.cn", Category: "college", SubPages: []string{"xyxw", "xygg", "xsgz/xgtz", "dwjw/djtz"}},
 	"zzxy":    {Name: "马克思主义学院", BaseURL: "http://zzxy.swjtu.edu.cn", Category: "college", SubPages: []string{"xyyw", "tzgg", "xwdt"}},
-	"sports":  {Name: "体育学院", BaseURL: "http://sports.swjtu.edu.cn", Category: "college", SubPages: []string{"xwdt", "tzggnew/qb"}},
+	"sports":  {Name: "体育学院", BaseURL: "http://sports.swjtu.edu.cn", Category: "college", SubPages: []string{"xwdt", "tzggnew/qb"}, ParseFunc: parseSportsNews},
 	"xinli":   {Name: "心理研究与咨询中心", BaseURL: "http://xinli.swjtu.edu.cn", Category: "college"},
 	"leeds":   {Name: "利兹学院", BaseURL: "http://leeds.swjtu.edu.cn", Category: "college"},
 	"mys":     {Name: "茅以升学院", BaseURL: "http://mys.swjtu.edu.cn", Category: "college"},

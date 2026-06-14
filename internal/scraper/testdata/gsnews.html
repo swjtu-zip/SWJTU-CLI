@@ -1,0 +1,1349 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+ 
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>西南交通大学研究生院（党委研究生工作部）</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="西南交通大学研究生院（党委研究生工作部）">
+<META Name="keywords" Content="西南交通大学，研究生院，党委研究生工作部,首页" />
+
+
+    <link rel="stylesheet" href="font/iconfont.css">
+    <link rel="stylesheet" href="css/swiper.min.css">
+    <link rel="stylesheet" href="css/aos.css">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/main.css">
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1001,'/index.jsp',-1,1451357554)</script>
+</head>
+
+<body aos-easing="linear" aos-easing="linear" aos-duration="500" aos-delay="0" style="zoom: 1;">
+    <!-- header部分 -->
+    <header>
+        <div class="top">
+            <div class="wp clearfix flexsb alstart">
+                <div class="logo"><a href="/">
+                        <img src="/image/header-logo.png" alt="">
+                    </a></div>
+                <div class="search">
+                    <div class="en">
+                        <a href="https://en.swjtu.edu.cn/" target="_blank">ENGLISH英文网站</a>
+                    </div>
+                    <div class="flexst">
+                        <div class="ipt-box"><!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+  
+    #appu1 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu1"></div>
+<script type="text/html" id="htmlu1">
+    <div id="appu1">
+        <div v-if="!isError">
+            <input type="text" class="qwss" placeholder="全文搜索" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+        
+             <div class="search-icon-box" name="submit_button" v-on:click="onSubmit()">
+                               <img src="../../image/search-icon.png" alt="">
+               </div>
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu1").html($("#htmlu1").text());
+</script>
+<script>
+    var appOwner = "1451357554";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu1",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu1 = document.querySelector("#appu1");
+   if (appElementu1 && appElementu1.__vue__) {
+
+   } else {
+      $("#divu1").html($("#htmlu1").text());
+      var appOwner = "1451357554";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou1 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu1(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu1();
+        }
+      };
+
+      function onSubmitu1(e) {
+        queryInfou1.query.keyWord= $("#appu1  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou1.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script></div>
+                        <div class="login-box flexcolumn"><a href="https://zhanqun.swjtu.edu.cn/system/caslogin.jsp" target="_blank" style="width:60px;display:flex;flex-direction: column;align-items: center;justify-content: center;">
+                            <div class="iconfont icon-yonghu" style="margin-left: 10px;height:32px;"></div>
+                            <span style="color:#ffffff;font-size:12px;">管理员登录</span>
+                           </a></div>
+                    </div>
+                </div>
+                <!-- 手机端-三根横线 -->
+                <div class="navmob-btn">
+                    <a class="head-menu-btn " href="javascript:;">
+                        <span class="line-1"></span>
+                        <span class="line-2"></span>
+                        <span class="line-3"></span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- 导航栏部分 -->
+    <nav class="nav-box wp">
+        <!-- pc端 -->
+        <ul class="flexsb nav_list fs18 pc-nav"> 
+                <li class=" active  mune_a">
+                <a href="index.htm">首页</a>
+                <div class="blue-line"></div>
+            </li>
+                <li class="dht"></li>
+            <li class=" mune_a">
+                <a href="jgjjnew/yjsyjj.htm">机构简介</a>
+                <div class="blue-line"></div>
+                    <ul class="secondary-menu nav-down">
+                            <li> <a class="a_item" href="jgjjnew/yjsyjj.htm">研究生院简介</a></li>
+                       
+                            <li> <a class="a_item" href="jgjjnew/jgsz.htm">机构设置</a></li>
+                       
+                            <li> <a class="a_item" href="jgjjnew/xrld.htm">现任领导</a></li>
+                       
+                            <li> <a class="a_item" href="jgjjnew/gzry.htm">工作人员</a></li>
+                       
+                     </ul>
+            </li>
+                <li class="dht"></li>
+            <li class=" mune_a">
+                <a href="http://yz.swjtu.edu.cn/" target="_blank">招生工作</a>
+                <div class="blue-line"></div>
+                    <ul class="secondary-menu nav-down">
+                            <li> <a class="a_item" href="zsgz/sszs.htm">硕士招生</a></li>
+                       
+                            <li> <a class="a_item" href="zsgz/bszs.htm">博士招生</a></li>
+                       
+                            <li> <a class="a_item" href="zsgz/zsxc.htm">招生宣传</a></li>
+                       
+                     </ul>
+            </li>
+                <li class="dht"></li>
+            <li class=" mune_a">
+                <a href="pygznew/pyfa.htm">培养工作</a>
+                <div class="blue-line"></div>
+                    <ul class="secondary-menu nav-down">
+                            <li> <a class="a_item" href="pygznew/pyfa.htm">培养方案</a></li>
+                       
+                            <li> <a class="a_item" href="pygznew/xjxl.htm">学籍学历</a></li>
+                       
+                            <li> <a class="a_item" href="pygznew/jxgl.htm">教学管理</a></li>
+                       
+                            <li> <a class="a_item" href="pygznew/kcsz.htm">课程思政</a></li>
+                       
+                            <li> <a class="a_item" href="pygznew/sxsj.htm">实习实践</a></li>
+                       
+                            <li> <a class="a_item" href="pygznew/gjjl.htm">国际交流</a></li>
+                       
+                            <li> <a class="a_item" href="pygznew/jxgg.htm">教学改革</a></li>
+                       
+                            <li> <a class="a_item" href="pygznew/jcjs.htm">教材建设</a></li>
+                       
+                            <li> <a class="a_item" href="pygznew/zldd.htm">质量督导</a></li>
+                       
+                            <li> <a class="a_item" href="pygznew/jsfz.htm">教师发展</a></li>
+                       
+                            <li> <a class="a_item" href="pygznew/qt.htm">其它</a></li>
+                       
+                     </ul>
+            </li>
+                <li class="dht"></li>
+            <li class=" mune_a">
+                <a href="xwgznew/xwsy.htm">学位工作</a>
+                <div class="blue-line"></div>
+                    <ul class="secondary-menu nav-down">
+                            <li> <a class="a_item" href="xwgznew/xwsy.htm">学位授予</a></li>
+                       
+                            <li> <a class="a_item" href="xwgznew/xwsqd.htm">学位授权点</a></li>
+                       
+                            <li> <a class="a_item" href="xwgznew/dsdw.htm">导师队伍</a></li>
+                       
+                            <li> <a class="a_item" href="xwgznew/pycy.htm">评优促优</a></li>
+                       
+                            <li> <a class="a_item" href="xwgznew/tdxl.htm">同等学力</a></li>
+                       
+                     </ul>
+            </li>
+                <li class="dht"></li>
+            <li class=" mune_a">
+                <a href="https://ygb.swjtu.edu.cn/index.htm" target="_blank">研工工作</a>
+                <div class="blue-line"></div>
+            </li>
+                <li class="dht"></li>
+            <li class=" mune_a">
+                <a href="zhxxnew/xkjs.htm">综合信息</a>
+                <div class="blue-line"></div>
+                    <ul class="secondary-menu nav-down">
+                            <li> <a class="a_item" href="zhxxnew/xkjs.htm">学科竞赛</a></li>
+                       
+                            <li> <a class="a_item" href="zhxxnew/cydjt.htm">创源大讲堂</a></li>
+                       
+                     </ul>
+            </li>
+                <li class="dht"></li>
+            <li class=" mune_a">
+                <a href="gzzdnew/yzgz.htm">规章制度</a>
+                <div class="blue-line"></div>
+                    <ul class="secondary-menu nav-down">
+                            <li> <a class="a_item" href="gzzdnew/yzgz.htm">研招工作</a></li>
+                       
+                            <li> <a class="a_item" href="gzzdnew/pygz.htm">培养工作</a></li>
+                       
+                            <li> <a class="a_item" href="gzzdnew/xwgz.htm">学位工作</a></li>
+                       
+                            <li> <a class="a_item" href="gzzdnew/sxsj.htm">实习实践</a></li>
+                       
+                            <li> <a class="a_item" href="gzzdnew/gjjl.htm">国际交流</a></li>
+                       
+                            <li> <a class="a_item" href="gzzdnew/zhsw.htm">综合事务</a></li>
+                       
+                     </ul>
+            </li>
+</ul>
+        <!-- mb端 -->
+        <div class="mb-nav-box pc-nav">
+            <ul class="flexcolumn mb-nav fadeupmbNav"> 
+                 
+                
+          
+              <li class="mune_a flexsb">
+                    <a href="index.htm">首页</a>
+                    <span class="nav_click">
+                        <span class="caret"></span>
+                    </span>
+              </li>
+      
+              <li class="mune_a flexsb">
+                    <a href="jgjjnew/yjsyjj.htm">机构简介</a>
+                    <span class="nav_click">
+                        <span class="caret"></span>
+                    </span>
+              </li>
+                  <div class="secondary-menu nav-down ">
+                    <div class="flexsb">
+                            <a class="a_item" href="jgjjnew/yjsyjj.htm">研究生院简介</a> 
+                            <a class="a_item" href="jgjjnew/jgsz.htm">机构设置</a> 
+                            <a class="a_item" href="jgjjnew/xrld.htm">现任领导</a> 
+                            <a class="a_item" href="jgjjnew/gzry.htm">工作人员</a> 
+                    </div>
+                </div>
+      
+              <li class="mune_a flexsb">
+                    <a href="http://yz.swjtu.edu.cn/">招生工作</a>
+                    <span class="nav_click">
+                        <span class="caret"></span>
+                    </span>
+              </li>
+                  <div class="secondary-menu nav-down ">
+                    <div class="flexsb">
+                            <a class="a_item" href="zsgz/sszs.htm">硕士招生</a> 
+                            <a class="a_item" href="zsgz/bszs.htm">博士招生</a> 
+                            <a class="a_item" href="zsgz/zsxc.htm">招生宣传</a> 
+                    </div>
+                </div>
+      
+              <li class="mune_a flexsb">
+                    <a href="pygznew/pyfa.htm">培养工作</a>
+                    <span class="nav_click">
+                        <span class="caret"></span>
+                    </span>
+              </li>
+                  <div class="secondary-menu nav-down ">
+                    <div class="flexsb">
+                            <a class="a_item" href="pygznew/pyfa.htm">培养方案</a> 
+                            <a class="a_item" href="pygznew/xjxl.htm">学籍学历</a> 
+                            <a class="a_item" href="pygznew/jxgl.htm">教学管理</a> 
+                            <a class="a_item" href="pygznew/kcsz.htm">课程思政</a> 
+                            <a class="a_item" href="pygznew/sxsj.htm">实习实践</a> 
+                            <a class="a_item" href="pygznew/gjjl.htm">国际交流</a> 
+                            <a class="a_item" href="pygznew/jxgg.htm">教学改革</a> 
+                            <a class="a_item" href="pygznew/jcjs.htm">教材建设</a> 
+                            <a class="a_item" href="pygznew/zldd.htm">质量督导</a> 
+                            <a class="a_item" href="pygznew/jsfz.htm">教师发展</a> 
+                            <a class="a_item" href="pygznew/qt.htm">其它</a> 
+                    </div>
+                </div>
+      
+              <li class="mune_a flexsb">
+                    <a href="xwgznew/xwsy.htm">学位工作</a>
+                    <span class="nav_click">
+                        <span class="caret"></span>
+                    </span>
+              </li>
+                  <div class="secondary-menu nav-down ">
+                    <div class="flexsb">
+                            <a class="a_item" href="xwgznew/xwsy.htm">学位授予</a> 
+                            <a class="a_item" href="xwgznew/xwsqd.htm">学位授权点</a> 
+                            <a class="a_item" href="xwgznew/dsdw.htm">导师队伍</a> 
+                            <a class="a_item" href="xwgznew/pycy.htm">评优促优</a> 
+                            <a class="a_item" href="xwgznew/tdxl.htm">同等学力</a> 
+                    </div>
+                </div>
+      
+              <li class="mune_a flexsb">
+                    <a href="https://ygb.swjtu.edu.cn/index.htm">研工工作</a>
+                    <span class="nav_click">
+                        <span class="caret"></span>
+                    </span>
+              </li>
+      
+              <li class="mune_a flexsb">
+                    <a href="zhxxnew/xkjs.htm">综合信息</a>
+                    <span class="nav_click">
+                        <span class="caret"></span>
+                    </span>
+              </li>
+                  <div class="secondary-menu nav-down ">
+                    <div class="flexsb">
+                            <a class="a_item" href="zhxxnew/xkjs.htm">学科竞赛</a> 
+                            <a class="a_item" href="zhxxnew/cydjt.htm">创源大讲堂</a> 
+                    </div>
+                </div>
+      
+              <li class="mune_a flexsb">
+                    <a href="gzzdnew/yzgz.htm">规章制度</a>
+                    <span class="nav_click">
+                        <span class="caret"></span>
+                    </span>
+              </li>
+                  <div class="secondary-menu nav-down ">
+                    <div class="flexsb">
+                            <a class="a_item" href="gzzdnew/yzgz.htm">研招工作</a> 
+                            <a class="a_item" href="gzzdnew/pygz.htm">培养工作</a> 
+                            <a class="a_item" href="gzzdnew/xwgz.htm">学位工作</a> 
+                            <a class="a_item" href="gzzdnew/sxsj.htm">实习实践</a> 
+                            <a class="a_item" href="gzzdnew/gjjl.htm">国际交流</a> 
+                            <a class="a_item" href="gzzdnew/zhsw.htm">综合事务</a> 
+                    </div>
+                </div>
+      
+      
+      
+      
+      
+</ul>
+        </div>
+    </nav>
+    <!-- banner轮播图部分 -->
+    <div class="wp swiper-box">
+        <div class="swiper-container main-banner">
+            
+            
+
+<script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script>
+<div class="swiper-wrapper">
+    <div class="swiper-slide" style="width: 100%;height: 100%;"> 
+        <a href="#" target="_blank" title="竢实耀百卅 扬华铸未来">
+            <img src="/__local/D/5D/AB/6ADD7DA481491A56E7052D76045_674F8163_19391.jpg" alt="" class="baimg">
+        </a>
+   </div>
+    <div class="swiper-slide" style="width: 100%;height: 100%;"> 
+        <a href="#" target="_blank" title="循梦而行，向阳而生">
+            <img src="/__local/3/C2/E6/552B830DAE7B34B560E28315AA6_B6A0C1AF_9C9AD.png" alt="" class="baimg">
+        </a>
+   </div>
+    <div class="swiper-slide" style="width: 100%;height: 100%;"> 
+        <a href="#" target="_blank" title="绿意书窗·韶光交大">
+            <img src="/__local/7/CC/58/203FF4B1D9583D32691F939A628_3F04F528_A1C32.png" alt="" class="baimg">
+        </a>
+   </div>
+</div><script>_showDynClickBatch(['dynclicks_u5_33774','dynclicks_u5_32224','dynclicks_u5_26674'],[33774,32224,26674],"wbnews", 1451357554)</script>
+ 
+            
+            <div class="swiper-button-next trans">
+                <i class="iconfont iconarrr"></i>
+            </div>
+            <div class="swiper-button-prev trans">
+                <i class="iconfont iconarrl"></i>
+            </div>
+            <div class="swiper-pagination"></div>
+
+        </div>
+    </div>
+    <main class="wp index-main">
+        <!-- 新闻公告 - 通知公告 -->
+        <div class=" main-1 flexsb fecai co73 aos-init aos-animate" aos="fade-up" aos-delay="50">
+            <div class="news boxa left">
+                <div class="flexsb top-title">
+                    <div class="fw fs24 caption-title">新闻动态</div>
+                    <div class="more-box">
+                        <a href="xwdtnew/rdxw.htm">更多 ></a>
+                    </div>
+                </div>
+                <div class="news-swiper-box">
+                    <div class="swiper-container news-swiper">
+                        <div class="swiper-wrapper">
+                           
+
+     <div class="swiper-slide" style="width: 100%;height: 100%;"> 
+            <a href="info/1587/33864.htm" target="_blank" style="display: block;height: 100%;width: 100%;">
+                <img src="/__local/7/56/4C/CE0C6005675F67A4509D28468BA_E893F41E_1C50A.jpg" alt="" class="baimg">
+                <div class="pic-text line1 fs18 fw">“百卅赓续·卓启新航”2026年创新领军工程硕博士论坛正式启动</div>
+            </a>    
+        </div>   
+     <div class="swiper-slide" style="width: 100%;height: 100%;"> 
+            <a href="info/1587/33794.htm" target="_blank" style="display: block;height: 100%;width: 100%;">
+                <img src="/__local/D/1D/18/3AA7D63593A3A1F0FBE5C50C1B9_A503783C_1B76A.jpg" alt="" class="baimg">
+                <div class="pic-text line1 fs18 fw">西南交通大学举行交通新质生产力产学研深度融合创新发展论坛</div>
+            </a>    
+        </div>   
+     <div class="swiper-slide" style="width: 100%;height: 100%;"> 
+            <a href="info/1587/33724.htm" target="_blank" style="display: block;height: 100%;width: 100%;">
+                <img src="/__local/2/8D/18/CF2C8ED79EEE635F11D119E52DF_152347D5_3B0A6.jpg" alt="" class="baimg">
+                <div class="pic-text line1 fs18 fw">西南交通大学首位以实践成果申请学位工程博士通过答辩</div>
+            </a>    
+        </div>   
+<script>_showDynClickBatch(['dynclicks_u6_33864','dynclicks_u6_33794','dynclicks_u6_33724'],[33864,33794,33724],"wbnews", 1451357554)</script>
+
+                        </div>
+
+                        <div class="swiper-pagination"></div>
+
+                    </div>
+                </div>
+                <ul class="news-list fecai co73 aos-init aos-animate" aos="fade-up" aos-delay="50">
+
+    <li class="list ">
+        <a href="info/1587/33864.htm" target="_blank" class="flexst">
+            <time class="flexcolumn left-content">
+                <span class="fs24 fw">18</span>
+                <span class="fs14 fw">2026.05</span>
+            </time>
+            <div class="right-content line2 fw" style="height: 54.38px;">
+               “百卅赓续·卓启新航”2026年创新领军工程硕博士论坛正式启动
+            </div>
+        </a>
+    </li>
+                    
+    <li class="list ">
+        <a href="info/1587/33794.htm" target="_blank" class="flexst">
+            <time class="flexcolumn left-content">
+                <span class="fs24 fw">16</span>
+                <span class="fs14 fw">2026.05</span>
+            </time>
+            <div class="right-content line2 fw" style="height: 54.38px;">
+               西南交通大学举行交通新质生产力产学研深度融合创新发展论坛
+            </div>
+        </a>
+    </li>
+                    
+    <li class="list ">
+        <a href="info/1587/33734.htm" target="_blank" class="flexst">
+            <time class="flexcolumn left-content">
+                <span class="fs24 fw">28</span>
+                <span class="fs14 fw">2026.04</span>
+            </time>
+            <div class="right-content line2 fw" style="height: 54.38px;">
+               我校研究生导师代表参加2026年全国研究生导师培训班（第一期）
+            </div>
+        </a>
+    </li>
+                    
+<script>_showDynClickBatch(['dynclicks_u7_33864','dynclicks_u7_33794','dynclicks_u7_33734'],[33864,33794,33734],"wbnews", 1451357554)</script>
+</ul>
+            </div>
+            <div class="inform boxb right">
+                <div class="flexsb top-title">
+                    <div class="fw fs24 caption-title">通知公告</div>
+                    <div class="more-box">
+                        <a href="tzggnew/qb.htm">更多 ></a>
+                    </div>
+                </div>
+                <ul class="tabNav  msg-tabNav flexsb fecai co73 aos-init aos-animate" aos="fade-up" aos-delay="50">
+                    <li data-content="content-1" class="fs18 current"><span class="iconfont icon-aixin"></span>全部</li>
+                    <li data-content="content-2" class="fs18"><span class="iconfont icon-peiyangfangan"></span>培养工作</li>
+                    <li data-content="content-3" class="fs18"><span class="iconfont icon-xuewei"></span>学位工作</li>
+                    <li data-content="content-4" class="fs18"><span class="iconfont icon-shijianrenwu4"></span>实习实践</li>
+                    <li data-content="content-5" class="fs18"><span class="iconfont icon-woshou"></span>招生工作</li>
+                    <li data-content="content-6" class="fs18"><span class="iconfont icon-biji"></span>综合信息</li>
+                </ul>
+                <div class="tabCon fecai co73 aos-init aos-animate" aos="fade-up" aos-delay="50">
+                    <div class="tabcons" id="content-1">
+                        
+
+    <ul>
+                    <li class="">
+                <a href="info/1637/34224.htm" class="flexst line1 item" target="_blank" title="关于受理2025-2026学年第二学期研究生转专业申请的通知">
+                    <span class="number">1</span>
+                    <p class="content line1">关于受理2025-2026学年第二学期研究生转专业申请的通知</p>
+                    <time>2026/06/12</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1637/34194.htm" class="flexst line1 item" target="_blank" title="西南交通大学关于开展2026-2027学年第一学期研究生教材选用及审核工作的通知">
+                    <span class="number">2</span>
+                    <p class="content line1">西南交通大学关于开展2026-2027学年第一学期研究生教材选用及审核工作的通知</p>
+                    <time>2026/06/12</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1637/34174.htm" class="flexst line1 item" target="_blank" title="关于组织我校2026届毕业生参与“研究生培养质量反馈调查”的通知" style="font-weight:bold;">
+                    <span class="number">3</span>
+                    <p class="content line1">关于组织我校2026届毕业生参与“研究生培养质量反馈调查”的通知</p>
+                    <time>2026/06/10</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1677/34144.htm" class="flexst line1 item" target="_blank" title="关于举办“华为杯”第九届中国研究生创“芯”大赛校赛的通知">
+                    <span class="number">4</span>
+                    <p class="content line1">关于举办“华为杯”第九届中国研究生创“芯”大赛校赛的通知</p>
+                    <time>2026/06/08</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1637/34134.htm" class="flexst line1 item" target="_blank" title="关于2025-2026学年第二学期国家考试期间停课的通知">
+                    <span class="number">5</span>
+                    <p class="content line1">关于2025-2026学年第二学期国家考试期间停课的通知</p>
+                    <time>2026/06/05</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1677/34124.htm" class="flexst line1 item" target="_blank" title="关于举办第三届中国研究生“文化中国”两创大赛校内选拔赛的通知">
+                    <span class="number">6</span>
+                    <p class="content line1">关于举办第三届中国研究生“文化中国”两创大赛校内选拔赛的通知</p>
+                    <time>2026/06/05</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1677/34084.htm" class="flexst line1 item" target="_blank" title="关于举办第八届中国研究生人工智能创新大赛校赛的通知">
+                    <span class="number">7</span>
+                    <p class="content line1">关于举办第八届中国研究生人工智能创新大赛校赛的通知</p>
+                    <time>2026/06/05</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1677/34074.htm" class="flexst line1 item" target="_blank" title="关于举办第三届中国研究生国际中文教育案例大赛校赛的通知">
+                    <span class="number">8</span>
+                    <p class="content line1">关于举办第三届中国研究生国际中文教育案例大赛校赛的通知</p>
+                    <time>2026/06/04</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1647/34094.htm" class="flexst line1 item" target="_blank" title="关于公布2026年研究生导师能力提升计划立项结果的通知">
+                    <span class="number">9</span>
+                    <p class="content line1">关于公布2026年研究生导师能力提升计划立项结果的通知</p>
+                    <time>2026/06/04</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1677/34064.htm" class="flexst line1 item" target="_blank" title="第二届中国研究生智能建造创新大赛参赛通知">
+                    <span class="number">10</span>
+                    <p class="content line1">第二届中国研究生智能建造创新大赛参赛通知</p>
+                    <time>2026/06/03</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1657/34054.htm" class="flexst line1 item" target="_blank" title="关于开展2026年春季学期研究生校内创新实践招募工作的通知">
+                    <span class="number">11</span>
+                    <p class="content line1">关于开展2026年春季学期研究生校内创新实践招募工作的通知</p>
+                    <time>2026/06/01</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1637/34044.htm" class="flexst line1 item" target="_blank" title="关于做好2025-2026学年第二学期研究生期末考试安排的通知" style="font-weight:bold;">
+                    <span class="number">12</span>
+                    <p class="content line1">关于做好2025-2026学年第二学期研究生期末考试安排的通知</p>
+                    <time>2026/06/01</time>
+                </a>
+            </li>
+    </ul>
+<script>_showDynClickBatch(['dynclicks_u8_34224','dynclicks_u8_34194','dynclicks_u8_34174','dynclicks_u8_34144','dynclicks_u8_34134','dynclicks_u8_34124','dynclicks_u8_34084','dynclicks_u8_34074','dynclicks_u8_34094','dynclicks_u8_34064','dynclicks_u8_34054','dynclicks_u8_34044'],[34224,34194,34174,34144,34134,34124,34084,34074,34094,34064,34054,34044],"wbnews", 1451357554)</script>
+</div>
+                    <div class="tabcons" id="content-2">
+
+    <ul>
+                    <li class="">
+                <a href="info/1637/34224.htm" class="flexst line1 item" target="_blank" title="关于受理2025-2026学年第二学期研究生转专业申请的通知">
+                    <span class="number">1</span>
+                    <p class="content line1">关于受理2025-2026学年第二学期研究生转专业申请的通知</p>
+                    <time>2026/06/12</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1637/34194.htm" class="flexst line1 item" target="_blank" title="西南交通大学关于开展2026-2027学年第一学期研究生教材选用及审核工作的通知">
+                    <span class="number">2</span>
+                    <p class="content line1">西南交通大学关于开展2026-2027学年第一学期研究生教材选用及审核工作的通知</p>
+                    <time>2026/06/12</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1637/34174.htm" class="flexst line1 item" target="_blank" title="关于组织我校2026届毕业生参与“研究生培养质量反馈调查”的通知" style="font-weight:bold;">
+                    <span class="number">3</span>
+                    <p class="content line1">关于组织我校2026届毕业生参与“研究生培养质量反馈调查”的通知</p>
+                    <time>2026/06/10</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1637/34134.htm" class="flexst line1 item" target="_blank" title="关于2025-2026学年第二学期国家考试期间停课的通知">
+                    <span class="number">4</span>
+                    <p class="content line1">关于2025-2026学年第二学期国家考试期间停课的通知</p>
+                    <time>2026/06/05</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1637/34044.htm" class="flexst line1 item" target="_blank" title="关于做好2025-2026学年第二学期研究生期末考试安排的通知" style="font-weight:bold;">
+                    <span class="number">5</span>
+                    <p class="content line1">关于做好2025-2026学年第二学期研究生期末考试安排的通知</p>
+                    <time>2026/06/01</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1637/33554.htm" class="flexst line1 item" target="_blank" title="关于2025-2026学年第二学期研究生督导抽检的说明" style="font-weight:bold;">
+                    <span class="number">6</span>
+                    <p class="content line1">关于2025-2026学年第二学期研究生督导抽检的说明</p>
+                    <time>2026/04/22</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1637/33504.htm" class="flexst line1 item" target="_blank" title="Notice on Supervisor Spot Check in the Training Links of Graduate Students">
+                    <span class="number">7</span>
+                    <p class="content line1">Notice on Supervisor Spot Check in the Training Links of Graduate Students</p>
+                    <time>2026/04/21</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1637/33484.htm" class="flexst line1 item" target="_blank" title="关于开展研究生培养环节导师抽检工作的通知">
+                    <span class="number">8</span>
+                    <p class="content line1">关于开展研究生培养环节导师抽检工作的通知</p>
+                    <time>2026/04/21</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1637/33334.htm" class="flexst line1 item" target="_blank" title="Notice on Submitting the Graduation Information of International Postgraduates in June of 2026">
+                    <span class="number">9</span>
+                    <p class="content line1">Notice on Submitting the Graduation Information of International Postgraduates in June of 2026</p>
+                    <time>2026/03/30</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1637/33324.htm" class="flexst line1 item" target="_blank" title="关于采集和报送2026年6月研究生毕业学历信息的通知">
+                    <span class="number">10</span>
+                    <p class="content line1">关于采集和报送2026年6月研究生毕业学历信息的通知</p>
+                    <time>2026/03/30</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1637/33274.htm" class="flexst line1 item" target="_blank" title="转发“关于举行西南交通大学第125届运动会的通知”">
+                    <span class="number">11</span>
+                    <p class="content line1">转发“关于举行西南交通大学第125届运动会的通知”</p>
+                    <time>2026/03/25</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1637/33264.htm" class="flexst line1 item" target="_blank" title="“清明节”放假通知/Announcement on Tomb-sweeping Day">
+                    <span class="number">12</span>
+                    <p class="content line1">“清明节”放假通知/Announcement on Tomb-sweeping Day</p>
+                    <time>2026/03/25</time>
+                </a>
+            </li>
+    </ul>
+
+<script>_showDynClickBatch(['dynclicks_u9_34224','dynclicks_u9_34194','dynclicks_u9_34174','dynclicks_u9_34134','dynclicks_u9_34044','dynclicks_u9_33554','dynclicks_u9_33504','dynclicks_u9_33484','dynclicks_u9_33334','dynclicks_u9_33324','dynclicks_u9_33274','dynclicks_u9_33264'],[34224,34194,34174,34134,34044,33554,33504,33484,33334,33324,33274,33264],"wbnews", 1451357554)</script>
+</div>
+                     <div class="tabcons" id="content-3">
+
+    <ul>
+                    <li class="">
+                <a href="info/1647/34094.htm" class="flexst line1 item" target="_blank" title="关于公布2026年研究生导师能力提升计划立项结果的通知">
+                    <span class="number">1</span>
+                    <p class="content line1">关于公布2026年研究生导师能力提升计划立项结果的通知</p>
+                    <time>2026/06/04</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1647/34024.htm" class="flexst line1 item" target="_blank" title="关于进行2027年博士、硕士生指导教师岗位任职资格遴选与招生资格审核工作的通知">
+                    <span class="number">2</span>
+                    <p class="content line1">关于进行2027年博士、硕士生指导教师岗位任职资格遴选与招生资格审核工作的通知</p>
+                    <time>2026/05/29</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1647/33704.htm" class="flexst line1 item" target="_blank" title="关于开展2026年研究生导师能力提升计划的通知">
+                    <span class="number">3</span>
+                    <p class="content line1">关于开展2026年研究生导师能力提升计划的通知</p>
+                    <time>2026/04/27</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1647/33674.htm" class="flexst line1 item" target="_blank" title="关于博士、硕士专业学位研究生以实践成果申请学位的指导意见">
+                    <span class="number">4</span>
+                    <p class="content line1">关于博士、硕士专业学位研究生以实践成果申请学位的指导意见</p>
+                    <time>2026/04/24</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1647/33464.htm" class="flexst line1 item" target="_blank" title="关于组织2026年博士创新基金项目申报和中期检查的通知">
+                    <span class="number">5</span>
+                    <p class="content line1">关于组织2026年博士创新基金项目申报和中期检查的通知</p>
+                    <time>2026/04/20</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1647/33354.htm" class="flexst line1 item" target="_blank" title="关于召开研究生导师队伍建设工作推进会暨2026年新增研究生导师岗前培训会的通知">
+                    <span class="number">6</span>
+                    <p class="content line1">关于召开研究生导师队伍建设工作推进会暨2026年新增研究生导师岗前培训会的通知</p>
+                    <time>2026/04/09</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1647/33314.htm" class="flexst line1 item" target="_blank" title="关于报送2026年6月博、硕士授位材料的通知">
+                    <span class="number">7</span>
+                    <p class="content line1">关于报送2026年6月博、硕士授位材料的通知</p>
+                    <time>2026/03/27</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1647/33304.htm" class="flexst line1 item" target="_blank" title="关于开展2026年度专业学位硕士研究生行业导师备案工作的通知">
+                    <span class="number">8</span>
+                    <p class="content line1">关于开展2026年度专业学位硕士研究生行业导师备案工作的通知</p>
+                    <time>2026/03/27</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1647/33124.htm" class="flexst line1 item" target="_blank" title="关于开展2026年度研究生教育评估监测专家库更新与报送工作的通知">
+                    <span class="number">9</span>
+                    <p class="content line1">关于开展2026年度研究生教育评估监测专家库更新与报送工作的通知</p>
+                    <time>2026/03/05</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1647/32994.htm" class="flexst line1 item" target="_blank" title="关于开展2026年同等学力申请硕士学位现场确认工作的通知">
+                    <span class="number">10</span>
+                    <p class="content line1">关于开展2026年同等学力申请硕士学位现场确认工作的通知</p>
+                    <time>2026/02/02</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1647/32904.htm" class="flexst line1 item" target="_blank" title="关于暂停2026年寒假期间博士论文外审的通知">
+                    <span class="number">11</span>
+                    <p class="content line1">关于暂停2026年寒假期间博士论文外审的通知</p>
+                    <time>2026/01/13</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1647/32774.htm" class="flexst line1 item" target="_blank" title="关于做好2024-2025 学年度博士硕士学位论文统一交存工作的通知">
+                    <span class="number">12</span>
+                    <p class="content line1">关于做好2024-2025 学年度博士硕士学位论文统一交存工作的通知</p>
+                    <time>2025/12/23</time>
+                </a>
+            </li>
+    </ul>
+<script>_showDynClickBatch(['dynclicks_u10_34094','dynclicks_u10_34024','dynclicks_u10_33704','dynclicks_u10_33674','dynclicks_u10_33464','dynclicks_u10_33354','dynclicks_u10_33314','dynclicks_u10_33304','dynclicks_u10_33124','dynclicks_u10_32994','dynclicks_u10_32904','dynclicks_u10_32774'],[34094,34024,33704,33674,33464,33354,33314,33304,33124,32994,32904,32774],"wbnews", 1451357554)</script>
+</div>
+                     <div class="tabcons" id="content-4">
+
+    <ul>
+                    <li class="">
+                <a href="info/1657/34054.htm" class="flexst line1 item" target="_blank" title="关于开展2026年春季学期研究生校内创新实践招募工作的通知">
+                    <span class="number">1</span>
+                    <p class="content line1">关于开展2026年春季学期研究生校内创新实践招募工作的通知</p>
+                    <time>2026/06/01</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1657/32634.htm" class="flexst line1 item" target="_blank" title="关于组织2024年秋季、2025年春季招募的实践生开展实践项目结题答辩的通知">
+                    <span class="number">2</span>
+                    <p class="content line1">关于组织2024年秋季、2025年春季招募的实践生开展实践项目结题答辩的通知</p>
+                    <time>2025/12/17</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1657/31974.htm" class="flexst line1 item" target="_blank" title="关于开展2025年秋季研究生校内实践招募工作的通知">
+                    <span class="number">3</span>
+                    <p class="content line1">关于开展2025年秋季研究生校内实践招募工作的通知</p>
+                    <time>2025/10/15</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1657/31234.htm" class="flexst line1 item" target="_blank" title="关于组织2024年招募的实践生开展实践项目结题答辩的通知">
+                    <span class="number">4</span>
+                    <p class="content line1">关于组织2024年招募的实践生开展实践项目结题答辩的通知</p>
+                    <time>2025/06/27</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1657/27794.htm" class="flexst line1 item" target="_blank" title="关于校级研究生实践基地建设项目验收通过的通知">
+                    <span class="number">5</span>
+                    <p class="content line1">关于校级研究生实践基地建设项目验收通过的通知</p>
+                    <time>2025/04/28</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1657/27664.htm" class="flexst line1 item" target="_blank" title="关于开展2025年春季研究生校内实践招募工作的通知">
+                    <span class="number">6</span>
+                    <p class="content line1">关于开展2025年春季研究生校内实践招募工作的通知</p>
+                    <time>2025/04/14</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1657/27024.htm" class="flexst line1 item" target="_blank" title="关于组织2024年春季招募的实践生开展实践项目结题答辩的通知">
+                    <span class="number">7</span>
+                    <p class="content line1">关于组织2024年春季招募的实践生开展实践项目结题答辩的通知</p>
+                    <time>2024/12/19</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1657/26164.htm" class="flexst line1 item" target="_blank" title="关于开展2024年秋季研究生校内实践招募工作的通知">
+                    <span class="number">8</span>
+                    <p class="content line1">关于开展2024年秋季研究生校内实践招募工作的通知</p>
+                    <time>2024/10/11</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1657/16514.htm" class="flexst line1 item" target="_blank" title="关于中国土木福州勘察设计研究院有限公司联合培养基地实践生招募的通知">
+                    <span class="number">9</span>
+                    <p class="content line1">关于中国土木福州勘察设计研究院有限公司联合培养基地实践生招募的通知</p>
+                    <time>2024/08/14</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1657/16524.htm" class="flexst line1 item" target="_blank" title="关于组织2023年秋季招募的实践生开展实践项目结题答辩的通知">
+                    <span class="number">10</span>
+                    <p class="content line1">关于组织2023年秋季招募的实践生开展实践项目结题答辩的通知</p>
+                    <time>2024/06/19</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1657/16504.htm" class="flexst line1 item" target="_blank" title="关于组织2022年秋季招募的实践生开展实践项目结题答辩的通知">
+                    <span class="number">11</span>
+                    <p class="content line1">关于组织2022年秋季招募的实践生开展实践项目结题答辩的通知</p>
+                    <time>2023/06/01</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1657/16494.htm" class="flexst line1 item" target="_blank" title="关于《企业技术前沿》课程第七期上课的通知">
+                    <span class="number">12</span>
+                    <p class="content line1">关于《企业技术前沿》课程第七期上课的通知</p>
+                    <time>2023/05/22</time>
+                </a>
+            </li>
+    </ul>
+<script>_showDynClickBatch(['dynclicks_u11_34054','dynclicks_u11_32634','dynclicks_u11_31974','dynclicks_u11_31234','dynclicks_u11_27794','dynclicks_u11_27664','dynclicks_u11_27024','dynclicks_u11_26164','dynclicks_u11_16514','dynclicks_u11_16524','dynclicks_u11_16504','dynclicks_u11_16494'],[34054,32634,31974,31234,27794,27664,27024,26164,16514,16524,16504,16494],"wbnews", 1451357554)</script>
+</div>
+                     <div class="tabcons" id="content-5">
+
+    <ul>
+                    <li class="">
+                <a href="info/2127/33214.htm" class="flexst line1 item" target="_blank" title="西南交通大学2026年硕士研究生招生考试考生进入复试的初试成绩要求">
+                    <span class="number">1</span>
+                    <p class="content line1">西南交通大学2026年硕士研究生招生考试考生进入复试的初试成绩要求</p>
+                    <time>2026/03/20</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/2127/33034.htm" class="flexst line1 item" target="_blank" title="西南交通大学2026年硕士研究生招生考试初试成绩查询和成绩复核公告">
+                    <span class="number">2</span>
+                    <p class="content line1">西南交通大学2026年硕士研究生招生考试初试成绩查询和成绩复核公告</p>
+                    <time>2026/02/26</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/2137/32814.htm" class="flexst line1 item" target="_blank" title="温馨提醒：西南交通大学2026年博士研究生 （含工程博士）招生网上报名即将启动">
+                    <span class="number">3</span>
+                    <p class="content line1">温馨提醒：西南交通大学2026年博士研究生 （含工程博士）招生网上报名即将启动</p>
+                    <time>2025/12/25</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/2127/32604.htm" class="flexst line1 item" target="_blank" title="2026年全国硕士研究生招生考试西南交通大学考点考生入场安全检查公告">
+                    <span class="number">4</span>
+                    <p class="content line1">2026年全国硕士研究生招生考试西南交通大学考点考生入场安全检查公告</p>
+                    <time>2025/12/17</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/2127/32594.htm" class="flexst line1 item" target="_blank" title="2026年全国硕士研究生招生考试西南交通大学考点考生入校安全须知">
+                    <span class="number">5</span>
+                    <p class="content line1">2026年全国硕士研究生招生考试西南交通大学考点考生入校安全须知</p>
+                    <time>2025/12/17</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/2127/32144.htm" class="flexst line1 item" target="_blank" title="西南交通大学考点（考点代码：5102）2026年全国硕士研究生招生考试报名信息网上确认公告">
+                    <span class="number">6</span>
+                    <p class="content line1">西南交通大学考点（考点代码：5102）2026年全国硕士研究生招生考试报名信息网上确认公告</p>
+                    <time>2025/10/28</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/2127/32054.htm" class="flexst line1 item" target="_blank" title="西南交通大学2026年推荐免试研究生拟录取名单公示">
+                    <span class="number">7</span>
+                    <p class="content line1">西南交通大学2026年推荐免试研究生拟录取名单公示</p>
+                    <time>2025/10/24</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/2127/32004.htm" class="flexst line1 item" target="_blank" title="2026年硕士研究生招生网报信息存疑提示">
+                    <span class="number">8</span>
+                    <p class="content line1">2026年硕士研究生招生网报信息存疑提示</p>
+                    <time>2025/10/21</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/2127/31904.htm" class="flexst line1 item" target="_blank" title="西南交通大学考点（5102）2026年全国硕士研究生招生考试网上报名公告">
+                    <span class="number">9</span>
+                    <p class="content line1">西南交通大学考点（5102）2026年全国硕士研究生招生考试网上报名公告</p>
+                    <time>2025/10/09</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/2127/31874.htm" class="flexst line1 item" target="_blank" title="西南交通大学2026年硕士研究生招生章程">
+                    <span class="number">10</span>
+                    <p class="content line1">西南交通大学2026年硕士研究生招生章程</p>
+                    <time>2025/10/02</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="https://www.sceea.cn/Html/202509/Newsdetail_4463.html" class="flexst line1 item" target="_blank" title="转发：四川省2026年全国硕士研究生招生考试网上报名公告">
+                    <span class="number">11</span>
+                    <p class="content line1">转发：四川省2026年全国硕士研究生招生考试网上报名公告</p>
+                    <time>2025/09/30</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/2127/31844.htm" class="flexst line1 item" target="_blank" title="西南交通大学2026年少数民族高层次骨干人才计划研究生招生公告">
+                    <span class="number">12</span>
+                    <p class="content line1">西南交通大学2026年少数民族高层次骨干人才计划研究生招生公告</p>
+                    <time>2025/09/30</time>
+                </a>
+            </li>
+    </ul>
+<script>_showDynClickBatch(['dynclicks_u12_33214','dynclicks_u12_33034','dynclicks_u12_32814','dynclicks_u12_32604','dynclicks_u12_32594','dynclicks_u12_32144','dynclicks_u12_32054','dynclicks_u12_32004','dynclicks_u12_31904','dynclicks_u12_31874','dynclicks_u12_31854','dynclicks_u12_31844'],[33214,33034,32814,32604,32594,32144,32054,32004,31904,31874,31854,31844],"wbnews", 1451357554)</script>
+</div>
+                     <div class="tabcons" id="content-6">
+
+    <ul>
+                    <li class="">
+                <a href="info/1677/34144.htm" class="flexst line1 item" target="_blank" title="关于举办“华为杯”第九届中国研究生创“芯”大赛校赛的通知">
+                    <span class="number">1</span>
+                    <p class="content line1">关于举办“华为杯”第九届中国研究生创“芯”大赛校赛的通知</p>
+                    <time>2026/06/08</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1677/34124.htm" class="flexst line1 item" target="_blank" title="关于举办第三届中国研究生“文化中国”两创大赛校内选拔赛的通知">
+                    <span class="number">2</span>
+                    <p class="content line1">关于举办第三届中国研究生“文化中国”两创大赛校内选拔赛的通知</p>
+                    <time>2026/06/05</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1677/34084.htm" class="flexst line1 item" target="_blank" title="关于举办第八届中国研究生人工智能创新大赛校赛的通知">
+                    <span class="number">3</span>
+                    <p class="content line1">关于举办第八届中国研究生人工智能创新大赛校赛的通知</p>
+                    <time>2026/06/05</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1677/34074.htm" class="flexst line1 item" target="_blank" title="关于举办第三届中国研究生国际中文教育案例大赛校赛的通知">
+                    <span class="number">4</span>
+                    <p class="content line1">关于举办第三届中国研究生国际中文教育案例大赛校赛的通知</p>
+                    <time>2026/06/04</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1677/34064.htm" class="flexst line1 item" target="_blank" title="第二届中国研究生智能建造创新大赛参赛通知">
+                    <span class="number">5</span>
+                    <p class="content line1">第二届中国研究生智能建造创新大赛参赛通知</p>
+                    <time>2026/06/03</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1677/33744.htm" class="flexst line1 item" target="_blank" title="关于申报2026年创新领军工程硕博士论坛项目的通知">
+                    <span class="number">6</span>
+                    <p class="content line1">关于申报2026年创新领军工程硕博士论坛项目的通知</p>
+                    <time>2026/04/28</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1677/33524.htm" class="flexst line1 item" target="_blank" title="关于举办西南交通大学第十五届研究生结构设计竞赛的通知">
+                    <span class="number">7</span>
+                    <p class="content line1">关于举办西南交通大学第十五届研究生结构设计竞赛的通知</p>
+                    <time>2026/04/22</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1677/33424.htm" class="flexst line1 item" target="_blank" title="西南交通大学关于开展2026年研究生学科竞赛支持计划的通知">
+                    <span class="number">8</span>
+                    <p class="content line1">西南交通大学关于开展2026年研究生学科竞赛支持计划的通知</p>
+                    <time>2026/04/17</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1677/33414.htm" class="flexst line1 item" target="_blank" title="西南交通大学2026年研究生创源大讲堂活动实施方案">
+                    <span class="number">9</span>
+                    <p class="content line1">西南交通大学2026年研究生创源大讲堂活动实施方案</p>
+                    <time>2026/04/16</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1677/33404.htm" class="flexst line1 item" target="_blank" title="关于举办“兆易创新杯”第二十一届中国研究生电子设计竞赛校赛及校内宣讲会的通知">
+                    <span class="number">10</span>
+                    <p class="content line1">关于举办“兆易创新杯”第二十一届中国研究生电子设计竞赛校赛及校内宣讲会的通知</p>
+                    <time>2026/04/09</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1677/33224.htm" class="flexst line1 item" target="_blank" title="西南交通大学关于启动中国国际大学生创新大赛（2026）校内选拔赛的通知（转自本科生院）">
+                    <span class="number">11</span>
+                    <p class="content line1">西南交通大学关于启动中国国际大学生创新大赛（2026）校内选拔赛的通知（转自本科生院）</p>
+                    <time>2026/03/23</time>
+                </a>
+            </li>
+            <li class="">
+                <a href="info/1677/33154.htm" class="flexst line1 item" target="_blank" title="研究生院关于招聘新媒体运营助管的通知">
+                    <span class="number">12</span>
+                    <p class="content line1">研究生院关于招聘新媒体运营助管的通知</p>
+                    <time>2026/03/11</time>
+                </a>
+            </li>
+    </ul>
+<script>_showDynClickBatch(['dynclicks_u13_34144','dynclicks_u13_34124','dynclicks_u13_34084','dynclicks_u13_34074','dynclicks_u13_34064','dynclicks_u13_33744','dynclicks_u13_33524','dynclicks_u13_33424','dynclicks_u13_33414','dynclicks_u13_33404','dynclicks_u13_33224','dynclicks_u13_33154'],[34144,34124,34084,34074,34064,33744,33524,33424,33414,33404,33224,33154],"wbnews", 1451357554)</script>
+</div>
+                </div>
+            </div>
+        </div>
+        <!-- 网上服务大厅 - 研究生网上快速通道 -->
+        <div class="main-2 flexsb fecai co73 aos-init aos-animate" aos="fade-up" aos-delay="50">
+            <div class="left boxa">
+                <div class="flexsb top-title">
+                    <div class="fw fs24 caption-title">网上服务大厅</div>
+                    <div class="more-box">
+                        <a href="#">更多 ></a>
+                    </div>
+                </div>
+                <ul class="guide">
+                    <li class="guide-li">
+                        <div class="title fw fs20">招生指南</div>
+                        <ul class="zlb flexst">
+                            <li>
+                                <span class="blue-fk"></span>
+                                <a href="http://yz.swjtu.edu.cn/vatuu/PlanMasterMajorAction?setAction=intro&type=zszyml&key1=1524F5164B8B7DB0" target="_blank">招生计划查询
+                                </a>
+                            </li>
+                            <li>
+                                <span class="blue-fk"></span>
+                                <a href="http://yz.swjtu.edu.cn/vatuu/PublicActivityAction?setAction=activityList" target="_blank">暑假学术夏令营 </a>
+                            </li>
+                            <li>
+                                <span class="blue-fk"></span>
+                                <a href="http://yz.swjtu.edu.cn/vatuu/PublicInfoQueryAction?setAction=queryAdmissionScore" target="_blank">入学考试成绩查询 </a>
+                            </li>
+                            <li>
+                                <span class="blue-fk"></span>
+                                <a href="http://yz.swjtu.edu.cn/vatuu/RetrialScoreAdminAction?setAction=publicRetrialMasterLine&tdsourcetag=s_pcqq_aiomsg" target="_blank">历年复试分数线查询 </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                </ul>
+                <ul class="guide">
+                    <li class="guide-li">
+                        <div class="title fw fs20">服务指南</div>
+                        <ul class="zlb flexst">
+                            <li>
+                                <span class="blue-fk"></span>
+                                <a href="gzlc/pygz.htm">工作流程
+                                </a>
+                            </li>
+                            <li>
+                                <span class="blue-fk"></span>
+                                <a href="xzzx/pygz.htm">下载中心 </a>
+                            </li>
+                            <li>
+                                <span class="blue-fk"></span>
+                                <a href="jxrl.htm">教学日历 </a>
+                            </li>
+                        </ul>
+
+                        <div class="title fw fs20 sz">思政慕课</div>
+                        <ul class="zlb flexst">
+                            <li>
+                                <span class="blue-fk"></span>
+                                <a href="https://drp.swjtu.edu.cn/learn/dachuanplate/detail/4" target="_blank">《中国精神》慕课
+                                </a>
+                            </li>
+
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div class="right boxb">
+                <div class="flexsb top-title">
+                    <div class="fw fs24 caption-title">研究生网上快速通道</div>
+                    <div class="more-box">
+                        <a href="#">更多 ></a>
+                    </div>
+                </div>
+                <ul class="kstd flexsb">
+                    <li>
+                        <a href="https://one.swjtu.edu.cn/new/index.html?id=2__799c6edd-b62e-4505-91a3-3c78acc2c4e0" target="_blank" class="flexst">
+                            <div class="pic-box flexst">
+                                <img src="image/kstd-icon01.png" alt="">
+                            </div>
+                            <div>
+                                <p style="margin-bottom: 5px;">研究生管理信息系统</p>
+                                <p class="fs20">登录入口</p>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://one.swjtu.edu.cn/yjsxkapp/sys/xsxkapp/index.html" target="_blank" class="flexst">
+                            <div class="pic-box flexst">
+                                <img src="image/kstd-icon02.png" alt="">
+                            </div>
+                            <div>
+                                <p class="fs20">研究生选课系统</p>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://ees.swjtu.edu.cn/" target="_blank" class="flexst">
+                            <div class="pic-box flexst">
+                                <img src="image/kstd-icon03.png" alt="">
+                            </div>
+                            <div>
+                                <p class="fs20">卓越工程师培养</p>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://one.swjtu.edu.cn/gsapp/sys/wdxsbdjcsqapp/*default/index.do?t_s=1724758339369&amp_sec_version_=1&gid_=dWxHaEl5VjVnRlR3WVp3eExCSTZRY0dkbkhkYnV2dC9vSy9MWGREc0kyZVpHTXhLcDkzdnBjZUdxR0o4Rit6V3lRRW9hTGo2K0ZSMVZBK3V0WDdwQlE9PQ&EMAP_LANG=zh&THEME=golden#/xsbdjcsq" target="_blank" class="flexst">
+                            <div class="pic-box flexst">
+                                <img src="image/kstd-icon04.png" alt="">
+                            </div>
+                            <div>
+                                <p class="fs20">研究生学位申请</p>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://ygb.swjtu.edu.cn/ytfw/zzyr.htm" target="_blank" class="flexst">
+                            <div class="pic-box flexst">
+                                <img src="image/zizhu.png" alt="">
+                            </div>
+                            <div>
+                                <p class="fs20">奖助学金</p>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.swjtu.edu.cn/zjjd/syxx.htm" target="_blank" class="flexst">
+                            <div class="pic-box flexst">
+                                <img src="image/kstd-icon06.png" alt="">
+                            </div>
+                            <div>
+                                <p class="fs20">实用信息</p>
+                            </div>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </main>
+    <!-- 友情链接 -->
+    <div class="friendly-link fecai co73 aos-init aos-animate" aos="fade-up" aos-delay="50">
+
+<div class="wp flexsb content">
+            <div class="left flexst">
+                <img src="image/link-icon.png" alt="">
+                <span class="fs24 fw " style="margin-left: 5px;">友情链接</span>
+            </div>
+            <ul class=" right fs14">
+                
+<li><a href="https://faculty.swjtu.edu.cn/" target="_blank">导师主页</a> </li>
+                
+<li><a href="https://mail.swjtu.edu.cn" target="_blank">西南交通大学电子邮件服务</a> </li>
+                
+<li><a href="https://www.swjtu.edu.cn/" target="_blank">西南交通大学校园门户</a> </li>
+                
+<li><a href="https://news.swjtu.edu.cn/" target="_blank">西南交通大学新闻网</a> </li>
+                
+<li><a href="https://www.cnki.net/" target="_blank">中国知网</a> </li>
+                
+<li><a href="https://www.sceea.cn/" target="_blank">四川省教育考试院</a> </li>
+                
+<li><a href="https://edu.sc.gov.cn/" target="_blank">四川省教育厅</a> </li>
+                
+<li><a href="https://www.chsi.com.cn/" target="_blank">中国高等教育学生信息网</a> </li>
+                
+<li><a href="http://www.moe.gov.cn/s78/A22/" target="_blank">中华人民共和国教育部研究生司</a> </li>
+                
+<li><a href="http://www.moe.gov.cn/" target="_blank">中华人民共和国教育部</a> </li>
+                
+</ul>
+        </div><script>_showDynClickBatch(['dynclicks_u14_9364','dynclicks_u14_9354','dynclicks_u14_9344','dynclicks_u14_9334','dynclicks_u14_9324','dynclicks_u14_9314','dynclicks_u14_9304','dynclicks_u14_9294','dynclicks_u14_9284','dynclicks_u14_9274'],[9364,9354,9344,9334,9324,9314,9304,9294,9284,9274],"wbnews", 1451357554)</script>
+</div>
+    <footer class=" fecai co73 aos-init aos-animate" aos="fade-up" aos-delay="50">    <div class="wp flexsb content">
+            <div class="footer-logo-box">
+                <img src="/image/footlogo.png" alt="">
+            </div>
+            <div class="address flexcolumn">
+                <span style="margin-bottom: 10px;"> 中国四川省成都市郫都区犀安路 999 号 </span>
+                <span> 邮政编码：611756 </span>
+            </div>
+            <div class="cell flexcolumn">
+                <span style="margin-bottom: 10px;"> 联系电话： +86-28-66366293 </span>
+                 <span>传<span style="margin-left: 1.5em; margin-right: 0.5em;"></span>真： +86-28-66367260</span>
+            </div>
+            <div class="ewm flexsb">
+                <div class="code1 flexcolumn">
+                    <img src="/image/yjsy-code.png" alt="">
+                    <span class="fs13">西南交通大学研究生院</span>
+                </div>
+                <div class="code2 flexcolumn">
+                    <img src="/image/yzb-code.png" alt="">
+                    <span class="fs13">西南交通大学研招办</span>
+                </div>
+            </div>
+        </div>
+        <div class="copyright">
+            <span class="fs12">Copyright © 2024 Graduate School of SouthWest Jiaotong University</span>
+        </div></footer>
+</body>
+<script src="js/aos.js"></script>
+<script src="js/jquery.min.js"></script>
+<script src="js/swiper.min.js"></script>
+<script src="js/main.js"></script>
+
+</html>

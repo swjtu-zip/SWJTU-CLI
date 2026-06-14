@@ -1,0 +1,650 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta name="format-detection" content="telephone=no" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,minimum-scale=1,maximum-scale=1,initial-scale=1,user-scalable=no" />
+    <title>西南交通科学技术发展研究院</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="西南交通科学技术发展研究院">
+<META Name="keywords" Content="西南交通科学技术发展研究院" />
+
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.css" rel="stylesheet">
+    <link href="css/slick.css" rel="stylesheet">
+    <link href="css/animate.min.css" rel="stylesheet">
+    <link href="css/date.css" rel="stylesheet">
+    <link href="css/style.css?ver=1.18" rel="stylesheet">
+    <script type="text/javascript" src="js/manifest.js"></script>
+    <script type="text/javascript" src="js/vendor.js"></script>
+    <script type="text/javascript" src="js/calendarSmall.js"></script>
+    <!--[if lte IE 9]> 
+    <script src="js/jquery_ie8.js"></script>
+    <![endif]-->
+    <link rel="stylesheet" href="css/swiper.min.css">
+    <link rel="stylesheet" href="css/my-swiper.css?ver=1.05">
+
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1001,'/index.jsp',-1,1611485322)</script>
+</head>
+<body>
+    <div class="header">
+        <div class="container clearfix">
+            <div class="pull-left logo"><a href=""><img src="images/logo.png"></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="images/weixincon.png"></div>
+            
+            <div class="pull-right">
+                <div class="header-a text-center"><a href="https://www.swjtu.edu.cn">学校主页</a><span>|</span><a href="http://kygl.swjtu.edu.cn">科研创新服务平台</a><span>|</span><a href="https://contract.swjtu.edu.cn/">合同管理系统</a><span>|</span><a href="en/Home.htm">English</a></a>
+                <div><!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script>
+<div id="divu0"></div>
+<script type="text/html" id="htmlu0">
+    <div id="appu0">
+        <div v-if="!isError">
+        
+                <div class="search-box">
+                    <input type="text" class="form-control" placeholder="" v-model=query.keyWord @keyup.enter="onSubmit" >
+                    <button class="btn btn-ss" type="submit" v-on:click="onSubmit()"></button>
+                </div>
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu0").html($("#htmlu0").text());
+</script>
+<script>
+    var appOwner = "1611485322";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu0",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu0 = document.querySelector("#appu0");
+   if (appElementu0 && appElementu0.__vue__) {
+
+   } else {
+      $("#divu0").html($("#htmlu0").text());
+      var appOwner = "1611485322";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou0 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu0(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu0();
+        }
+      };
+
+      function onSubmitu0(e) {
+        queryInfou0.query.keyWord= $("#appu0  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou0.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script></div>
+            </div>
+        </div>
+        <div class="menu-button">
+          <div class="bar">11</div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+        </div>
+    </div>
+    <div class="nav-box">
+        <div class="container">            <ul class="nav-list clearfix text-center">
+                <li><a href="index.htm" style="font-weight:bold;">首页</a>
+                </li>
+                <li><a href="bmgk/bmjs.htm" style="font-weight:bold;">部门概况</a>
+                      <span class="nav-click"><span class="caret"></span></span>
+                        <ul class="nav-down">
+                                <li><a href="bmgk/bmjs.htm">部门介绍</a></li>     
+                                <li><a href="bmgk/xrld.htm">现任领导</a></li>     
+                                <li><a href="bmgk/bgssz.htm">办公室设置</a></li>     
+                        </ul>
+                </li>
+                <li><a href="tzgg1.htm" style="font-weight:bold;">通知公告</a>
+                      <span class="nav-click"><span class="caret"></span></span>
+                        <ul class="nav-down">
+                                <li><a href="tzgg1/zrjj.htm">自然基金</a></li>     
+                                <li><a href="tzgg1/zdyf.htm">重点研发</a></li>     
+                                <li><a href="tzgg1/qtzx.htm">其他纵向</a></li>     
+                                <li><a href="tzgg1/jdpt.htm">基地平台</a></li>     
+                                <li><a href="tzgg1/kjhz.htm">科技合作</a></li>     
+                                <li><a href="tzgg1/kjjl.htm">科技奖励</a></li>     
+                                <li><a href="tzgg1/xshd.htm">学术活动</a></li>     
+                                <li><a href="tzgg1/zhsx.htm">综合事项</a></li>     
+                        </ul>
+                </li>
+                <li><a href="kyjd/kyjd.htm" style="font-weight:bold;">科研基地</a>
+                      <span class="nav-click"><span class="caret"></span></span>
+                        <ul class="nav-down">
+                                <li><a href="kyjd/kyjd.htm">科研基地</a></li>     
+                        </ul>
+                </li>
+                <li><a href="kytd/kytd.htm" style="font-weight:bold;">科研团队</a>
+                      <span class="nav-click"><span class="caret"></span></span>
+                        <ul class="nav-down">
+                                <li><a href="kytd/kytd.htm">科研团队</a></li>     
+                        </ul>
+                </li>
+                <li><a href="kjhz/xqhz.htm" style="font-weight:bold;">科技合作</a>
+                      <span class="nav-click"><span class="caret"></span></span>
+                        <ul class="nav-down">
+                                <li><a href="kjhz/xqhz.htm">校企合作</a></li>     
+                                <li><a href="kjhz/xdhz.htm">校地合作</a></li>     
+                                <li><a href="kjhz/cgzh.htm">成果转化</a></li>     
+                        </ul>
+                </li>
+                <li><a href="djgz/zbdt.htm" style="font-weight:bold;">党建工作</a>
+                      <span class="nav-click"><span class="caret"></span></span>
+                        <ul class="nav-down">
+                                <li><a href="djgz/zbdt.htm">支部动态</a></li>     
+                        </ul>
+                </li>
+                <li><a href="xxgs/hxwx.htm" style="font-weight:bold;">信息公示</a>
+                      <span class="nav-click"><span class="caret"></span></span>
+                        <ul class="nav-down">
+                                <li><a href="xxgs/hxwx.htm">横向外协</a></li>     
+                                <li><a href="xxgs/zxwx.htm">纵向外协</a></li>     
+                                <li><a href="xxgs/kjjl.htm">科技奖励</a></li>     
+                                <li><a href="xxgs/cgzh.htm">成果转化</a></li>     
+                                <li><a href="xxgs/qt.htm">其他</a></li>     
+                        </ul>
+                </li>
+            </ul></div>
+    </div>
+    <div class="banner-box">    <script language="javascript" src="/system/resource/js/dynclicks.js"></script><div class="banner">
+        <div><a href="https://news.swjtu.edu.cn/info/1011/90285.htm"><img src="images/weixintupian_20251121171733_94_1933.jpg"></a></div>
+        <div><a href="https://news.swjtu.edu.cn/info/1011/60965.htm"><img src="banner/banner.jpg"></a></div>
+        <div><a href="https://news.swjtu.edu.cn/info/1011/44585.htm"><img src="banner/bannerhc.jpg"></a></div>
+        <div><a href=""><img src="banner/bannerky.jpg"></a></div>
+</div>
+</div>
+    <div class="back-lg">
+        <div class="container">
+            <div class="title text-center">办事流程</div>
+            <div>            <ul class="tabs-ul text-center clearfix">
+                <li class="active"><a href="#1140" aria-controls="1140" role="tab" data-toggle="tab">项目申报</a></li>
+                <li><a href="#1141" aria-controls="1141" role="tab" data-toggle="tab">基地平台</a></li>
+                <li><a href="#1142" aria-controls="1142" role="tab" data-toggle="tab">校内管理</a></li>
+                <li><a href="#1143" aria-controls="1143" role="tab" data-toggle="tab">知识产权</a></li>
+                <li><a href="#1144" aria-controls="1144" role="tab" data-toggle="tab">科技奖励</a></li>
+                <li><a href="#1169" aria-controls="1169" role="tab" data-toggle="tab">产学研合作</a></li>
+                <li><a href="#1145" aria-controls="1145" role="tab" data-toggle="tab">专职科研</a></li>
+                <li><a href="#1146" aria-controls="1146" role="tab" data-toggle="tab">常用下载</a></li>
+            </ul>
+</div>
+            <!-- Tab panes -->
+            <div class="tab-content">
+                <div role="tabpanel" class="tab-pane active" id="1140">
+
+<script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script>                    <ul class="tabs-list clearfix text-center">
+                        <li><a href="info/1140/10472.htm" target="_blank"><img src="/__local/B/9A/A1/BDFBB6F1DF2EDA4F4AECCD5BC5A_1697CE74_9AB.png"><br>国家重点研发计划项目过程管理</a></li>
+                        <li><a href="info/1140/10471.htm" target="_blank"><img src="/__local/C/A8/AF/4985E624973E740A9FEC51085F3_0F1E0F86_A2B.png"><br>国家自然科学基金项目过程管理</a></li>
+                        <li><a href="info/1140/10470.htm" target="_blank"><img src="/__local/4/CA/55/4F8257EF8802E7738807870AF00_4B4F9356_834.png"><br>四川省科技厅项目全过程管理</a></li>
+                        <li><a href="info/1140/27555.htm" target="_blank"><img src="/__local/2/7D/E6/FC9E5856FE728DE12CBF69978A3_CCCF5194_CF0.jpg"><br>四川省自然基金全过程管理</a></li>
+                        <li><a href="info/1140/10469.htm" target="_blank"><img src="/__local/C/88/5A/BB27F474A450D8F3F70E6E723AD_FF0FD8A5_A96.png"><br>成都市科技计划项目过程管理</a></li>
+                        <li><a href="info/1140/10468.htm" target="_blank"><img src="/__local/B/8D/15/809C0C5FB025047701FC9F14FCA_201052EE_D37.png"><br>其他纵向项目全过程管理</a></li>
+                        <li><a href="info/1140/27565.htm" target="_blank"><img src="/__local/F/CF/D6/41A7A781356F06F0F0016C4E563_261BAC7F_D15.jpg"><br>横向项目合同审批流程（不含出账合同）</a></li>
+                    </ul>
+<script>_showDynClickBatch(['dynclicks_u4_10472','dynclicks_u4_10471','dynclicks_u4_10470','dynclicks_u4_27555','dynclicks_u4_10469','dynclicks_u4_10468','dynclicks_u4_27565'],[10472,10471,10470,27555,10469,10468,27565],"wbnews", 1611485322)</script>
+</div>
+                <div role="tabpanel" class="tab-pane" id="1141">
+
+<ul class="tabs-list clearfix text-center">
+                        <li><a href="info/1141/10474.htm" target="_blank"><img src="/__local/8/D3/4D/CABA0CC47ECDE5CF51BBC42F564_073CCC66_D6B.png"><br>四川省重点实验室信息变更业务流程</a></li>
+                        <li><a href="info/1141/10473.htm" target="_blank"><img src="/__local/A/8D/26/18C0DD9A6A5D115A7A254C447DF_5C934318_9EE.png"><br>对外联合共建科研基地办理流程</a></li>
+                    </ul><script>_showDynClickBatch(['dynclicks_u5_10474','dynclicks_u5_10473'],[10474,10473],"wbnews", 1611485322)</script>
+</div>
+                <div role="tabpanel" class="tab-pane" id="1142">
+
+                    <ul class="tabs-list clearfix text-center">
+                        <li><a href="info/1142/10484.htm" target="_blank"><img src="/__local/1/38/17/15C74B291AF02632F0BF141CD87_CD061FAD_918.png"><br>项目立项</a></li>
+                        <li><a href="info/1142/29005.htm" target="_blank"><img src="/__local/6/25/48/9DFD18D972374FF1B9655C85A26_C8D5238F_AD4.png"><br>项目开票</a></li>
+                        <li><a href="info/1142/10482.htm" target="_blank"><img src="/__local/1/30/36/4E01961F457A37B2F150ADFDA33_BF821030_A9B.png"><br>项目变更</a></li>
+                        <li><a href="info/1142/10481.htm" target="_blank"><img src="/__local/4/65/F9/45C9F764EEFDA4A0A6178C18ED1_CD1429F8_C87.png"><br>经费认领</a></li>
+                        <li><a href="info/1142/10480.htm" target="_blank"><img src="/__local/3/83/8E/AAF450A76E84C988AD3719DEBF8_76B3969A_8DB.png"><br>合作费外拨</a></li>
+                        <li><a href="info/1142/10479.htm" target="_blank"><img src="/__local/2/A3/B3/CC38DAABB66FEAA3A9F60D12C9D_B1F97999_948.png"><br>出账合同办理</a></li>
+                        <li><a href="info/1142/10478.htm" target="_blank"><img src="/__local/D/30/B9/F091C54D51256953926E9B757CD_D7B34CBA_F88.png"><br>结题结账</a></li>
+                        <li><a href="info/1142/27925.htm" target="_blank"><img src="/__local/B/8D/15/809C0C5FB025047701FC9F14FCA_201052EE_D37.png"><br>中央高校基本科研业务费项目（理工类）流程</a></li>
+                        <li><a href="info/1142/10483.htm" target="_blank"><img src="/__local/6/25/48/9DFD18D972374FF1B9655C85A26_C8D5238F_AD4.png"><br>横向项目投标流程</a></li>
+                    </ul>
+<script>_showDynClickBatch(['dynclicks_u6_10484','dynclicks_u6_29005','dynclicks_u6_10482','dynclicks_u6_10481','dynclicks_u6_10480','dynclicks_u6_10479','dynclicks_u6_10478','dynclicks_u6_27925','dynclicks_u6_10483'],[10484,29005,10482,10481,10480,10479,10478,27925,10483],"wbnews", 1611485322)</script>
+</div>
+                <div role="tabpanel" class="tab-pane" id="1143">
+
+                    <ul class="tabs-list clearfix text-center">
+                        <li><a href="info/1143/27775.htm" target="_blank"><img src="/__local/1/38/17/15C74B291AF02632F0BF141CD87_CD061FAD_918.png"><br>专利签订流程</a></li>
+                        <li><a href="info/1143/27825.htm" target="_blank"><img src="/__local/6/25/48/9DFD18D972374FF1B9655C85A26_C8D5238F_AD4.png"><br>软件著作权申请流程</a></li>
+                    </ul>
+<script>_showDynClickBatch(['dynclicks_u7_27775','dynclicks_u7_27825'],[27775,27825],"wbnews", 1611485322)</script>
+</div>
+                <div role="tabpanel" class="tab-pane" id="1144">
+
+                    <ul class="tabs-list clearfix text-center">
+                        <li><a href="info/1144/18845.htm" target="_blank"><img src="/__local/4/D6/69/FFF617310EAC35D9759FC823E31_9BAA9250_ED2.jpg"><br>科技奖励申报流程</a></li>
+                    </ul>
+<script>_showDynClickBatch(['dynclicks_u8_18845'],[18845],"wbnews", 1611485322)</script>
+</div>
+                <div role="tabpanel" class="tab-pane" id="1169">
+
+                    <ul class="tabs-list clearfix text-center">
+                        <li><a href="info/1169/10575.htm" target="_blank"><img src="/__local/0/AE/F7/B1CD91DC5C0EDD75854F77F609A_5044401E_C17.png"><br>产学研合作协议签订流程</a></li>
+                    </ul>
+<script>_showDynClickBatch(['dynclicks_u9_10575'],[10575],"wbnews", 1611485322)</script>
+</div>
+                <div role="tabpanel" class="tab-pane" id="1145">
+
+                    <ul class="tabs-list clearfix text-center">
+                        <li><a href="info/1145/10489.htm" target="_blank"><img src="/__local/2/38/18/254BCBF1E708E0C3BAB37923879_8D0876F8_9DD.png"><br>专职科研人员聘用流程（博士及以上）</a></li>
+                        <li><a href="info/1145/14625.htm" target="_blank"><img src="/__local/4/65/F9/45C9F764EEFDA4A0A6178C18ED1_CD1429F8_C87.png"><br>科研助理聘用流程（硕士及以下）</a></li>
+                    </ul>
+<script>_showDynClickBatch(['dynclicks_u10_10489','dynclicks_u10_14625'],[10489,14625],"wbnews", 1611485322)</script>
+</div>
+                <div role="tabpanel" class="tab-pane" id="1146">
+
+                    <ul class="tabs-list clearfix text-center">
+                        <li><a href="cyxz/cyxz.htm" target="_blank"><img src="/__local/E/1D/75/7BBC00440DF3EFB212DB9C350DC_70118CD1_F50.png"><br>常用下载</a></li>
+                    </ul>
+<script>_showDynClickBatch(['dynclicks_u11_10490'],[10490],"wbnews", 1611485322)</script>
+</div>
+            </div>        
+        </div>
+        <div class="container">
+            <div class="back-sm">
+                <!--通知 --> 
+                <div class="clearfix">
+                    <div class="pull-left link-box">
+                        <div class="link-top clearfix">
+                            <div class="pull-left link-tt">通知公告</div>
+                        </div>
+                        <!-- Tab panes -->
+                        <div class="tab-content">
+                            <div role="tabpanel" class="tab-pane active" id="1120">
+
+                                <a href="tzgg1.htm" class="tabs-more"></a>
+                                <ul class="news-list">
+                                    <li class="txt-elise"><b>【其他纵向】</b><a href="info/1123/31215.htm" target="_blank">关于组织申报四川省科技厅2026年度第二批软科学项目的通知</a><span>2026-06-12</span></li>
+                                    <li class="txt-elise"><b>【其他纵向】</b><a href="info/1123/31205.htm" target="_blank">关于开展国家铁路局铁路科技标准规划类专家库和法规类专家库信息更新及专家推荐工作的通知</a><span>2026-06-11</span></li>
+                                    <li class="txt-elise"><b>【重点研发】</b><a href="info/1121/31195.htm" target="_blank">关于征求国家重点研发计划“发育编程及其代谢调节”“合成生物学”重点专项2026年度项目申报指南意见的通知</a><span>2026-06-11</span></li>
+                                    <li class="txt-elise"><b>【其他纵向】</b><a href="info/1123/31185.htm" target="_blank">关于组织征集四川省科技厅科技领域标志性重大场景新技术新产品示范推广应用项目需求的通知</a><span>2026-06-11</span></li>
+                                    <li class="txt-elise"><b>【重点研发】</b><a href="info/1121/31175.htm" target="_blank">关于组织征集创新药物研发国家科技重大专项2027年度项目申报指南意见的通知</a><span>2026-06-10</span></li>
+                                    <li class="txt-elise"><b>【自然基金】</b><a href="info/1120/31165.htm" target="_blank">2026年度国家自然科学基金民营企业创新发展联合基金项目指南（第二批）</a><span>2026-06-09</span></li>
+                                    <li class="txt-elise"><b>【自然基金】</b><a href="info/1120/31155.htm" target="_blank">2026年度国家自然科学基金委员会与国际理论物理中心合作交流项目指南</a><span>2026-06-09</span></li>
+                                </ul>
+<script>_showDynClickBatch(['dynclicks_u12_31215','dynclicks_u12_31205','dynclicks_u12_31195','dynclicks_u12_31185','dynclicks_u12_31175','dynclicks_u12_31165','dynclicks_u12_31155'],[31215,31205,31195,31185,31175,31165,31155],"wbnews", 1611485322)</script>
+</div>
+                        </div>
+                    </div>
+                    <div class="pull-right date-box">
+                        <div class="date-html">
+                          <div id="calendar"></div>
+                        </div>
+                      <script>
+                        var calendar = new Calendar('#calendar', {
+                          requestUrl: '../jsonData/',
+                          style: {
+                            width: 400,
+                            height: 290
+                          },
+                          defaultData: {
+                            time: '',
+                            timeString: '',
+                            img: '',
+                            url: '',
+                            summary: '',
+                            title: '',
+                            host: '',
+                            address: ''
+                          },
+                          url: '/rqtz/rqtz.htm'
+                        });
+                      </script>
+                    </div>
+                </div> 
+                
+                <!--新闻 --> 
+                <div class="clearfix bottom-box">
+                    <div class="pull-left img-link">
+
+<div class="swiper-container sy_ban">
+        <div class="swiper-wrapper">
+                <div class="swiper-slide">
+                    <a href="info/1150/23465.htm" target="_blank">
+                        <img src="/__local/8/83/11/8FE812EE064DCA49BF0B4CFA70B_73FDE1EF_40AC8.jpg" alt="">
+                        <div class="txtk  ani" swiper-animate-effect="fadeInUp" swiper-animate-duration="0.5s" swiper-animate-delay="0.2s">
+                            <p class="h4">校党委副书记、纪委书记夏玉峰同志到 科学技术发展研究院调研指导工作</p>
+                        </div>
+                    </a>
+                </div>
+                <div class="swiper-slide">
+                    <a href="info/1150/13790.htm" target="_blank">
+                        <img src="/__local/2/E5/1A/6E5F626CA8498F813875F547091_F77E64B3_49104.jpg" alt="">
+                        <div class="txtk  ani" swiper-animate-effect="fadeInUp" swiper-animate-duration="0.5s" swiper-animate-delay="0.2s">
+                            <p class="h4">科学技术发展研究院组织召开2021-2022学年第一学期科研工作例会</p>
+                        </div>
+                    </a>
+                </div>
+                <div class="swiper-slide">
+                    <a href="info/1150/13732.htm" target="_blank">
+                        <img src="/__local/4/FA/C8/B69C5B05FDE00EA64AF02482BB4_62E43E53_59130.jpg" alt="">
+                        <div class="txtk  ani" swiper-animate-effect="fadeInUp" swiper-animate-duration="0.5s" swiper-animate-delay="0.2s">
+                            <p class="h4">智能制造交叉学科团队学术沙龙顺利举办</p>
+                        </div>
+                    </a>
+                </div>
+                <div class="swiper-slide">
+                    <a href="info/1150/13088.htm" target="_blank">
+                        <img src="/__local/A/79/08/F439FD2F37D0FE47BA6512E3E04_F96B9CB5_33AEF.jpg" alt="">
+                        <div class="txtk  ani" swiper-animate-effect="fadeInUp" swiper-animate-duration="0.5s" swiper-animate-delay="0.2s">
+                            <p class="h4">智慧交通交叉团队学术沙龙顺利举办</p>
+                        </div>
+                    </a>
+                </div>
+                <div class="swiper-slide">
+                    <a href="info/1150/13066.htm" target="_blank">
+                        <img src="/__local/5/61/A2/EAD92B8E709C4F54AB2C09F2126_575F6E39_34F7F.jpg" alt="">
+                        <div class="txtk  ani" swiper-animate-effect="fadeInUp" swiper-animate-duration="0.5s" swiper-animate-delay="0.2s">
+                            <p class="h4">智慧城市前沿技术与创新应用论坛顺利举行</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+    <!-- Add Pagination -->
+    <div class="swiper-pagination"></div>
+</div><script>_showDynClickBatch(['dynclicks_u13_23465','dynclicks_u13_13790','dynclicks_u13_13732','dynclicks_u13_13088','dynclicks_u13_13066'],[23465,13790,13732,13088,13066],"wbnews", 1611485322)</script>
+</div>
+                    <div class="pull-right link-box" id="myNews">
+                        <div class="link-top clearfix">
+                            <div class="pull-left link-tt">新闻动态</div>
+                            <ul class="link-tabs clearfix pull-left" id="myTab">
+                                <li id="k1148" class="active"><a href="#1148" aria-controls="1148" role="tab" data-toggle="tab">科研政策</a></li>
+                                <li id="k1149"><a href="#1149" aria-controls="1149" role="tab" data-toggle="tab">科研动态</a></li>
+                                <li id="k1199"><a href="#1199" aria-controls="1199" role="tab" data-toggle="tab">专题专栏</a></li>
+                            </ul>
+                        </div>
+                        <!-- Tab panes -->
+                        <div class="tab-content">
+                            <div role="tabpanel" class="tab-pane active" id="1148">
+
+                                <a href="/xwdt/xnkyzc.htm" class="tabs-more"></a>
+                                <ul class="news-list">
+                                    <li class="txt-elise"><b>【政策】</b>校外 | <a href="http://www.gov.cn/zhengce/index.htm" target="_blank">国务院政策查询</a><span>2021-11-19</span></li>
+                                    <li class="txt-elise"><b>【政策】</b>校外 | <a href="https://mp.weixin.qq.com/s/5vYvM5yyIkgo6XNZxXHZ2Q" target="_blank">斯坦福崔屹《Science》：硅阳极电池瞬态电压脉冲的容量恢复！</a><span>2024-11-05</span></li>
+                                    <li class="txt-elise"><b>【政策】</b>校外 | <a href="https://xxgk.mot.gov.cn/2020/jigou/kjs/202208/t20220830_3672859.html  " target="_blank">交通运输部 科学技术部关于公布第二批国家交通运输科普基地名单的通知</a><span>2022-08-31</span></li>
+                                    <li class="txt-elise"><b>【政策】</b>校外 | <a href="https://mp.weixin.qq.com/s/cXM9SWvToCsTQAKGz4CPOA" target="_blank">国家科研经费管理政策文件汇总（2022.6）</a><span>2022-06-24</span></li>
+                                    <li class="txt-elise"><b>【政策】</b>校外 | <a href="https://mp.weixin.qq.com/s/5a138VCs9J1sT7RSwtOYvg" target="_blank">国知局：实施专利年费缴纳延期政策！期间不产生滞纳金</a><span>2022-06-10</span></li>
+                                    <li class="txt-elise"><b>【政策】</b>校外 | <a href="https://mp.weixin.qq.com/s/XW9y0cX1FePvtGQKrpvaeg" target="_blank">科技经费投向哪里？科技部：重点加大基础研究支持力度</a><span>2022-06-07</span></li>
+                                    <li class="txt-elise"><b>【政策】</b>校外 | <a href="https://mp.weixin.qq.com/s/5qX4sujOnvjkczByS1RGwg" target="_blank">国家“十四五”规划中的智慧城市与城市科技要点</a><span>2022-05-23</span></li>
+                                </ul>
+<script>_showDynClickBatch(['dynclicks_u14_11850','dynclicks_u14_22945','dynclicks_u14_13334','dynclicks_u14_13110','dynclicks_u14_13030','dynclicks_u14_13015','dynclicks_u14_12939'],[11850,22945,13334,13110,13030,13015,12939],"wbnews", 1611485322)</script>
+</div>
+                            <div role="tabpanel" class="tab-pane" id="1149">
+
+                                <a href="/xwdt/xnkyzc.htm" class="tabs-more"></a>
+                                <ul class="news-list">
+                                    <li class="txt-elise"><b>【动态】</b>校内 | <a href="info/1150/30675.htm" target="_blank">2025-2026学年第二学期科研工作例会 顺利召开</a><span>2026-05-06</span></li>
+                                    <li class="txt-elise"><b>【动态】</b>校内 | <a href="info/1150/30095.htm" target="_blank">学校召开“重大工程+文科发展”融合创新项目启动会</a><span>2026-04-03</span></li>
+                                    <li class="txt-elise"><b>【动态】</b>校内 | <a href="info/1150/25865.htm" target="_blank">香山科学会议第785次“高速铁路大气覆冰致灾成因与防护”学术讨论会在北...</a><span>2025-05-27</span></li>
+                                    <li class="txt-elise"><b>【动态】</b>校内 | <a href="info/1150/24445.htm" target="_blank">打造世界级盾构技术“策源地”！西南交大联合中铁十四局成立盾构前沿技...</a><span>2025-03-11</span></li>
+                                    <li class="txt-elise"><b>【动态】</b>校内 | <a href="info/1150/24375.htm" target="_blank">西南交通大学获批首个川渝共建重点实验室</a><span>2025-03-07</span></li>
+                                    <li class="txt-elise"><b>【动态】</b>校内 | <a href="info/1150/19845.htm" target="_blank">西南交通大学科创园先导区首批创业项目路演顺利举行</a><span>2024-05-16</span></li>
+                                    <li class="txt-elise"><b>【动态】</b>校内 | <a href="https://news.swjtu.edu.cn/info/1011/48085.htm" target="_blank">王平教授荣获何梁何利基金科学与技术进步奖</a><span>2023-12-22</span></li>
+                                </ul>
+<script>_showDynClickBatch(['dynclicks_u15_30675','dynclicks_u15_30095','dynclicks_u15_25865','dynclicks_u15_24445','dynclicks_u15_24375','dynclicks_u15_19845','dynclicks_u15_17235'],[30675,30095,25865,24445,24375,19845,17235],"wbnews", 1611485322)</script>
+</div>
+                            <div role="tabpanel" class="tab-pane" id="1199">
+
+                                <a href="/xwdt/xnkyzc.htm" class="tabs-more"></a>
+                                <ul class="news-list">
+                                    <li class="txt-elise"><a href="/ztzl/kcxjt.htm" target="_blank">可持续交通</a></li>
+                                </ul>
+
+</div>
+                        </div>
+                    </div>
+                </div>
+                
+              
+                
+            </div>
+        </div>
+    </div>
+    <div class="footer">
+        <div class="container">
+            <div class="clearfix friends-top"><script language="javascript" src="/system/resource/js/openlink.js"></script><div class="pull-left frients-tt">校内链接</div>
+                <ul class="friends-list clearfix pull-left">
+              
+<li><a href="javascript:" target="" title="网站建设中">川藏铁路研究院</a></li>
+              
+<li><a href="javascript:" target="" title="网站建设中">先进技术与装备研究院</a></li>
+              
+<li><a href="https://ott.swjtu.edu.cn/" target="" title="网站建设中">技术转移研究院</a></li>
+              
+<li><a href="https://ifst.swjtu.edu.cn/" target="target=_blank" title="">前沿科学研究院</a></li>
+              
+<li><a href="https://ift.swjtu.edu.cn/" target="target=_blank" title="未来技术研究院">未来技术研究院</a></li>
+              
+<li><a href="javascript:" target="" title="网站建设中">城市轨道交通研究院</a></li>
+                </ul>  </div>
+            <div class="clearfix friends-top">                <div class="pull-left frients-tt">校外链接</div>
+                <ul class="friends-list clearfix pull-left">
+                    <li><a href="http://www.moe.gov.cn/s78/A16/" target="_blank">中华人民共和国教育部</a></li>
+                    <li><a href="http://www.nsfc.gov.cn" target="_blank">国家自然科学基金委员会</a></li>
+                    <li><a href="http://www.most.gov.cn" target="_blank">中华人民共和国科学技术部</a></li>
+                    <li><a href="http://kjt.sc.gov.cn/" target="_blank">四川省科学技术厅</a></li>
+                    <li><a href="http://cdst.chengdu.gov.cn/" target="_blank">成都市科学技术局</a></li>
+                </ul>                
+</div>
+            
+            <div class="footer-p">
+                <div class="pull-left logo">                       
+                     <img src="images/swjtu.png" border="0">                     
+                </div>                 
+                <div class="pull-right">                                 
+                    <p>Copyright© 2021 西南交通大学科学技术发展研究院. All rights reserved.</p>
+                    <p>地址：中国四川省成都市郫都区犀安路999号<span>邮编：611756</span> </p>
+                    <p>Tel：028-66366272<span>  网站访问量：    <img src="/system/_component/jsq/counter.jsp?wbtreeid=1001&owner=1611485322&len=8&style=15&basenum=1800&countertype=TOTAL_COUNTER">
+</span></p>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</body>
+
+
+<script src="js/jquery.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/slick.js"></script>
+<script src="js/common.js"></script>
+<script src="js/wow.min.js"></script>
+<!-- Swiper JS -->
+<script src="js/swiper.min.js"></script>
+<script src="js/swiper.animate1.0.3.min.js"></script>
+<script>
+    if (!(/msie [6|7|8|9]/i.test(navigator.userAgent))){
+      new WOW().init();
+    };
+    $('.banner').slick({
+        infinite: true,
+        slidesToShow: 1,
+        slidesToScroll: 1,
+        autoplay: true,
+        centerMode: false,
+        arrows:true,
+        dots:true
+    });
+
+    function clock()
+    {
+        if($('#k1148').hasClass('active')){
+            $('#k1149').children().tab('show');
+        }else{
+            if($('#k1149').hasClass('active')){
+                $('#k1199').children().tab('show');
+            }else{
+                if($('#k1199').hasClass('active')){
+                    $('#k1148').children().tab('show');
+                }
+           }
+        }
+    }
+
+    $(function(){
+        $('#myTab a').hover(function(){
+            $(this).tab('show');
+        });
+
+        var timer=null;
+        $('#myNews').mouseover(function(){
+            timer=window.clearInterval(timer)
+        });
+        $('#myNews').mouseout(function(){
+            timer=self.setInterval("clock()",8000);
+        });
+
+        timer=self.setInterval("clock()",8000);
+    })
+
+</script>
+<!-- Initialize Swiper -->
+<script>
+    var swiper = new Swiper('.swiper-container', {
+        spaceBetween: 0,
+        autoplay:true,
+        autoplay: {
+            delay: 8000, // 8秒切换一次
+            // stopOnLastSlide: true,
+            // disableOnInteraction: true,
+        },
+        //loop : true,
+        pagination: {
+            el: '.swiper-pagination',
+            clickable: true,
+        }
+    });
+</script>                   
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

@@ -184,6 +184,84 @@ func TestXczxParse(t *testing.T) {
 	}
 }
 
+// TestEseParse tests parsing of 环境学院 (dedicated parser)
+func TestEseParse(t *testing.T) {
+	html := loadTestHTML("ese.html")
+	if html == nil {
+		t.Skip("testdata/ese.html not found")
+	}
+	items, err := parseEseNews(html, "https://ese.swjtu.edu.cn")
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	if len(items) == 0 {
+		t.Fatal("expected items, got 0")
+	}
+	n := len(items)
+	if n > 5 {
+		n = 5
+	}
+	for i, item := range items[:n] {
+		t.Logf("[%d] %s | %s | %s", i+1, item.Date, item.Title, item.URL)
+	}
+	// Check dates are extracted
+	hasDate := false
+	for _, item := range items {
+		if item.Date != "" {
+			hasDate = true
+		}
+		// Check no date in title
+		if hasDatePrefix(item.Title) {
+			t.Errorf("date prefix in title: %s", item.Title)
+		}
+		// Check no full article content in title
+		if len(item.Title) > 100 {
+			t.Errorf("title too long (full article?): %s...", item.Title[:80])
+		}
+	}
+	if !hasDate {
+		t.Error("no dates extracted from ese")
+	}
+}
+
+// TestSportsParse tests parsing of 体育学院 (dedicated parser)
+func TestSportsParse(t *testing.T) {
+	html := loadTestHTML("sports.html")
+	if html == nil {
+		t.Skip("testdata/sports.html not found")
+	}
+	items, err := parseSportsNews(html, "http://sports.swjtu.edu.cn")
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	if len(items) == 0 {
+		t.Fatal("expected items, got 0")
+	}
+	n := len(items)
+	if n > 5 {
+		n = 5
+	}
+	for i, item := range items[:n] {
+		t.Logf("[%d] %s | %s | %s", i+1, item.Date, item.Title, item.URL)
+	}
+	// Check no banner content
+	for i, item := range items {
+		if containsAny(item.Title, "习近平给四所交通大学全体师生") {
+			t.Errorf("item %d: banner content: %s", i+1, item.Title)
+		}
+	}
+	// Check dates are extracted
+	hasDate := false
+	for _, item := range items {
+		if item.Date != "" {
+			hasDate = true
+		}
+	}
+	if !hasDate {
+		t.Error("no dates extracted from sports")
+	}
+}
+
 func containsAny(s string, subs ...string) bool {
 	for _, sub := range subs {
 		if len(s) >= len(sub) {
