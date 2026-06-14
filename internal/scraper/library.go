@@ -234,7 +234,9 @@ func PrintSearchResults(results []SearchResult, total int, keyword string) {
 			fmt.Printf("      收录: %s\n", r.CoreMark)
 		}
 	}
-	fmt.Printf("\n共 %d 条结果 (关键词: %s)\n", total, keyword)
+	totalPages := (total + 19) / 20
+	fmt.Printf("\n共 %d 条结果, 约 %d 页 (关键词: %s)\n", total, totalPages, keyword)
+	fmt.Println("  用 --page N 查看第N页")
 }
 
 func PrintLibDatabases(items []LibDatabase) {

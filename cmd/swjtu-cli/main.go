@@ -604,8 +604,15 @@ func cmdLib() {
 			os.Exit(1)
 		}
 		keyword := os.Args[3]
-		fmt.Printf("🔍 统一检索: %s\n\n", keyword)
-		results, total, err := client.Search(keyword, 1, 20)
+		page := 1
+		// Parse --page flag
+		for i := 4; i < len(os.Args)-1; i++ {
+			if os.Args[i] == "--page" {
+				fmt.Sscanf(os.Args[i+1], "%d", &page)
+			}
+		}
+		fmt.Printf("🔍 统一检索: %s (第%d页)\n\n", keyword, page)
+		results, total, err := client.Search(keyword, page, 20)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "❌ 检索失败: %v\n", err)
 			os.Exit(1)
@@ -618,8 +625,14 @@ func cmdLib() {
 			os.Exit(1)
 		}
 		keyword := os.Args[3]
-		fmt.Printf("📖 馆藏图书检索: %s\n\n", keyword)
-		results, total, err := client.Search(keyword, 1, 20)
+		page := 1
+		for i := 4; i < len(os.Args)-1; i++ {
+			if os.Args[i] == "--page" {
+				fmt.Sscanf(os.Args[i+1], "%d", &page)
+			}
+		}
+		fmt.Printf("📖 馆藏图书检索: %s (第%d页)\n\n", keyword, page)
+		results, total, err := client.Search(keyword, page, 20)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "❌ 检索失败: %v\n", err)
 			os.Exit(1)
@@ -632,8 +645,14 @@ func cmdLib() {
 			os.Exit(1)
 		}
 		keyword := os.Args[3]
-		fmt.Printf("📰 期刊论文检索: %s\n\n", keyword)
-		results, total, err := client.Search(keyword, 1, 20)
+		page := 1
+		for i := 4; i < len(os.Args)-1; i++ {
+			if os.Args[i] == "--page" {
+				fmt.Sscanf(os.Args[i+1], "%d", &page)
+			}
+		}
+		fmt.Printf("📰 期刊论文检索: %s (第%d页)\n\n", keyword, page)
+		results, total, err := client.Search(keyword, page, 20)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "❌ 检索失败: %v\n", err)
 			os.Exit(1)
