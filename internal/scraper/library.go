@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
@@ -110,6 +111,8 @@ func (c *LibClient) get(path string, params map[string]string) ([]byte, error) {
 
 // --- Academic Search ---
 
+const searchBoxConfigureId = "15164479-81e6-40d1-9cc5-17fefa3905ae"
+
 type SearchResult struct {
 	Title      string   `json:"title"`
 	Authors    string   `json:"author"`
@@ -130,9 +133,20 @@ type SearchResult struct {
 	CoverPath  string   `json:"cover_path"`
 }
 
-const searchBoxConfigureId = "15164479-81e6-40d1-9cc5-17fefa3905ae"
+// SearchType constants
+const (
+	SearchFullText = "U" // 全字段
+	SearchTitle    = "T" // 题名
+	SearchKeywords = "K" // 关键词
+	SearchAuthor   = "A" // 作者
+	SearchAbstract = "S" // 摘要
+	SearchJournal  = "P" // 刊名
+)
 
-func (c *LibClient) Search(keyword string, page, size int) ([]SearchResult, int, error) {
+func (c *LibClient) Search(keyword, field string, page, size int) ([]SearchResult, int, error) {
+	if field == "" {
+		field = SearchFullText
+	}
 	if page < 1 {
 		page = 1
 	}
@@ -140,14 +154,22 @@ func (c *LibClient) Search(keyword string, page, size int) ([]SearchResult, int,
 		size = 10
 	}
 
+	// Generate a random variable name for the rule expression
+	varName := fmt.Sprintf("@%s_%d_0_f", field, rand.Intn(999999))
+
 	body := map[string]interface{}{
-		"pageIndex":              page,
-		"pageSize":               size,
-		"keywords":               keyword,
-		"searchBoxConfigureId":   searchBoxConfigureId,
-		"rule":                   map[string]interface{}{"ruleBody": "", "ruleParameters": []interface{}{}},
-		"filterRule":             map[string]interface{}{"ruleBody": "", "ruleParameters": []interface{}{}},
-		"requestAggsType":        1,
+		"pageIndex":            page,
+		"pageSize":             size,
+		"keywords":             "", // Must be empty; filtering is done via rule
+		"searchBoxConfigureId": searchBoxConfigureId,
+		"rule": map[string]interface{}{
+			"ruleBody": fmt.Sprintf("%s=%s", field, varName),
+			"ruleParameters": []map[string]string{
+				{"key": varName, "value": keyword},
+			},
+		},
+		"filterRule":      map[string]interface{}{"ruleBody": "", "ruleParameters": []interface{}{}},
+		"requestAggsType": 1,
 	}
 
 	data, err := c.post("/articlesearch/api/search/asset-search@4", body)
