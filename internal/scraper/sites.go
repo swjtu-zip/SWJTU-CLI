@@ -18,7 +18,7 @@ var AllSites = map[string]*BodaSite{
 	"sme":     {Name: "机械工程学院", BaseURL: "http://sme.swjtu.edu.cn", Category: "college", SubPages: []string{"xwtz/xyxw", "xwtz/xshd", "xsgz/tzgg", "kxyj/tzgg"}},
 	"dqxy":    {Name: "电气工程学院", BaseURL: "http://dqxy.swjtu.edu.cn", Category: "college", SubPages: []string{"xwdt/qb", "xsgz_more/tzgg"}},
 	"sist":    {Name: "信息科学与技术学院", BaseURL: "http://sist.swjtu.edu.cn", Category: "college"},
-	"scai":    {Name: "计算机与人工智能学院", BaseURL: "https://scai.swjtu.edu.cn", Category: "college"},
+	"scai":    {Name: "计算机与人工智能学院", BaseURL: "https://scai.swjtu.edu.cn", Category: "college", ParseFunc: parseScaiNews},
 	"sic":     {Name: "集成电路科学与工程学院", BaseURL: "https://sic.swjtu.edu.cn", Category: "college"},
 	"glxy":    {Name: "经济管理学院", BaseURL: "http://glxy.swjtu.edu.cn", Category: "college", SubPages: []string{"xwtz/xyxw", "xwtz/tzgg", "xwtz/xsdt", "xwtz/tzgg/dzbg", "xwtz/tzgg/bks", "xwtz/tzgg/yjs", "xwtz/tzgg/xsgz", "xwtz/tzgg/kygz"}},
 	"sfl":     {Name: "外国语学院", BaseURL: "http://sfl.swjtu.edu.cn", Category: "college"},
@@ -42,7 +42,7 @@ var AllSites = map[string]*BodaSite{
 	"leeds":   {Name: "利兹学院", BaseURL: "http://leeds.swjtu.edu.cn", Category: "college"},
 	"mys":     {Name: "茅以升学院", BaseURL: "http://mys.swjtu.edu.cn", Category: "college"},
 	"iscit":   {Name: "智慧城市与交通学院", BaseURL: "https://iscit.swjtu.edu.cn", Category: "college"},
-	"ees":     {Name: "国家卓越工程师学院", BaseURL: "https://ees.swjtu.edu.cn", Category: "college"},
+	"ees":     {Name: "国家卓越工程师学院", BaseURL: "https://ees.swjtu.edu.cn", Category: "college", ParseFunc: parseEesNews},
 	"rvl":     {Name: "轨道交通运载系统全国重点实验室", BaseURL: "http://rvl.swjtu.edu.cn", Category: "college"},
 	"ai":      {Name: "人工智能研究院", BaseURL: "https://ai.swjtu.edu.cn", Category: "college"},
 

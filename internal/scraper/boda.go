@@ -245,7 +245,7 @@ func (s *BodaSite) GetArticle(articleURL string) (*model.Article, error) {
 // navSelectors are CSS selectors for non-content areas to exclude.
 var navSelectors = []string{
 	"header", "nav", "footer", ".header", ".nav", ".footer",
-	".menu", ".top", ".link", ".share", ".search", ".crumbs",
+	".menu", ".top", ".share", ".search", ".crumbs",
 	".swiper", ".slider", ".gotop", "script", "style",
 	".banner", ".slide", ".carousel", ".focus", ".hero",
 	".sidebar", ".side", ".widget", ".login", ".user-info",
@@ -322,12 +322,12 @@ func isValidNewsTitle(title string) bool {
 
 // isValidNewsURL filters out non-news URLs.
 func isValidNewsURL(href string) bool {
-	// Skip external domains
+	// Skip external domains (use :// prefix for domain boundary matching)
 	if strings.Contains(href, "mp.weixin.qq.com") ||
-		strings.Contains(href, "jiuye.swjtu.edu.cn") ||
-		strings.Contains(href, "cas.swjtu.edu.cn") ||
-		strings.Contains(href, "one.swjtu.edu.cn") ||
-		strings.Contains(href, "i.swjtu.edu.cn") {
+		strings.Contains(href, "://jiuye.swjtu.edu.cn") ||
+		strings.Contains(href, "://cas.swjtu.edu.cn") ||
+		strings.Contains(href, "://one.swjtu.edu.cn") ||
+		strings.Contains(href, "://i.swjtu.edu.cn") {
 		return false
 	}
 	// Skip OA login pages
