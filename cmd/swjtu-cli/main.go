@@ -604,21 +604,8 @@ func cmdLib() {
 			os.Exit(1)
 		}
 		keyword := os.Args[3]
-		searchType := scraper.SearchTypeFullText
-		if len(os.Args) > 4 {
-			switch os.Args[4] {
-			case "title":
-				searchType = scraper.SearchTypeTitle
-			case "author":
-				searchType = scraper.SearchTypeAuthor
-			case "keyword":
-				searchType = scraper.SearchTypeKeywords
-			case "journal":
-				searchType = scraper.SearchTypeJournal
-			}
-		}
 		fmt.Printf("🔍 统一检索: %s\n\n", keyword)
-		results, total, err := client.Search(keyword, searchType, 1, 20)
+		results, total, err := client.Search(keyword, 1, 20)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "❌ 检索失败: %v\n", err)
 			os.Exit(1)
@@ -632,8 +619,7 @@ func cmdLib() {
 		}
 		keyword := os.Args[3]
 		fmt.Printf("📖 馆藏图书检索: %s\n\n", keyword)
-		// Use title search with type=163161 for books
-		results, total, err := client.Search(keyword, scraper.SearchTypeTitle, 1, 20)
+		results, total, err := client.Search(keyword, 1, 20)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "❌ 检索失败: %v\n", err)
 			os.Exit(1)
@@ -647,7 +633,7 @@ func cmdLib() {
 		}
 		keyword := os.Args[3]
 		fmt.Printf("📰 期刊论文检索: %s\n\n", keyword)
-		results, total, err := client.Search(keyword, scraper.SearchTypeJournal, 1, 20)
+		results, total, err := client.Search(keyword, 1, 20)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "❌ 检索失败: %v\n", err)
 			os.Exit(1)

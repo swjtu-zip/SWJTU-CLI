@@ -26,7 +26,7 @@ type LibClient struct {
 
 func NewLibClient() *LibClient {
 	return &LibClient{
-		client: &http.Client{Timeout: 15 * time.Second},
+		client: &http.Client{Timeout: 30 * time.Second},
 	}
 }
 
@@ -108,32 +108,31 @@ func (c *LibClient) get(path string, params map[string]string) ([]byte, error) {
 	return data, nil
 }
 
-// --- Search ---
+// --- Academic Search ---
 
 type SearchResult struct {
-	Title   string `json:"title"`
-	Summary string `json:"summary"`
-	URL     string `json:"url"`
-	AppType string `json:"app_type"`
-	PubTime string `json:"pub_time"`
+	Title      string   `json:"title"`
+	Authors    string   `json:"author"`
+	Journal    string   `json:"journal_name"`
+	Year       int      `json:"pub_year"`
+	DOI        string   `json:"doi"`
+	Abstract   string   `json:"abstract"`
+	Keywords   string   `json:"keyword"`
+	Organ      string   `json:"organ"`
+	Publisher  string   `json:"publisher"`
+	ISSN       string   `json:"issn"`
+	CoreMark   string   `json:"journal_core_mark"`
+	DocType    int      `json:"doc_type"`
+	Language   string   `json:"language"`
+	IsOA       string   `json:"is_oa"`
+	CitedCnt   string   `json:"cited_cnt"`
+	SourceType string   `json:"srcdb_class_name"`
+	CoverPath  string   `json:"cover_path"`
 }
 
-// SearchType constants for the library search API
-const (
-	SearchTypeFullText    = 254    // 全字段
-	SearchTypeKeywords    = 155643 // 关键词
-	SearchTypeAbstract    = 153595 // 摘要
-	SearchTypeTitle       = 163161 // 题名
-	SearchTypeAuthor      = 20571  // 作者
-	SearchTypeJournal     = 72     // 刊名
-	SearchTypeISSN        = 12     // ISSN
-	SearchTypeISBN        = 2      // ISBN
-)
+const searchBoxConfigureId = "15164479-81e6-40d1-9cc5-17fefa3905ae"
 
-func (c *LibClient) Search(keyword string, searchType, page, size int) ([]SearchResult, int, error) {
-	if searchType == 0 {
-		searchType = SearchTypeFullText
-	}
+func (c *LibClient) Search(keyword string, page, size int) ([]SearchResult, int, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -142,13 +141,16 @@ func (c *LibClient) Search(keyword string, searchType, page, size int) ([]Search
 	}
 
 	body := map[string]interface{}{
-		"pageIndex": page,
-		"pageSize":  size,
-		"keyWord":   keyword,
-		"type":      searchType,
+		"pageIndex":              page,
+		"pageSize":               size,
+		"keywords":               keyword,
+		"searchBoxConfigureId":   searchBoxConfigureId,
+		"rule":                   map[string]interface{}{"ruleBody": "", "ruleParameters": []interface{}{}},
+		"filterRule":             map[string]interface{}{"ruleBody": "", "ruleParameters": []interface{}{}},
+		"requestAggsType":        1,
 	}
 
-	data, err := c.post("/articlesearch/api/search/match-component", body)
+	data, err := c.post("/articlesearch/api/search/asset-search@4", body)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -157,14 +159,8 @@ func (c *LibClient) Search(keyword string, searchType, page, size int) ([]Search
 		StatusCode int `json:"statusCode"`
 		Data       struct {
 			Hits struct {
-				Total  int `json:"total"`
-				Source []struct {
-					Title    string `json:"title"`
-					Summary  string `json:"summary"`
-					URL      string `json:"url"`
-					AppType  string `json:"app_type"`
-					PubTime  string `json:"pub_time"`
-				} `json:"source"`
+				Total  int              `json:"total"`
+				Source []json.RawMessage `json:"source"`
 			} `json:"hits"`
 		} `json:"data"`
 	}
@@ -176,14 +172,11 @@ func (c *LibClient) Search(keyword string, searchType, page, size int) ([]Search
 	}
 
 	var results []SearchResult
-	for _, hit := range resp.Data.Hits.Source {
-		results = append(results, SearchResult{
-			Title:   hit.Title,
-			Summary: hit.Summary,
-			URL:     hit.URL,
-			AppType: hit.AppType,
-			PubTime: hit.PubTime,
-		})
+	for _, raw := range resp.Data.Hits.Source {
+		var r SearchResult
+		if err := json.Unmarshal(raw, &r); err == nil && r.Title != "" {
+			results = append(results, r)
+		}
 	}
 	return results, resp.Data.Hits.Total, nil
 }
@@ -210,7 +203,13 @@ func (c *LibClient) GetDatabases() ([]LibDatabase, error) {
 	return resp.Data, nil
 }
 
-// --- Print helpers ---
+// LibNewsSite scrapes library news from the博达 CMS news page.
+var LibNewsSite = &BodaSite{
+	Name:    "图书馆",
+	BaseURL: "https://news.swjtu.edu.cn",
+}
+
+// Print helpers
 
 func PrintSearchResults(results []SearchResult, total int, keyword string) {
 	if len(results) == 0 {
@@ -218,16 +217,21 @@ func PrintSearchResults(results []SearchResult, total int, keyword string) {
 		return
 	}
 	for i, r := range results {
-		fmt.Printf("  %2d. %s\n", i+1, r.Title)
-		if r.Summary != "" {
-			s := r.Summary
-			if len(s) > 100 {
-				s = s[:100] + "..."
-			}
-			fmt.Printf("      %s\n", s)
+		authors := r.Authors
+		if len(authors) > 50 {
+			authors = authors[:50] + "..."
 		}
-		if r.URL != "" {
-			fmt.Printf("      %s\n", r.URL)
+		journal := r.Journal
+		if journal == "" {
+			journal = "未知期刊"
+		}
+		fmt.Printf("  %2d. %s\n", i+1, r.Title)
+		fmt.Printf("      %s | %s %d\n", authors, journal, r.Year)
+		if r.DOI != "" {
+			fmt.Printf("      DOI: %s\n", r.DOI)
+		}
+		if r.CoreMark != "" {
+			fmt.Printf("      收录: %s\n", r.CoreMark)
 		}
 	}
 	fmt.Printf("\n共 %d 条结果 (关键词: %s)\n", total, keyword)
@@ -242,12 +246,6 @@ func PrintLibDatabases(items []LibDatabase) {
 		fmt.Printf("  %2d. %-12s %s\n", i+1, item.EnglishAbbr, item.Name)
 	}
 	fmt.Printf("\n共 %d 个数据库\n", len(items))
-}
-
-// LibNewsSite scrapes library news from the博达 CMS news page.
-var LibNewsSite = &BodaSite{
-	Name:    "图书馆",
-	BaseURL: "https://news.swjtu.edu.cn",
 }
 
 func PrintLibNews(items []model.NewsItem) {
