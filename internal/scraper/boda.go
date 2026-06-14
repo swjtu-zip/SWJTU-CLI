@@ -222,20 +222,28 @@ var navSelectors = []string{
 
 // cleanTitle removes date prefixes and other noise from titles.
 func cleanTitle(title string) string {
+	// Collapse newlines and excessive whitespace into single space
+	title = strings.Join(strings.Fields(title), " ")
 	// Remove date prefixes like "07/16", "2025-08-12", "06-01", "01 2026.06"
 	datePrefixes := []string{
-		`^\d{2}/\d{2}`,     // 07/16
-		`^\d{4}-\d{2}-\d{2}`, // 2025-08-12
-		`^\d{2}-\d{2}`,     // 06-01
+		`^\d{2}/\d{2}`,          // 07/16
+		`^\d{4}-\d{2}-\d{2}`,    // 2025-08-12
 		`^\d{2}\s+\d{4}\.\d{2}`, // 01 2026.06
 	}
 	for _, pattern := range datePrefixes {
 		re := regexp.MustCompile(pattern)
 		title = re.ReplaceAllString(title, "")
 	}
-	// Remove trailing date patterns
-	trailingDate := regexp.MustCompile(`\s*\d{4}[-/年.]\d{1,2}[-/月.]\d{1,2}[日]?\s*$`)
-	title = trailingDate.ReplaceAllString(title, "")
+	// Remove trailing date patterns (full and short)
+	trailingDates := []string{
+		`\s*\d{4}[-/年.]\d{1,2}[-/月.]\d{1,2}[日]?\s*$`, // 2025-08-12
+		`\s+\d{1,2}-\d{1,2}\s*$`,                          // 01-08
+		`\s+\d{1,2}/\d{1,2}\s*$`,                          // 01/08
+	}
+	for _, pattern := range trailingDates {
+		re := regexp.MustCompile(pattern)
+		title = re.ReplaceAllString(title, "")
+	}
 	// Remove ">>" suffix
 	title = strings.TrimSuffix(title, ">>")
 	// Clean up whitespace
