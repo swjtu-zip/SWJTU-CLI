@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -11,6 +12,30 @@ func loadTestHTML(filename string) []byte {
 		return nil
 	}
 	return data
+}
+
+func TestArticleParserKeepsArchiveHTMLAndResolvesResources(t *testing.T) {
+	html := []byte(`<html><body>
+<h1 class="news_tit">测试文章</h1>
+<div class="news_source"><span class="date">2026-08-31</span></div>
+<div class="v_news_content"><p>正文内容</p><img src="/images/photo.jpg"><a href="/upload/file.pdf">附件</a></div>
+</body></html>`)
+	article, err := parseBodaArticle(html, "https://news.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Content != "正文内容" {
+		t.Fatalf("unexpected text content: %q", article.Content)
+	}
+	if len(article.Images) != 1 || article.Images[0] != "https://news.swjtu.edu.cn/images/photo.jpg" {
+		t.Fatalf("unexpected images: %#v", article.Images)
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].URL != "https://news.swjtu.edu.cn/upload/file.pdf" {
+		t.Fatalf("unexpected attachments: %#v", article.Attachments)
+	}
+	if !strings.Contains(article.ContentHTML, `src="https://news.swjtu.edu.cn/images/photo.jpg"`) || !strings.Contains(article.ContentHTML, `href="https://news.swjtu.edu.cn/upload/file.pdf"`) {
+		t.Fatalf("archive HTML did not retain resolved resources: %s", article.ContentHTML)
+	}
 }
 
 // TestJdywParse tests parsing of 交大要闻

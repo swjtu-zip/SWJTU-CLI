@@ -49,23 +49,18 @@ func fillMissingDates(items []model.NewsItem) {
 // ListNewsPage fetches a specific page of news.
 // page 1 = first page (slug.htm), page 2+ = slug/{total-page+2-page}.htm
 func (s *BodaSite) ListNewsPage(slug string, page int) ([]model.NewsItem, error) {
-	var listURL string
-	if page <= 1 {
-		listURL = fmt.Sprintf("%s/%s.htm", s.BaseURL, slug)
-	} else {
-		// Need to discover total pages first for page 2+
-		// For now, try the direct page number format
-		listURL = fmt.Sprintf("%s/%s/%d.htm", s.BaseURL, slug, page)
+	totalPages := 0
+	if page > 1 && s.PageURL != nil {
+		// Some static sites number generated files from newest to oldest.
+		// Let the site's URL function map the user-facing page number.
+		totalPages, _ = s.GetTotalPages(slug)
 	}
+	listURL := s.listPageURL(slug, page, totalPages, ".htm")
 
 	body, err := fetch(listURL)
 	if err != nil {
 		// Try .html extension
-		if page <= 1 {
-			listURL = fmt.Sprintf("%s/%s.html", s.BaseURL, slug)
-		} else {
-			listURL = fmt.Sprintf("%s/%s/%d.html", s.BaseURL, slug, page)
-		}
+		listURL = s.listPageURL(slug, page, totalPages, ".html")
 		body, err = fetch(listURL)
 		if err != nil {
 			return nil, fmt.Errorf("tried .htm and .html: %w", err)
@@ -79,16 +74,26 @@ func (s *BodaSite) ListNewsPage(slug string, page int) ([]model.NewsItem, error)
 
 // GetTotalPages extracts total page count from a list page.
 func (s *BodaSite) GetTotalPages(slug string) (int, error) {
-	listURL := fmt.Sprintf("%s/%s.htm", s.BaseURL, slug)
+	listURL := s.listPageURL(slug, 1, 0, ".htm")
 	body, err := fetch(listURL)
 	if err != nil {
-		listURL = fmt.Sprintf("%s/%s.html", s.BaseURL, slug)
+		listURL = s.listPageURL(slug, 1, 0, ".html")
 		body, err = fetch(listURL)
 		if err != nil {
 			return 0, err
 		}
 	}
 	return parseTotalPages(body), nil
+}
+
+func (s *BodaSite) listPageURL(slug string, page, totalPages int, extension string) string {
+	if s.PageURL != nil {
+		return s.PageURL(s.BaseURL, slug, page, totalPages, extension)
+	}
+	if page <= 1 {
+		return fmt.Sprintf("%s/%s%s", s.BaseURL, slug, extension)
+	}
+	return fmt.Sprintf("%s/%s/%d%s", s.BaseURL, slug, page, extension)
 }
 
 // ListNewsRange fetches news from a date range by paginating.
@@ -129,10 +134,16 @@ func (s *BodaSite) ListNewsRange(slug string, from, to string, maxPages int) ([]
 	if len(items) > 0 {
 		lastDate := parseDate(items[len(items)-1].Date)
 		if lastDate.IsZero() || !lastDate.Before(fromTime) {
-			// Need more pages - fetch in descending page order
-			// Page 2 = totalPages, page 3 = totalPages-1, etc.
+			// Need more pages. The legacy default URL scheme fetches generated
+			// files from oldest to newest; custom URL functions use logical page
+			// numbers and decide the file order themselves.
 			for p := 2; p <= totalPages; p++ {
 				realPage := totalPages + 2 - p
+				if s.PageURL != nil {
+					// A custom URL function receives user-facing page numbers;
+					// it handles any reverse numbering internally.
+					realPage = p
+				}
 				pageItems, err := s.ListNewsPage(slug, realPage)
 				if err != nil || len(pageItems) == 0 {
 					break
@@ -145,7 +156,7 @@ func (s *BodaSite) ListNewsRange(slug string, from, to string, maxPages int) ([]
 						shouldStop = true
 						break
 					}
-					if !t.IsZero() && t.After(toTime.Add(24 * time.Hour)) {
+					if !t.IsZero() && t.After(toTime.Add(24*time.Hour)) {
 						continue
 					}
 					if !seen[item.URL] {
@@ -235,11 +246,24 @@ func parseTotalPages(html []byte) int {
 
 // GetArticle fetches a single article page and parses its content.
 func (s *BodaSite) GetArticle(articleURL string) (*model.Article, error) {
+	art, _, err := s.GetArticleSnapshot(articleURL)
+	return art, err
+}
+
+// GetArticleSnapshot fetches and parses an article while retaining the
+// original response body. The snapshot is used by archival clients that need
+// to preserve both the source page and the normalized article fields.
+func (s *BodaSite) GetArticleSnapshot(articleURL string) (*model.Article, []byte, error) {
 	body, err := fetch(articleURL)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return parseBodaArticle(body, s.BaseURL)
+	art, err := parseBodaArticle(body, s.BaseURL)
+	if err != nil {
+		return nil, nil, err
+	}
+	art.RawHTML = string(body)
+	return art, body, nil
 }
 
 // navSelectors are CSS selectors for non-content areas to exclude.
@@ -268,8 +292,8 @@ func cleanTitle(title string) string {
 	// Remove trailing date patterns (full and short)
 	trailingDates := []string{
 		`\s*\d{4}[-/年.]\d{1,2}[-/月.]\d{1,2}[日]?\s*$`, // 2025-08-12
-		`\s+\d{1,2}-\d{1,2}\s*$`,                          // 01-08
-		`\s+\d{1,2}/\d{1,2}\s*$`,                          // 01/08
+		`\s+\d{1,2}-\d{1,2}\s*$`,                     // 01-08
+		`\s+\d{1,2}/\d{1,2}\s*$`,                     // 01/08
 	}
 	for _, pattern := range trailingDates {
 		re := regexp.MustCompile(pattern)
@@ -304,7 +328,9 @@ func isValidNewsTitle(title string) bool {
 		"习近平总书记给四所交通大学全体师生",
 	}
 	for _, s := range skip {
-		if title == s || strings.Contains(title, s) {
+		// These are navigation labels. Matching the whole title avoids
+		// discarding legitimate notices such as "本科生转专业...".
+		if title == s {
 			return false
 		}
 	}
@@ -436,80 +462,80 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 				href, _ = a.Attr("href")
 			}
 			// Try title from attribute first, then specific class, then link text
-		title := strings.TrimSpace(a.AttrOr("title", ""))
-		if title == "" {
-			// Clone the selection and remove known non-title elements before extracting text
-			titleSel := sel.Find(".xw-ul-tt, .line1, .txts, .a_block, .news-title, h3, h4, .info, p.line2").First()
-			if titleSel.Length() > 0 {
-				// Remove category labels and other noise
-				titleSel.Find(".lanmu, .source, .date, .time").Remove()
-				title = strings.TrimSpace(titleSel.Text())
-			}
-		}
-		// Try <p> tag inside <a> (ese.swjtu.edu.cn pattern)
-		if title == "" {
-			pTag := a.Find("p").First()
-			if pTag.Length() > 0 {
-				title = strings.TrimSpace(pTag.Text())
-			}
-		}
-		if title == "" {
-			title = strings.TrimSpace(a.Text())
-			if len(title) > 100 {
-				title = strings.TrimSpace(sel.Find(".xw-ul-tt, .line1, .txts, .a_block").Text())
-			}
-		}
-		// If still empty, try img title/alt attribute
-		if title == "" {
-			img := a.Find("img").First()
-			if img.Length() > 0 {
-				title = strings.TrimSpace(img.AttrOr("title", ""))
-				if title == "" {
-					title = strings.TrimSpace(img.AttrOr("alt", ""))
+			title := strings.TrimSpace(a.AttrOr("title", ""))
+			if title == "" {
+				// Clone the selection and remove known non-title elements before extracting text
+				titleSel := sel.Find(".xw-ul-tt, .line1, .txts, .a_block, .news-title, h3, h4, .info, p.line2").First()
+				if titleSel.Length() > 0 {
+					// Remove category labels and other noise
+					titleSel.Find(".lanmu, .source, .date, .time").Remove()
+					title = strings.TrimSpace(titleSel.Text())
 				}
 			}
-		}
-		// Clean title: remove date prefixes and other noise
-		title = cleanTitle(title)
-		if title == "" || href == "" || !isValidNewsTitle(title) {
-			return
-		}
-		if len(title) > 100 || strings.Contains(title, "来源") {
-			return
-		}
-		// Try multiple date selectors
-		date := ""
-		dateSelectors := []string{".time", ".time span", "span.time", "em", ".date", ".xw-ul-date font", ".xw-ul-date span", ".calendar .date", ".date-label", ".time-box", "time"}
-		for _, dateSel := range dateSelectors {
-			date = strings.TrimSpace(sel.Find(dateSel).Text())
-			if date != "" {
-				break
-			}
-		}
-		// Try <time> sibling (sports.swjtu.edu.cn pattern)
-		if date == "" {
-			parent := sel.Parent()
-			if parent.Length() > 0 {
-				date = strings.TrimSpace(parent.Find("time").Text())
-			}
-		}
-		// Special handling for ese date format: <div class="s2-date"><b>06-09</b><span>/ 2026</span></div>
-		if date == "" {
-			s2date := a.Find(".s2-date, .s3-date, .s1-date")
-			if s2date.Length() > 0 {
-				day := strings.TrimSpace(s2date.Find("b").Text())
-				year := strings.TrimSpace(s2date.Find("span").Text())
-				year = strings.TrimPrefix(year, "/")
-				year = strings.TrimSpace(year)
-				if day != "" && year != "" {
-					date = year + "-" + day
+			// Try <p> tag inside <a> (ese.swjtu.edu.cn pattern)
+			if title == "" {
+				pTag := a.Find("p").First()
+				if pTag.Length() > 0 {
+					title = strings.TrimSpace(pTag.Text())
 				}
 			}
-		}
-		// Special handling for ctt date format: <div class="news-time"><div class="day">24</div><div class="month">2025.11</div></div>
-		if date == "" {
-			day := strings.TrimSpace(sel.Find(".news-time .day, .xw-ul-date span").Text())
-			ym := strings.TrimSpace(sel.Find(".news-time .month, .xw-ul-date font").Text())
+			if title == "" {
+				title = strings.TrimSpace(a.Text())
+				if len(title) > 100 {
+					title = strings.TrimSpace(sel.Find(".xw-ul-tt, .line1, .txts, .a_block").Text())
+				}
+			}
+			// If still empty, try img title/alt attribute
+			if title == "" {
+				img := a.Find("img").First()
+				if img.Length() > 0 {
+					title = strings.TrimSpace(img.AttrOr("title", ""))
+					if title == "" {
+						title = strings.TrimSpace(img.AttrOr("alt", ""))
+					}
+				}
+			}
+			// Clean title: remove date prefixes and other noise
+			title = cleanTitle(title)
+			if title == "" || href == "" || !isValidNewsTitle(title) {
+				return
+			}
+			if len(title) > 100 || strings.Contains(title, "来源") {
+				return
+			}
+			// Try multiple date selectors
+			date := ""
+			dateSelectors := []string{".time", ".time span", "span.time", "em", ".date", ".xw-ul-date font", ".xw-ul-date span", ".calendar .date", ".date-label", ".time-box", "time"}
+			for _, dateSel := range dateSelectors {
+				date = strings.TrimSpace(sel.Find(dateSel).Text())
+				if date != "" {
+					break
+				}
+			}
+			// Try <time> sibling (sports.swjtu.edu.cn pattern)
+			if date == "" {
+				parent := sel.Parent()
+				if parent.Length() > 0 {
+					date = strings.TrimSpace(parent.Find("time").Text())
+				}
+			}
+			// Special handling for ese date format: <div class="s2-date"><b>06-09</b><span>/ 2026</span></div>
+			if date == "" {
+				s2date := a.Find(".s2-date, .s3-date, .s1-date")
+				if s2date.Length() > 0 {
+					day := strings.TrimSpace(s2date.Find("b").Text())
+					year := strings.TrimSpace(s2date.Find("span").Text())
+					year = strings.TrimPrefix(year, "/")
+					year = strings.TrimSpace(year)
+					if day != "" && year != "" {
+						date = year + "-" + day
+					}
+				}
+			}
+			// Special handling for ctt date format: <div class="news-time"><div class="day">24</div><div class="month">2025.11</div></div>
+			if date == "" {
+				day := strings.TrimSpace(sel.Find(".news-time .day, .xw-ul-date span").Text())
+				ym := strings.TrimSpace(sel.Find(".news-time .month, .xw-ul-date font").Text())
 				if day != "" && ym != "" {
 					date = ym + "/" + day
 				}
@@ -696,6 +722,9 @@ func parseBodaArticle(html []byte, baseURL string) (*model.Article, error) {
 
 	art.Title = strings.TrimSpace(doc.Find("h1.news_tit").Text())
 	if art.Title == "" {
+		art.Title = strings.TrimSpace(doc.Find(".news-title").First().Text())
+	}
+	if art.Title == "" {
 		art.Title = strings.TrimSpace(doc.Find("h1").First().Text())
 	}
 
@@ -731,6 +760,21 @@ func parseBodaArticle(html []byte, baseURL string) (*model.Article, error) {
 		}
 	}
 
+	// bksy.swjtu.edu.cn uses .tips instead of the older .news_source block.
+	if tips := doc.Find(".tips"); tips.Length() > 0 {
+		if art.Date == "" {
+			dateText := strings.TrimSpace(tips.Find(".left-details").First().Text())
+			if match := regexp.MustCompile(`\d{4}[-/.]\d{1,2}[-/.]\d{1,2}`).FindString(dateText); match != "" {
+				art.Date = strings.ReplaceAll(strings.ReplaceAll(match, "/", "-"), ".", "-")
+			}
+		}
+		if art.Source == "" {
+			source := strings.TrimSpace(tips.Find(".middle2").First().Text())
+			source = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(source, "来源："), "来源:"))
+			art.Source = source
+		}
+	}
+
 	// Content body
 	contentSel := doc.Find("#vsb_content_501 .v_news_content")
 	if contentSel.Length() == 0 {
@@ -741,7 +785,7 @@ func parseBodaArticle(html []byte, baseURL string) (*model.Article, error) {
 	}
 	if contentSel.Length() > 0 {
 		var parts []string
-		contentSel.Find("p").Each(func(i int, sel *goquery.Selection) {
+		contentSel.Find("p, h1, h2, h3, h4").Each(func(i int, sel *goquery.Selection) {
 			text := strings.TrimSpace(sel.Text())
 			if text != "" {
 				parts = append(parts, text)
@@ -752,7 +796,9 @@ func parseBodaArticle(html []byte, baseURL string) (*model.Article, error) {
 		contentSel.Find("img").Each(func(i int, sel *goquery.Selection) {
 			src, _ := sel.Attr("src")
 			if src != "" {
-				art.Images = append(art.Images, resolveURL(baseURL, src))
+				resolved := resolveURL(baseURL, src)
+				art.Images = append(art.Images, resolved)
+				sel.SetAttr("src", resolved)
 			}
 		})
 
@@ -804,13 +850,42 @@ func parseBodaArticle(html []byte, baseURL string) (*model.Article, error) {
 			}
 
 			if isAttach && attName != "" {
+				resolved := resolveURL(baseURL, href)
 				art.Attachments = append(art.Attachments, model.Attachment{
 					Name: attName,
-					URL:  resolveURL(baseURL, href),
+					URL:  resolved,
 				})
+				sel.SetAttr("href", resolved)
 			}
 		})
+		if html, htmlErr := contentSel.Html(); htmlErr == nil {
+			art.ContentHTML = html
+		}
 	}
+
+	// Some Visual SiteBuilder templates render the attachment list next to,
+	// rather than inside, .v_news_content (bksy.swjtu.edu.cn is one example).
+	attachmentURLs := make(map[string]bool, len(art.Attachments))
+	for _, attachment := range art.Attachments {
+		attachmentURLs[attachment.URL] = true
+	}
+	doc.Find(".left-news-details li a[href]").Each(func(_ int, sel *goquery.Selection) {
+		parentText := strings.TrimSpace(sel.Parent().Text())
+		if !strings.Contains(parentText, "附件") {
+			return
+		}
+		href, _ := sel.Attr("href")
+		name := strings.TrimSpace(sel.Text())
+		if href == "" || name == "" {
+			return
+		}
+		resolved := resolveURL(baseURL, href)
+		if attachmentURLs[resolved] {
+			return
+		}
+		attachmentURLs[resolved] = true
+		art.Attachments = append(art.Attachments, model.Attachment{Name: name, URL: resolved})
+	})
 
 	authorBlock := doc.Find(".xxx")
 	if authorBlock.Length() > 0 {

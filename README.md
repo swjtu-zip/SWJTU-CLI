@@ -81,6 +81,18 @@ swjtu-cli download <文件URL>            # 下载单个文件
 swjtu-cli download-all <文章URL>        # 下载文章全部附件(Excel/Word/PDF/图片)
 ```
 
+### 统一登录与浏览器抓取
+
+对于需要统一身份认证、但没有开放 API 的业务系统，使用独立浏览器会话：
+
+```bash
+swjtu-cli auth login https://one.swjtu.edu.cn/       # 浏览器中手动完成登录
+swjtu-cli auth fetch https://one.swjtu.edu.cn/ --out page.html --wait 3
+swjtu-cli auth profile                               # 查看独立会话目录
+```
+
+程序会启动专用的 Chrome/Chromium profile。密码、验证码和二次验证均由用户在浏览器中完成，CLI 不读取日常浏览器 profile，也不保存原始密码。可通过 `SWJTU_CLI_BROWSER` 指定浏览器可执行文件。
+
 ### 站点管理
 
 ```bash
@@ -108,6 +120,7 @@ swjtu-cli test-all                      # 全量测试
 
 - Go (标准库)
 - goquery (HTML解析)
+- chromedp (独立 Chrome/Chromium 浏览器控制)
 - 博达 Visual SiteBuilder 9 CMS 适配（通用解析器 + 站点专属解析器）
 - 维普智图 API（图书馆学术检索）
 
@@ -117,6 +130,21 @@ swjtu-cli test-all                      # 全量测试
 go test ./internal/scraper/             # 运行解析器单元测试
 swjtu-cli test-all                      # 全量站点测试
 ```
+
+### Go SDK
+
+归档服务等 Go 程序可以直接使用 `pkg/sdk`，不需要解析 CLI 的终端输出：
+
+```go
+client := sdk.New(sdk.Options{})
+feeds := sdk.Feeds()
+items, _ := client.ListFeed(ctx, feeds[0], 1)
+article, raw, _ := client.FetchArticleSnapshot(ctx, items[0].URL)
+resource, _ := client.DownloadResource(ctx, article.Images[0])
+defer resource.Body.Close()
+```
+
+SDK 保留列表解析、文章正文 HTML、图片/附件 URL 和流式资源下载；现有命令行行为保持不变。
 
 单元测试使用 `testdata/` 下保存的HTML快照，不依赖网络。
 
@@ -143,6 +171,7 @@ swjtu-cli/
 │   │     ├── sports.go     # 体育学院专属解析器
 │   │     ├── sites.go      # 站点注册表（含ParseFunc字段）
 │   │     └── testdata/     # 单元测试HTML快照（46个站点）
+│   ├── browser/             # 独立浏览器会话与渲染页面抓取
 │   └── model/
 │       └── news.go         # 数据模型
 ├── go.mod

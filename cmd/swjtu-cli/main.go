@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -8,9 +9,11 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
+	"swjtu-cli/internal/browser"
 	"swjtu-cli/internal/model"
 	"swjtu-cli/internal/scraper"
 )
@@ -30,6 +33,8 @@ func main() {
 		cmdDownload()
 	case "download-all":
 		cmdDownloadAll()
+	case "auth":
+		cmdAuth()
 	case "lib":
 		cmdLib()
 	case "sites":
@@ -53,6 +58,10 @@ func printUsage() {
 	fmt.Println("  swjtu-cli read <url>                  阅读文章详情")
 	fmt.Println("  swjtu-cli download <url> [dir]        下载单个文件")
 	fmt.Println("  swjtu-cli download-all <url> [dir]    下载文章全部附件")
+	fmt.Println("  swjtu-cli auth login <url>             浏览器手动登录并保存会话")
+	fmt.Println("  swjtu-cli auth fetch <url> [--out f]   使用登录会话抓取页面")
+	fmt.Println("                                      可选 --wait 秒数等待 SPA 渲染")
+	fmt.Println("  swjtu-cli auth profile                 显示独立浏览器会话目录")
 	fmt.Println("  swjtu-cli sites [分类]                列出所有站点")
 	fmt.Println("  swjtu-cli test-all                    测试所有站点")
 	fmt.Println()
@@ -134,11 +143,11 @@ func cmdNews() {
 	// No args: aggregate all sites
 	if len(args) < 2 {
 		if from != "" || to != "" {
-			fmt.Println("📰 历史新闻聚合\n")
+			fmt.Println("📰 历史新闻聚合")
 			items, success, fail := scraper.AggregateNewsRange("", from, to, maxPages)
 			scraper.PrintAggResult(items, success, fail, true)
 		} else {
-			fmt.Println("📰 聚合所有站点新闻\n")
+			fmt.Println("📰 聚合所有站点新闻")
 			items, success, fail := scraper.AggregateNews("", 5)
 			scraper.PrintAggResult(items, success, fail, true)
 		}
@@ -336,6 +345,173 @@ func cmdDownloadAll() {
 	} else {
 		fmt.Printf("\n📊 下载完成: %d/%d\n", downloaded, total)
 	}
+}
+
+// cmdAuth controls the user-authorized browser session. The browser, rather
+// than this process, owns the authentication cookies.
+func cmdAuth() {
+	if len(os.Args) < 3 {
+		printAuthUsage()
+		os.Exit(1)
+	}
+
+	switch os.Args[2] {
+	case "login":
+		cmdAuthLogin()
+	case "fetch":
+		cmdAuthFetch()
+	case "profile":
+		profileDir, err := browser.DefaultProfileDir()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "❌ 获取会话目录失败: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println(profileDir)
+	default:
+		printAuthUsage()
+		os.Exit(1)
+	}
+}
+
+func printAuthUsage() {
+	fmt.Println("用法:")
+	fmt.Println("  swjtu-cli auth login <url>             打开独立浏览器并手动登录")
+	fmt.Println("  swjtu-cli auth fetch <url> [--out f]   使用已保存会话抓取渲染后的HTML")
+	fmt.Println("                                      可选 --wait 秒数等待SPA渲染")
+	fmt.Println("  swjtu-cli auth profile                 显示独立浏览器会话目录")
+	fmt.Println()
+	fmt.Println("环境变量:")
+	fmt.Println("  SWJTU_CLI_BROWSER                       指定 Chrome/Chromium 可执行文件")
+}
+
+func cmdAuthLogin() {
+	if len(os.Args) < 4 {
+		fmt.Fprintln(os.Stderr, "❌ 请提供目标业务系统URL")
+		os.Exit(1)
+	}
+	targetURL := os.Args[3]
+	if err := browser.ValidateSWJTUTargetURL(targetURL); err != nil {
+		fmt.Fprintf(os.Stderr, "❌ 目标URL无效: %v\n", err)
+		os.Exit(1)
+	}
+
+	session, err := browser.New(browser.Options{})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "❌ 启动独立浏览器失败: %v\n", err)
+		os.Exit(1)
+	}
+	defer session.Close()
+
+	page, err := session.Open(targetURL, 800*time.Millisecond)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "❌ 打开目标页面失败: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("🌐 已启动独立浏览器\n   浏览器: %s\n   会话目录: %s\n   当前页面: %s\n\n", session.BrowserPath(), session.ProfileDir(), page.URL)
+	fmt.Println("请在浏览器窗口中完成统一登录及必要的二次验证。")
+	fmt.Println("完成后回到此终端按 Enter，程序将保留该独立浏览器会话。")
+	if err := waitForEnter(); err != nil {
+		fmt.Fprintf(os.Stderr, "❌ 等待登录确认失败: %v\n", err)
+		os.Exit(1)
+	}
+
+	page, err = session.CurrentPage()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "❌ 读取登录后页面失败: %v\n", err)
+		os.Exit(1)
+	}
+	if browser.LooksLikeCASLogin(page.URL) {
+		fmt.Printf("⚠️  当前仍是统一登录页面，会话可能尚未完成。\n   当前页面: %s\n", page.URL)
+		return
+	}
+	fmt.Printf("✅ 会话已保留\n   当前页面: %s\n   后续可执行: swjtu-cli auth fetch <url> --out page.html\n", page.URL)
+}
+
+func cmdAuthFetch() {
+	targetURL, outputPath, settle, err := parseAuthFetchArgs(os.Args[3:])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "❌ %v\n", err)
+		printAuthUsage()
+		os.Exit(1)
+	}
+
+	session, err := browser.New(browser.Options{})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "❌ 启动独立浏览器失败: %v\n", err)
+		os.Exit(1)
+	}
+	defer session.Close()
+
+	page, err := session.Open(targetURL, settle)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "❌ 打开目标页面失败: %v\n", err)
+		os.Exit(1)
+	}
+
+	if browser.LooksLikeCASLogin(page.URL) {
+		fmt.Println("🔐 保存的会话已过期，请在浏览器窗口中完成登录。")
+		if err := waitForEnter(); err != nil {
+			fmt.Fprintf(os.Stderr, "❌ 等待登录确认失败: %v\n", err)
+			os.Exit(1)
+		}
+		page, err = session.Open(targetURL, settle)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "❌ 登录后重新打开页面失败: %v\n", err)
+			os.Exit(1)
+		}
+	}
+
+	if outputPath == "" {
+		fmt.Printf("<!-- url: %s | title: %s -->\n%s\n", page.URL, page.Title, page.HTML)
+		return
+	}
+	if err := os.WriteFile(outputPath, []byte(page.HTML), 0600); err != nil {
+		fmt.Fprintf(os.Stderr, "❌ 写入页面失败: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("✅ 页面已抓取\n   标题: %s\n   URL: %s\n   文件: %s (%d bytes)\n", page.Title, page.URL, outputPath, len(page.HTML))
+}
+
+func parseAuthFetchArgs(args []string) (string, string, time.Duration, error) {
+	if len(args) == 0 || args[0] == "" {
+		return "", "", 0, fmt.Errorf("请提供目标业务系统URL")
+	}
+	targetURL := args[0]
+	if err := browser.ValidateSWJTUTargetURL(targetURL); err != nil {
+		return "", "", 0, fmt.Errorf("目标URL无效: %w", err)
+	}
+
+	outputPath := ""
+	settle := 1500 * time.Millisecond
+	for i := 1; i < len(args); i++ {
+		switch args[i] {
+		case "--out":
+			if i+1 >= len(args) || args[i+1] == "" {
+				return "", "", 0, fmt.Errorf("--out 需要文件路径")
+			}
+			outputPath = args[i+1]
+			i++
+		case "--wait":
+			if i+1 >= len(args) {
+				return "", "", 0, fmt.Errorf("--wait 需要秒数")
+			}
+			seconds, err := strconv.ParseFloat(args[i+1], 64)
+			if err != nil || seconds < 0 {
+				return "", "", 0, fmt.Errorf("--wait 必须是非负秒数")
+			}
+			settle = time.Duration(seconds * float64(time.Second))
+			i++
+		default:
+			return "", "", 0, fmt.Errorf("未知参数: %s", args[i])
+		}
+	}
+	return targetURL, outputPath, settle, nil
+}
+
+func waitForEnter() error {
+	_, err := bufio.NewReader(os.Stdin).ReadString('\n')
+	return err
 }
 
 func cmdSites() {
@@ -611,7 +787,7 @@ func cmdLib() {
 		scraper.PrintLibNews(libItems)
 
 	case "db":
-		fmt.Println("📚 数据库导航\n")
+		fmt.Println("📚 数据库导航")
 		items, err := client.GetDatabases()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "❌ 获取失败: %v\n", err)

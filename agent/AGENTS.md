@@ -15,6 +15,7 @@ Go CLI tool that helps SWJTU students access campus data via terminal.
 - **Library API**: `internal/scraper/library.go` (维普智图 API client)
 - **Cache**: `internal/scraper/cache.go` (5-minute TTL in-memory cache)
 - **HTTP client**: `internal/scraper/client.go` (with cache integration)
+- **Browser session**: `internal/browser/browser.go` (dedicated headed Chromium profile)
 - **Models**: `internal/model/news.go`
 - **Broken sites**: `agent/broken-sites.md`
 
@@ -28,6 +29,8 @@ SWJTU-CLI/
 ├── cmd/swjtu-cli/
 │   └── main.go            # CLI entrypoint
 ├── internal/
+│   ├── browser/
+│   │   └── browser.go       # dedicated browser session and rendered HTML capture
 │   ├── scraper/
 │   │   ├── boda.go         # universal 博达 CMS parser + utility functions
 │   │   ├── boda_test.go    # parser unit tests (9 tests)
@@ -98,6 +101,21 @@ Sites with non-standard HTML get dedicated parsers registered via `ParseFunc`:
 | `--detail-date` | Fetch missing dates from article detail pages |
 | `--nocache` | Bypass cache, force fresh data |
 
+## Browser-assisted authentication
+
+For business systems without an API, `auth login <url>` launches a dedicated
+headed Chrome/Chromium profile. The user completes CAS login, CAPTCHA, QR-code,
+SMS, or other second-factor steps in that browser. `auth fetch <url>` reuses
+that profile and returns the rendered page HTML.
+
+- The CLI never asks for or stores the user's password.
+- The dedicated profile is separate from the user's normal browser profile.
+- Authentication cookies remain in the browser profile; they are not copied into
+  the scraper HTTP client.
+- This is a generic browser foundation. Each business system still needs its
+  own page/API adapter for structured data extraction.
+- Set `SWJTU_CLI_BROWSER` when Chrome/Chromium is not discoverable on `PATH`.
+
 ## Library API (library.go)
 
 Uses 维普智图 API gateway (lib.swjtu.edu.cn):
@@ -140,4 +158,5 @@ Run: `go test ./internal/scraper/`
 - `--detail-date` fetches each missing date individually (slow for many items)
 - SPA sites (sist, xg, jwc, sro, fad, cwc, lib, journals) return no results
 - Library search uses 维普智图 API, not the library's own search engine
-- No CAS authentication support yet
+- CAS-protected systems use the browser-assisted flow above; structured
+  extraction still requires a per-system adapter.

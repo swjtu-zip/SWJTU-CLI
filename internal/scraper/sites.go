@@ -9,6 +9,9 @@ type BodaSite struct {
 	Category  string   // "college", "party", "admin", "unit", "institute"
 	SubPages  []string // known sub-page slugs (e.g. "tzgg", "xyxw")
 	ParseFunc func(html []byte, baseURL string) ([]model.NewsItem, error) // optional site-specific parser
+	// PageURL optionally customizes the static list-page path. totalPages is
+	// provided for sites whose generated page numbers run in reverse order.
+	PageURL func(baseURL, slug string, page, totalPages int, extension string) string
 }
 
 // AllSites contains every accessible SWJTU secondary unit website.
@@ -61,6 +64,7 @@ var AllSites = map[string]*BodaSite{
 
 	// === 行政部门 ===
 	"xb":      {Name: "校长办公室", BaseURL: "https://xb.swjtu.edu.cn", Category: "admin"},
+	"bksy":    {Name: "本科生院", BaseURL: "https://bksy.swjtu.edu.cn", Category: "admin", SubPages: []string{"tzgg/qb", "tzgg/jxyx", "tzgg/jxjs", "tzgg/jsfz", "tzgg/tsjy", "tzgg/sjjx", "tzgg/syjx", "tzgg/cxcy", "tzgg/zljs", "tzgg/glgd"}, ParseFunc: parseBksyNews, PageURL: bksyPageURL},
 	"jwc":     {Name: "本科生院", BaseURL: "https://jwc.swjtu.edu.cn", Category: "admin"},
 	"gsnews":  {Name: "研究生院", BaseURL: "https://gsnews.swjtu.edu.cn", Category: "admin"},
 	"sro":     {Name: "科学技术发展研究院", BaseURL: "http://sro.swjtu.edu.cn", Category: "admin"},

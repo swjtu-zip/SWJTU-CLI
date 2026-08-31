@@ -29,6 +29,9 @@ go build -o swjtu-cli.exe ./cmd/swjtu-cli/
 | `news --nocache` | Bypass 5-min cache |
 | `read <url>` | Full article with attachments |
 | `download-all <url>` | Download all attachments |
+| `auth login <url>` | Open a dedicated browser for manual login |
+| `auth fetch <url>` | Fetch rendered HTML with the saved browser session |
+| `auth profile` | Show the dedicated browser profile directory |
 | `lib db` | Database navigation |
 | `lib news` | Library news |
 | `lib search <keyword>` | Academic literature search |
@@ -52,6 +55,7 @@ internal/scraper/
 ├── sites.go        # Site registry (ParseFunc field for custom parsers)
 ├── agg.go          # Concurrent aggregation
 └── testdata/       # HTML snapshots for tests (46 sites)
+internal/browser/    # Dedicated browser session and rendered HTML capture
 ```
 
 ## Parser Types
@@ -86,4 +90,6 @@ internal/scraper/
 - 8 SPA sites return empty: sist, xg, jwc, sro, fad, cwc, lib, journals
 - Many sites lack dates in list pages (46/75 show ----.---.---)
 - `--detail-date` fetches individually (slow for many items)
-- CAS-authenticated sites not supported
+- Direct HTTP scraping of CAS-authenticated sites is not supported
+- Browser-assisted CAS login is supported through `auth login/fetch`; each
+  business system still needs a dedicated structured-data adapter.
