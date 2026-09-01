@@ -86,7 +86,7 @@ func printUsage() {
 	fmt.Println("  swjtu-cli news civil tzgg --from 2026-01-01 --to 2026-03-31")
 	fmt.Println("  swjtu-cli news --from 2026-06-01      6月以来所有新闻")
 	fmt.Println()
-	fmt.Println("新闻分类: jdyw mtjd ybdt sjmt tzgg xshd (校级)")
+	fmt.Println("新闻分类: jdyw mtjd ybdt (校级)")
 	fmt.Println("站点分类: college party admin unit institute (聚合)")
 	fmt.Println("用 'swjtu-cli sites' 查看全部站点ID和子分类")
 }

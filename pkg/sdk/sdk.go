@@ -99,9 +99,6 @@ func Feeds() []Feed {
 		{ID: "news:jdyw", SiteID: "news", SiteName: scraper.NewsSite.Name, Category: "university", Slug: "jdyw", Name: scraper.NewsCategories["jdyw"], BaseURL: scraper.NewsSite.BaseURL},
 		{ID: "news:mtjd", SiteID: "news", SiteName: scraper.NewsSite.Name, Category: "university", Slug: "mtjd", Name: scraper.NewsCategories["mtjd"], BaseURL: scraper.NewsSite.BaseURL},
 		{ID: "news:ybdt", SiteID: "news", SiteName: scraper.NewsSite.Name, Category: "university", Slug: "ybdt", Name: scraper.NewsCategories["ybdt"], BaseURL: scraper.NewsSite.BaseURL},
-		{ID: "news:sjmt", SiteID: "news", SiteName: scraper.NewsSite.Name, Category: "university", Slug: "sjmt", Name: scraper.NewsCategories["sjmt"], BaseURL: scraper.NewsSite.BaseURL},
-		{ID: "news:tzgg", SiteID: "news", SiteName: scraper.NewsSite.Name, Category: "university", Slug: "tzgg", Name: scraper.NewsCategories["tzgg"], BaseURL: scraper.NewsSite.BaseURL},
-		{ID: "news:xshd", SiteID: "news", SiteName: scraper.NewsSite.Name, Category: "university", Slug: "xshd", Name: scraper.NewsCategories["xshd"], BaseURL: scraper.NewsSite.BaseURL},
 	}
 	ids := make([]string, 0, len(scraper.AllSites))
 	for id := range scraper.AllSites {

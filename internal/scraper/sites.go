@@ -108,9 +108,6 @@ var NewsCategories = map[string]string{
 	"jdyw": "交大要闻",
 	"mtjd": "媒体交大",
 	"ybdt": "院部动态",
-	"sjmt": "社交媒体",
-	"tzgg": "通知公告",
-	"xshd": "学术活动",
 }
 
 // CategoryNames maps category codes to display names.

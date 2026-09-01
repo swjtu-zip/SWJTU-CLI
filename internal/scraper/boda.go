@@ -2,8 +2,10 @@ package scraper
 
 import (
 	"fmt"
+	"html"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -720,12 +722,46 @@ func parseBodaArticle(html []byte, baseURL string) (*model.Article, error) {
 
 	art := &model.Article{}
 
-	art.Title = strings.TrimSpace(doc.Find("h1.news_tit").Text())
-	if art.Title == "" {
-		art.Title = strings.TrimSpace(doc.Find(".news-title").First().Text())
+	// Remember which element the headline came from: the meta line (date,
+	// source) usually sits in its immediate neighborhood, and confining the
+	// generic date search to that zone avoids picking up event dates from
+	// the article body (时间：2026年9月16日 in a notice, etc.).
+	var titleSel *goquery.Selection
+	if sel := doc.Find("h1.news_tit").First(); sel.Length() > 0 {
+		art.Title = strings.TrimSpace(sel.Text())
+		titleSel = sel
 	}
 	if art.Title == "" {
-		art.Title = strings.TrimSpace(doc.Find("h1").First().Text())
+		if sel := doc.Find(".news-title").First(); sel.Length() > 0 {
+			art.Title = strings.TrimSpace(sel.Text())
+			titleSel = sel
+		}
+	}
+	if art.Title == "" {
+		if sel := doc.Find("h1").First(); sel.Length() > 0 {
+			art.Title = strings.TrimSpace(sel.Text())
+			titleSel = sel
+		}
+	}
+	// Newer 博达 templates (news.swjtu.edu.cn and many unit sites) put the
+	// headline in .art-tit/.cont-tit instead of an h1.
+	if art.Title == "" {
+		for _, sel := range []string{".art-tit h1", ".art-tit h2", ".art-tit h3", ".cont-tit h1", ".cont-tit h2", ".cont-tit h3", ".article-title", ".arti-title", ".detail-title"} {
+			if found := doc.Find(sel).First(); found.Length() > 0 {
+				if title := strings.TrimSpace(found.Text()); title != "" {
+					art.Title = title
+					titleSel = found
+					break
+				}
+			}
+		}
+	}
+	// 博达 pages almost always carry a clean pageTitle meta.
+	if art.Title == "" {
+		art.Title = strings.TrimSpace(doc.Find(`meta[name="pageTitle"]`).AttrOr("content", ""))
+	}
+	if art.Title == "" {
+		art.Title = stripSiteSuffix(strings.TrimSpace(doc.Find("title").First().Text()))
 	}
 
 	// Source + date
@@ -783,6 +819,25 @@ func parseBodaArticle(html []byte, baseURL string) (*model.Article, error) {
 	if contentSel.Length() == 0 {
 		contentSel = doc.Find("#vsb_content_501")
 	}
+	// scai.swjtu.edu.cn and other newer templates use their own wrappers.
+	if contentSel.Length() == 0 {
+		contentSel = doc.Find(".news-content-wrapper")
+	}
+	if contentSel.Length() == 0 {
+		contentSel = doc.Find("[id^='vsb_content']")
+	}
+	if contentSel.Length() == 0 {
+		contentSel = doc.Find(".content-main")
+	}
+	// Some templates render the article twice (desktop + mobile copies);
+	// keep only the first so text isn't duplicated and zone exclusion works.
+	contentSel = contentSel.First()
+
+	// Generic labeled-text fallback: many unit templates render the meta line
+	// as plain text (日期：2026/08/21, 信息来源：xxx, 作者：xxx) without any
+	// of the containers handled above. Runs after contentSel is known so the
+	// date search can be confined to the meta zone around the article.
+	fillGenericMeta(doc, art, titleSel, contentSel)
 	if contentSel.Length() > 0 {
 		var parts []string
 		contentSel.Find("p, h1, h2, h3, h4").Each(func(i int, sel *goquery.Selection) {
@@ -921,6 +976,195 @@ func parseBodaArticle(html []byte, baseURL string) (*model.Article, error) {
 	})
 
 	return art, nil
+}
+
+var (
+	labelDateRe         = regexp.MustCompile(`(?:^|[\s\x{a0}：:，。；;、|])(?:日期|发布时间|发布日期|发表日期|发表时间|发布于|时间)[\s\x{a0}]*[:：][\s\x{a0}]*(20\d{2})[\s\x{a0}]*[-/.年][\s\x{a0}]*(\d{1,2})[\s\x{a0}]*[-/.月][\s\x{a0}]*(\d{1,2})`)
+	javaDateRe          = regexp.MustCompile(`(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{2} \d{2}:\d{2}:\d{2} CST \d{4}`)
+	bareDateRe          = regexp.MustCompile(`(20\d{2})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{1,2})`)
+	labelSourceRe       = regexp.MustCompile(`(?:信息来源|来源)\s*[:：][\s\x{a0}]*([^\s\x{a0}，。；;:：<>（）()]{2,40})`)
+	labelAuthorRe       = regexp.MustCompile(`作者\s*[:：][\s\x{a0}]*([^\s\x{a0}，。；;:：<>（）()]{2,30})`)
+	labelEditorRe       = regexp.MustCompile(`(?:编辑|责编)\s*[:：][\s\x{a0}]*([^\s\x{a0}，。；;:：<>（）()]{2,30})`)
+	labelPhotographerRe = regexp.MustCompile(`摄影\s*[:：][\s\x{a0}]*([^\s\x{a0}，。；;:：<>（）()]{2,30})`)
+	siteSuffixRe        = regexp.MustCompile(`[-–—_][^-–—_]{0,60}$`)
+	siteWordsRe         = regexp.MustCompile(`大学|学院|研究院|新闻网|党委|宣传|财务|审计|工会|处|部|中心|图书馆|档案馆|医院|集团|实验室|管委会|办公室|期刊社`)
+)
+
+// labelWords are tokens that appear as field labels on article pages. When a
+// captured value is one of these, the label was empty and the regex consumed
+// the next label instead (e.g. "来源：作者：张三" in flattened text).
+var labelWords = map[string]bool{
+	"来源": true, "信息来源": true, "作者": true, "编辑": true, "责编": true,
+	"摄影": true, "日期": true, "时间": true, "审核": true, "点击": true,
+	"点击量": true, "浏览": true, "发布": true, "发布日期": true, "发布时间": true,
+	"发表时间": true, "发布者": true, "供稿": true, "撰稿": true, "文字": true, "图片": true,
+}
+
+var labelValueNoise = regexp.MustCompile(`(20\d{2}年.*|https?$|^\d)`)
+
+var labelCutRe = regexp.MustCompile(`(日期|时间|来源|编辑|责编|审核|点击|浏览|摄影)`)
+
+func cleanLabelValue(value string) string {
+	value = strings.TrimSpace(value)
+	if cut := labelCutRe.FindStringIndex(value); cut != nil {
+		value = value[:cut[0]]
+	}
+	if labelWords[value] || labelValueNoise.MatchString(value) {
+		return ""
+	}
+	return value
+}
+
+// stripSiteSuffix removes a trailing "- 西南交通大学xx学院" style suffix from
+// a <title> tag while leaving dashes inside the headline itself untouched.
+func stripSiteSuffix(title string) string {
+	suffix := siteSuffixRe.FindString(title)
+	if suffix != "" && siteWordsRe.MatchString(suffix) {
+		return strings.TrimSpace(strings.TrimSuffix(title, suffix))
+	}
+	return title
+}
+
+func normalizeDateParts(year, month, day string) string {
+	m, errM := strconv.Atoi(month)
+	d, errD := strconv.Atoi(day)
+	if errM != nil || errD != nil || m < 1 || m > 12 || d < 1 || d > 31 {
+		return ""
+	}
+	return fmt.Sprintf("%s-%02d-%02d", year, m, d)
+}
+
+// fillGenericMeta extracts date/source/author fields using the Chinese
+// labels (日期：, 信息来源：, 作者：…) that most unit templates render
+// without any stable CSS container. Fields that were already filled by the
+// site-specific selectors above are kept.
+//
+// The date search is deliberately confined to the "meta zone" — the
+// neighborhood of the headline and the content container — because article
+// bodies are full of event dates (时间：2026年9月16日 in a notice) that must
+// never be mistaken for the publish date.
+func fillGenericMeta(doc *goquery.Document, art *model.Article, titleSel, contentSel *goquery.Selection) {
+	text := ""
+	visibleText := func() string {
+		if text == "" {
+			clone := doc.Clone()
+			clone.Find("script, style, noscript").Remove()
+			text = clone.Text()
+		}
+		return text
+	}
+	if art.Date == "" {
+		art.Date = findDateInMetaZone(titleSel, contentSel)
+	}
+	if art.Date == "" {
+		for _, sel := range []string{`meta[name="publishdate"]`, `meta[name="publish_date"]`, `meta[name="PubDate"]`, `meta[property="article:published_time"]`} {
+			content := strings.TrimSpace(doc.Find(sel).AttrOr("content", ""))
+			if m := bareDateRe.FindStringSubmatch(content); m != nil {
+				if date := normalizeDateParts(m[1], m[2], m[3]); date != "" {
+					art.Date = date
+					break
+				}
+			}
+		}
+	}
+	// scai.swjtu.edu.cn renders "发布日期：Tue Jul 07 00:00:00 CST 2026";
+	// this format is distinctive enough to match against the whole page.
+	if art.Date == "" {
+		if m := javaDateRe.FindString(visibleText()); m != "" {
+			if parsed, err := time.Parse("Mon Jan 02 15:04:05 MST 2006", m); err == nil {
+				art.Date = parsed.Format("2006-01-02")
+			}
+		}
+	}
+	if art.Source == "" {
+		if m := labelSourceRe.FindStringSubmatch(visibleText()); m != nil {
+			art.Source = cleanLabelValue(m[1])
+		}
+	}
+	if art.Author == "" {
+		if m := labelAuthorRe.FindStringSubmatch(visibleText()); m != nil {
+			art.Author = cleanLabelValue(m[1])
+		}
+	}
+	if art.Editor == "" {
+		if m := labelEditorRe.FindStringSubmatch(visibleText()); m != nil {
+			art.Editor = cleanLabelValue(m[1])
+		}
+	}
+	if art.Photographer == "" {
+		if m := labelPhotographerRe.FindStringSubmatch(visibleText()); m != nil {
+			art.Photographer = cleanLabelValue(m[1])
+		}
+	}
+}
+
+var (
+	scriptBlockRe  = regexp.MustCompile(`(?is)<script[\s\S]*?</script>|<style[\s\S]*?</style>|<noscript[\s\S]*?</noscript>`)
+	tagStripRe     = regexp.MustCompile(`<[^>]*>`)
+	spaceCollapseRe = regexp.MustCompile(`[\s\x{a0}]+`)
+)
+
+// flattenedText renders a selection as plain text with a space wherever a
+// tag boundary was, so label regexes can tell "时间：" (a label) apart from
+// "截止时间：" (a word inside a sentence). Selection.Text() glues sibling
+// elements together and loses that distinction.
+func flattenedText(sel *goquery.Selection) string {
+	inner, err := sel.Html()
+	if err != nil {
+		return sel.Text()
+	}
+	text := scriptBlockRe.ReplaceAllString(inner, " ")
+	text = tagStripRe.ReplaceAllString(text, " ")
+	text = html.UnescapeString(text)
+	return spaceCollapseRe.ReplaceAllString(text, " ")
+}
+
+// findDateInMetaZone looks for a publish date in the ancestors of the
+// headline and of the content container (with the article body itself
+// excluded), so dates mentioned inside the article text are never picked.
+func findDateInMetaZone(titleSel, contentSel *goquery.Selection) string {
+	zones := make([]string, 0, 8)
+	contentText := ""
+	collect := func(sel *goquery.Selection, exclude string) {
+		count := 0
+		sel.Parents().EachWithBreak(func(_ int, parent *goquery.Selection) bool {
+			if count >= 4 {
+				return false
+			}
+			count++
+			text := flattenedText(parent)
+			if exclude != "" {
+				text = strings.Replace(text, exclude, "", 1)
+			}
+			zones = append(zones, text)
+			return true
+		})
+	}
+	if contentSel != nil && contentSel.Length() > 0 {
+		contentText = flattenedText(contentSel)
+		collect(contentSel, contentText)
+	}
+	if titleSel != nil && titleSel.Length() > 0 {
+		collect(titleSel, "")
+	}
+	// Labeled dates first: they are the strongest signal even in wider zones.
+	for _, zone := range zones {
+		if m := labelDateRe.FindStringSubmatch(zone); m != nil {
+			if date := normalizeDateParts(m[1], m[2], m[3]); date != "" {
+				return date
+			}
+		}
+	}
+	// Then bare dates, but only in the tightest zones (the meta line sits
+	// right next to the headline; wider zones contain related-news dates).
+	for _, zone := range zones[:min(2, len(zones))] {
+		if m := bareDateRe.FindStringSubmatch(zone); m != nil {
+			if date := normalizeDateParts(m[1], m[2], m[3]); date != "" {
+				return date
+			}
+		}
+	}
+	return ""
 }
 
 func resolveURL(base, href string) string {
