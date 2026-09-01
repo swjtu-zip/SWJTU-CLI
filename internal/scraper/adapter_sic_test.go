@@ -15,10 +15,15 @@ func TestSicAdapterRegistered(t *testing.T) {
 	if site.BaseURL != "https://sic.swjtu.edu.cn" {
 		t.Fatalf("unexpected base URL: %q", site.BaseURL)
 	}
-	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil {
+	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.ListPageFunc == nil || site.ArticleFetchFunc == nil {
 		t.Fatalf("sic adapter hooks are incomplete: %+v", site)
 	}
-	for _, want := range []string{"xydt", "tzgg/qb", "tzgg/xshd"} {
+	for _, want := range []string{
+		"xydt", "dqgz/dqdt", "dqgz/ghzj", "dqgz/xytw", "dqgz/jwgz",
+		"tzgg/qb", "tzgg/dzb", "tzgg/yjsjx", "tzgg/bkjx", "tzgg/ky",
+		"tzgg/xsgz", "tzgg/sy", "tzgg/xshd", "tzgg/zsjy", "xsgz/xsfc",
+		"xsjl", "jxhd",
+	} {
 		found := false
 		for _, got := range site.SubPages {
 			if got == want {
@@ -29,6 +34,36 @@ func TestSicAdapterRegistered(t *testing.T) {
 		if !found {
 			t.Errorf("missing sic sub-page %q in %#v", want, site.SubPages)
 		}
+	}
+}
+
+func TestSicSourceTotalPagesUsesArticleCountAndPageSize(t *testing.T) {
+	html, err := os.ReadFile("testdata/sic_list.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	items, err := parseSicNews(html, "https://sic.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 10 {
+		t.Fatalf("expected ten newest entries, got %d", len(items))
+	}
+	if got := items[0].Type; got != "学院动态" {
+		t.Fatalf("list type = %q, want 学院动态", got)
+	}
+	if got := items[0].Date; got != "2026-08-28" {
+		t.Fatalf("list date = %q, want 2026-08-28", got)
+	}
+	if got, err := sicTotalPagesFromHTML(html, "xydt"); err != nil || got != 17 {
+		t.Fatalf("sicTotalPagesFromHTML = %d, %v; want 17", got, err)
+	}
+}
+
+func TestSicZeroItemTabIsAValidSinglePage(t *testing.T) {
+	html := []byte(`<html><body><h1 class="margin_auto_1">党政办</h1><span class="p_t">共0条</span></body></html>`)
+	if got, err := sicTotalPagesFromHTML(html, "tzgg/dzb"); err != nil || got != 1 {
+		t.Fatalf("zero-item tab pages = %d, %v; want 1", got, err)
 	}
 }
 
@@ -144,5 +179,47 @@ func TestSicParseArticlePrefersDetailHeadline(t *testing.T) {
 	}
 	if article.Title != "真实的集成电路学院文章标题" {
 		t.Fatalf("article title = %q", article.Title)
+	}
+}
+
+func TestSicParseLiveArticleFixturePreservesMetadataAndResources(t *testing.T) {
+	html, err := os.ReadFile("testdata/sic_article.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	article, err := parseSicArticle(html, "https://sic.swjtu.edu.cn")
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	if article.Title != "喜报！我院首届硕士研究生在中国研究生电子设计竞赛中斩获佳绩" {
+		t.Fatalf("title = %q", article.Title)
+	}
+	if article.Type != "学院动态" {
+		t.Fatalf("type = %q, want 学院动态", article.Type)
+	}
+	if article.Date != "2026-08-28" || article.PublishedAt != "2026-08-28 17:03:55" {
+		t.Fatalf("date metadata = (%q, %q)", article.Date, article.PublishedAt)
+	}
+	if !strings.Contains(article.Content, "正文第一段") || strings.Contains(article.Content, "学院动态") {
+		t.Fatalf("unexpected body content: %q", article.Content)
+	}
+	if len(article.Images) != 1 || article.Images[0] != "https://sic.swjtu.edu.cn/__local/example.png" {
+		t.Fatalf("images = %#v", article.Images)
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].Name != "会议通知.pdf" || article.Attachments[0].URL != "https://sic.swjtu.edu.cn/system/_content/download.jsp?urltype=news.DownloadAttachUrl&wbfileid=fixture" {
+		t.Fatalf("attachments = %#v", article.Attachments)
+	}
+	if !strings.Contains(article.ContentHTML, `src="https://sic.swjtu.edu.cn/__local/example.png"`) || !strings.Contains(article.ContentHTML, `href="https://sic.swjtu.edu.cn/system/_content/download.jsp?urltype=news.DownloadAttachUrl&amp;wbfileid=fixture"`) {
+		t.Fatalf("content HTML did not resolve resources: %s", article.ContentHTML)
+	}
+}
+
+func TestSicRejectsNonArticlePage(t *testing.T) {
+	html, err := os.ReadFile("testdata/sic_static.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := parseSicArticle(html, "https://sic.swjtu.edu.cn"); err == nil {
+		t.Fatal("static page was accepted as an article")
 	}
 }
