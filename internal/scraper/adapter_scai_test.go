@@ -80,3 +80,33 @@ func TestScaiAdapterArticleDate(t *testing.T) {
 		t.Errorf("content = %q", article.Content)
 	}
 }
+
+func TestScaiAdapterArticleTitleUsesContentHeadline(t *testing.T) {
+	data, err := os.ReadFile("testdata/scai_article.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	site := AllSites["scai"]
+	if site == nil || site.ParseArticleFunc == nil {
+		t.Fatal("scai article adapter was not registered")
+	}
+	article, err := site.ParseArticleFunc(data, site.BaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const want = "计算机与人工智能学院党委理论学习中心组召开专题学习会"
+	if article.Title != want {
+		t.Fatalf("title = %q, want %q", article.Title, want)
+	}
+	if article.Title == "计算机与人工智能学院" {
+		t.Fatal("article title fell back to the school name")
+	}
+	if article.Date != "2026-07-07" {
+		t.Errorf("date = %q, want 2026-07-07", article.Date)
+	}
+	if !strings.Contains(article.Content, "学院召开党委理论学习中心组") {
+		t.Errorf("content = %q", article.Content)
+	}
+}

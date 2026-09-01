@@ -208,12 +208,42 @@ func parseScaiArticle(html []byte, baseURL string) (*model.Article, error) {
 	if err != nil {
 		return article, nil
 	}
+	if title := scaiArticleTitle(doc); title != "" {
+		article.Title = title
+	}
 	if date := scaiArticleDate(doc); date != "" {
 		article.Date = date
 	} else if date := scaiDateFromText(article.Date); date != "" {
 		article.Date = date
 	}
 	return article, nil
+}
+
+// scaiArticleTitle is intentionally scoped to the article content wrapper.
+// SCAI repeats the school name in the document title and header; when a
+// detail-page variant does not expose the headline through a generic selector,
+// the unscoped fallback can therefore return the school name as the article
+// title. The real detail template puts the headline under .content inside
+// .news-content-wrapper.
+func scaiArticleTitle(doc *goquery.Document) string {
+	for _, selector := range []string{
+		".news-content-wrapper .content > h1.news-title",
+		".news-content-wrapper .content > .news-title",
+		".news-content-wrapper .content > h1",
+		".news-content-wrapper .content > h2",
+		".news-content-wrapper .content > .article-title",
+		".news-content-wrapper .content > .detail-title",
+		".news-content-wrapper .content > .title",
+		".news-content-wrapper .content .news-title",
+	} {
+		if found := doc.Find(selector).First(); found.Length() > 0 {
+			title := strings.Join(strings.Fields(found.Text()), " ")
+			if scaiIsArticleTitle(title) {
+				return title
+			}
+		}
+	}
+	return ""
 }
 
 func scaiArticleDate(doc *goquery.Document) string {
