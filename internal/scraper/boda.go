@@ -26,12 +26,15 @@ func (s *BodaSite) ListNewsWithDates(slug string) ([]model.NewsItem, error) {
 	if err != nil {
 		return nil, err
 	}
-	fillMissingDates(items)
+	fillMissingDates(items, s.ParseArticleFunc, s.BaseURL)
 	return items, nil
 }
 
 // fillMissingDates fetches detail pages for items missing dates.
-func fillMissingDates(items []model.NewsItem) {
+func fillMissingDates(items []model.NewsItem, parseArticle ParseArticleFunc, baseURL string) {
+	if parseArticle == nil {
+		parseArticle = parseBodaArticle
+	}
 	for i := range items {
 		if items[i].Date != "" {
 			continue
@@ -40,7 +43,7 @@ func fillMissingDates(items []model.NewsItem) {
 		if err != nil {
 			continue
 		}
-		art, err := parseBodaArticle(body, "")
+		art, err := parseArticle(body, baseURL)
 		if err != nil || art.Date == "" {
 			continue
 		}
@@ -1000,7 +1003,7 @@ var (
 var labelWords = map[string]bool{
 	"来源": true, "信息来源": true, "作者": true, "编辑": true, "责编": true,
 	"摄影": true, "日期": true, "时间": true, "审核": true, "点击": true,
-	"点击量": true, "浏览": true, "发布": true, "发布日期": true, "发布时间": true,
+	"点击量": true, "浏览": true, "阅读量": true, "发布": true, "发布日期": true, "发布时间": true,
 	"发表时间": true, "发布者": true, "供稿": true, "撰稿": true, "文字": true, "图片": true,
 }
 
@@ -1103,8 +1106,8 @@ func fillGenericMeta(doc *goquery.Document, art *model.Article, titleSel, conten
 }
 
 var (
-	scriptBlockRe  = regexp.MustCompile(`(?is)<script[\s\S]*?</script>|<style[\s\S]*?</style>|<noscript[\s\S]*?</noscript>`)
-	tagStripRe     = regexp.MustCompile(`<[^>]*>`)
+	scriptBlockRe   = regexp.MustCompile(`(?is)<script[\s\S]*?</script>|<style[\s\S]*?</style>|<noscript[\s\S]*?</noscript>`)
+	tagStripRe      = regexp.MustCompile(`<[^>]*>`)
 	spaceCollapseRe = regexp.MustCompile(`[\s\x{a0}]+`)
 )
 

@@ -11,9 +11,10 @@
 | 应用心理学研究院 | psy.swjtu.edu.cn | DNS不存在 |
 | 交通安全技术研究院 | jtaq.swjtu.edu.cn | DNS不存在 |
 
-## SPA站点 (返回空结果)
+## 动态/不可直接采集站点 (返回明确错误)
 
-以下站点注册在 `sites.go` 中但返回无结果，因为它们是 SPA 或需要认证：
+以下站点仍注册在 `sites.go` 中，但当前列表不可由静态 HTTP 页面直接取得；对应 adapter
+会返回明确错误，而不是返回成功的空结果：
 
 | 站点 | 域名 | 技术栈 |
 |------|------|--------|
@@ -25,6 +26,9 @@
 | 计划财务处 | cwc.swjtu.edu.cn | SPA |
 | 图书馆 | lib.swjtu.edu.cn | SPA (有独立API) |
 | 期刊社 | journals.swjtu.edu.cn | SPA |
+
+东部（国际）校区管委会 `ic.swjtu.edu.cn` 当前返回 HTTP 403，保留在站点注册表中，
+但实网审计会报告可诊断的访问错误。
 
 ## CAS认证保护
 

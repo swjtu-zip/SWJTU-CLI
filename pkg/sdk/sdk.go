@@ -234,6 +234,24 @@ func (c *Client) DownloadResource(ctx context.Context, resourceURL string) (*Res
 }
 
 func siteForURL(rawURL string) *scraper.BodaSite {
+	parsed, err := url.Parse(rawURL)
+	if err == nil && parsed.Hostname() != "" {
+		host := strings.ToLower(parsed.Hostname())
+		for _, site := range scraper.AllSites {
+			base, baseErr := url.Parse(site.BaseURL)
+			if baseErr == nil && strings.EqualFold(host, base.Hostname()) {
+				return site
+			}
+		}
+		if base, baseErr := url.Parse(scraper.NewsSite.BaseURL); baseErr == nil && strings.EqualFold(host, base.Hostname()) {
+			return scraper.NewsSite
+		}
+		return scraper.NewsSite
+	}
+
+	// Preserve the old fallback for malformed or relative URLs. Normal HTTP
+	// URLs take the exact-host path above; substring matching would confuse
+	// sic.swjtu.edu.cn with ic.swjtu.edu.cn and silently skip SIC's adapter.
 	for _, site := range scraper.AllSites {
 		if strings.Contains(rawURL, site.BaseURL) || strings.Contains(rawURL, strings.TrimPrefix(site.BaseURL, "http://")) || strings.Contains(rawURL, strings.TrimPrefix(site.BaseURL, "https://")) {
 			return site

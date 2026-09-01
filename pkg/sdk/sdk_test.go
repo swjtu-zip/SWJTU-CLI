@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"swjtu-cli/internal/scraper"
 )
 
 func TestFeedsHaveStableUniqueIDs(t *testing.T) {
@@ -22,6 +24,15 @@ func TestFeedsHaveStableUniqueIDs(t *testing.T) {
 			t.Fatalf("duplicate feed ID: %s", feed.ID)
 		}
 		seen[feed.ID] = true
+	}
+}
+
+func TestSiteForURLMatchesExactHost(t *testing.T) {
+	if got := siteForURL("https://sic.swjtu.edu.cn/info/1381/7231.htm"); got != scraper.AllSites["sic"] {
+		t.Fatalf("SIC URL resolved to the wrong site: %q", got.Name)
+	}
+	if got := siteForURL("https://ic.swjtu.edu.cn/info/1/2.htm"); got != scraper.AllSites["ic"] {
+		t.Fatalf("IC URL resolved to the wrong site: %q", got.Name)
 	}
 }
 

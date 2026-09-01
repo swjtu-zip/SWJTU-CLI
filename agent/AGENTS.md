@@ -3,15 +3,15 @@
 ## Project Overview
 
 Go CLI tool that helps SWJTU students access campus data via terminal.
-- **News scraping**: 77 secondary unit websites (博达 CMS + custom parsers)
+- **News scraping**: 70 secondary unit websites (博达 CMS + custom parsers)
 - **Library API**: Academic literature search via 维普智图 API gateway
 - **Designed to expand**: 教务, 邮件, 一网通办, etc.
 
 ## Quick Reference
 
-- **Site registry**: `internal/scraper/sites.go` (all 77 sites with ParseFunc field)
+- **Site registry**: `internal/scraper/sites.go` (site metadata; 70 sites)
 - **Generic parser**: `internal/scraper/boda.go` (博达 CMS universal parser + utility functions)
-- **Site-specific parsers**: `internal/scraper/ese.go`, `sports.go`, `scai.go`, `ees.go`
+- **Site adapters**: `internal/scraper/adapter_<siteid>.go` (one list/article adapter per site)
 - **Library API**: `internal/scraper/library.go` (维普智图 API client)
 - **Cache**: `internal/scraper/cache.go` (5-minute TTL in-memory cache)
 - **HTTP client**: `internal/scraper/client.go` (with cache integration)
@@ -36,14 +36,12 @@ SWJTU-CLI/
 │   │   ├── boda_test.go    # parser unit tests (9 tests)
 │   │   ├── cache.go        # HTTP cache (5-min TTL)
 │   │   ├── client.go       # HTTP client with cache
-│   │   ├── ese.go          # 环境学院专属解析器
-│   │   ├── ees.go          # 卓越工程师学院专属解析器
+│   │   ├── adapter_<siteid>.go # 每站独立的列表/详情 adapter
 │   │   ├── library.go      # 图书馆API client (维普智图)
-│   │   ├── scai.go         # 计算机学院专属解析器
-│   │   ├── sports.go       # 体育学院专属解析器
-│   │   ├── sites.go        # site registry (ParseFunc field)
+│   │   ├── adapter_registry_test.go # 全站 adapter 覆盖测试
+│   │   ├── sites.go        # site metadata registry
 │   │   ├── agg.go          # aggregation (concurrent fetching)
-│   │   └── testdata/       # HTML snapshots for unit tests (46 sites)
+│   │   └── testdata/       # HTML/JSON snapshots for unit tests
 │   ├── model/
 │   │   └── news.go         # NewsItem, Article structs
 │   └── oa/                 # future: 教务, 邮件 adapters
@@ -62,16 +60,20 @@ Handles most 博达 CMS sites automatically with 5 patterns:
 4. **Pattern 4**: `a[href*='newsDetail']` (scai-like UUID links)
 5. Date extraction: `.time`, `span.time`, `em`, `.date`, `.s2-date`, `time`, etc.
 
-### Site-Specific Parsers (ParseFunc)
+### Site Adapters
 
-Sites with non-standard HTML get dedicated parsers registered via `ParseFunc`:
+Every site has its own `adapter_<siteid>.go`, registered through `registerAdapter`. The
+adapter may call shared low-level helpers, but site-specific HTML selectors and date rules
+stay local to that site. Examples of larger adapters include:
 
 | Site | File | Reason |
 |------|------|--------|
-| ese | `ese.go` | s2-date/p structure + s6-tx/h3 structure |
-| sports | `sports.go` | `<time>` + `<p class="line2">` layout |
-| scai | `scai.go` | Vue SPA with `title` attr + UUID links |
-| ees | `ees.go` | `<p class="title">` with full article in `<a>` |
+| civil | `adapter_civil.go` | homepage cards and reverse-numbered list pages |
+| ctt | `adapter_ctt.go` | separate category/homepage modules and generated numbering |
+| dqxy | `adapter_dqxy.go` | homepage cards and reverse-numbered list pages |
+| gsee | `adapter_gsee.go` | news lists and academic schedule entries |
+| sist | `adapter_sist.go` | Vue shell/API payload distinction |
+| wkjsc | `adapter_wkjsc.go` | explicit dated rows, legacy detail metadata |
 
 ### Utility Functions (boda.go)
 
@@ -129,9 +131,9 @@ Uses 维普智图 API gateway (lib.swjtu.edu.cn):
   - Field symbols: U=全文, T=题名, K=关键词, A=作者, S=摘要, P=刊名
   - `requestAggsType`: integer (1=SIMPLE, 2=COMPLEX, 3=CLUSTER)
 
-## Unit Tests (boda_test.go)
+## Unit Tests
 
-9 tests using saved HTML snapshots from `testdata/`:
+Tests use saved HTML/JSON snapshots from `testdata/`, including:
 - `TestJdywParse`: 交大要闻 — dates, titles, URLs correct
 - `TestCivilParse`: 土木学院 — no banner content (习近平回信 filtered)
 - `TestClxyParse`: 材料学院 — no nav links, no external links
@@ -141,6 +143,8 @@ Uses 维普智图 API gateway (lib.swjtu.edu.cn):
 - `TestEseParse`: 环境学院 — dedicated parser, s2-date extraction
 - `TestSportsParse`: 体育学院 — dedicated parser, time/line2 extraction
 - `TestScaiParse`: 计算机学院 — dedicated parser, title attr + UUID links
+- `TestEveryRegisteredSiteHasAdapter`: all 70 sites and the news site have list/article hooks
+- per-site adapter tests for the non-standard templates and unavailable SPA shells
 
 Run: `go test ./internal/scraper/`
 
@@ -154,9 +158,11 @@ Run: `go test ./internal/scraper/`
 
 ## Known Limitations
 
-- Many sites don't have dates in list pages (46/75 show `----.--.--`)
+- List-page date availability depends on the individual site's HTML; adapters preserve a
+  missing date for detail-page fallback rather than inventing a year.
 - `--detail-date` fetches each missing date individually (slow for many items)
-- SPA sites (sist, xg, jwc, sro, fad, cwc, lib, journals) return no results
+- SPA/login/unavailable sites (sist, xg, jwc, sro, fad, cwc, lib, journals) return explicit
+  errors instead of an empty successful result
 - Library search uses 维普智图 API, not the library's own search engine
 - CAS-protected systems use the browser-assisted flow above; structured
   extraction still requires a per-system adapter.
