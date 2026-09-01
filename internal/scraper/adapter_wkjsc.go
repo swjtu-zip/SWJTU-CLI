@@ -23,7 +23,12 @@ func init() {
 }
 
 var wkjscArticlePathRE = regexp.MustCompile(`(?i)^/info/\d+/\d+\.html?$`)
-var wkjscDateRE = regexp.MustCompile(`(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})\s*日?`)
+var (
+	wkjscDateRE   = regexp.MustCompile(`(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})\s*日?`)
+	wkjscSourceRE = regexp.MustCompile(`来源\s*[:：]?\s*([^\s\[\]]+)`)
+)
+
+const wkjscSiteName = "西南交通大学文科建设处"
 
 func parseAdapter_wkjscList(html []byte, baseURL string) ([]model.NewsItem, error) {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
@@ -96,6 +101,46 @@ func normalizeWkjscDate(text string) string {
 	return normalizeDateParts(match[1], match[2], match[3])
 }
 
+func wkjscArticleTitle(doc *goquery.Document) string {
+	if doc == nil {
+		return ""
+	}
+
+	// The detail template renders the real headline as #div_title #lb_title.
+	// The document title and the first pageTitle meta instead identify the site.
+	for _, selector := range []string{"#div_title #lb_title", "#lb_title"} {
+		if title := strings.Join(strings.Fields(doc.Find(selector).First().Text()), " "); title != "" {
+			return title
+		}
+	}
+	return ""
+}
+
+func wkjscFallbackTitle(doc *goquery.Document) string {
+	if doc == nil {
+		return ""
+	}
+
+	var title string
+	doc.Find(`meta[name="pageTitle"]`).EachWithBreak(func(_ int, meta *goquery.Selection) bool {
+		candidate := strings.Join(strings.Fields(meta.AttrOr("content", "")), " ")
+		if candidate != "" && candidate != wkjscSiteName {
+			title = candidate
+			return false
+		}
+		return true
+	})
+	if title != "" {
+		return title
+	}
+
+	title = stripSiteSuffix(strings.Join(strings.Fields(doc.Find("title").First().Text()), " "))
+	if title == wkjscSiteName {
+		return ""
+	}
+	return title
+}
+
 func parseAdapter_wkjscArticle(html []byte, baseURL string) (*model.Article, error) {
 	article, err := parseBodaArticle(html, baseURL)
 	if err != nil {
@@ -105,15 +150,19 @@ func parseAdapter_wkjscArticle(html []byte, baseURL string) (*model.Article, err
 	if err != nil {
 		return article, nil
 	}
-	if title := strings.TrimSpace(doc.Find("#lb_title, .divtitle").First().Text()); title != "" {
+	if title := wkjscArticleTitle(doc); title != "" {
 		article.Title = title
+	} else if article.Title == wkjscSiteName {
+		// Keep the site name from becoming an article title if an older detail
+		// page omits the legacy span but still exposes a distinct pageTitle.
+		article.Title = wkjscFallbackTitle(doc)
 	}
 	if meta := strings.Join(strings.Fields(doc.Find("#lb_hits").First().Text()), " "); meta != "" {
 		if date := normalizeWkjscDate(meta); date != "" {
 			article.Date = date
 		}
 		if article.Source == "" {
-			if match := regexp.MustCompile(`来源\s*[:：]?\s*([^\s\[\]]+)`).FindStringSubmatch(meta); match != nil {
+			if match := wkjscSourceRE.FindStringSubmatch(meta); match != nil {
 				if source := cleanLabelValue(match[1]); source != "" {
 					article.Source = source
 				}
