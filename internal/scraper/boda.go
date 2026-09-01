@@ -260,7 +260,11 @@ func (s *BodaSite) GetArticleSnapshot(articleURL string) (*model.Article, []byte
 	if err != nil {
 		return nil, nil, err
 	}
-	art, err := parseBodaArticle(body, s.BaseURL)
+	parse := parseBodaArticle
+	if s.ParseArticleFunc != nil {
+		parse = s.ParseArticleFunc
+	}
+	art, err := parse(body, s.BaseURL)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -981,7 +985,7 @@ func parseBodaArticle(html []byte, baseURL string) (*model.Article, error) {
 var (
 	labelDateRe         = regexp.MustCompile(`(?:^|[\s\x{a0}：:，。；;、|])(?:日期|发布时间|发布日期|发表日期|发表时间|发布于|时间)[\s\x{a0}]*[:：][\s\x{a0}]*(20\d{2})[\s\x{a0}]*[-/.年][\s\x{a0}]*(\d{1,2})[\s\x{a0}]*[-/.月][\s\x{a0}]*(\d{1,2})`)
 	javaDateRe          = regexp.MustCompile(`(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{2} \d{2}:\d{2}:\d{2} CST \d{4}`)
-	bareDateRe          = regexp.MustCompile(`(20\d{2})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{1,2})`)
+	bareDateRe          = regexp.MustCompile(`(20\d{2})[\s\x{a0}]*[-/.年][\s\x{a0}]*(\d{1,2})[\s\x{a0}]*[-/.月][\s\x{a0}]*(\d{1,2})`)
 	labelSourceRe       = regexp.MustCompile(`(?:信息来源|来源)\s*[:：][\s\x{a0}]*([^\s\x{a0}，。；;:：<>（）()]{2,40})`)
 	labelAuthorRe       = regexp.MustCompile(`作者\s*[:：][\s\x{a0}]*([^\s\x{a0}，。；;:：<>（）()]{2,30})`)
 	labelEditorRe       = regexp.MustCompile(`(?:编辑|责编)\s*[:：][\s\x{a0}]*([^\s\x{a0}，。；;:：<>（）()]{2,30})`)

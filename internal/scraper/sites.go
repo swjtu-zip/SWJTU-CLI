@@ -9,9 +9,48 @@ type BodaSite struct {
 	Category  string   // "college", "party", "admin", "unit", "institute"
 	SubPages  []string // known sub-page slugs (e.g. "tzgg", "xyxw")
 	ParseFunc func(html []byte, baseURL string) ([]model.NewsItem, error) // optional site-specific parser
+	// ParseArticleFunc optionally overrides article parsing for this site.
+	// Even sites on the same CMS ship different HTML, so each site can
+	// provide its own adapter instead of relying on the generic parser.
+	ParseArticleFunc func(html []byte, baseURL string) (*model.Article, error)
 	// PageURL optionally customizes the static list-page path. totalPages is
 	// provided for sites whose generated page numbers run in reverse order.
 	PageURL func(baseURL, slug string, page, totalPages int, extension string) string
+}
+
+// SiteAdapter bundles the site-specific hooks one website needs. Adapters
+// live in their own files (adapter_<siteid>.go) and attach themselves via
+// registerAdapter in init().
+type SiteAdapter struct {
+	SubPages     []string
+	ParseList    func(html []byte, baseURL string) ([]model.NewsItem, error)
+	ParseArticle func(html []byte, baseURL string) (*model.Article, error)
+	PageURL      func(baseURL, slug string, page, totalPages int, extension string) string
+}
+
+// registerAdapter attaches a site-specific adapter to a site entry. The
+// special id "news" targets the main university news site.
+func registerAdapter(siteID string, adapter SiteAdapter) {
+	site, ok := AllSites[siteID]
+	if !ok {
+		if siteID == "news" {
+			site = NewsSite
+		} else {
+			return
+		}
+	}
+	if adapter.ParseList != nil {
+		site.ParseFunc = adapter.ParseList
+	}
+	if adapter.ParseArticle != nil {
+		site.ParseArticleFunc = adapter.ParseArticle
+	}
+	if adapter.PageURL != nil {
+		site.PageURL = adapter.PageURL
+	}
+	if len(adapter.SubPages) > 0 {
+		site.SubPages = adapter.SubPages
+	}
 }
 
 // AllSites contains every accessible SWJTU secondary unit website.
