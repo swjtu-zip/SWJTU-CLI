@@ -2,6 +2,8 @@ package scraper
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -65,6 +67,20 @@ func TestGenericListRejectsExternalAndPseudoURLs(t *testing.T) {
 	}
 }
 
+func TestGenericTitleLinkPatternRejectsExternalURL(t *testing.T) {
+	html := []byte(`<html><body><div class="content">
+<a title="外部文章标题足够长" href="https://other.example/news.htm">外部文章标题足够长</a>
+<a title="本站文章标题足够长" href="/notice.htm">本站文章标题足够长</a>
+</div></body></html>`)
+	items, err := parseBodaNewsList(html, "https://news.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].URL != "https://news.swjtu.edu.cn/notice.htm" {
+		t.Fatalf("title-link pattern items = %#v", items)
+	}
+}
+
 func TestGenericListRejectsUnrecognisedShellButAllowsKnownEmptyList(t *testing.T) {
 	if _, err := parseBodaNewsList([]byte(`<html><body><div id="app"></div></body></html>`), "https://news.swjtu.edu.cn"); err == nil {
 		t.Fatal("unrecognised shell was accepted as an empty list")
@@ -98,6 +114,64 @@ func TestListNewsRangeWalksUnknownForwardPagesUntilEmpty(t *testing.T) {
 	}
 	if len(items) != 1 || strings.Join(intsToStrings(pages), ",") != "1,1,2,3" {
 		t.Fatalf("items=%#v pages=%v", items, pages)
+	}
+}
+
+func TestListNewsRangeUsesForwardURLsWhenTotalUnknown(t *testing.T) {
+	var paths []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		paths = append(paths, r.URL.Path)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		switch r.URL.Path {
+		case "/news.htm":
+			_, _ = w.Write([]byte(`<ul class="news-list"><li><a href="/info/1/1.htm">第一页文章标题</a><span class="date">2026-08-31</span></li></ul>`))
+		case "/news/2.htm":
+			_, _ = w.Write([]byte(`<ul class="news-list"><li><a href="/info/1/2.htm">第二页文章标题</a><span class="date">2026-08-30</span></li></ul>`))
+		case "/news/3.htm":
+			_, _ = w.Write([]byte(`<ul class="news-list"></ul>`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	oldNoCache := NoCache
+	NoCache = true
+	defer func() { NoCache = oldNoCache }()
+	site := &BodaSite{
+		BaseURL: server.URL,
+		ParseFunc: func(raw []byte, baseURL string) ([]model.NewsItem, error) {
+			return parseBodaNewsList(raw, baseURL)
+		},
+		TotalPagesFunc: func(string) (int, error) { return 0, nil },
+	}
+	items, err := site.ListNewsRange("news", "2026-01-01", "2026-12-31", 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("unknown-total items = %#v", items)
+	}
+	if got, want := strings.Join(paths, ","), "/news.htm,/news/2.htm,/news/3.htm"; got != want {
+		t.Fatalf("requested paths = %q, want %q", got, want)
+	}
+}
+
+func TestListNewsRangeRetainsPartialItemsWithPageError(t *testing.T) {
+	site := &BodaSite{
+		ListPageFunc: func(_ string, page int) ([]model.NewsItem, int, error) {
+			if page == 1 {
+				return []model.NewsItem{{Title: "第一页文章标题", URL: "https://example.com/info/1/1.htm", Date: "2026-08-31"}}, 3, nil
+			}
+			return nil, 3, fmt.Errorf("upstream page failure")
+		},
+	}
+	items, err := site.ListNewsRange("news", "2026-01-01", "2026-12-31", 0)
+	if err == nil {
+		t.Fatal("expected a surfaced later-page error")
+	}
+	if len(items) != 1 || items[0].Title != "第一页文章标题" {
+		t.Fatalf("partial items = %#v, err=%v", items, err)
 	}
 }
 

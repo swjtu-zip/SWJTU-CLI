@@ -158,9 +158,6 @@ func (c *Client) ListFeed(ctx context.Context, feed Feed, page int) ([]NewsItem,
 		}
 		items, err = site.ListNewsPage(feed.Slug, page)
 	}
-	if err != nil {
-		return nil, err
-	}
 	result := make([]NewsItem, 0, len(items))
 	for _, item := range items {
 		itemType := item.Type
@@ -168,6 +165,12 @@ func (c *Client) ListFeed(ctx context.Context, feed Feed, page int) ([]NewsItem,
 			itemType = feed.Name
 		}
 		result = append(result, NewsItem{Title: item.Title, URL: item.URL, Date: item.Date, PublishedAt: item.PublishedAt, Type: itemType, ParsedAt: item.ParsedAt})
+	}
+	if err != nil {
+		// ListNewsRange returns the pages it did obtain together with a
+		// surfaced error. Keep those items available to archive callers so a
+		// transient later-page failure does not discard the entire feed.
+		return result, err
 	}
 	return result, contextErr(ctx)
 }

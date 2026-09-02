@@ -170,27 +170,6 @@ func (s *BodaSite) ListNewsRange(slug string, from, to string, maxPages int) ([]
 
 	totalPages, totalPagesErr := s.GetTotalPages(slug)
 	usingFallbackPages := totalPagesErr != nil || totalPages == 0
-	if totalPages == 0 {
-		// A reverse-numbered PageURL cannot safely construct an older physical
-		// page without knowing the source total.  Returning an error is safer
-		// than silently crawling a guessed ten-page prefix.  A normal URL or a
-		// custom ListPageFunc can walk forward until an empty page; use the
-		// caller's cap (or a deliberately high safety cap) for that case.
-		if s.PageURL != nil && s.ListPageFunc == nil {
-			if totalPagesErr != nil {
-				return nil, fmt.Errorf("total page count unavailable for custom page URL: %w", totalPagesErr)
-			}
-			return nil, fmt.Errorf("total page count unavailable for custom page URL")
-		}
-		if maxPages > 0 {
-			totalPages = maxPages
-		} else {
-			totalPages = 1000
-		}
-	}
-	if maxPages > 0 && totalPages > maxPages {
-		totalPages = maxPages
-	}
 
 	for _, item := range items {
 		t := parseDate(item.Date)
@@ -203,6 +182,28 @@ func (s *BodaSite) ListNewsRange(slug string, from, to string, maxPages int) ([]
 		}
 	}
 
+	if totalPages == 0 {
+		// A reverse-numbered PageURL cannot safely construct an older physical
+		// page without knowing the source total. Returning an error is safer
+		// than silently crawling a guessed prefix. A normal URL or a custom
+		// ListPageFunc can walk forward until an empty page; use the caller's
+		// cap (or a deliberately high safety cap) for that case.
+		if s.PageURL != nil && s.ListPageFunc == nil {
+			if totalPagesErr != nil {
+				return allItems, fmt.Errorf("total page count unavailable for custom page URL: %w", totalPagesErr)
+			}
+			return allItems, fmt.Errorf("total page count unavailable for custom page URL")
+		}
+		if maxPages > 0 {
+			totalPages = maxPages
+		} else {
+			totalPages = 1000
+		}
+	}
+	if maxPages > 0 && totalPages > maxPages {
+		totalPages = maxPages
+	}
+
 	// Check if we need more pages.  An explicitly reported multi-page list must
 	// still be walked when page one happens to be empty; otherwise a transient
 	// empty first response can hide every later page.
@@ -212,27 +213,21 @@ func (s *BodaSite) ListNewsRange(slug string, from, to string, maxPages int) ([]
 		shouldPaginate = lastDate.IsZero() || !lastDate.Before(fromTime)
 	}
 	if shouldPaginate {
-		// Need more pages. The legacy default URL scheme fetches generated
-		// files from oldest to newest; custom URL functions use logical page
-		// numbers and decide the file order themselves.
+		// Every page-numbered source gets the logical page number here. Reverse
+		// generated filenames are mapped by the adapter's PageURL hook, which
+		// receives the same logical number and the source total.
 		for p := 2; p <= totalPages; p++ {
-			realPage := totalPages + 2 - p
-			if s.PageURL != nil || s.ListPageFunc != nil {
-				// A custom URL function receives user-facing page numbers;
-				// a custom ListPageFunc likewise owns the page direction and
-				// receives logical pages directly.
-				realPage = p
-			}
+			realPage := p
 			pageItems, err := s.ListNewsPage(slug, realPage)
 			if err != nil {
 				// An unknown total is only a cap, not evidence that every page
 				// was fetched.  An HTTP/parser error therefore must be visible
 				// to the caller instead of returning a plausible partial result.
-				return nil, fmt.Errorf("list page %d/%d: %w", p, totalPages, err)
+				return allItems, fmt.Errorf("list page %d/%d: %w", p, totalPages, err)
 			}
 			if len(pageItems) == 0 {
 				if !usingFallbackPages && p < totalPages {
-					return nil, fmt.Errorf("list page %d/%d returned no articles", p, totalPages)
+					return allItems, fmt.Errorf("list page %d/%d returned no articles", p, totalPages)
 				}
 				break
 			}
@@ -826,7 +821,7 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 				return
 			}
 			fullURL := cleanURL(resolveURL(baseURL, href))
-			if seen[fullURL] || !isValidNewsURL(fullURL) {
+			if seen[fullURL] || !isValidSiteNewsURL(fullURL, baseURL) {
 				return
 			}
 			seen[fullURL] = true
