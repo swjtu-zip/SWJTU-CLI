@@ -90,6 +90,7 @@ func TestArticleParserKeepsListTableAndLazyImageContent(t *testing.T) {
 <p>第二段正文。</p>
 <ul><li>第三项正文。</li><li><p>第四段正文。</p></li></ul>
 <table><tbody><tr><td>第五格</td><td>第六格</td></tr></tbody></table>
+<p><a href="/files/body.pdf">正文附件.pdf</a></p>
 <img src="data:image/gif;base64,placeholder" data-src="/images/lazy.png">
 <img data-original="/images/lazy.png">
 </div></body></html>`)
@@ -103,6 +104,9 @@ func TestArticleParserKeepsListTableAndLazyImageContent(t *testing.T) {
 	}
 	if len(article.Images) != 1 || article.Images[0] != "https://news.swjtu.edu.cn/images/lazy.png" {
 		t.Fatalf("images = %#v", article.Images)
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].URL != "https://news.swjtu.edu.cn/files/body.pdf" {
+		t.Fatalf("attachments = %#v", article.Attachments)
 	}
 }
 

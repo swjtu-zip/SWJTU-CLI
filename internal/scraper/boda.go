@@ -816,6 +816,18 @@ func extractBodaContentText(contentSel *goquery.Selection) string {
 	if contentSel == nil || contentSel.Length() == 0 {
 		return ""
 	}
+	textSel := contentSel.Clone()
+	textSel.Find("a[href]").Each(func(_ int, sel *goquery.Selection) {
+		href := strings.TrimSpace(sel.AttrOr("href", ""))
+		if !bodaLooksLikeAttachmentLink(sel, href) {
+			return
+		}
+		if row := sel.Closest("li"); row.Length() > 0 && strings.Contains(row.Text(), "附件") {
+			row.Remove()
+			return
+		}
+		sel.Remove()
+	})
 
 	var parts []string
 	appendText := func(sel *goquery.Selection) {
@@ -825,7 +837,7 @@ func extractBodaContentText(contentSel *goquery.Selection) string {
 		}
 	}
 
-	contentSel.Find("p, h1, h2, h3, h4, li, td, th, div").Each(func(_ int, sel *goquery.Selection) {
+	textSel.Find("p, h1, h2, h3, h4, li, td, th, div").Each(func(_ int, sel *goquery.Selection) {
 		node := sel.Get(0)
 		if node == nil {
 			return
@@ -864,7 +876,7 @@ func extractBodaContentText(contentSel *goquery.Selection) string {
 		// A few otherwise standard templates put plain text directly in the
 		// content wrapper. Keep that text rather than reporting a false empty
 		// body; image-only pages still correctly remain empty here.
-		return strings.Join(strings.Fields(contentSel.Text()), " ")
+		return strings.Join(strings.Fields(textSel.Text()), " ")
 	}
 	return strings.Join(parts, "\n\n")
 }
@@ -889,6 +901,33 @@ func bodaResourceURL(baseURL, raw string) string {
 		return ""
 	}
 	return resolved
+}
+
+var bodaAttachmentExts = []string{".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".pdf", ".zip", ".rar", ".7z", ".txt", ".csv"}
+
+func bodaLooksLikeAttachmentLink(sel *goquery.Selection, href string) bool {
+	if sel == nil || sel.Length() == 0 || href == "" {
+		return false
+	}
+	if strings.TrimSpace(sel.AttrOr("download", "")) != "" {
+		return true
+	}
+	name := strings.ToLower(strings.TrimSpace(sel.AttrOr("name", "")))
+	lower := strings.ToLower(href)
+	if strings.Contains(lower, "download.jsp") || strings.Contains(lower, "downloadattachurl") {
+		return true
+	}
+	for _, ext := range bodaAttachmentExts {
+		if strings.HasSuffix(name, ext) || strings.Contains(lower, ext) {
+			return true
+		}
+	}
+	for _, selector := range []string{"li", ".attachment", ".attachments", ".news-attachment", ".download"} {
+		if ancestor := sel.Closest(selector); ancestor.Length() > 0 && strings.Contains(ancestor.Text(), "附件") {
+			return true
+		}
+	}
+	return false
 }
 
 func parseBodaArticle(html []byte, baseURL string) (*model.Article, error) {
@@ -1057,6 +1096,9 @@ func parseBodaArticle(html []byte, baseURL string) (*model.Article, error) {
 			// Determine if this is an attachment
 			isAttach := false
 			attName := ""
+			if bodaLooksLikeAttachmentLink(sel, href) {
+				isAttach = true
+			}
 
 			// Check download attribute first (博达CMS pattern)
 			if hasDownload && downloadName != "" {
@@ -1084,6 +1126,12 @@ func parseBodaArticle(html []byte, baseURL string) (*model.Article, error) {
 						}
 						break
 					}
+				}
+			}
+			if isAttach && attName == "" {
+				attName = linkText
+				if attName == "" {
+					attName = href
 				}
 			}
 
