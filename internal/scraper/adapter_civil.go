@@ -72,8 +72,9 @@ func parseCivilNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 
 	items := make([]model.NewsItem, 0)
 	seen := make(map[string]bool)
+	defaultType := civilListPageType(doc)
 	add := func(item, anchor *goquery.Selection) {
-		addCivilNewsItem(&items, seen, item, anchor, baseURL)
+		addCivilNewsItem(&items, seen, item, anchor, baseURL, defaultType)
 	}
 
 	// The home page's featured items use .line2. Do not scan every info/ link:
@@ -125,7 +126,7 @@ func civilListItem(anchor *goquery.Selection) *goquery.Selection {
 	return anchor.Parent()
 }
 
-func addCivilNewsItem(items *[]model.NewsItem, seen map[string]bool, item, anchor *goquery.Selection, baseURL string) {
+func addCivilNewsItem(items *[]model.NewsItem, seen map[string]bool, item, anchor *goquery.Selection, baseURL, defaultType string) {
 	if anchor == nil || anchor.Length() == 0 || isCivilDecoration(anchor) {
 		return
 	}
@@ -155,14 +156,62 @@ func addCivilNewsItem(items *[]model.NewsItem, seen map[string]bool, item, ancho
 	if date == "" {
 		date = civilDateFromItem(anchor)
 	}
+	typ := civilListType(item, anchor)
+	if typ == "" {
+		typ = defaultType
+	}
 
 	seen[fullURL] = true
 	*items = append(*items, model.NewsItem{
-		Title:    title,
-		URL:      fullURL,
-		Date:     date,
-		ParsedAt: time.Now(),
+		Title: title, URL: fullURL, Date: date, Type: typ, ParsedAt: time.Now(),
 	})
+}
+
+func civilListType(item, anchor *goquery.Selection) string {
+	for _, current := range []*goquery.Selection{item, anchor} {
+		if current == nil || current.Length() == 0 {
+			continue
+		}
+		for _, selector := range []string{".list", ".tabcons", ".tabCon"} {
+			if panel := current.Closest(selector); panel.Length() > 0 {
+				if heading := panel.Find("h4, h3.intit").First(); heading.Length() > 0 {
+					value := strings.Join(strings.Fields(heading.Text()), " ")
+					value = strings.TrimSpace(strings.TrimSuffix(strings.TrimSuffix(value, "更多>>"), "更多"))
+					if value != "" {
+						return value
+					}
+				}
+			}
+		}
+		if panel := current.Closest(".preface-new-box"); panel.Length() > 0 {
+			if heading := panel.Find("h3.intit").First(); heading.Length() > 0 {
+				value := strings.Join(strings.Fields(heading.Text()), " ")
+				value = strings.TrimSpace(strings.TrimSuffix(strings.TrimSuffix(value, "更多>>"), "更多"))
+				if value != "" {
+					return value
+				}
+			}
+		}
+	}
+	return ""
+}
+
+func civilListPageType(doc *goquery.Document) string {
+	if doc == nil {
+		return ""
+	}
+	for _, selector := range []string{".right .title h3", ".contents .title h3", ".news_list h3"} {
+		if heading := doc.Find(selector).First(); heading.Length() > 0 {
+			value := strings.Join(strings.Fields(heading.Text()), " ")
+			if value != "" && !isCivilHeading(value) {
+				return value
+			}
+			if value != "" {
+				return value
+			}
+		}
+	}
+	return ""
 }
 
 func isCivilDecoration(sel *goquery.Selection) bool {

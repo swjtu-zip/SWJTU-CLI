@@ -235,12 +235,27 @@ func clxyParseHome(home *goquery.Selection, baseURL string) []model.NewsItem {
 			if items[index].Type == "" && item.Type != "" {
 				items[index].Type = item.Type
 			}
+			if clxyTypeIsBetter(item.Type, items[index].Type) {
+				items[index].Type = item.Type
+			}
 			return
 		}
 		seen[fullURL] = len(items)
 		items = append(items, item)
 	})
 	return items
+}
+
+func clxyTypeIsBetter(candidate, current string) bool {
+	candidate = strings.TrimSpace(candidate)
+	current = strings.TrimSpace(current)
+	if candidate == "" || candidate == current {
+		return false
+	}
+	if current == "" {
+		return true
+	}
+	return current == "材料要闻"
 }
 
 func clxyHomeDecoration(anchor *goquery.Selection) bool {

@@ -197,9 +197,10 @@ func (s *BodaSite) ListNewsRange(slug string, from, to string, maxPages int) ([]
 			// numbers and decide the file order themselves.
 			for p := 2; p <= totalPages; p++ {
 				realPage := totalPages + 2 - p
-				if s.PageURL != nil {
+				if s.PageURL != nil || s.ListPageFunc != nil {
 					// A custom URL function receives user-facing page numbers;
-					// it handles any reverse numbering internally.
+					// a custom ListPageFunc likewise owns the page direction and
+					// receives logical pages directly.
 					realPage = p
 				}
 				pageItems, err := s.ListNewsPage(slug, realPage)

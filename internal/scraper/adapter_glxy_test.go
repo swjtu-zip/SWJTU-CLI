@@ -82,6 +82,8 @@ func TestGlxyHomepageScopesEveryRealModule(t *testing.T) {
 		glxyBaseURL + "/info/1331/57265.htm": {"关于开展2026年上半年教师资格认定工作的通知", "党政办公", "2026-04-14"},
 		glxyBaseURL + "/info/1075/59095.htm": {"重庆邮电大学人工智能学院夏书银教授学术讲座", "学术活动", ""},
 		glxyBaseURL + "/info/1460/57785.htm": {"我院胡书老师在Production and Operations Management期刊发表学术论文", "科研成果", ""},
+		glxyBaseURL + "/info/1333/58955.htm": {"经济管理学院关于2027年博士、硕士生指导教师岗位任职资格遴选与招生资格...", "研究生", "2026-06-04"},
+		glxyBaseURL + "/info/1336/59105.htm": {"关于2026-2027学年第一学期本科教材选用的公示", "公示公告", "2026-06-10"},
 	}
 	for url, expected := range want {
 		got, ok := byURL[url]
@@ -92,7 +94,7 @@ func TestGlxyHomepageScopesEveryRealModule(t *testing.T) {
 			t.Errorf("homepage entry %s = %#v, want %#v", url, got, expected)
 		}
 	}
-	for _, typ := range []string{"全部通知", "党政办公", "本科生", "研究生", "学生工作", "科研工作", "公示公告", "其它"} {
+	for _, typ := range []string{"党政办公", "本科生", "研究生", "学生工作", "科研工作", "公示公告", "其它"} {
 		found := false
 		for _, item := range items {
 			if item.Type == typ {

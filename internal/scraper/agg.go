@@ -213,8 +213,6 @@ func parseDate(s string) time.Time {
 		"2006-01-02",
 		"2006.01.02",
 		"2006.01",
-		"01-02",
-		"01.02",
 	}
 	for _, f := range formats {
 		t, err := time.Parse(f, s)

@@ -1,11 +1,14 @@
 package scraper
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/PuerkitoBio/goquery"
+
+	"swjtu-cli/internal/model"
 )
 
 func loadTestHTML(filename string) []byte {
@@ -14,6 +17,45 @@ func loadTestHTML(filename string) []byte {
 		return nil
 	}
 	return data
+}
+
+func TestListNewsRangePassesLogicalPagesToCustomListPage(t *testing.T) {
+	var pages []int
+	site := &BodaSite{
+		ListPageFunc: func(_ string, page int) ([]model.NewsItem, int, error) {
+			pages = append(pages, page)
+			items := map[int][]model.NewsItem{
+				1: {{Title: "最新文章", URL: "https://example.com/info/1/1.htm", Date: "2026-08-01"}},
+				2: {{Title: "次新文章", URL: "https://example.com/info/1/2.htm", Date: "2026-07-01"}},
+				3: {{Title: "历史文章", URL: "https://example.com/info/1/3.htm", Date: "2025-01-01"}},
+			}
+			return items[page], 3, nil
+		},
+	}
+	items, err := site.ListNewsRange("news", "2025-09-01", "2026-09-01", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("got %d range items, want 2", len(items))
+	}
+	if strings.Join(intsToStrings(pages), ",") != "1,1,2,3" {
+		t.Fatalf("custom page calls = %v, want [1 1 2 3]", pages)
+	}
+}
+
+func TestParseDateTreatsMonthDayAsUnknown(t *testing.T) {
+	if !parseDate("06-14").IsZero() || !parseDate("09.01").IsZero() {
+		t.Fatal("partial month-day values must not be compared as year zero")
+	}
+}
+
+func intsToStrings(values []int) []string {
+	result := make([]string, len(values))
+	for i, value := range values {
+		result[i] = fmt.Sprint(value)
+	}
+	return result
 }
 
 func TestArticleParserKeepsArchiveHTMLAndResolvesResources(t *testing.T) {

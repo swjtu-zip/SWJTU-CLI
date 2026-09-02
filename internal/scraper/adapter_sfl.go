@@ -22,6 +22,7 @@ func init() {
 		ParseList:    parseSflNews,
 		ParseArticle: parseSflArticle,
 		PageURL:      sflPageURL,
+		TotalPages:   sflTotalPages,
 	})
 }
 
@@ -278,6 +279,29 @@ func sflRememberPageCount(scope *goquery.Selection) {
 	sflState.Lock()
 	sflState.pageCounts["xyxw"] = count
 	sflState.Unlock()
+}
+
+func sflTotalPages(slug string) (int, error) {
+	baseURL := "http://sfl.swjtu.edu.cn"
+	if site := AllSites["sfl"]; site != nil && strings.TrimSpace(site.BaseURL) != "" {
+		baseURL = strings.TrimRight(site.BaseURL, "/")
+	}
+	body, err := fetch(fmt.Sprintf("%s/%s.htm", baseURL, sflTargetSlug(slug)))
+	if err != nil {
+		return 0, err
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
+	if err != nil {
+		return 0, fmt.Errorf("sfl parse page count: %w", err)
+	}
+	sflRememberPageCount(doc.Find("body").First())
+	sflState.RLock()
+	count := sflState.pageCounts[sflTargetSlug(slug)]
+	sflState.RUnlock()
+	if count < 1 {
+		return 0, fmt.Errorf("sfl page count is missing")
+	}
+	return count, nil
 }
 
 func parseSflArticle(html []byte, baseURL string) (*model.Article, error) {

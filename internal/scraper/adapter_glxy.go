@@ -36,7 +36,7 @@ var glxySubPages = []string{
 	"xwtz/tzgg/gsgg",
 	"xwtz/tzgg/qt",
 	"xwtz/xsdt",
-	"kxyj2/kycg",
+	"kxyj2/kycg", "kxyj2/kytj",
 	"zthd",
 }
 
@@ -255,10 +255,13 @@ func addGlxyHomepageItem(items *[]model.NewsItem, seen map[string]int, row *goqu
 	}
 	if existing, ok := seen[fullURL]; ok {
 		// A notice often appears in the aggregate tab and its specific tab.
-		// Keep one item and retain the first (aggregate-tab) provenance.
+		// Keep one item, but prefer the specific tab over the aggregate label.
 		if (*items)[existing].Date == "" && date != "" {
 			(*items)[existing].Date = date
 			(*items)[existing].PublishedAt = publishedAt
+		}
+		if glxyTypeIsBetter(typ, (*items)[existing].Type) {
+			(*items)[existing].Type = typ
 		}
 		return
 	}
@@ -271,6 +274,27 @@ func addGlxyHomepageItem(items *[]model.NewsItem, seen map[string]int, row *goqu
 		Type:        typ,
 		ParsedAt:    time.Now(),
 	})
+}
+
+func glxyTypeIsBetter(candidate, current string) bool {
+	candidate = strings.TrimSpace(candidate)
+	current = strings.TrimSpace(current)
+	if candidate == "" || candidate == current {
+		return false
+	}
+	if current == "" {
+		return true
+	}
+	return glxyTypeIsGeneric(current) && !glxyTypeIsGeneric(candidate)
+}
+
+func glxyTypeIsGeneric(value string) bool {
+	switch strings.TrimSpace(value) {
+	case "学院新闻", "全部通知", "新闻通知", "首页新闻":
+		return true
+	default:
+		return false
+	}
 }
 
 func glxyArticleURL(baseURL, href string) (string, bool) {

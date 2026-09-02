@@ -85,6 +85,15 @@ func TestCivilAdapterListSnapshot(t *testing.T) {
 			t.Errorf("item %q = (%q, %q), want (%q, %q)", url, item.Title, item.Date, expected.title, expected.date)
 		}
 	}
+	for url, wantType := range map[string]string{
+		"http://civil.swjtu.edu.cn/info/1048/72392.htm": "通知公告",
+		"http://civil.swjtu.edu.cn/info/1057/71882.htm": "教育教学",
+		"http://civil.swjtu.edu.cn/info/1152/72042.htm": "土木要闻",
+	} {
+		if got := got[url].Type; got != wantType {
+			t.Errorf("item %q type = %q, want %q", url, got, wantType)
+		}
+	}
 }
 
 func TestCivilAdapterCategoryCardDateAndNavigationScope(t *testing.T) {

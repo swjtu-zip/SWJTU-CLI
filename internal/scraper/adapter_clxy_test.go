@@ -129,6 +129,20 @@ func TestClxyHomeParserKeepsVisibleAndHiddenTabs(t *testing.T) {
 	}
 }
 
+func TestClxyHomePrefersSpecificListTypeForRepeatedArticle(t *testing.T) {
+	html := []byte(`<div id="pc"><div class="content">
+<div class="item-long"><h3 class="title">材料要闻<a class="more">更多</a></h3><ul class="news-img"><li><a href="info/1145/31306.htm" class="pic-link"><img src="/__local/feature.png"></a><a href="info/1145/31306.htm" class="text-link">重复文章</a></li></ul></div>
+<div class="item-s"><h3 class="title">学院新闻<a class="more">更多</a></h3><ul><li class="list-item"><a href="info/1145/31306.htm">重复文章</a><span class="date">2026-06-06</span></li></ul></div>
+</div></div>`)
+	items, err := parseAdapter_clxyList(html, "https://clxy.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].Type != "学院新闻" || items[0].Date != "2026-06-06" {
+		t.Fatalf("repeated item = %#v", items)
+	}
+}
+
 func TestClxyArticleParserExtractsMetadataImagesAndExternalAttachment(t *testing.T) {
 	html, err := os.ReadFile("testdata/clxy_article.html")
 	if err != nil {
