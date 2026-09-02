@@ -82,6 +82,30 @@ func TestArticleParserKeepsArchiveHTMLAndResolvesResources(t *testing.T) {
 	}
 }
 
+func TestArticleParserKeepsListTableAndLazyImageContent(t *testing.T) {
+	html := []byte(`<html><body>
+<h1 class="news_tit">列表和表格文章</h1>
+<div class="v_news_content">
+<div>第一段普通文本。</div>
+<p>第二段正文。</p>
+<ul><li>第三项正文。</li><li><p>第四段正文。</p></li></ul>
+<table><tbody><tr><td>第五格</td><td>第六格</td></tr></tbody></table>
+<img src="data:image/gif;base64,placeholder" data-src="/images/lazy.png">
+<img data-original="/images/lazy.png">
+</div></body></html>`)
+	article, err := parseBodaArticle(html, "https://news.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "第一段普通文本。\n\n第二段正文。\n\n第三项正文。\n\n第四段正文。\n\n第五格\n\n第六格"
+	if article.Content != want {
+		t.Fatalf("content = %q, want %q", article.Content, want)
+	}
+	if len(article.Images) != 1 || article.Images[0] != "https://news.swjtu.edu.cn/images/lazy.png" {
+		t.Fatalf("images = %#v", article.Images)
+	}
+}
+
 func TestArticleParserPreservesPublishedTimeAndType(t *testing.T) {
 	html := []byte(`<html><body>
 <h1 class="news_tit">带发布时间的文章</h1>

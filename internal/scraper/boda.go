@@ -807,6 +807,90 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 	return items, nil
 }
 
+// extractBodaContentText handles the block shapes used by the shared detail
+// templates. Paragraphs are the common case, but older units frequently put
+// prose in plain divs, lists, or table cells. Avoid adding a parent list item
+// when it contains a more precise child block, otherwise the same text would
+// be emitted twice.
+func extractBodaContentText(contentSel *goquery.Selection) string {
+	if contentSel == nil || contentSel.Length() == 0 {
+		return ""
+	}
+
+	var parts []string
+	appendText := func(sel *goquery.Selection) {
+		value := strings.Join(strings.Fields(sel.Text()), " ")
+		if value != "" {
+			parts = append(parts, value)
+		}
+	}
+
+	contentSel.Find("p, h1, h2, h3, h4, li, td, th, div").Each(func(_ int, sel *goquery.Selection) {
+		node := sel.Get(0)
+		if node == nil {
+			return
+		}
+		switch strings.ToLower(node.Data) {
+		case "p", "h1", "h2", "h3", "h4":
+			appendText(sel)
+		case "li":
+			if sel.Find("p, h1, h2, h3, h4, li, td, th").Length() > 0 {
+				return
+			}
+			appendText(sel)
+		case "td", "th":
+			if sel.Find("p, h1, h2, h3, h4, li, td, th").Length() > 0 {
+				return
+			}
+			appendText(sel)
+		case "div":
+			if sel.Closest("p, h1, h2, h3, h4, li, td, th").Length() > 0 {
+				return
+			}
+			if sel.Find("p, h1, h2, h3, h4, li, td, th, div").Length() > 0 {
+				return
+			}
+			// A leaf div containing a hyperlink is commonly a related-link or
+			// attachment row outside the prose paragraphs. Keep plain text divs,
+			// but do not turn those utility links into article body text.
+			if sel.Find("a, img").Length() > 0 {
+				return
+			}
+			appendText(sel)
+		}
+	})
+
+	if len(parts) == 0 {
+		// A few otherwise standard templates put plain text directly in the
+		// content wrapper. Keep that text rather than reporting a false empty
+		// body; image-only pages still correctly remain empty here.
+		return strings.Join(strings.Fields(contentSel.Text()), " ")
+	}
+	return strings.Join(parts, "\n\n")
+}
+
+// bodaResourceURL resolves a content image only when it is an actual HTTP(S)
+// resource. This drops base64 placeholders and javascript/file pseudo-URLs,
+// while retaining legitimate images hosted on a CDN or another unit domain.
+func bodaResourceURL(baseURL, raw string) string {
+	raw = strings.TrimSpace(raw)
+	lower := strings.ToLower(raw)
+	for _, prefix := range []string{"data:", "javascript:", "file:", "blob:"} {
+		if strings.HasPrefix(lower, prefix) {
+			return ""
+		}
+	}
+	resolved := cleanURL(resolveURL(baseURL, raw))
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Host == "" {
+		return ""
+	}
+	if scheme := strings.ToLower(parsed.Scheme); scheme != "http" && scheme != "https" {
+		return ""
+	}
+	return resolved
+}
+
 func parseBodaArticle(html []byte, baseURL string) (*model.Article, error) {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
 	if err != nil {
@@ -931,30 +1015,29 @@ func parseBodaArticle(html []byte, baseURL string) (*model.Article, error) {
 	// of the containers handled above. Runs after contentSel is known so the
 	// date search can be confined to the meta zone around the article.
 	fillGenericMeta(doc, art, titleSel, contentSel)
+	attachmentURLs := make(map[string]bool, len(art.Attachments))
+	for _, attachment := range art.Attachments {
+		attachmentURLs[attachment.URL] = true
+	}
 	if contentSel.Length() > 0 {
-		var parts []string
-		contentSel.Find("p, h1, h2, h3, h4").Each(func(i int, sel *goquery.Selection) {
-			text := strings.TrimSpace(sel.Text())
-			if text != "" {
-				parts = append(parts, text)
-			}
-		})
-		art.Content = strings.Join(parts, "\n\n")
-		if art.Content == "" {
-			// A few otherwise standard templates put plain text directly in
-			// the content wrapper instead of paragraph elements. Keep that
-			// text rather than reporting a false empty body; image-only pages
-			// still correctly remain empty here while their Images are saved.
-			art.Content = strings.Join(strings.Fields(contentSel.Text()), " ")
-		}
+		art.Content = extractBodaContentText(contentSel)
 
+		imageSeen := make(map[string]bool)
 		contentSel.Find("img").Each(func(i int, sel *goquery.Selection) {
-			src, _ := sel.Attr("src")
-			if src != "" {
-				resolved := resolveURL(baseURL, src)
-				art.Images = append(art.Images, resolved)
-				sel.SetAttr("src", resolved)
+			var src string
+			for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+				if value := strings.TrimSpace(sel.AttrOr(attr, "")); value != "" {
+					src = value
+					break
+				}
 			}
+			resolved := bodaResourceURL(baseURL, src)
+			if resolved == "" || imageSeen[resolved] {
+				return
+			}
+			imageSeen[resolved] = true
+			art.Images = append(art.Images, resolved)
+			sel.SetAttr("src", resolved)
 		})
 
 		// Extract attachments
@@ -1006,6 +1089,10 @@ func parseBodaArticle(html []byte, baseURL string) (*model.Article, error) {
 
 			if isAttach && attName != "" {
 				resolved := resolveURL(baseURL, href)
+				if attachmentURLs[resolved] {
+					return
+				}
+				attachmentURLs[resolved] = true
 				art.Attachments = append(art.Attachments, model.Attachment{
 					Name: attName,
 					URL:  resolved,
@@ -1020,10 +1107,6 @@ func parseBodaArticle(html []byte, baseURL string) (*model.Article, error) {
 
 	// Some Visual SiteBuilder templates render the attachment list next to,
 	// rather than inside, .v_news_content (bksy.swjtu.edu.cn is one example).
-	attachmentURLs := make(map[string]bool, len(art.Attachments))
-	for _, attachment := range art.Attachments {
-		attachmentURLs[attachment.URL] = true
-	}
 	doc.Find(".left-news-details li a[href]").Each(func(_ int, sel *goquery.Selection) {
 		parentText := strings.TrimSpace(sel.Parent().Text())
 		if !strings.Contains(parentText, "附件") {
