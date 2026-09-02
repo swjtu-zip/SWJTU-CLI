@@ -171,7 +171,22 @@ func (s *BodaSite) ListNewsRange(slug string, from, to string, maxPages int) ([]
 	totalPages, totalPagesErr := s.GetTotalPages(slug)
 	usingFallbackPages := totalPagesErr != nil || totalPages == 0
 	if totalPages == 0 {
-		totalPages = 10 // fallback
+		// A reverse-numbered PageURL cannot safely construct an older physical
+		// page without knowing the source total.  Returning an error is safer
+		// than silently crawling a guessed ten-page prefix.  A normal URL or a
+		// custom ListPageFunc can walk forward until an empty page; use the
+		// caller's cap (or a deliberately high safety cap) for that case.
+		if s.PageURL != nil && s.ListPageFunc == nil {
+			if totalPagesErr != nil {
+				return nil, fmt.Errorf("total page count unavailable for custom page URL: %w", totalPagesErr)
+			}
+			return nil, fmt.Errorf("total page count unavailable for custom page URL")
+		}
+		if maxPages > 0 {
+			totalPages = maxPages
+		} else {
+			totalPages = 1000
+		}
 	}
 	if maxPages > 0 && totalPages > maxPages {
 		totalPages = maxPages
@@ -188,55 +203,59 @@ func (s *BodaSite) ListNewsRange(slug string, from, to string, maxPages int) ([]
 		}
 	}
 
-	// Check if we need more pages
+	// Check if we need more pages.  An explicitly reported multi-page list must
+	// still be walked when page one happens to be empty; otherwise a transient
+	// empty first response can hide every later page.
+	shouldPaginate := totalPages > 1
 	if len(items) > 0 {
 		lastDate := parseDate(items[len(items)-1].Date)
-		if lastDate.IsZero() || !lastDate.Before(fromTime) {
-			// Need more pages. The legacy default URL scheme fetches generated
-			// files from oldest to newest; custom URL functions use logical page
-			// numbers and decide the file order themselves.
-			for p := 2; p <= totalPages; p++ {
-				realPage := totalPages + 2 - p
-				if s.PageURL != nil || s.ListPageFunc != nil {
-					// A custom URL function receives user-facing page numbers;
-					// a custom ListPageFunc likewise owns the page direction and
-					// receives logical pages directly.
-					realPage = p
-				}
-				pageItems, err := s.ListNewsPage(slug, realPage)
-				if err != nil {
-					if !usingFallbackPages {
-						return nil, fmt.Errorf("list page %d/%d: %w", p, totalPages, err)
-					}
-					break
-				}
-				if len(pageItems) == 0 {
-					if !usingFallbackPages && p < totalPages {
-						return nil, fmt.Errorf("list page %d/%d returned no articles", p, totalPages)
-					}
-					break
-				}
-
-				shouldStop := false
-				for _, item := range pageItems {
-					t := parseDate(item.Date)
-					if !t.IsZero() && t.Before(fromTime) {
-						shouldStop = true
-						break
-					}
-					if !t.IsZero() && !t.Before(toTime.Add(24*time.Hour)) {
-						continue
-					}
-					if !seen[item.URL] {
-						seen[item.URL] = true
-						allItems = append(allItems, item)
-					}
-				}
-				if shouldStop {
-					break
-				}
-				time.Sleep(300 * time.Millisecond)
+		shouldPaginate = lastDate.IsZero() || !lastDate.Before(fromTime)
+	}
+	if shouldPaginate {
+		// Need more pages. The legacy default URL scheme fetches generated
+		// files from oldest to newest; custom URL functions use logical page
+		// numbers and decide the file order themselves.
+		for p := 2; p <= totalPages; p++ {
+			realPage := totalPages + 2 - p
+			if s.PageURL != nil || s.ListPageFunc != nil {
+				// A custom URL function receives user-facing page numbers;
+				// a custom ListPageFunc likewise owns the page direction and
+				// receives logical pages directly.
+				realPage = p
 			}
+			pageItems, err := s.ListNewsPage(slug, realPage)
+			if err != nil {
+				// An unknown total is only a cap, not evidence that every page
+				// was fetched.  An HTTP/parser error therefore must be visible
+				// to the caller instead of returning a plausible partial result.
+				return nil, fmt.Errorf("list page %d/%d: %w", p, totalPages, err)
+			}
+			if len(pageItems) == 0 {
+				if !usingFallbackPages && p < totalPages {
+					return nil, fmt.Errorf("list page %d/%d returned no articles", p, totalPages)
+				}
+				break
+			}
+
+			shouldStop := false
+			for _, item := range pageItems {
+				t := parseDate(item.Date)
+				if !t.IsZero() && t.Before(fromTime) {
+					shouldStop = true
+					break
+				}
+				if !t.IsZero() && !t.Before(toTime.Add(24*time.Hour)) {
+					continue
+				}
+				if !seen[item.URL] {
+					seen[item.URL] = true
+					allItems = append(allItems, item)
+				}
+			}
+			if shouldStop {
+				break
+			}
+			time.Sleep(300 * time.Millisecond)
 		}
 	}
 
@@ -460,6 +479,29 @@ func isValidNewsURL(href string) bool {
 	return true
 }
 
+// isValidSiteNewsURL applies the invariant that a shared Boda list parser
+// must never turn an external card, login link, or pseudo URL into a local
+// article.  Individual adapters may intentionally allow a different host,
+// but the generic parser has the site's canonical base URL available and
+// should be conservative by default.
+func isValidSiteNewsURL(href, baseURL string) bool {
+	if !isValidNewsURL(href) {
+		return false
+	}
+	candidate, err := url.Parse(strings.TrimSpace(href))
+	if err != nil || candidate.Hostname() == "" {
+		return false
+	}
+	if scheme := strings.ToLower(candidate.Scheme); scheme != "http" && scheme != "https" {
+		return false
+	}
+	base, err := url.Parse(strings.TrimSpace(baseURL))
+	if err != nil || base.Hostname() == "" {
+		return false
+	}
+	return strings.EqualFold(candidate.Hostname(), base.Hostname())
+}
+
 // isExternalURL checks if a URL is from a different domain than the site.
 func isExternalURL(href, baseURL string) bool {
 	if !strings.HasPrefix(href, "http") {
@@ -508,8 +550,12 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 		return nil, fmt.Errorf("parse html: %w", err)
 	}
 
-	var items []model.NewsItem
+	items := make([]model.NewsItem, 0)
 	seen := make(map[string]bool)
+	// A page with a real, but currently empty, list is a valid result.  A
+	// login/static shell with no recognisable list is not: returning nil error
+	// for the latter makes a broken tab look successfully crawled.
+	recognizedList := doc.Find("li.flex, .list_news, .news_cont, .list_zx, .list_sd2, .xw-ul, .notice, .news-list, .newsList, .lists, .list-item, .news-item, .center-news-top, .top-news-item, div.news-list").Length() > 0
 
 	// Pattern 1: Standard list with <li class="flex">
 	// <li class="flex"><span class="time">date</span><a href="url">title</a></li>
@@ -528,7 +574,7 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 			return
 		}
 		fullURL := cleanURL(resolveURL(baseURL, href))
-		if seen[fullURL] || !isValidNewsURL(fullURL) {
+		if seen[fullURL] || !isValidSiteNewsURL(fullURL, baseURL) {
 			return
 		}
 		seen[fullURL] = true
@@ -642,7 +688,7 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 				date = ""
 			}
 			fullURL := cleanURL(resolveURL(baseURL, href))
-			if seen[fullURL] || !isValidNewsURL(fullURL) {
+			if seen[fullURL] || !isValidSiteNewsURL(fullURL, baseURL) {
 				return
 			}
 			seen[fullURL] = true
@@ -689,7 +735,7 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 				return
 			}
 			fullURL := cleanURL(resolveURL(baseURL, href))
-			if seen[fullURL] || !isValidNewsURL(fullURL) {
+			if seen[fullURL] || !isValidSiteNewsURL(fullURL, baseURL) {
 				return
 			}
 			seen[fullURL] = true
@@ -732,7 +778,7 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 				return
 			}
 			fullURL := cleanURL(resolveURL(baseURL, href))
-			if seen[fullURL] || !isValidNewsURL(fullURL) {
+			if seen[fullURL] || !isValidSiteNewsURL(fullURL, baseURL) {
 				return
 			}
 			seen[fullURL] = true
@@ -804,6 +850,9 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 		})
 	}
 
+	if len(items) == 0 && !recognizedList {
+		return nil, fmt.Errorf("response contains no recognisable news list")
+	}
 	return items, nil
 }
 

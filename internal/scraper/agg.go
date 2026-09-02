@@ -2,6 +2,8 @@ package scraper
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,6 +18,124 @@ type AggResult struct {
 	Err    error
 }
 
+type aggregateSite struct {
+	id   string
+	site *BodaSite
+}
+
+// aggregateSites returns the same feed universe exposed by the SDK: the
+// university news site plus every registered unit site. The old aggregate
+// path only iterated AllSites and requested each site's synthetic index feed,
+// silently omitting the main news site and every configured tab.
+func aggregateSites(category string) []aggregateSite {
+	sites := make([]aggregateSite, 0, len(AllSites)+1)
+	if category == "" || category == "university" {
+		sites = append(sites, aggregateSite{id: "news", site: NewsSite})
+	}
+	ids := make([]string, 0, len(AllSites))
+	for id := range AllSites {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		site := AllSites[id]
+		if category != "" && site.Category != category {
+			continue
+		}
+		sites = append(sites, aggregateSite{id: id, site: site})
+	}
+	return sites
+}
+
+// siteFeedSlugs includes the synthetic homepage and every explicitly audited
+// tab. A homepage can repeat a child-tab article, so callers merge by URL.
+func siteFeedSlugs(site *BodaSite) []string {
+	if site == nil {
+		return nil
+	}
+	slugs := []string{"index"}
+	seen := map[string]bool{"index": true}
+	for _, raw := range site.SubPages {
+		slug := strings.Trim(strings.TrimSpace(raw), "/")
+		if slug == "" || seen[slug] {
+			continue
+		}
+		seen[slug] = true
+		slugs = append(slugs, slug)
+	}
+	return slugs
+}
+
+func mergeAggregateItems(dst []model.NewsItem, src []model.NewsItem) []model.NewsItem {
+	positions := make(map[string]int, len(dst)+len(src))
+	for i, item := range dst {
+		if item.URL != "" {
+			positions[item.URL] = i
+		}
+	}
+	for _, item := range src {
+		if item.URL == "" {
+			continue
+		}
+		if index, ok := positions[item.URL]; ok {
+			if aggregateItemIsBetter(item, dst[index]) {
+				dst[index] = item
+			}
+			continue
+		}
+		positions[item.URL] = len(dst)
+		dst = append(dst, item)
+	}
+	return dst
+}
+
+func aggregateItemIsBetter(candidate, current model.NewsItem) bool {
+	if strings.TrimSpace(current.Title) == "" && strings.TrimSpace(candidate.Title) != "" {
+		return true
+	}
+	if strings.TrimSpace(current.Type) == "" && strings.TrimSpace(candidate.Type) != "" {
+		return true
+	}
+	if strings.TrimSpace(current.Date) == "" && strings.TrimSpace(candidate.Date) != "" {
+		return true
+	}
+	return !publishedAtHasClock(current.PublishedAt) && publishedAtHasClock(candidate.PublishedAt)
+}
+
+func listSiteNews(site *BodaSite) ([]model.NewsItem, error) {
+	var items []model.NewsItem
+	var failures []string
+	for _, slug := range siteFeedSlugs(site) {
+		pageItems, err := site.ListNews(slug)
+		if err != nil {
+			failures = append(failures, fmt.Sprintf("%s: %v", slug, err))
+			continue
+		}
+		items = mergeAggregateItems(items, pageItems)
+	}
+	if len(failures) > 0 {
+		return items, fmt.Errorf("%d feed(s) failed: %s", len(failures), strings.Join(failures, "; "))
+	}
+	return items, nil
+}
+
+func listSiteNewsRange(site *BodaSite, from, to string, maxPages int) ([]model.NewsItem, error) {
+	var items []model.NewsItem
+	var failures []string
+	for _, slug := range siteFeedSlugs(site) {
+		pageItems, err := site.ListNewsRange(slug, from, to, maxPages)
+		if err != nil {
+			failures = append(failures, fmt.Sprintf("%s: %v", slug, err))
+			continue
+		}
+		items = mergeAggregateItems(items, pageItems)
+	}
+	if len(failures) > 0 {
+		return items, fmt.Errorf("%d feed(s) failed: %s", len(failures), strings.Join(failures, "; "))
+	}
+	return items, nil
+}
+
 // FetchAllNews fetches news from all sites concurrently.
 // limit: max items per site (0 = all)
 func FetchAllNews(limit int) []AggResult {
@@ -23,24 +143,18 @@ func FetchAllNews(limit int) []AggResult {
 	var results []AggResult
 	var wg sync.WaitGroup
 
-	for id, site := range AllSites {
+	for _, entry := range aggregateSites("") {
 		wg.Add(1)
 		go func(id string, site *BodaSite) {
 			defer wg.Done()
-			items, err := site.ListNews("index")
-			if err != nil {
-				mu.Lock()
-				results = append(results, AggResult{SiteID: id, Site: site, Err: err})
-				mu.Unlock()
-				return
-			}
+			items, err := listSiteNews(site)
 			if limit > 0 && len(items) > limit {
 				items = items[:limit]
 			}
 			mu.Lock()
-			results = append(results, AggResult{SiteID: id, Site: site, Items: items})
+			results = append(results, AggResult{SiteID: id, Site: site, Items: items, Err: err})
 			mu.Unlock()
-		}(id, site)
+		}(entry.id, entry.site)
 	}
 	wg.Wait()
 	return results
@@ -52,27 +166,18 @@ func FetchCategoryNews(category string, limit int) []AggResult {
 	var results []AggResult
 	var wg sync.WaitGroup
 
-	for id, site := range AllSites {
-		if site.Category != category {
-			continue
-		}
+	for _, entry := range aggregateSites(category) {
 		wg.Add(1)
 		go func(id string, site *BodaSite) {
 			defer wg.Done()
-			items, err := site.ListNews("index")
-			if err != nil {
-				mu.Lock()
-				results = append(results, AggResult{SiteID: id, Site: site, Err: err})
-				mu.Unlock()
-				return
-			}
+			items, err := listSiteNews(site)
 			if limit > 0 && len(items) > limit {
 				items = items[:limit]
 			}
 			mu.Lock()
-			results = append(results, AggResult{SiteID: id, Site: site, Items: items})
+			results = append(results, AggResult{SiteID: id, Site: site, Items: items, Err: err})
 			mu.Unlock()
-		}(id, site)
+		}(entry.id, entry.site)
 	}
 	wg.Wait()
 	return results
@@ -92,9 +197,9 @@ func AggregateNews(category string, limitPerSite int) ([]AggItem, int, int) {
 	for _, r := range results {
 		if r.Err != nil {
 			fail++
-			continue
+		} else {
+			success++
 		}
-		success++
 		for _, item := range r.Items {
 			items = append(items, AggItem{
 				NewsItem: item,
@@ -110,38 +215,19 @@ func AggregateNews(category string, limitPerSite int) ([]AggItem, int, int) {
 
 // AggregateNewsRange fetches historical news from all sites within a date range.
 func AggregateNewsRange(category, from, to string, maxPages int) ([]AggItem, int, int) {
-	sites := make(map[string]*BodaSite)
-	if category == "" {
-		for id, site := range AllSites {
-			sites[id] = site
-		}
-	} else {
-		for id, site := range AllSites {
-			if site.Category == category {
-				sites[id] = site
-			}
-		}
-	}
-
 	var mu sync.Mutex
 	var results []AggResult
 	var wg sync.WaitGroup
 
-	for id, site := range sites {
+	for _, entry := range aggregateSites(category) {
 		wg.Add(1)
 		go func(id string, site *BodaSite) {
 			defer wg.Done()
-			items, err := site.ListNewsRange("index", from, to, maxPages)
-			if err != nil {
-				mu.Lock()
-				results = append(results, AggResult{SiteID: id, Site: site, Err: err})
-				mu.Unlock()
-				return
-			}
+			items, err := listSiteNewsRange(site, from, to, maxPages)
 			mu.Lock()
-			results = append(results, AggResult{SiteID: id, Site: site, Items: items})
+			results = append(results, AggResult{SiteID: id, Site: site, Items: items, Err: err})
 			mu.Unlock()
-		}(id, site)
+		}(entry.id, entry.site)
 	}
 	wg.Wait()
 
@@ -150,9 +236,9 @@ func AggregateNewsRange(category, from, to string, maxPages int) ([]AggItem, int
 	for _, r := range results {
 		if r.Err != nil {
 			fail++
-			continue
+		} else {
+			success++
 		}
-		success++
 		for _, item := range r.Items {
 			items = append(items, AggItem{
 				NewsItem: item,

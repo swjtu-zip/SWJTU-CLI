@@ -50,6 +50,57 @@ func TestParseDateTreatsMonthDayAsUnknown(t *testing.T) {
 	}
 }
 
+func TestGenericListRejectsExternalAndPseudoURLs(t *testing.T) {
+	html := []byte(`<html><body><ul class="news-list">
+<li><a href="https://other.example/info/1/1.htm">外部站点文章标题</a></li>
+<li><a href="javascript:void(0)">脚本伪链接标题</a></li>
+<li><a href="/info/1/2.htm">本站文章标题足够长</a></li>
+</ul></body></html>`)
+	items, err := parseBodaNewsList(html, "https://news.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].URL != "https://news.swjtu.edu.cn/info/1/2.htm" {
+		t.Fatalf("generic list items = %#v", items)
+	}
+}
+
+func TestGenericListRejectsUnrecognisedShellButAllowsKnownEmptyList(t *testing.T) {
+	if _, err := parseBodaNewsList([]byte(`<html><body><div id="app"></div></body></html>`), "https://news.swjtu.edu.cn"); err == nil {
+		t.Fatal("unrecognised shell was accepted as an empty list")
+	}
+	items, err := parseBodaNewsList([]byte(`<html><body><ul class="news-list"></ul></body></html>`), "https://news.swjtu.edu.cn")
+	if err != nil {
+		t.Fatalf("known empty list rejected: %v", err)
+	}
+	if items == nil || len(items) != 0 {
+		t.Fatalf("known empty list = %#v", items)
+	}
+}
+
+func TestListNewsRangeWalksUnknownForwardPagesUntilEmpty(t *testing.T) {
+	var pages []int
+	site := &BodaSite{
+		ListPageFunc: func(_ string, page int) ([]model.NewsItem, int, error) {
+			pages = append(pages, page)
+			if page == 1 {
+				return nil, 0, nil
+			}
+			if page == 2 {
+				return []model.NewsItem{{Title: "历史文章标题", URL: "https://example.com/info/1/2.htm", Date: "2026-07-01"}}, 0, nil
+			}
+			return []model.NewsItem{}, 0, nil
+		},
+	}
+	items, err := site.ListNewsRange("news", "2026-01-01", "2026-12-31", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || strings.Join(intsToStrings(pages), ",") != "1,1,2,3" {
+		t.Fatalf("items=%#v pages=%v", items, pages)
+	}
+}
+
 func intsToStrings(values []int) []string {
 	result := make([]string, len(values))
 	for i, value := range values {
