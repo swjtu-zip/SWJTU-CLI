@@ -25,6 +25,11 @@ func TestFeedsHaveStableUniqueIDs(t *testing.T) {
 		}
 		seen[feed.ID] = true
 	}
+	for _, id := range []string{"news:zhxw", "news:index/kxts", "news:index/tzgg", "news:index/xshd"} {
+		if !seen[id] {
+			t.Errorf("missing news tab feed %q", id)
+		}
+	}
 }
 
 func TestSiteForURLMatchesExactHost(t *testing.T) {
@@ -55,6 +60,41 @@ func TestDownloadResourceUsesResponseFilename(t *testing.T) {
 	}
 	body, err := io.ReadAll(resource.Body)
 	if err != nil || string(body) != "pdf" {
+		t.Fatalf("unexpected resource body: %q (%v)", body, err)
+	}
+}
+
+func TestDownloadResourceRejectsHTMLErrorPage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte("<html><body>登录页</body></html>"))
+	}))
+	defer server.Close()
+
+	client := New(Options{HTTPClient: server.Client()})
+	if _, err := client.DownloadResource(context.Background(), server.URL+"/download"); err == nil {
+		t.Fatal("expected HTML resource response to be rejected")
+	}
+}
+
+func TestDownloadResourceWithReferer(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Referer"); got != "https://example.org/article/42" {
+			t.Fatalf("Referer = %q", got)
+		}
+		w.Header().Set("Content-Type", "application/octet-stream")
+		_, _ = w.Write([]byte("file"))
+	}))
+	defer server.Close()
+
+	client := New(Options{HTTPClient: server.Client()})
+	resource, err := client.DownloadResourceWithReferer(context.Background(), server.URL+"/download", "https://example.org/article/42")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resource.Body.Close()
+	body, err := io.ReadAll(resource.Body)
+	if err != nil || string(body) != "file" {
 		t.Fatalf("unexpected resource body: %q (%v)", body, err)
 	}
 }

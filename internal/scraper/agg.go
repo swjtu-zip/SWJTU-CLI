@@ -203,6 +203,12 @@ func compareDate(a, b string) int {
 // parseDate tries to parse various date formats used across SWJTU sites.
 func parseDate(s string) time.Time {
 	formats := []string{
+		time.RFC3339Nano,
+		"2006-01-02 15:04:05",
+		"2006-01-02 15:04",
+		"2006/01/02 15:04:05",
+		"2006/01/02 15:04",
+		"Mon Jan 02 15:04:05 MST 2006",
 		"2006/01/02",
 		"2006-01-02",
 		"2006.01.02",

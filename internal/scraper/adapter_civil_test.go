@@ -87,6 +87,31 @@ func TestCivilAdapterListSnapshot(t *testing.T) {
 	}
 }
 
+func TestCivilAdapterCategoryCardDateAndNavigationScope(t *testing.T) {
+	html, err := os.ReadFile("testdata/civil_list_live.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	items, err := parseCivilNews(html, "http://civil.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("parsed %d items, want 2", len(items))
+	}
+	if items[0].Title != "关于开展真实通知" || items[0].Date != "2026-08-01" {
+		t.Fatalf("first item = %#v", items[0])
+	}
+	if items[1].Title != "真实科研消息" || items[1].Date != "2026-07-27" {
+		t.Fatalf("second item = %#v", items[1])
+	}
+	for _, item := range items {
+		if item.Title == "导航伪文章链接" {
+			t.Fatalf("navigation link leaked into items: %#v", item)
+		}
+	}
+}
+
 func TestCivilAdapterArticleMeta(t *testing.T) {
 	html := []byte(`<html><body>
 <main>
@@ -107,6 +132,41 @@ func TestCivilAdapterArticleMeta(t *testing.T) {
 	}
 	if article.Content != "正文内容。" {
 		t.Fatalf("content = %q", article.Content)
+	}
+}
+
+func TestCivilAdapterLiveDetailShape(t *testing.T) {
+	html, err := os.ReadFile("testdata/civil_article_live.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	article, err := parseCivilArticle(html, "http://civil.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title != "土木工程学院2026年暑期实习安排" {
+		t.Fatalf("title = %q", article.Title)
+	}
+	if article.Date != "2026-06-26" {
+		t.Fatalf("date = %q, want 2026-06-26", article.Date)
+	}
+	if article.PublishedAt != "2026-06-26 10:03:47" {
+		t.Fatalf("published_at = %q, want source seconds preserved", article.PublishedAt)
+	}
+	if article.Source != "" || article.Type != "" || article.Author != "" {
+		t.Fatalf("empty civil metadata was not kept empty: source=%q type=%q author=%q", article.Source, article.Type, article.Author)
+	}
+	if article.Content != "各位老师、同学：\n\n2026年土木工程学院认识实习与生产实习的具体安排详见附件。" {
+		t.Fatalf("content = %q", article.Content)
+	}
+	if len(article.Attachments) != 1 {
+		t.Fatalf("attachments = %#v, want one CMS attachment", article.Attachments)
+	}
+	if article.Attachments[0].Name != "土木工程学院认识实习安排表.xlsx" || article.Attachments[0].URL != "http://civil.swjtu.edu.cn/system/_content/download.jsp?urltype=news.DownloadAttachUrl&owner=1796209034&wbfileid=A875E791E31D455E18F3B471CC9C07BC" {
+		t.Fatalf("attachment = %#v", article.Attachments[0])
+	}
+	if len(article.Images) != 1 || article.Images[0] != "http://civil.swjtu.edu.cn/__local/ABC/image.jpg" {
+		t.Fatalf("images = %#v", article.Images)
 	}
 }
 

@@ -114,23 +114,23 @@ func (c *LibClient) get(path string, params map[string]string) ([]byte, error) {
 const searchBoxConfigureId = "15164479-81e6-40d1-9cc5-17fefa3905ae"
 
 type SearchResult struct {
-	Title      string   `json:"title"`
-	Authors    string   `json:"author"`
-	Journal    string   `json:"journal_name"`
-	Year       int      `json:"pub_year"`
-	DOI        string   `json:"doi"`
-	Abstract   string   `json:"abstract"`
-	Keywords   string   `json:"keyword"`
-	Organ      string   `json:"organ"`
-	Publisher  string   `json:"publisher"`
-	ISSN       string   `json:"issn"`
-	CoreMark   string   `json:"journal_core_mark"`
-	DocType    int      `json:"doc_type"`
-	Language   string   `json:"language"`
-	IsOA       string   `json:"is_oa"`
-	CitedCnt   string   `json:"cited_cnt"`
-	SourceType string   `json:"srcdb_class_name"`
-	CoverPath  string   `json:"cover_path"`
+	Title      string `json:"title"`
+	Authors    string `json:"author"`
+	Journal    string `json:"journal_name"`
+	Year       int    `json:"pub_year"`
+	DOI        string `json:"doi"`
+	Abstract   string `json:"abstract"`
+	Keywords   string `json:"keyword"`
+	Organ      string `json:"organ"`
+	Publisher  string `json:"publisher"`
+	ISSN       string `json:"issn"`
+	CoreMark   string `json:"journal_core_mark"`
+	DocType    int    `json:"doc_type"`
+	Language   string `json:"language"`
+	IsOA       string `json:"is_oa"`
+	CitedCnt   string `json:"cited_cnt"`
+	SourceType string `json:"srcdb_class_name"`
+	CoverPath  string `json:"cover_path"`
 }
 
 // SearchType constants
@@ -181,7 +181,7 @@ func (c *LibClient) Search(keyword, field string, page, size int) ([]SearchResul
 		StatusCode int `json:"statusCode"`
 		Data       struct {
 			Hits struct {
-				Total  int              `json:"total"`
+				Total  int               `json:"total"`
 				Source []json.RawMessage `json:"source"`
 			} `json:"hits"`
 		} `json:"data"`

@@ -24,8 +24,13 @@ func init() {
 		SubPages: []string{
 			"xwtz/xyxw",
 			"xwtz/xshd",
-			"xsgz/tzgg",
+			"dqgz/p/tzgg",
+			"rcpy/bks/tzgg",
+			"rcpy/yjs/tzgg",
 			"kxyj/tzgg",
+			"xsgz/tzgg",
+			"xwtz/tmzl",
+			"xwtz/qtgg",
 		},
 		ParseList:    parseSmeNews,
 		ParseArticle: parseSmeArticle,
@@ -68,6 +73,7 @@ func parseSmeNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 
 	items := make([]model.NewsItem, 0)
 	seen := make(map[string]int)
+	pageType := smeBreadcrumbType(doc)
 	doc.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
 		if isSmeNonContentLink(anchor) {
 			return
@@ -92,6 +98,7 @@ func parseSmeNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 			Title:    title,
 			URL:      fullURL,
 			Date:     date,
+			Type:     smeArticleType(anchor, pageType),
 			ParsedAt: time.Now(),
 		})
 	})
@@ -123,6 +130,11 @@ func parseSmeArticle(html []byte, baseURL string) (*model.Article, error) {
 	if article.Date == "" {
 		article.Date = smeArticleMetaDate(doc, titleSel)
 	}
+	if article.Type == "" {
+		article.Type = smeBreadcrumbType(doc)
+	}
+	appendSmeAttachments(article, doc, baseURL)
+	normalizeArticlePublishedAt(article)
 	return article, nil
 }
 
@@ -148,11 +160,25 @@ var smeNonContentSelectors = []string{
 }
 
 func isSmeNonContentLink(sel *goquery.Selection) bool {
+	// The home page uses the generic .carousel class for two real article
+	// sections. Other carousels (banners/focus widgets) are still excluded.
+	if isSmeArticleCarousel(sel) {
+		return false
+	}
 	if isInNavArea(sel) {
 		return true
 	}
 	for _, selector := range smeNonContentSelectors {
 		if sel.Closest(selector).Length() > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func isSmeArticleCarousel(sel *goquery.Selection) bool {
+	for _, id := range []string{"news", "ac"} {
+		if sel.Closest("#"+id).Length() > 0 {
 			return true
 		}
 	}
@@ -270,6 +296,12 @@ func smeArticleDateFromList(anchor, card *goquery.Selection, baseURL string) str
 			return date
 		}
 	}
+	// SME's home-page tabs put the date in a span inside the anchor. Check
+	// the anchor before its card because an academic carousel item can hold
+	// two articles with different dates.
+	if date := smeDateFromSelection(anchor); date != "" {
+		return date
+	}
 	if card != nil && card.Length() > 0 {
 		if date := smeDateFromSelection(card); date != "" {
 			return date
@@ -294,7 +326,7 @@ func smeArticleDateFromList(anchor, card *goquery.Selection, baseURL string) str
 	return date
 }
 
-var smeDateSelectors = `time, [datetime], [data-date], [data-time], .date, .time, [class*="date"], [class*="Date"], [class*="time"], [class*="Time"]`
+var smeDateSelectors = `time, [datetime], [data-date], [data-time], .date, .time, span.flex-none, [class*="date"], [class*="Date"], [class*="time"], [class*="Time"]`
 
 func smeDateFromSelection(sel *goquery.Selection) string {
 	if sel == nil || sel.Length() == 0 {
@@ -348,10 +380,84 @@ func addSmeItem(items *[]model.NewsItem, seen map[string]int, item model.NewsIte
 		if !isSmeNewsTitle((*items)[index].Title) && isSmeNewsTitle(item.Title) {
 			(*items)[index].Title = item.Title
 		}
+		if (*items)[index].Type == "" && item.Type != "" {
+			(*items)[index].Type = item.Type
+		}
 		return
 	}
 	seen[item.URL] = len(*items)
 	*items = append(*items, item)
+}
+
+func smeArticleType(anchor *goquery.Selection, pageType string) string {
+	for id, typ := range map[string]string{
+		"news":  "学院新闻",
+		"ac":    "学术活动",
+		"Tab1":  "党政办公",
+		"Tab2":  "本科生教学",
+		"Tab3":  "研究生教学",
+		"Tab4":  "科学研究",
+		"Tab5":  "学生工作",
+		"Tab6":  "推免专栏",
+		"Tab7":  "其他",
+		"Tab8":  "其他",
+		"Tab9":  "推免专栏",
+		"Tab10": "公示专栏",
+	} {
+		if anchor.Closest("#"+id).Length() > 0 {
+			return typ
+		}
+	}
+	return pageType
+}
+
+func smeBreadcrumbType(doc *goquery.Document) string {
+	if doc == nil {
+		return ""
+	}
+	typ := ""
+	doc.Find(".path_info_box a").Each(func(_ int, sel *goquery.Selection) {
+		value := cleanSmeTitle(sel.Text())
+		if value == "" || value == "学院首页" || value == "首页" {
+			return
+		}
+		typ = value
+	})
+	return typ
+}
+
+func appendSmeAttachments(article *model.Article, doc *goquery.Document, baseURL string) {
+	if article == nil || doc == nil {
+		return
+	}
+	seen := make(map[string]bool, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		seen[attachment.URL] = true
+	}
+
+	// SME places its DownloadAttachUrl links in a UL immediately after
+	// .v_news_content, so the generic content-only attachment scan misses
+	// them. Restrict this scan to the article detail container.
+	doc.Find(`main.show_detail_box a[href], .show_content_detail a[href]`).Each(func(_ int, sel *goquery.Selection) {
+		href := strings.TrimSpace(sel.AttrOr("href", ""))
+		if href == "" {
+			return
+		}
+		hrefLower := strings.ToLower(href)
+		if !strings.Contains(hrefLower, "downloadattachurl") && !strings.Contains(hrefLower, "download.jsp") {
+			return
+		}
+		name := strings.TrimSpace(htmlstd.UnescapeString(strings.Join(strings.Fields(sel.Text()), " ")))
+		if name == "" {
+			return
+		}
+		resolved := cleanURL(resolveURL(baseURL, href))
+		if seen[resolved] {
+			return
+		}
+		seen[resolved] = true
+		article.Attachments = append(article.Attachments, model.Attachment{Name: name, URL: resolved})
+	})
 }
 
 func normalizeSmeDate(value string) string {

@@ -3,16 +3,25 @@ package model
 import "time"
 
 type NewsItem struct {
-	Title    string    `json:"title"`
-	URL      string    `json:"url"`
-	Date     string    `json:"date"`
+	Title string `json:"title"`
+	URL   string `json:"url"`
+	Date  string `json:"date"`
+	// PublishedAt preserves a source timestamp when the listing exposes a
+	// time-of-day. Date remains the backwards-compatible calendar date.
+	PublishedAt string `json:"published_at,omitempty"`
+	// Type is the source's content/tab type when it can be identified.
+	Type     string    `json:"type,omitempty"`
 	ParsedAt time.Time `json:"parsed_at"`
 }
 
 type Article struct {
-	Title        string       `json:"title"`
-	Source       string       `json:"source"`
-	Date         string       `json:"date"`
+	Title  string `json:"title"`
+	Source string `json:"source"`
+	Date   string `json:"date"`
+	// PublishedAt preserves minute/second precision from the source when
+	// available; Date is retained for existing callers and date-only pages.
+	PublishedAt  string       `json:"published_at,omitempty"`
+	Type         string       `json:"type,omitempty"`
 	Content      string       `json:"content"`
 	ContentHTML  string       `json:"content_html,omitempty"`
 	RawHTML      string       `json:"raw_html,omitempty"`

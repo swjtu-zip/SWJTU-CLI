@@ -28,6 +28,12 @@ func init() {
 			"scientific",
 			"xsgz",
 			"zsjy",
+			"djgz",
+			"yjspy",
+			"tmxy",
+			"bkjx/bkjxgg",
+			"zsjy/jxjypxzx_j",
+			"zgzx/zsgxjyzx",
 		},
 		ParseList:    parseCivilNews,
 		ParseArticle: parseCivilArticle,
@@ -40,6 +46,10 @@ var (
 	civilDateRe        = regexp.MustCompile(`(20[0-9]{2})\s*[-/.年]\s*([0-9]{1,2})\s*[-/.月]\s*([0-9]{1,2})`)
 	civilYearMonthRe   = regexp.MustCompile(`(20[0-9]{2})\s*[-/.年]\s*([0-9]{1,2})`) // used with a separate day element
 	civilDayRe         = regexp.MustCompile(`^([0-9]{1,2})$`)
+	civilSplitDateRe   = regexp.MustCompile(`^([0-9]{1,2})\s*20[0-9]{2}\s*[-/.年]\s*[0-9]{1,2}$`)
+	civilDateTimeRe    = regexp.MustCompile(`(20[0-9]{2})\s*[-/.年]\s*([0-9]{1,2})\s*[-/.月]\s*([0-9]{1,2})(?:日|号)?\s+([0-9]{1,2}):([0-9]{2})(?::([0-9]{2}))?`)
+	civilSourceValueRe = regexp.MustCompile(`(?:信息来源|来源)\s*[:：]\s*(.*?)(?:\s*(?:分类|文章类型|信息类型|类型|作者|编辑|责编|摄影|阅读量|日期|发布时间)\s*[:：]|$)`)
+	civilTypeValueRe   = regexp.MustCompile(`(?:文章类型|信息类型|类型|分类)\s*[:：]\s*(.*?)(?:\s*(?:来源|作者|编辑|责编|摄影|阅读量|日期|发布时间)\s*[:：]|$)`)
 )
 
 // civilPageURL maps the logical page number shown by civil.swjtu.edu.cn to
@@ -101,6 +111,14 @@ func parseCivilNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 }
 
 func civilListItem(anchor *goquery.Selection) *goquery.Selection {
+	// On category pages the title and split date live in the same
+	// .news_list_des card, while the anchor itself is nested in a <p>. Taking
+	// only the parent loses the date; keep the card as the parse scope.
+	for _, selector := range []string{".news_list_des", ".news-list-des"} {
+		if item := anchor.Closest(selector); item.Length() > 0 {
+			return item
+		}
+	}
 	if item := anchor.Closest("li"); item.Length() > 0 {
 		return item
 	}
@@ -220,8 +238,9 @@ func civilDateFromScope(scope *goquery.Selection) string {
 	})
 	if day == "" {
 		// Handle an unclassed "07 2026-04" date block without interpreting
-		// digits from the article title as a day.
-		if match := regexp.MustCompile(`^([0-9]{1,2})\s+20[0-9]{2}\s*[-/.年]\s*[0-9]{1,2}$`).FindStringSubmatch(text); match != nil {
+		// digits from the article title as a day. The live civil template may
+		// omit whitespace between adjacent date divs, producing "072026-04".
+		if match := civilSplitDateRe.FindStringSubmatch(text); match != nil {
 			day = match[1]
 		}
 	}
@@ -262,9 +281,17 @@ func parseCivilArticle(html []byte, baseURL string) (*model.Article, error) {
 	if date := civilArticleDate(doc); date != "" {
 		article.Date = date
 	}
-	if article.Source == "" {
-		article.Source = civilArticleSource(doc)
+	if publishedAt := civilArticlePublishedAt(doc); publishedAt != "" {
+		article.PublishedAt = publishedAt
 	}
+	// The civil template always renders these labels in .top-info, even when
+	// their values are empty. Override generic whole-page fallback values so
+	// an empty "来源：" cannot become the next label, e.g. "分类".
+	if civilArticleMetadata(doc).Length() > 0 {
+		article.Source = civilArticleSource(doc)
+		article.Type = civilArticleType(doc)
+	}
+	addCivilArticleAttachments(article, doc, baseURL)
 	return article, nil
 }
 
@@ -301,6 +328,39 @@ func isCivilHeading(text string) bool {
 	return false
 }
 
+func civilArticleMetadata(doc *goquery.Document) *goquery.Selection {
+	for _, selector := range []string{".top-info", ".article-info", ".detail-info", ".news-info", ".news_source"} {
+		if found := doc.Find(selector).First(); found.Length() > 0 {
+			return found
+		}
+	}
+	return doc.Find("__civil_no_metadata__")
+}
+
+func civilMetadataText(sel *goquery.Selection) string {
+	if sel == nil || sel.Length() == 0 {
+		return ""
+	}
+	return strings.Join(strings.Fields(flattenedText(sel)), " ")
+}
+
+func civilMetadataValue(doc *goquery.Document, valueRe *regexp.Regexp) string {
+	for _, selector := range []string{".top-info", ".article-info", ".detail-info", ".news-info", ".news_source"} {
+		var value string
+		doc.Find(selector).EachWithBreak(func(_ int, sel *goquery.Selection) bool {
+			match := valueRe.FindStringSubmatch(civilMetadataText(sel))
+			if len(match) > 1 {
+				value = strings.TrimSpace(match[1])
+			}
+			return value == ""
+		})
+		if value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
 func civilArticleDate(doc *goquery.Document) string {
 	for _, selector := range []string{".top-info", ".article-info", ".detail-info", ".news-info", ".news_source"} {
 		var date string
@@ -318,26 +378,69 @@ func civilArticleDate(doc *goquery.Document) string {
 	return ""
 }
 
-func civilArticleSource(doc *goquery.Document) string {
-	var source string
-	doc.Find(".top-info, .article-info, .detail-info, .news-info, .news_source").EachWithBreak(func(_ int, sel *goquery.Selection) bool {
-		text := strings.Join(strings.Fields(sel.Text()), " ")
-		for _, prefix := range []string{"来源：", "来源:"} {
-			if index := strings.Index(text, prefix); index >= 0 {
-				value := strings.TrimSpace(text[index+len(prefix):])
-				for _, marker := range []string{"分类", "阅读量", "日期", "发布时间"} {
-					if markerIndex := strings.Index(value, marker); markerIndex >= 0 {
-						value = value[:markerIndex]
-					}
-				}
-				value = strings.TrimSpace(value)
-				if value != "" {
-					source = value
-					return false
-				}
+func civilArticlePublishedAt(doc *goquery.Document) string {
+	for _, selector := range []string{".top-info", ".article-info", ".detail-info", ".news-info", ".news_source"} {
+		var publishedAt string
+		doc.Find(selector).EachWithBreak(func(_ int, sel *goquery.Selection) bool {
+			match := civilDateTimeRe.FindStringSubmatch(civilMetadataText(sel))
+			if len(match) == 0 {
+				return true
 			}
+			date := normalizeCivilDate(match[1], match[2], match[3])
+			if date == "" {
+				return true
+			}
+			second := match[6]
+			if second == "" {
+				second = "00"
+			}
+			publishedAt = fmt.Sprintf("%s %02s:%s:%s", date, match[4], match[5], second)
+			return false
+		})
+		if publishedAt != "" {
+			return publishedAt
 		}
-		return true
+	}
+	return ""
+}
+
+func civilArticleSource(doc *goquery.Document) string {
+	return civilMetadataValue(doc, civilSourceValueRe)
+}
+
+func civilArticleType(doc *goquery.Document) string {
+	return civilMetadataValue(doc, civilTypeValueRe)
+}
+
+func addCivilArticleAttachments(article *model.Article, doc *goquery.Document, baseURL string) {
+	seen := make(map[string]bool, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		seen[attachment.URL] = true
+	}
+
+	// civil puts the attachment <ul> after .v_news_content. The generic Boda
+	// parser deliberately scopes links to the content body, so these links
+	// need a site-specific pass. Requiring the CMS download endpoint and an
+	// enclosing "附件" list item keeps ordinary body links out.
+	doc.Find("a[href]").Each(func(_ int, sel *goquery.Selection) {
+		href := strings.TrimSpace(sel.AttrOr("href", ""))
+		lowerHref := strings.ToLower(href)
+		if href == "" || !strings.Contains(lowerHref, "download.jsp") || !strings.Contains(lowerHref, "downloadattachurl") || isInNavArea(sel) {
+			return
+		}
+		listItem := sel.Closest("li")
+		if listItem.Length() == 0 || !strings.Contains(listItem.Text(), "附件") {
+			return
+		}
+		name := strings.TrimSpace(sel.Text())
+		if name == "" {
+			return
+		}
+		resolved := cleanURL(resolveURL(baseURL, href))
+		if seen[resolved] {
+			return
+		}
+		seen[resolved] = true
+		article.Attachments = append(article.Attachments, model.Attachment{Name: name, URL: resolved})
 	})
-	return source
 }

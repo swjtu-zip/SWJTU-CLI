@@ -5,6 +5,21 @@ import "swjtu-cli/internal/model"
 type ParseListFunc func(html []byte, baseURL string) ([]model.NewsItem, error)
 type ParseArticleFunc func(html []byte, baseURL string) (*model.Article, error)
 
+// ListPageFunc is an adapter-owned list fetcher for sites whose data is not
+// available as a GET-able HTML page (for example, a Vue site backed by a POST
+// JSON API). The second return value is the source-reported total page count;
+// zero means that the source did not expose one.
+type ListPageFunc func(slug string, page int) ([]model.NewsItem, int, error)
+
+// TotalPagesFunc is an adapter-owned total-page lookup for list sources whose
+// page count is not represented by the shared HTML pagination markup.
+type TotalPagesFunc func(slug string) (int, error)
+
+// ArticleFetchFunc is an adapter-owned article fetcher for sites whose detail
+// page is also rendered from an API. The raw response is retained for the
+// archive just like a fetched HTML detail page.
+type ArticleFetchFunc func(articleURL string) (*model.Article, []byte, error)
+
 // BodaSite represents a site built on 博达 Visual SiteBuilder 9 CMS.
 type BodaSite struct {
 	Name      string
@@ -19,6 +34,12 @@ type BodaSite struct {
 	// PageURL optionally customizes the static list-page path. totalPages is
 	// provided for sites whose generated page numbers run in reverse order.
 	PageURL func(baseURL, slug string, page, totalPages int, extension string) string
+	// ListPageFunc optionally replaces the shared GET-and-parse list path.
+	ListPageFunc ListPageFunc
+	// TotalPagesFunc optionally replaces the shared HTML pagination lookup.
+	TotalPagesFunc TotalPagesFunc
+	// ArticleFetchFunc optionally replaces the shared GET-and-parse detail path.
+	ArticleFetchFunc ArticleFetchFunc
 }
 
 // SiteAdapter bundles the site-specific hooks one website needs. Adapters
@@ -29,6 +50,9 @@ type SiteAdapter struct {
 	ParseList    ParseListFunc
 	ParseArticle ParseArticleFunc
 	PageURL      func(baseURL, slug string, page, totalPages int, extension string) string
+	ListPage     ListPageFunc
+	TotalPages   TotalPagesFunc
+	FetchArticle ArticleFetchFunc
 }
 
 // registerAdapter attaches a site-specific adapter to a site entry. The
@@ -50,6 +74,15 @@ func registerAdapter(siteID string, adapter SiteAdapter) {
 	}
 	if adapter.PageURL != nil {
 		site.PageURL = adapter.PageURL
+	}
+	if adapter.ListPage != nil {
+		site.ListPageFunc = adapter.ListPage
+	}
+	if adapter.TotalPages != nil {
+		site.TotalPagesFunc = adapter.TotalPages
+	}
+	if adapter.FetchArticle != nil {
+		site.ArticleFetchFunc = adapter.FetchArticle
 	}
 	if len(adapter.SubPages) > 0 {
 		site.SubPages = adapter.SubPages
@@ -150,6 +183,20 @@ var NewsCategories = map[string]string{
 	"jdyw": "交大要闻",
 	"mtjd": "媒体交大",
 	"ybdt": "院部动态",
+}
+
+// NewsFeedNames covers the ordinary article tabs exposed by the university
+// news site's current navigation. The three legacy CLI category names above
+// remain aliases for compatibility; the SDK also publishes the additional
+// tabs as independent feeds.
+var NewsFeedNames = map[string]string{
+	"jdyw2":      "交大要闻",
+	"zhxw":       "综合新闻",
+	"mtjd":       "媒体交大",
+	"ybdt":       "院部动态",
+	"index/kxts": "科学探索",
+	"index/tzgg": "通知公告",
+	"index/xshd": "学术活动",
 }
 
 // CategoryNames maps category codes to display names.

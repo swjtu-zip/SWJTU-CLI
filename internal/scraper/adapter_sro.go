@@ -26,5 +26,5 @@ func parseAdapter_sroList(html []byte, baseURL string) ([]model.NewsItem, error)
 }
 
 func parseAdapter_sroArticle(html []byte, baseURL string) (*model.Article, error) {
-	return parseBodaArticle(html, baseURL)
+	return parseBodaArticleWithSectionType(html, baseURL)
 }

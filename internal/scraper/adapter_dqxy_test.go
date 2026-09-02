@@ -14,6 +14,14 @@ func TestDqxyAdapterRegistration(t *testing.T) {
 	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil {
 		t.Fatal("dqxy adapter hooks are incomplete")
 	}
+	if len(site.SubPages) != len(dqxySubPages) {
+		t.Fatalf("registered sub-pages = %d, want %d", len(site.SubPages), len(dqxySubPages))
+	}
+	for i, want := range dqxySubPages {
+		if site.SubPages[i] != want {
+			t.Errorf("sub-page[%d] = %q, want %q", i, site.SubPages[i], want)
+		}
+	}
 
 	const base = "http://dqxy.swjtu.edu.cn"
 	if got := site.PageURL(base, "xwdt/qb", 1, 21, ".htm"); got != base+"/xwdt/qb.htm" {
@@ -24,6 +32,9 @@ func TestDqxyAdapterRegistration(t *testing.T) {
 	}
 	if got := site.PageURL(base, "xwdt/qb", 21, 21, ".htm"); got != base+"/xwdt/qb/1.htm" {
 		t.Fatalf("last page URL = %q", got)
+	}
+	if got := site.PageURL(base, "xsgz1/xsfc1", 2, 53, ".htm"); got != base+"/xsgz1/xsfc1/52.htm" {
+		t.Fatalf("xsgz1 page 2 URL = %q", got)
 	}
 }
 
@@ -49,6 +60,9 @@ func TestDqxyAdapterList(t *testing.T) {
 	}
 	if items[0].Date != "2026-07-19" {
 		t.Errorf("first date = %q", items[0].Date)
+	}
+	if items[0].Type != "学院新闻" {
+		t.Errorf("first type = %q", items[0].Type)
 	}
 	if items[len(items)-1].URL != "http://dqxy.swjtu.edu.cn/info/2926/233409.htm" {
 		t.Errorf("last URL = %q", items[len(items)-1].URL)
@@ -113,7 +127,76 @@ func TestDqxyAdapterArticle(t *testing.T) {
 	if art.Date != "2026-07-19" {
 		t.Errorf("date = %q, want 2026-07-19", art.Date)
 	}
+	if art.Type != "学院新闻" {
+		t.Errorf("type = %q, want 学院新闻", art.Type)
+	}
+	if art.PublishedAt != "2026-07-19 16:03:00" {
+		t.Errorf("published_at = %q, want source time preserved", art.PublishedAt)
+	}
+	if len(art.Images) != 5 {
+		t.Errorf("images = %d, want 5", len(art.Images))
+	}
 	if len(art.Content) < 100 {
 		t.Errorf("content too short: %d", len(art.Content))
+	}
+}
+
+func TestDqxyAdapterHomepageScope(t *testing.T) {
+	data, err := os.ReadFile("testdata/dqxy_home.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	items, err := parseDqxyNews(data, "http://dqxy.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("got %d homepage items, want 2 bounded news cards", len(items))
+	}
+	if items[0].URL != "http://dqxy.swjtu.edu.cn/info/2926/234499.htm" {
+		t.Errorf("first homepage URL = %q", items[0].URL)
+	}
+	if items[0].Type != "学院新闻" || items[1].Type != "学院新闻" {
+		t.Errorf("homepage types = %q, %q", items[0].Type, items[1].Type)
+	}
+	for _, item := range items {
+		if strings.Contains(item.Title, "导航伪文章") {
+			t.Errorf("navigation item leaked into homepage results: %q", item.Title)
+		}
+	}
+}
+
+func TestDqxyAdapterExternalAttachments(t *testing.T) {
+	data, err := os.ReadFile("testdata/dqxy_article_attachments.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	art, err := parseDqxyArticle(data, "http://dqxy.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if art.Title != "关于组织院内创新大赛选拔赛的通知" {
+		t.Errorf("title = %q", art.Title)
+	}
+	if art.Date != "2024-05-10" || art.PublishedAt != "2024-05-10 15:33:00" {
+		t.Errorf("date/published_at = %q/%q", art.Date, art.PublishedAt)
+	}
+	if art.Type != "通知公告" {
+		t.Errorf("type = %q, want 通知公告", art.Type)
+	}
+	if len(art.Content) < 20 {
+		t.Errorf("content too short: %d", len(art.Content))
+	}
+	if len(art.Images) != 1 || art.Images[0] != "http://dqxy.swjtu.edu.cn/__local/test.png" {
+		t.Errorf("images = %#v", art.Images)
+	}
+	if len(art.Attachments) != 2 {
+		t.Fatalf("attachments = %d, want 2", len(art.Attachments))
+	}
+	if art.Attachments[0].Name != "附件1：报名表.docx" || !strings.Contains(art.Attachments[0].URL, "wbfileid=DOC1") {
+		t.Errorf("first attachment = %#v", art.Attachments[0])
+	}
+	if art.Attachments[1].Name != "附件2：汇总表.xlsx" || !strings.Contains(art.Attachments[1].URL, "wbfileid=XLS2") {
+		t.Errorf("second attachment = %#v", art.Attachments[1])
 	}
 }

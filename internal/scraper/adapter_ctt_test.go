@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -11,8 +12,14 @@ func TestCttAdapterRegistration(t *testing.T) {
 	if !ok {
 		t.Fatal("ctt site is not registered")
 	}
-	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil {
+	if site.BaseURL != cttBaseURL {
+		t.Fatalf("CTT base URL = %q, want %q", site.BaseURL, cttBaseURL)
+	}
+	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil {
 		t.Fatalf("CTT adapter hooks are incomplete: %+v", site)
+	}
+	if !reflect.DeepEqual(site.SubPages, cttSubPages) {
+		t.Fatalf("CTT sub-pages = %#v, want %#v", site.SubPages, cttSubPages)
 	}
 }
 
@@ -89,6 +96,79 @@ func TestCttHomeParserUsesCurrentHomeModules(t *testing.T) {
 	if items[0].Date != "2026-06-18" || items[1].Date != "2026-07-17" {
 		t.Fatalf("unexpected current home dates: %#v", items)
 	}
+	if items[0].Type != "交运要闻" {
+		t.Fatalf("unexpected current home type: %#v", items[0])
+	}
+}
+
+func TestCttHomeParserCollectsEveryHiddenTab(t *testing.T) {
+	body := readCttFixture(t, "ctt_home_live.html")
+	items, err := parseCttNews(body, cttBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 12 {
+		t.Fatalf("got %d CTT home articles, want 12: %#v", len(items), items)
+	}
+	wantTypes := map[string]int{
+		"交运要闻":  4,
+		"院务公告":  2,
+		"本科教学":  2,
+		"研究生教育": 2,
+		"学生工作":  2,
+	}
+	gotTypes := make(map[string]int)
+	for _, item := range items {
+		gotTypes[item.Type]++
+		if !strings.HasPrefix(item.URL, cttBaseURL+"/info/") {
+			t.Errorf("unexpected home URL: %q", item.URL)
+		}
+		if strings.Contains(item.URL, "/3001/") || strings.Contains(item.URL, "/5591/") {
+			t.Errorf("banner/platform link leaked into home feed: %#v", item)
+		}
+	}
+	if !reflect.DeepEqual(gotTypes, wantTypes) {
+		t.Fatalf("home item types = %#v, want %#v", gotTypes, wantTypes)
+	}
+}
+
+func TestCttListParserReadsClassificationAndTotalPages(t *testing.T) {
+	body := readCttFixture(t, "ctt_list_live.html")
+	items, err := parseCttNews(body, cttBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("got %d CTT list articles, want 2: %#v", len(items), items)
+	}
+	for _, item := range items {
+		if item.Type != "学院通知" {
+			t.Errorf("item type = %q, want 学院通知", item.Type)
+		}
+		if item.PublishedAt != "" {
+			t.Errorf("date-only list unexpectedly has a clock: %#v", item)
+		}
+	}
+	if items[0].Date != "2026-07-17" || items[1].Date != "2026-04-13" {
+		t.Fatalf("unexpected CTT list dates: %#v", items)
+	}
+	if got := cttTotalPagesFromHTML(body); got != 44 {
+		t.Fatalf("CTT total pages = %d, want 44", got)
+	}
+}
+
+func TestCttEmptyListIsAValidEmptyResult(t *testing.T) {
+	body := readCttFixture(t, "ctt_empty.html")
+	items, err := parseCttNews(body, cttBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 0 {
+		t.Fatalf("empty CTT list returned %#v", items)
+	}
+	if got := cttTotalPagesFromHTML(body); got != 1 {
+		t.Fatalf("empty CTT list total pages = %d, want 1", got)
+	}
 }
 
 func TestCttPageURLUsesReverseGeneratedNumbering(t *testing.T) {
@@ -118,4 +198,52 @@ func TestCttArticleParserReadsPublishDate(t *testing.T) {
 	if article.Date != "2026-05-21" {
 		t.Fatalf("article date = %q, want 2026-05-21", article.Date)
 	}
+}
+
+func TestCttArticleParserExtractsResourcesAndPreciseMetadata(t *testing.T) {
+	article, err := parseCttArticle(readCttFixture(t, "ctt_article_live.html"), cttBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title != "CTT 详情测试" || article.Source != "交通运输与物流学院" || article.Type != "学院通知" {
+		t.Fatalf("unexpected CTT article metadata: %#v", article)
+	}
+	if article.Date != "2026-08-29" || article.PublishedAt != "2026-08-29 09:27:00" {
+		t.Fatalf("unexpected CTT article date: %#v", article)
+	}
+	if !strings.Contains(article.Content, "正文第一段") {
+		t.Errorf("article content = %q", article.Content)
+	}
+	if len(article.Images) != 1 || article.Images[0] != cttBaseURL+"/images/body.jpg" {
+		t.Fatalf("article images = %#v", article.Images)
+	}
+	if len(article.Attachments) != 1 {
+		t.Fatalf("article attachments = %#v, want one deduplicated attachment", article.Attachments)
+	}
+	if article.Attachments[0].Name != "通知附件.pdf" || !strings.HasPrefix(article.Attachments[0].URL, cttBaseURL+"/system/_content/download.jsp?") {
+		t.Fatalf("article attachment = %#v", article.Attachments[0])
+	}
+	if !strings.Contains(article.ContentHTML, cttBaseURL+"/images/body.jpg") || !strings.Contains(article.ContentHTML, cttBaseURL+"/system/_content/download.jsp?") {
+		t.Errorf("resolved resources missing from ContentHTML: %s", article.ContentHTML)
+	}
+}
+
+func TestCttArticleParserRejectsShells(t *testing.T) {
+	shell := []byte(`<html><head><meta name="pageType" content="1"><title>CTT 首页</title></head><body><div class="v_news_content"><p>壳页面</p></div></body></html>`)
+	if _, err := parseCttArticle(shell, cttBaseURL); err == nil {
+		t.Fatal("non-article pageType was accepted as an article")
+	}
+	captcha := []byte(`<html><head><title>附件下载</title></head><body><h1>请输入验证码下载附件</h1></body></html>`)
+	if _, err := parseCttArticle(captcha, cttBaseURL); err == nil {
+		t.Fatal("captcha HTML was accepted as an article")
+	}
+}
+
+func readCttFixture(t *testing.T, name string) []byte {
+	t.Helper()
+	body, err := os.ReadFile("testdata/" + name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return body
 }

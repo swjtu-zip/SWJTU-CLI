@@ -3,6 +3,7 @@ package scraper
 import (
 	"fmt"
 	"net/url"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -13,16 +14,39 @@ import (
 	"swjtu-cli/internal/model"
 )
 
-// ctt.swjtu.edu.cn has a site-specific second-page layout. Its category
-// pages use .news-list cards, while the home page uses a .news-ul list. The
-// generic parser does not know either container and can therefore return an
-// empty list or pick unrelated links from the page shell.
-func init() {
-	registerAdapter("ctt", SiteAdapter{
-		ParseList:    parseCttNews,
-		ParseArticle: parseCttArticle,
-		PageURL:      cttPageURL,
-	})
+const cttBaseURL = "https://ctt.swjtu.edu.cn"
+
+// cttSubPages contains the reachable article archives exposed by the live
+// navigation and by the "查看更多" links in its hidden home/landing modules.
+// xzfc and mtgz are deliberately retained: they are real list endpoints and
+// currently render a valid empty list. Static profile/overview pages and
+// landing pages whose content is only a six-item preview are not feeds.
+var cttSubPages = []string{
+	"xyywlist/jyyw",
+	"xyywlist/dcjy",
+	"xyywlist/xzfc",
+	"xyywlist/kycx",
+	"xyywlist/tsdj",
+	"xyywlist/jwgz",
+	"xyywlist/mtgz",
+	"xyywlist/wjxz",
+	"xyywlist/gzzd",
+	"tzgg/xytz",
+	"bkjxnew/jxgg",
+	"yjsjxnew/tzgg",
+	"kxyjNew/kytz",
+	"sysglnew/tzgg",
+	"shpxnew/jxjyxx",
+	"xsgzNew1/txhd",
+	"xsgzNew1/bksgl",
+	"xsgzNew1/yjsgl",
+	"xsgzNew1/xszz",
+	"xsgzNew1/bjjs",
+	"dqgzNew/djtz",
+	"dqgzNew/djxw",
+	"dqgzNew/gszq",
+	"dqgzNew/ghhd",
+	"ltgz_ggw_",
 }
 
 var (
@@ -31,14 +55,38 @@ var (
 	cttFullDateRe        = regexp.MustCompile(`(?i)(20[0-9]{2})\s*[-/.年]\s*([0-9]{1,2})\s*[-/.月]\s*([0-9]{1,2})\s*日?`)
 	cttYearMonthRe       = regexp.MustCompile(`(?i)^(20[0-9]{2})\s*[-/.年]\s*([0-9]{1,2})\s*月?$`)
 	cttMonthDayRe        = regexp.MustCompile(`^([0-9]{1,2})\s*[-/.]\s*([0-9]{1,2})$`)
+	cttAttachmentExtRe   = regexp.MustCompile(`(?i)\.(?:pdf|docx?|xlsx?|pptx?|zip|rar|7z|txt|csv|wps|rtf)(?:$|[?#])`)
+	cttDownloadURLRe     = regexp.MustCompile(`(?i)(?:downloadattachurl|attachment|download)`)
 )
 
+// ctt.swjtu.edu.cn uses a different generated-page order from the shared
+// default: the unsuffixed file is logical page 1, while logical page 2 is
+// the file named total-1.htm and the oldest page is /1.htm.
+func init() {
+	if site := AllSites["ctt"]; site != nil {
+		site.BaseURL = cttBaseURL
+	}
+	registerAdapter("ctt", SiteAdapter{
+		SubPages:     cttSubPages,
+		ParseList:    parseCttNews,
+		ParseArticle: parseCttArticle,
+		PageURL:      cttPageURL,
+		TotalPages:   cttTotalPages,
+	})
+}
+
 // cttPageURL maps the logical page number (1=newest) to CTT's generated
-// files. For example, the first xytz page advertises 20 pages and links page
-// 2 to xytz/19.htm.
+// files. For example, the first xytz page advertises 20 pages and links
+// logical page 2 to xytz/19.htm.
 func cttPageURL(baseURL, slug string, page, totalPages int, extension string) string {
-	baseURL = strings.TrimRight(baseURL, "/")
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
 	slug = strings.Trim(slug, "/")
+	if extension == "" {
+		extension = ".htm"
+	}
+	if !strings.HasPrefix(extension, ".") {
+		extension = "." + extension
+	}
 	if page <= 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
@@ -53,6 +101,65 @@ func cttPageURL(baseURL, slug string, page, totalPages int, extension string) st
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, filePage, extension)
 }
 
+// cttTotalPages reads the logical page labels from the first page. Looking at
+// the labels, rather than the generated hrefs, is essential because the href
+// for the last page is /1.htm even when the logical total is much larger.
+func cttTotalPages(slug string) (int, error) {
+	baseURL := cttBaseURL
+	if site := AllSites["ctt"]; site != nil && strings.TrimSpace(site.BaseURL) != "" {
+		baseURL = strings.TrimRight(strings.TrimSpace(site.BaseURL), "/")
+	}
+
+	listURL := cttPageURL(baseURL, slug, 1, 0, ".htm")
+	body, err := fetch(listURL)
+	if err != nil {
+		listURL = cttPageURL(baseURL, slug, 1, 0, ".html")
+		body, err = fetch(listURL)
+	}
+	if err != nil {
+		return 0, fmt.Errorf("ctt: fetch first page for %s: %w", slug, err)
+	}
+
+	if total := cttTotalPagesFromHTML(body); total > 0 {
+		return total, nil
+	}
+	if cttListShellFromHTML(body) {
+		return 1, nil
+	}
+	return 0, fmt.Errorf("ctt: %s does not expose a recognized list page", slug)
+}
+
+func cttTotalPagesFromHTML(raw []byte) int {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(raw)))
+	if err != nil {
+		return 0
+	}
+
+	maxPage := 0
+	doc.Find(".p_pages .p_no a, .p_pages .p_no_d").Each(func(_ int, sel *goquery.Selection) {
+		value, err := strconv.Atoi(strings.TrimSpace(sel.Text()))
+		if err == nil && value > maxPage {
+			maxPage = value
+		}
+	})
+	return maxPage
+}
+
+func cttListShellFromHTML(raw []byte) bool {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(raw)))
+	if err != nil {
+		return false
+	}
+	return cttListShell(doc)
+}
+
+func cttListShell(doc *goquery.Document) bool {
+	if doc == nil {
+		return false
+	}
+	return doc.Find(".main_right #curType, .main_right .position, .main_right .p_pages").Length() > 0
+}
+
 func parseCttNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
 	if err != nil {
@@ -61,48 +168,78 @@ func parseCttNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 
 	items := make([]model.NewsItem, 0)
 	seen := make(map[string]bool)
+	listType := cttListType(doc)
 
-	// Category pages have one .news-list card per article. Restricting the
-	// extraction to this container excludes the banner cards and left-side
-	// navigation, both of which also contain article-looking links.
-	listCards := doc.Find(".news-list")
-	if listCards.Length() > 0 {
-		listCards.Each(func(_ int, card *goquery.Selection) {
-			anchor := card.Find(".news-box > a[href]").First()
-			if anchor.Length() == 0 {
-				anchor = card.Find("a[href]").First()
+	// Category archives have one .news-list card per article. Restricting the
+	// extraction to this container excludes the banner cards and page shell,
+	// both of which also contain article-looking links.
+	doc.Find(".news-list").Each(func(_ int, card *goquery.Selection) {
+		anchor := card.Find(".news-box > a[href]").First()
+		if anchor.Length() == 0 {
+			anchor = card.Find("a[href]").First()
+		}
+		addCttListItem(&items, seen, card, anchor, baseURL, listType, false)
+	})
+
+	// Keep compatibility with the older home-page template, whose real rows
+	// use root-level numeric article URLs.
+	doc.Find(".news-ul > li").Each(func(_ int, row *goquery.Selection) {
+		addCttListItem(&items, seen, row, row.Find(".newstxtli a[href]").First(), baseURL, "交运要闻", true)
+	})
+
+	// The current home page has a four-item latest-news block plus four hidden
+	// tab panels. Parse every panel instead of stopping after the first block;
+	// all four panels are present in the HTML even though only one is visible.
+	doc.Find(".innews > li").Each(func(_ int, row *goquery.Selection) {
+		typ := cttClosestHeading(row, ".rowa", "交运要闻")
+		anchor := row.Find(".info a[href]").First()
+		if anchor.Length() == 0 {
+			anchor = row.Find("a.line2[href]").First()
+		}
+		addCttListItem(&items, seen, row, anchor, baseURL, typ, false)
+	})
+	doc.Find(".rowb").Each(func(_ int, panel *goquery.Selection) {
+		tabs := panel.Find(".tabNav li")
+		foundTabs := false
+		panel.Find(".tabcons").Each(func(index int, tab *goquery.Selection) {
+			foundTabs = true
+			typ := ""
+			if index < tabs.Length() {
+				typ = cleanCttText(tabs.Eq(index).Text())
 			}
-			addCttListItem(&items, seen, card, anchor, baseURL, false)
+			tab.Find(".list li").Each(func(_ int, row *goquery.Selection) {
+				addCttListItem(&items, seen, row, row.Find("a.texto[href]").First(), baseURL, typ, false)
+			})
 		})
-	}
-	// The home page's "最近更新" block is intentionally handled separately.
-	// Some generated home pages contain an empty .news-list shell for another
-	// module, so fall back when the category pass did not yield an article.
-	if len(items) == 0 {
-		doc.Find(".news-ul > li").Each(func(_ int, row *goquery.Selection) {
-			addCttListItem(&items, seen, row, row.Find(".newstxtli a[href]").First(), baseURL, true)
-		})
-	}
-	if len(items) == 0 {
-		// The current home page uses the newer .innews and .rowb modules
-		// instead of .news-ul. Both contain real /info/<channel>/<id>.htm
-		// links; keep the extraction scoped to those modules so image links,
-		// navigation, and platform descriptions do not leak into the feed.
-		doc.Find(".innews > li").Each(func(_ int, row *goquery.Selection) {
-			addCttListItem(&items, seen, row, row.Find(".info a[href], a.line2[href]").First(), baseURL, false)
-		})
-		doc.Find(".rowb .list li").Each(func(_ int, row *goquery.Selection) {
-			addCttListItem(&items, seen, row, row.Find("a.texto[href]").First(), baseURL, false)
-		})
-	}
+		if !foundTabs {
+			typ := cleanCttText(tabs.First().Text())
+			panel.Find(".list li").Each(func(_ int, row *goquery.Selection) {
+				addCttListItem(&items, seen, row, row.Find("a.texto[href]").First(), baseURL, typ, false)
+			})
+		}
+	})
+
+	// Some top-level navigation pages are landing pages with one or more
+	// hidden notice panels. They are not registered as feeds, but keeping this
+	// scoped fallback makes their real preview articles parseable when a caller
+	// explicitly supplies the landing URL. Banner-image links remain excluded.
+	doc.Find(".notice-title-box").Each(func(_ int, block *goquery.Selection) {
+		addCttListItem(&items, seen, block, block.Find("a[href]").First(), baseURL, listType, false)
+	})
+	doc.Find(".notice-list-box > li").Each(func(_ int, row *goquery.Selection) {
+		addCttListItem(&items, seen, row, row.Find("a.notice-txt[href]").First(), baseURL, listType, false)
+	})
 
 	if len(items) == 0 {
-		return nil, fmt.Errorf("CTT list contains no article entries")
+		if cttListShell(doc) {
+			return items, nil
+		}
+		return nil, fmt.Errorf("CTT list contains no recognized article entries")
 	}
 	return items, nil
 }
 
-func addCttListItem(items *[]model.NewsItem, seen map[string]bool, block, anchor *goquery.Selection, baseURL string, allowRootArticle bool) {
+func addCttListItem(items *[]model.NewsItem, seen map[string]bool, block, anchor *goquery.Selection, baseURL, typ string, allowRootArticle bool) {
 	if anchor == nil || anchor.Length() == 0 {
 		return
 	}
@@ -127,12 +264,19 @@ func addCttListItem(items *[]model.NewsItem, seen map[string]bool, block, anchor
 		return
 	}
 
+	date := cttDateFromBlock(block)
+	publishedAt := cttPublishedAtFromBlock(block)
+	if cardType := cttTypeFromBlock(block); cardType != "" {
+		typ = cardType
+	}
 	seen[fullURL] = true
 	*items = append(*items, model.NewsItem{
-		Title:    title,
-		URL:      fullURL,
-		Date:     cttDateFromBlock(block),
-		ParsedAt: time.Now(),
+		Title:       title,
+		URL:         fullURL,
+		Date:        date,
+		PublishedAt: publishedAt,
+		Type:        cleanCttText(typ),
+		ParsedAt:    time.Now(),
 	})
 }
 
@@ -151,26 +295,83 @@ func cttArticleURL(baseURL, href string, allowRootArticle bool) (string, bool) {
 	return "", false
 }
 
+func cttListType(doc *goquery.Document) string {
+	if doc == nil {
+		return ""
+	}
+	for _, selector := range []string{".main_right #curType", ".main_left .submenu_cur", ".main_left .menu h3", ".selectbtn.active"} {
+		if value := cleanCttText(doc.Find(selector).First().Text()); value != "" {
+			return value
+		}
+	}
+	if title := cleanCttText(doc.Find("title").First().Text()); title != "" {
+		return cleanCttText(stripSiteSuffix(title))
+	}
+	return ""
+}
+
+func cttClosestHeading(sel *goquery.Selection, ancestor, fallback string) string {
+	if sel != nil && sel.Length() > 0 {
+		if value := cleanCttText(sel.Closest(ancestor).Find("h3").First().Text()); value != "" {
+			return value
+		}
+	}
+	return fallback
+}
+
+func cttTypeFromBlock(block *goquery.Selection) string {
+	if block == nil || block.Length() == 0 {
+		return ""
+	}
+	content := block.Find(".news-content").First()
+	if content.Length() == 0 {
+		return ""
+	}
+	text := cleanCttText(flattenedText(content))
+	marker := strings.Index(text, "分类")
+	if marker < 0 {
+		return ""
+	}
+	value := text[marker+len("分类"):]
+	if !strings.ContainsAny(value, ":：") {
+		return ""
+	}
+	value = strings.TrimSpace(strings.TrimLeft(value, ":："))
+	for _, stop := range []string{"查看", "浏览", "点击"} {
+		if index := strings.Index(value, stop); index >= 0 {
+			value = value[:index]
+		}
+	}
+	return cleanCttText(value)
+}
+
+func cleanCttText(value string) string {
+	return strings.Join(strings.Fields(strings.TrimSpace(value)), " ")
+}
+
 func cttDateFromBlock(block *goquery.Selection) string {
 	if block == nil || block.Length() == 0 {
 		return ""
 	}
 
-	if date := cttDateFromScope(block.Find(".news-time").First()); date != "" {
-		return date
-	}
-	if date := cttDateFromScope(block.Find(".timecon").First()); date != "" {
-		return date
-	}
-	for _, selector := range []string{"time", ".date", ".time", "[class*='date']", "[class*='time']"} {
+	for _, selector := range []string{".news-time", ".timecon", ".notice-title-time", ".notice-time", "time", ".date", ".time", "[class*='date']", "[class*='time']"} {
 		if date := cttDateFromScope(block.Find(selector).First()); date != "" {
 			return date
 		}
 	}
-	if date := cttDateFromScope(block); date != "" {
-		return date
+	return cttDateFromScope(block)
+}
+
+func cttPublishedAtFromBlock(block *goquery.Selection) string {
+	if block == nil || block.Length() == 0 {
+		return ""
 	}
-	return ""
+	for _, selector := range []string{".news-time", ".timecon", ".notice-title-time", ".notice-time", "time", ".date", ".time", "[class*='date']", "[class*='time']"} {
+		if published := cttPublishedAtFromScope(block.Find(selector).First()); published != "" {
+			return published
+		}
+	}
+	return cttPublishedAtFromScope(block)
 }
 
 func cttDateFromScope(scope *goquery.Selection) string {
@@ -178,8 +379,8 @@ func cttDateFromScope(scope *goquery.Selection) string {
 		return ""
 	}
 
-	day := strings.TrimSpace(scope.Find(".day").First().Text())
-	month := strings.TrimSpace(scope.Find(".month").First().Text())
+	day := strings.TrimSpace(scope.Find(".day, .notice-day").First().Text())
+	month := strings.TrimSpace(scope.Find(".month, .notice-year").First().Text())
 	if day != "" && month != "" {
 		if match := cttYearMonthRe.FindStringSubmatch(month); match != nil {
 			return normalizeDateParts(match[1], match[2], day)
@@ -189,7 +390,10 @@ func cttDateFromScope(scope *goquery.Selection) string {
 		}
 	}
 
-	text := strings.Join(strings.Fields(scope.Text()), " ")
+	text := cleanCttText(flattenedText(scope))
+	if precise := cttPublishedAtFromText(text); precise != "" {
+		return precise[:10]
+	}
 	if match := cttFullDateRe.FindStringSubmatch(text); match != nil {
 		return normalizeDateParts(match[1], match[2], match[3])
 	}
@@ -206,31 +410,192 @@ func cttDateFromScope(scope *goquery.Selection) string {
 	return ""
 }
 
+func cttPublishedAtFromScope(scope *goquery.Selection) string {
+	if scope == nil || scope.Length() == 0 {
+		return ""
+	}
+	return cttPublishedAtFromText(cleanCttText(flattenedText(scope)))
+}
+
+func cttPublishedAtFromText(text string) string {
+	match := dateTimeRe.FindString(text)
+	if match == "" {
+		return ""
+	}
+	value := normalizePublishedAt(match)
+	if publishedAtHasClock(value) {
+		return value
+	}
+	return ""
+}
+
 func parseCttArticle(html []byte, baseURL string) (*model.Article, error) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
+	if err != nil {
+		return nil, fmt.Errorf("parse CTT article: %w", err)
+	}
+	if cttArticleIsShell(doc) {
+		return nil, fmt.Errorf("ctt: response is not an article detail")
+	}
+
 	article, err := parseBodaArticle(html, baseURL)
 	if err != nil {
 		return nil, err
 	}
-	if article.Date != "" {
-		if match := cttFullDateRe.FindStringSubmatch(article.Date); match != nil {
-			article.Date = normalizeDateParts(match[1], match[2], match[3])
-		}
-		return article, nil
-	}
+	cttApplyArticleMeta(doc, article)
+	cttAppendAttachments(article, doc, baseURL)
+	cttFinalizeContent(article, doc, baseURL)
 
-	doc, docErr := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
-	if docErr != nil {
-		return article, nil
+	if strings.TrimSpace(article.Title) == "" {
+		return nil, fmt.Errorf("ctt: article has no title")
 	}
-	for _, selector := range []string{".top-info", ".news_source", ".left-top"} {
-		scope := doc.Find(selector).First()
-		if scope.Length() == 0 {
-			continue
-		}
-		if match := cttFullDateRe.FindStringSubmatch(strings.Join(strings.Fields(scope.Text()), " ")); match != nil {
-			article.Date = normalizeDateParts(match[1], match[2], match[3])
-			break
-		}
+	if strings.TrimSpace(article.Content) == "" && len(article.Images) == 0 && len(article.Attachments) == 0 {
+		return nil, fmt.Errorf("ctt: article body is empty")
 	}
+	normalizeArticlePublishedAt(article)
 	return article, nil
+}
+
+func cttArticleIsShell(doc *goquery.Document) bool {
+	if doc == nil {
+		return true
+	}
+	pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"]`).AttrOr("content", ""))
+	if pageType != "" && pageType != "3" {
+		return true
+	}
+	title := cleanCttText(doc.Find("title").First().Text())
+	titleLower := strings.ToLower(title)
+	if strings.Contains(title, "404") || strings.Contains(title, "错误提示") || strings.Contains(title, "验证码") || strings.Contains(title, "附件下载") || strings.Contains(titleLower, "not found") {
+		return true
+	}
+	content := cttArticleContent(doc)
+	return content == nil || content.Length() == 0
+}
+
+func cttArticleContent(doc *goquery.Document) *goquery.Selection {
+	if doc == nil {
+		return nil
+	}
+	for _, selector := range []string{".left-main .v_news_content", ".v_news_content", "#vsb_content_501", ".content-main"} {
+		if content := doc.Find(selector).First(); content.Length() > 0 {
+			return content
+		}
+	}
+	return nil
+}
+
+func cttApplyArticleMeta(doc *goquery.Document, article *model.Article) {
+	if doc == nil || article == nil {
+		return
+	}
+	meta := doc.Find(".left-top .top-info, .left-top .news_source, .top-info, .news_source").First()
+	if meta.Length() == 0 {
+		return
+	}
+	meta.Find("span").Each(func(_ int, field *goquery.Selection) {
+		value := cleanCttText(flattenedText(field))
+		switch {
+		case strings.HasPrefix(value, "来源：") || strings.HasPrefix(value, "来源:"):
+			article.Source = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(value, "来源："), "来源:"))
+		case strings.HasPrefix(value, "发布日期：") || strings.HasPrefix(value, "发布日期:") || strings.HasPrefix(value, "日期：") || strings.HasPrefix(value, "日期:"):
+			value = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(value, "发布日期："), "发布日期:"), "日期："), "日期:"))
+			if date, publishedAt := cttDateValue(value); date != "" {
+				article.Date = date
+				if publishedAt != "" {
+					article.PublishedAt = publishedAt
+				}
+			}
+		case strings.HasPrefix(value, "类型：") || strings.HasPrefix(value, "类型:") || strings.HasPrefix(value, "分类：") || strings.HasPrefix(value, "分类:"):
+			article.Type = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(value, "类型："), "类型:"), "分类："), "分类:"))
+		}
+	})
+}
+
+func cttDateValue(value string) (string, string) {
+	value = cleanCttText(value)
+	if precise := cttPublishedAtFromText(value); precise != "" {
+		return precise[:10], precise
+	}
+	if match := cttFullDateRe.FindStringSubmatch(value); match != nil {
+		return normalizeDateParts(match[1], match[2], match[3]), ""
+	}
+	return "", ""
+}
+
+func cttAppendAttachments(article *model.Article, doc *goquery.Document, baseURL string) {
+	if article == nil || doc == nil {
+		return
+	}
+	seen := make(map[string]bool, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		seen[attachment.URL] = true
+	}
+	doc.Find(".news-left a[href], .left-main a[href]").Each(func(_ int, anchor *goquery.Selection) {
+		href := strings.TrimSpace(anchor.AttrOr("href", ""))
+		if href == "" {
+			return
+		}
+		name := cttAttachmentName(anchor, href)
+		if !cttIsAttachmentLink(href, name, anchor.AttrOr("download", "")) || name == "" {
+			return
+		}
+		resolved := cleanURL(resolveURL(baseURL, href))
+		if resolved == "" || seen[resolved] {
+			return
+		}
+		seen[resolved] = true
+		article.Attachments = append(article.Attachments, model.Attachment{Name: name, URL: resolved})
+		anchor.SetAttr("href", resolved)
+	})
+}
+
+func cttIsAttachmentLink(href, name, download string) bool {
+	return cttDownloadURLRe.MatchString(href) || cttAttachmentExtRe.MatchString(href) || cttAttachmentExtRe.MatchString(name) || strings.TrimSpace(download) != ""
+}
+
+func cttAttachmentName(anchor *goquery.Selection, href string) string {
+	if anchor == nil || anchor.Length() == 0 {
+		return ""
+	}
+	for _, attr := range []string{"download", "name"} {
+		if value := cleanCttText(anchor.AttrOr(attr, "")); value != "" {
+			return value
+		}
+	}
+	if value := cleanCttText(anchor.Text()); value != "" {
+		return value
+	}
+	if parsed, err := url.Parse(href); err == nil {
+		return path.Base(parsed.Path)
+	}
+	return ""
+}
+
+func cttFinalizeContent(article *model.Article, doc *goquery.Document, baseURL string) {
+	if article == nil || doc == nil {
+		return
+	}
+	content := cttArticleContent(doc)
+	if content == nil || content.Length() == 0 {
+		return
+	}
+	content.Find("img[src]").Each(func(_ int, image *goquery.Selection) {
+		if src := strings.TrimSpace(image.AttrOr("src", "")); src != "" {
+			image.SetAttr("src", cleanURL(resolveURL(baseURL, src)))
+		}
+	})
+	content.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
+		href := strings.TrimSpace(anchor.AttrOr("href", ""))
+		name := cttAttachmentName(anchor, href)
+		if cttIsAttachmentLink(href, name, anchor.AttrOr("download", "")) {
+			anchor.SetAttr("href", cleanURL(resolveURL(baseURL, href)))
+		}
+	})
+	if html, err := content.Html(); err == nil {
+		article.ContentHTML = html
+	}
+	if strings.TrimSpace(article.Content) == "" {
+		article.Content = cleanCttText(flattenedText(content))
+	}
 }

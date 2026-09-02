@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<body>
+  <div class="list-top-item">
+    <div class="calendar"><div class="day">Mon Aug 03 00:00:00 CST 2026</div></div>
+    <a class="link title ellipsis" href="../web/page-newsDetail.html?nid=page-one">第 1 页文章</a>
+  </div>
+  <div class="item-wrapper">
+    <div class="calendar"><div class="day">Tue Jul 07 00:00:00 CST 2026</div></div>
+    <div class="info-wrapper">
+      <a class="link ellipsis" href="../web/page-newsDetail.html?nid=page-row">列表文章</a>
+    </div>
+  </div>
+  <!-- 共【290】条，20条/页，共【15】页，当前第【1】页 -->
+  <div class="page-wrapper">
+    <a class="page-btn" onclick="gotoPage(1)">首页</a>
+    <a class="page-btn" onclick="gotoPage(2)">2</a>
+    <a class="page-btn" onclick="gotoPage(15)">尾页</a>
+  </div>
+  <script>
+    function gotoPage(pageNum) {
+      location.href = '/web/page-module.html?mid=12D0D8DF28CC1D1D&page=' + pageNum;
+    }
+  </script>
+</body>
+</html>

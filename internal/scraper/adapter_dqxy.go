@@ -20,10 +20,37 @@ import (
 // hooks here instead of routing this site through the generic 博达 parser.
 func init() {
 	registerAdapter("dqxy", SiteAdapter{
+		SubPages:     dqxySubPages,
 		ParseList:    parseDqxyNews,
 		ParseArticle: parseDqxyArticle,
 		PageURL:      dqxyPageURL,
 	})
+}
+
+// dqxySubPages contains the site's actual news/notice list entry points. The
+// site has two student-work trees (the current *_more tree and the older
+// xsgz1 tree); both are linked by the live home-page navigation and expose
+// independent article archives.
+var dqxySubPages = []string{
+	"xwdt/qb",
+	"xwdt/xyxw",
+	"xwdt/djdt",
+	"tzgg/qb",
+	"tzgg/dzbg",
+	"tzgg/bksjy",
+	"tzgg/yjsjy",
+	"tzgg/kygz",
+	"tzgg/xsgz",
+	"tzgg/syjx",
+	"tzgg/gsgg",
+	"tzgg/qt",
+	"xsgz_more/tzgg",
+	"xsgz_more/xsdj",
+	"xsgz_more/xfjs",
+	"xsgz_more/xgdt",
+	"xsgz_more/xsfc",
+	"xsgz1/xsdj",
+	"xsgz1/xsfc1",
 }
 
 var (
@@ -37,6 +64,7 @@ var (
 type dqxyNewsRow struct {
 	URL       string
 	Title     string
+	Type      string
 	Date      string
 	MonthDay  int
 	Year      int
@@ -122,6 +150,7 @@ func parseDqxyNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 			Title:    row.Title,
 			URL:      row.URL,
 			Date:     row.Date,
+			Type:     row.Type,
 			ParsedAt: time.Now(),
 		})
 	}
@@ -133,6 +162,9 @@ func collectDqxyHomeRows(doc *goquery.Document, baseURL string) []dqxyNewsRow {
 	doc.Find(".home-school-news .mid-section > li").Each(func(_ int, row *goquery.Selection) {
 		if a := firstDqxyArticleLink(row, baseURL); a != nil {
 			if parsed, ok := newDqxyRow(row, a, baseURL); ok {
+				if parsed.Type == "" {
+					parsed.Type = "学院新闻"
+				}
 				rows = append(rows, parsed)
 			}
 		}
@@ -141,8 +173,9 @@ func collectDqxyHomeRows(doc *goquery.Document, baseURL string) []dqxyNewsRow {
 }
 
 // collectDqxyListRows scopes the primary extraction to the content list. The
-// broad div.item fallback is only used when the known container is absent and
-// still requires a valid /info/... article URL.
+// fallback is limited to the document's main content. In particular, do
+// not scan arbitrary div.item nodes: home-page/navigation templates can use
+// that class for unrelated blocks containing article-looking links.
 func collectDqxyListRows(doc *goquery.Document, baseURL string) []dqxyNewsRow {
 	var blocks *goquery.Selection
 	for _, selector := range []string{
@@ -155,7 +188,7 @@ func collectDqxyListRows(doc *goquery.Document, baseURL string) []dqxyNewsRow {
 		}
 	}
 	if blocks == nil {
-		blocks = doc.Find("div.item")
+		blocks = doc.Find("main .item")
 	}
 
 	rows := make([]dqxyNewsRow, 0, blocks.Length())
@@ -230,9 +263,23 @@ func newDqxyRow(container, a *goquery.Selection, baseURL string) (dqxyNewsRow, b
 	if dateText == "" && container != a {
 		dateText = dqxyDateText(a)
 	}
-	row := dqxyNewsRow{URL: fullURL, Title: title}
+	row := dqxyNewsRow{URL: fullURL, Title: title, Type: dqxyRowType(container)}
 	setDqxyDate(&row, dateText)
 	return row, true
+}
+
+func dqxyRowType(container *goquery.Selection) string {
+	if container == nil || container.Length() == 0 {
+		return ""
+	}
+	typeText := strings.TrimSpace(container.Find(".lanmu").First().Text())
+	if typeText == "" {
+		return ""
+	}
+	typeText = strings.Join(strings.Fields(typeText), " ")
+	typeText = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(typeText, "【"), "["))
+	typeText = strings.TrimSuffix(strings.TrimSuffix(typeText, "】"), "]")
+	return strings.TrimSpace(typeText)
 }
 
 func firstDqxyArticleLink(container *goquery.Selection, baseURL string) *goquery.Selection {
@@ -464,5 +511,56 @@ func parseDqxyArticle(html []byte, baseURL string) (*model.Article, error) {
 	} else if date := parseDqxyFullDate(art.Date); date != "" {
 		art.Date = date
 	}
+	if typ := dqxyArticleType(doc); typ != "" {
+		art.Type = typ
+	}
+	appendDqxyAttachments(art, doc, baseURL)
 	return art, nil
+}
+
+func dqxyArticleType(doc *goquery.Document) string {
+	var typ string
+	doc.Find("main.news_detail_page .top-nav a").Each(func(_ int, sel *goquery.Selection) {
+		candidate := strings.Join(strings.Fields(sel.Text()), " ")
+		if candidate == "" || candidate == "首页" || candidate == "学院首页" {
+			return
+		}
+		typ = candidate
+	})
+	return typ
+}
+
+// dqxy places its CMS download links in a UL after the #vsb_content section,
+// not inside .v_news_content. Scan only the article writing area, require the
+// CMS download endpoint and an enclosing attachment label, and leave ordinary
+// body links (including external notices) untouched.
+func appendDqxyAttachments(article *model.Article, doc *goquery.Document, baseURL string) {
+	if article == nil || doc == nil {
+		return
+	}
+	seen := make(map[string]bool, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		seen[attachment.URL] = true
+	}
+	doc.Find("main.news_detail_page .writing a[href]").Each(func(_ int, sel *goquery.Selection) {
+		href := strings.TrimSpace(sel.AttrOr("href", ""))
+		lowerHref := strings.ToLower(href)
+		if href == "" || !strings.Contains(lowerHref, "download.jsp") || !strings.Contains(lowerHref, "downloadattachurl") || isInNavArea(sel) {
+			return
+		}
+		listItem := sel.Closest("li")
+		if listItem.Length() == 0 || !strings.Contains(listItem.Text(), "附件") {
+			return
+		}
+		name := strings.Join(strings.Fields(sel.Text()), " ")
+		if name == "" {
+			return
+		}
+		resolved := cleanURL(resolveURL(baseURL, href))
+		if seen[resolved] {
+			return
+		}
+		seen[resolved] = true
+		article.Attachments = append(article.Attachments, model.Attachment{Name: name, URL: resolved})
+	})
 }

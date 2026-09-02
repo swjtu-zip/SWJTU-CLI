@@ -48,12 +48,18 @@ func fillMissingDates(items []model.NewsItem, parseArticle ParseArticleFunc, bas
 			continue
 		}
 		items[i].Date = art.Date
+		items[i].PublishedAt = art.PublishedAt
 	}
 }
 
 // ListNewsPage fetches a specific page of news.
 // page 1 = first page (slug.htm), page 2+ = slug/{total-page+2-page}.htm
 func (s *BodaSite) ListNewsPage(slug string, page int) ([]model.NewsItem, error) {
+	if s.ListPageFunc != nil {
+		items, _, err := s.ListPageFunc(slug, page)
+		return normalizeNewsItems(items), err
+	}
+
 	totalPages := 0
 	if page > 1 && s.PageURL != nil {
 		// Some static sites number generated files from newest to oldest.
@@ -72,13 +78,32 @@ func (s *BodaSite) ListNewsPage(slug string, page int) ([]model.NewsItem, error)
 		}
 	}
 	if s.ParseFunc != nil {
-		return s.ParseFunc(body, s.BaseURL)
+		items, err := s.ParseFunc(body, s.BaseURL)
+		return normalizeNewsItems(items), err
 	}
-	return parseBodaNewsList(body, s.BaseURL)
+	items, err := parseBodaNewsList(body, s.BaseURL)
+	return normalizeNewsItems(items), err
+}
+
+func normalizeNewsItems(items []model.NewsItem) []model.NewsItem {
+	for i := range items {
+		if items[i].PublishedAt == "" {
+			items[i].PublishedAt = normalizePublishedAt(items[i].Date)
+		}
+	}
+	return items
 }
 
 // GetTotalPages extracts total page count from a list page.
 func (s *BodaSite) GetTotalPages(slug string) (int, error) {
+	if s.ListPageFunc != nil {
+		_, totalPages, err := s.ListPageFunc(slug, 1)
+		return totalPages, err
+	}
+	if s.TotalPagesFunc != nil {
+		return s.TotalPagesFunc(slug)
+	}
+
 	listURL := s.listPageURL(slug, 1, 0, ".htm")
 	body, err := fetch(listURL)
 	if err != nil {
@@ -101,6 +126,33 @@ func (s *BodaSite) listPageURL(slug string, page, totalPages int, extension stri
 	return fmt.Sprintf("%s/%s/%d%s", s.BaseURL, slug, page, extension)
 }
 
+// reverseBodaPageURL maps the logical newest-first page number used by the
+// scraper to 博达's generated files. These sites publish the newest page as
+// slug.htm, then number older pages downward so the last page is slug/1.htm.
+// Returning an empty URL when the source total is unknown prevents silently
+// requesting a guessed page number.
+func reverseBodaPageURL(baseURL, slug string, page, totalPages int, extension string) string {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if baseURL == "" || slug == "" || page < 1 {
+		return ""
+	}
+	if extension == "" {
+		extension = ".htm"
+	}
+	if !strings.HasPrefix(extension, ".") {
+		extension = "." + extension
+	}
+	if page == 1 {
+		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
+	}
+	if totalPages < 1 || page > totalPages {
+		return ""
+	}
+	physical := totalPages - page + 1
+	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, physical, extension)
+}
+
 // ListNewsRange fetches news from a date range by paginating.
 // from/to format: "2026-01-01", "2026-06-14", etc.
 func (s *BodaSite) ListNewsRange(slug string, from, to string, maxPages int) ([]model.NewsItem, error) {
@@ -116,7 +168,8 @@ func (s *BodaSite) ListNewsRange(slug string, from, to string, maxPages int) ([]
 		return nil, err
 	}
 
-	totalPages, _ := s.GetTotalPages(slug)
+	totalPages, totalPagesErr := s.GetTotalPages(slug)
+	usingFallbackPages := totalPagesErr != nil || totalPages == 0
 	if totalPages == 0 {
 		totalPages = 10 // fallback
 	}
@@ -126,7 +179,7 @@ func (s *BodaSite) ListNewsRange(slug string, from, to string, maxPages int) ([]
 
 	for _, item := range items {
 		t := parseDate(item.Date)
-		if !t.IsZero() && (t.Before(fromTime) || t.After(toTime.Add(24*time.Hour))) {
+		if !t.IsZero() && (t.Before(fromTime) || !t.Before(toTime.Add(24*time.Hour))) {
 			continue
 		}
 		if !seen[item.URL] {
@@ -150,7 +203,16 @@ func (s *BodaSite) ListNewsRange(slug string, from, to string, maxPages int) ([]
 					realPage = p
 				}
 				pageItems, err := s.ListNewsPage(slug, realPage)
-				if err != nil || len(pageItems) == 0 {
+				if err != nil {
+					if !usingFallbackPages {
+						return nil, fmt.Errorf("list page %d/%d: %w", p, totalPages, err)
+					}
+					break
+				}
+				if len(pageItems) == 0 {
+					if !usingFallbackPages && p < totalPages {
+						return nil, fmt.Errorf("list page %d/%d returned no articles", p, totalPages)
+					}
 					break
 				}
 
@@ -161,7 +223,7 @@ func (s *BodaSite) ListNewsRange(slug string, from, to string, maxPages int) ([]
 						shouldStop = true
 						break
 					}
-					if !t.IsZero() && t.After(toTime.Add(24*time.Hour)) {
+					if !t.IsZero() && !t.Before(toTime.Add(24*time.Hour)) {
 						continue
 					}
 					if !seen[item.URL] {
@@ -187,14 +249,12 @@ func parseTotalPages(html []byte) int {
 		return 0
 	}
 
-	// Pattern 1: "共X页" or "/X页"
-	totalText := doc.Find(".p_t").Text()
-	if strings.Contains(totalText, "/") {
-		parts := strings.Split(totalText, "/")
-		for _, p := range parts {
-			p = strings.TrimSpace(strings.TrimSuffix(p, "页"))
-			if n, err := fmt.Sscanf(p, "%d"); err == nil && n > 0 {
-				// parse manually
+	// Pattern 1: explicit counters such as "第1/78页" or "共78页".
+	pageCountRe := regexp.MustCompile(`(?:/|共|第)\s*(\d+)\s*页`)
+	for _, value := range []string{doc.Find(".p_t").Text(), doc.Find(".paging, .page, .p_pages").Text()} {
+		if match := pageCountRe.FindStringSubmatch(strings.Join(strings.Fields(value), "")); match != nil {
+			if total, err := strconv.Atoi(match[1]); err == nil && total > 0 {
+				return total
 			}
 		}
 	}
@@ -206,33 +266,30 @@ func parseTotalPages(html []byte) int {
 		// Try text content of p_last
 		lastLink = doc.Find(".p_last").Text()
 	}
+	lastPageHint := trailingPageNumber(lastLink)
 
 	// Pattern 3: Find the highest page number in pagination links
 	maxPage := 0
 	doc.Find(".p_no a, .p_pages a").Each(func(i int, sel *goquery.Selection) {
 		href, _ := sel.Attr("href")
 		text := strings.TrimSpace(sel.Text())
-		// Try to extract page number from href or text
-		for _, s := range []string{href, text} {
-			s = strings.TrimSuffix(strings.TrimSuffix(s, ".htm"), ".html")
-			// Extract trailing number
-			for j := len(s) - 1; j >= 0; j-- {
-				if s[j] < '0' || s[j] > '9' {
-					if j < len(s)-1 {
-						num := 0
-						fmt.Sscanf(s[j+1:], "%d", &num)
-						if num > maxPage {
-							maxPage = num
-						}
-					}
-					break
-				}
+		// Try to extract page number from href or text. Handle an all-digit
+		// value too; the old character loop skipped that common case.
+		for _, value := range []string{href, text} {
+			if num := trailingPageNumber(value); num > maxPage {
+				maxPage = num
 			}
 		}
 	})
 
 	if maxPage > 0 {
+		if lastPageHint > maxPage {
+			maxPage = lastPageHint
+		}
 		return maxPage
+	}
+	if lastPageHint > 0 {
+		return lastPageHint
 	}
 
 	// Pattern 4: "共X条每页Y条" format, calculate pages
@@ -249,6 +306,17 @@ func parseTotalPages(html []byte) int {
 	return 0
 }
 
+func trailingPageNumber(value string) int {
+	value = strings.TrimSpace(value)
+	value = strings.TrimRight(value, "/")
+	match := regexp.MustCompile(`(?:^|/)(\d+)(?:\.(?:htm|html))?(?:[?#].*)?$`).FindStringSubmatch(value)
+	if match == nil {
+		return 0
+	}
+	n, _ := strconv.Atoi(match[1])
+	return n
+}
+
 // GetArticle fetches a single article page and parses its content.
 func (s *BodaSite) GetArticle(articleURL string) (*model.Article, error) {
 	art, _, err := s.GetArticleSnapshot(articleURL)
@@ -259,6 +327,19 @@ func (s *BodaSite) GetArticle(articleURL string) (*model.Article, error) {
 // original response body. The snapshot is used by archival clients that need
 // to preserve both the source page and the normalized article fields.
 func (s *BodaSite) GetArticleSnapshot(articleURL string) (*model.Article, []byte, error) {
+	if s.ArticleFetchFunc != nil {
+		art, body, err := s.ArticleFetchFunc(articleURL)
+		if err != nil {
+			return nil, nil, err
+		}
+		if art == nil {
+			return nil, nil, fmt.Errorf("article adapter returned nil article")
+		}
+		normalizeArticlePublishedAt(art)
+		art.RawHTML = string(body)
+		return art, body, nil
+	}
+
 	body, err := fetch(articleURL)
 	if err != nil {
 		return nil, nil, err
@@ -271,6 +352,8 @@ func (s *BodaSite) GetArticleSnapshot(articleURL string) (*model.Article, []byte
 	if err != nil {
 		return nil, nil, err
 	}
+	enrichPublishedAtFromHTML(body, art)
+	normalizeArticlePublishedAt(art)
 	art.RawHTML = string(body)
 	return art, body, nil
 }
@@ -290,9 +373,11 @@ func cleanTitle(title string) string {
 	title = strings.Join(strings.Fields(title), " ")
 	// Remove date prefixes like "07/16", "2025-08-12", "06-01", "01 2026.06"
 	datePrefixes := []string{
-		`^\d{2}/\d{2}`,          // 07/16
-		`^\d{4}-\d{2}-\d{2}`,    // 2025-08-12
-		`^\d{2}\s+\d{4}\.\d{2}`, // 01 2026.06
+		`^\d{2}/\d{2}`,                   // 07/16
+		`^\d{4}-\d{2}-\d{2}`,             // 2025-08-12
+		`^\d{2}\s+\d{4}\.\d{2}`,          // 01 2026.06
+		`^\d{1,2}[./-]\d{1,2}\s*20\d{2}`, // 09.30 2024
+		`^\d{1,2}[./-]\d{1,2}20\d{2}`,    // 09.302024
 	}
 	for _, pattern := range datePrefixes {
 		re := regexp.MustCompile(pattern)
@@ -320,7 +405,7 @@ func isValidNewsTitle(title string) bool {
 	if len(title) < 6 {
 		return false
 	}
-	skip := []string{"首页", "更多", "查看更多", "登录", "注册", "搜索", "English",
+	skip := []string{"首页", "更多", "查看更多", "了解更多", "查看全部", "Read More", "More", "登录", "注册", "搜索", "English",
 		"学院概况", "师资队伍", "人才培养", "党建工作", "学生工作", "招生就业",
 		"科学研究", "交流合作", "校友工作", "诚聘英才", "联系我们", "下载专区",
 		"学院简介", "现任领导", "组织机构", "教师名录", "本科生", "研究生",
@@ -436,7 +521,7 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 		if a.Length() == 0 {
 			return
 		}
-		title := strings.TrimSpace(a.Text())
+		title := cleanTitle(a.Text())
 		href, _ := a.Attr("href")
 		if title == "" || href == "" || !isValidNewsTitle(title) {
 			return
@@ -854,6 +939,13 @@ func parseBodaArticle(html []byte, baseURL string) (*model.Article, error) {
 			}
 		})
 		art.Content = strings.Join(parts, "\n\n")
+		if art.Content == "" {
+			// A few otherwise standard templates put plain text directly in
+			// the content wrapper instead of paragraph elements. Keep that
+			// text rather than reporting a false empty body; image-only pages
+			// still correctly remain empty here while their Images are saved.
+			art.Content = strings.Join(strings.Fields(contentSel.Text()), " ")
+		}
 
 		contentSel.Find("img").Each(func(i int, sel *goquery.Selection) {
 			src, _ := sel.Attr("src")
@@ -985,14 +1077,94 @@ func parseBodaArticle(html []byte, baseURL string) (*model.Article, error) {
 	return art, nil
 }
 
+// parseBodaArticleWithSectionType keeps the shared body/resource parser while
+// filling the section metadata exposed by the many slightly different Boda
+// detail templates. A site adapter still owns the entry point; this helper
+// only centralizes the conservative DOM fallback for templates that use the
+// same breadcrumb conventions.
+func parseBodaArticleWithSectionType(raw []byte, baseURL string) (*model.Article, error) {
+	article, err := parseBodaArticle(raw, baseURL)
+	if err != nil || article == nil || article.Type != "" {
+		return article, err
+	}
+	doc, parseErr := goquery.NewDocumentFromReader(strings.NewReader(string(raw)))
+	if parseErr != nil {
+		return article, nil
+	}
+	article.Type = bodaArticleSectionType(doc, article.Title)
+	return article, nil
+}
+
+// bodaArticleSectionType extracts a section label from detail-page layouts.
+// It intentionally ignores generic breadcrumb terminals such as 首页/正文 and
+// the article headline itself; an absent type is preferable to storing a
+// navigation label as the article type.
+func bodaArticleSectionType(doc *goquery.Document, articleTitle string) string {
+	selectors := []string{
+		".list-banner-tt",
+		".article_category_bg h2",
+		".n_left12138 > h2",
+		".inner_right .local > h2",
+		".page-content .sidebar > .title",
+		".news-list-wrap > .hd > h3",
+		".right > .title > h3",
+		".banner-title .big-title",
+		".main_right .current > h3",
+		".navleft-hd p",
+		".list-head > p",
+		".main_titT a",
+		".loaction a",
+		".boxRight .top_left span",
+		".el-breadcrumb .container",
+		".current > h3",
+	}
+	for _, selector := range selectors {
+		selection := doc.Find(selector)
+		for i := selection.Length() - 1; i >= 0; i-- {
+			candidate := strings.TrimSpace(selection.Eq(i).Text())
+			if selector == ".main_titT a" || selector == ".loaction a" || selector == ".boxRight .top_left span" || selector == ".el-breadcrumb .container" {
+				parts := strings.Split(candidate, ">")
+				for j := len(parts) - 1; j >= 0; j-- {
+					if value := bodaTypeCandidate(parts[j], articleTitle); value != "" {
+						return value
+					}
+				}
+				continue
+			}
+			if value := bodaTypeCandidate(candidate, articleTitle); value != "" {
+				return value
+			}
+		}
+	}
+	return ""
+}
+
+func bodaTypeCandidate(value, articleTitle string) string {
+	value = strings.Join(strings.Fields(value), " ")
+	value = strings.Trim(value, " >|\t\r\n")
+	if value == "" || value == strings.Join(strings.Fields(articleTitle), " ") {
+		return ""
+	}
+	switch value {
+	case "首页", "正文", "文章详情", "新闻中心", "新闻资讯", "网站首页", "LINK":
+		return ""
+	}
+	if strings.Contains(value, "当前位置") || strings.Contains(value, "点击数") || len([]rune(value)) > 40 {
+		return ""
+	}
+	return value
+}
+
 var (
 	labelDateRe         = regexp.MustCompile(`(?:^|[\s\x{a0}：:，。；;、|])(?:日期|发布时间|发布日期|发表日期|发表时间|发布于|时间)[\s\x{a0}]*[:：][\s\x{a0}]*(20\d{2})[\s\x{a0}]*[-/.年][\s\x{a0}]*(\d{1,2})[\s\x{a0}]*[-/.月][\s\x{a0}]*(\d{1,2})`)
 	javaDateRe          = regexp.MustCompile(`(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{2} \d{2}:\d{2}:\d{2} CST \d{4}`)
+	dateTimeRe          = regexp.MustCompile(`(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})\s*(?:日|号)?[ Tt]+(\d{1,2}):(\d{2})(?::(\d{2}))?`)
 	bareDateRe          = regexp.MustCompile(`(20\d{2})[\s\x{a0}]*[-/.年][\s\x{a0}]*(\d{1,2})[\s\x{a0}]*[-/.月][\s\x{a0}]*(\d{1,2})`)
 	labelSourceRe       = regexp.MustCompile(`(?:信息来源|来源)\s*[:：][\s\x{a0}]*([^\s\x{a0}，。；;:：<>（）()]{2,40})`)
 	labelAuthorRe       = regexp.MustCompile(`作者\s*[:：][\s\x{a0}]*([^\s\x{a0}，。；;:：<>（）()]{2,30})`)
 	labelEditorRe       = regexp.MustCompile(`(?:编辑|责编)\s*[:：][\s\x{a0}]*([^\s\x{a0}，。；;:：<>（）()]{2,30})`)
 	labelPhotographerRe = regexp.MustCompile(`摄影\s*[:：][\s\x{a0}]*([^\s\x{a0}，。；;:：<>（）()]{2,30})`)
+	labelTypeRe         = regexp.MustCompile(`(?:文章类型|信息类型|类型|类别|分类)\s*[:：]\s*([^\s\x{a0}，。；;:：<>（）()]{2,40})`)
 	siteSuffixRe        = regexp.MustCompile(`[-–—_][^-–—_]{0,60}$`)
 	siteWordsRe         = regexp.MustCompile(`大学|学院|研究院|新闻网|党委|宣传|财务|审计|工会|处|部|中心|图书馆|档案馆|医院|集团|实验室|管委会|办公室|期刊社`)
 )
@@ -1020,6 +1192,99 @@ func cleanLabelValue(value string) string {
 		return ""
 	}
 	return value
+}
+
+// normalizePublishedAt retains time-of-day precision while keeping the
+// legacy Article.Date field date-only. An empty result means the source did
+// not contain a complete calendar date.
+func normalizePublishedAt(value string) string {
+	value = strings.Join(strings.Fields(strings.TrimSpace(value)), " ")
+	if value == "" {
+		return ""
+	}
+	for _, layout := range []string{
+		time.RFC3339Nano,
+		"2006-01-02 15:04:05.999999999", "2006-01-02 15:04:05", "2006-01-02 15:04",
+		"2006/01/02 15:04:05", "2006/01/02 15:04",
+		"2006.01.02 15:04:05", "2006.01.02 15:04",
+		"2006年1月2日 15时04分05秒", "2006年1月2日 15时04分",
+		"2006年1月2日 15:04:05", "2006年1月2日 15:04",
+		"Mon Jan 02 15:04:05 MST 2006",
+	} {
+		if parsed, err := time.Parse(layout, value); err == nil {
+			return parsed.Format("2006-01-02 15:04:05")
+		}
+	}
+	if match := dateTimeRe.FindStringSubmatch(value); match != nil {
+		second := match[6]
+		if second == "" {
+			second = "00"
+		}
+		return fmt.Sprintf("%s-%02s-%02s %02s:%s:%s", match[1], match[2], match[3], match[4], match[5], second)
+	}
+	if match := bareDateRe.FindStringSubmatch(value); match != nil {
+		return normalizeDateParts(match[1], match[2], match[3])
+	}
+	return ""
+}
+
+func normalizeArticlePublishedAt(article *model.Article) {
+	if article == nil {
+		return
+	}
+	if article.PublishedAt == "" {
+		article.PublishedAt = normalizePublishedAt(article.Date)
+	} else {
+		article.PublishedAt = normalizePublishedAt(article.PublishedAt)
+	}
+	if article.Date != "" {
+		if date := normalizePublishedAt(article.Date); len(date) >= 10 {
+			article.Date = date[:10]
+		}
+	}
+	if article.Date == "" && len(article.PublishedAt) >= 10 {
+		article.Date = article.PublishedAt[:10]
+	}
+}
+
+func enrichPublishedAtFromHTML(body []byte, article *model.Article) {
+	if article == nil || publishedAtHasClock(article.PublishedAt) {
+		return
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
+	if err != nil {
+		return
+	}
+	var titleSel, contentSel *goquery.Selection
+	for _, selector := range []string{"h1.news_tit", ".news-title", "h1", ".art-tit h1", ".cont-tit h1", ".article-title", ".detail-title"} {
+		if found := doc.Find(selector).First(); found.Length() > 0 {
+			titleSel = found
+			break
+		}
+	}
+	for _, selector := range []string{"#vsb_content_501 .v_news_content", ".v_news_content", ".news-content-wrapper", ".content-main", "[id^='vsb_content']"} {
+		if found := doc.Find(selector).First(); found.Length() > 0 {
+			contentSel = found
+			break
+		}
+	}
+	if value := findDateTimeInMetaZone(titleSel, contentSel); value != "" {
+		if precise := normalizePublishedAt(value); publishedAtHasClock(precise) {
+			article.PublishedAt = precise
+			return
+		}
+	}
+	clone := doc.Clone()
+	clone.Find("script, style, noscript").Remove()
+	if value := javaDateRe.FindString(clone.Text()); value != "" {
+		if parsed, err := time.Parse("Mon Jan 02 15:04:05 MST 2006", value); err == nil {
+			article.PublishedAt = parsed.Format("2006-01-02 15:04:05")
+		}
+	}
+}
+
+func publishedAtHasClock(value string) bool {
+	return len(strings.TrimSpace(value)) > len("2006-01-02") && strings.Contains(value, ":")
 }
 
 // stripSiteSuffix removes a trailing "- 西南交通大学xx学院" style suffix from
@@ -1063,6 +1328,11 @@ func fillGenericMeta(doc *goquery.Document, art *model.Article, titleSel, conten
 	if art.Date == "" {
 		art.Date = findDateInMetaZone(titleSel, contentSel)
 	}
+	if art.PublishedAt == "" {
+		if value := findDateTimeInMetaZone(titleSel, contentSel); value != "" {
+			art.PublishedAt = normalizePublishedAt(value)
+		}
+	}
 	if art.Date == "" {
 		for _, sel := range []string{`meta[name="publishdate"]`, `meta[name="publish_date"]`, `meta[name="PubDate"]`, `meta[property="article:published_time"]`} {
 			content := strings.TrimSpace(doc.Find(sel).AttrOr("content", ""))
@@ -1080,6 +1350,7 @@ func fillGenericMeta(doc *goquery.Document, art *model.Article, titleSel, conten
 		if m := javaDateRe.FindString(visibleText()); m != "" {
 			if parsed, err := time.Parse("Mon Jan 02 15:04:05 MST 2006", m); err == nil {
 				art.Date = parsed.Format("2006-01-02")
+				art.PublishedAt = parsed.Format("2006-01-02 15:04:05")
 			}
 		}
 	}
@@ -1103,6 +1374,12 @@ func fillGenericMeta(doc *goquery.Document, art *model.Article, titleSel, conten
 			art.Photographer = cleanLabelValue(m[1])
 		}
 	}
+	if art.Type == "" {
+		if m := labelTypeRe.FindStringSubmatch(visibleText()); m != nil {
+			art.Type = cleanLabelValue(m[1])
+		}
+	}
+	normalizeArticlePublishedAt(art)
 }
 
 var (
@@ -1169,6 +1446,46 @@ func findDateInMetaZone(titleSel, contentSel *goquery.Selection) string {
 			if date := normalizeDateParts(m[1], m[2], m[3]); date != "" {
 				return date
 			}
+		}
+	}
+	return ""
+}
+
+// findDateTimeInMetaZone is the precision-preserving counterpart to
+// findDateInMetaZone. It searches the same narrow headline/meta ancestors so
+// times mentioned in the article body cannot be mistaken for publication
+// times.
+func findDateTimeInMetaZone(titleSel, contentSel *goquery.Selection) string {
+	zones := make([]string, 0, 8)
+	contentText := ""
+	collect := func(sel *goquery.Selection, exclude string) {
+		count := 0
+		sel.Parents().EachWithBreak(func(_ int, parent *goquery.Selection) bool {
+			if count >= 4 {
+				return false
+			}
+			count++
+			text := flattenedText(parent)
+			if exclude != "" {
+				text = strings.Replace(text, exclude, "", 1)
+			}
+			zones = append(zones, text)
+			return true
+		})
+	}
+	if contentSel != nil && contentSel.Length() > 0 {
+		contentText = flattenedText(contentSel)
+		collect(contentSel, contentText)
+	}
+	if titleSel != nil && titleSel.Length() > 0 {
+		collect(titleSel, "")
+	}
+	for _, zone := range zones {
+		if match := dateTimeRe.FindString(zone); match != "" {
+			return match
+		}
+		if match := javaDateRe.FindString(zone); match != "" {
+			return match
 		}
 	}
 	return ""

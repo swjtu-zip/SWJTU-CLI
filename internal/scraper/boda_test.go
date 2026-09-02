@@ -4,6 +4,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 func loadTestHTML(filename string) []byte {
@@ -35,6 +37,59 @@ func TestArticleParserKeepsArchiveHTMLAndResolvesResources(t *testing.T) {
 	}
 	if !strings.Contains(article.ContentHTML, `src="https://news.swjtu.edu.cn/images/photo.jpg"`) || !strings.Contains(article.ContentHTML, `href="https://news.swjtu.edu.cn/upload/file.pdf"`) {
 		t.Fatalf("archive HTML did not retain resolved resources: %s", article.ContentHTML)
+	}
+}
+
+func TestArticleParserPreservesPublishedTimeAndType(t *testing.T) {
+	html := []byte(`<html><body>
+<h1 class="news_tit">带发布时间的文章</h1>
+<div class="news_source"><span>发布时间：2026-08-31 14:34</span><span>类型：通知公告</span></div>
+<div class="v_news_content"><p>这是一段足够长的正文，用来验证发布时间和类型不会从元数据中丢失。</p></div>
+</body></html>`)
+	article, err := parseBodaArticle(html, "https://news.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Date != "2026-08-31" || article.PublishedAt != "2026-08-31 14:34:00" || article.Type != "通知公告" {
+		t.Fatalf("unexpected precise metadata: date=%q published_at=%q type=%q", article.Date, article.PublishedAt, article.Type)
+	}
+}
+
+func TestBodaFallbackCleansListTitlesAndFindsSectionTypes(t *testing.T) {
+	if got := cleanTitle("09.302024 技术转移研究院2024年国庆节值班安排表"); got != "技术转移研究院2024年国庆节值班安排表" {
+		t.Fatalf("cleaned title = %q", got)
+	}
+	if isValidNewsTitle("了解更多") {
+		t.Fatal("homepage action link was accepted as an article title")
+	}
+	tests := []struct {
+		name string
+		html string
+		want string
+	}{
+		{name: "breadcrumb", html: `<div class="loaction">首页 &gt; <a href="/xyxw.htm">学院新闻</a> &gt; 正文</div><h1>文章标题</h1>`, want: "学院新闻"},
+		{name: "section heading", html: `<div class="news-list-wrap"><div class="hd"><h3>通知公告</h3></div></div><h1>文章标题</h1>`, want: "通知公告"},
+		{name: "vue breadcrumb", html: `<div class="el-breadcrumb"><div class="container">首页 &gt; 新闻资讯 &gt; 新闻动态 &gt; <span>文章详情</span></div></div><h1>文章标题</h1>`, want: "新闻动态"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			doc, err := goquery.NewDocumentFromReader(strings.NewReader(tt.html))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := bodaArticleSectionType(doc, "文章标题"); got != tt.want {
+				t.Fatalf("section type = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseTotalPagesUsesExplicitCounterAndLastPage(t *testing.T) {
+	if got := parseTotalPages([]byte(`<div class="p_t">第1/78页</div>`)); got != 78 {
+		t.Fatalf("explicit counter = %d, want 78", got)
+	}
+	if got := parseTotalPages([]byte(`<div class="p_pages"><span class="p_last"><a href="1.htm">尾页</a></span><a href="7.htm">7</a></div>`)); got != 7 {
+		t.Fatalf("link counter = %d, want 7", got)
 	}
 }
 

@@ -36,5 +36,8 @@ func parseAdapter_xinliArticle(html []byte, baseURL string) (*model.Article, err
 	if title := strings.TrimSpace(doc.Find(".box1 .bt").First().Text()); title != "" {
 		article.Title = strings.Join(strings.Fields(title), " ")
 	}
+	if article.Type == "" {
+		article.Type = bodaArticleSectionType(doc, article.Title)
+	}
 	return article, nil
 }
