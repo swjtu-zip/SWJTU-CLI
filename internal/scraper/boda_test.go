@@ -157,6 +157,45 @@ func TestListNewsRangeUsesForwardURLsWhenTotalUnknown(t *testing.T) {
 	}
 }
 
+func TestListNewsRangeUsesForwardURLsWhenTotalIsKnown(t *testing.T) {
+	var paths []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		paths = append(paths, r.URL.Path)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if r.URL.Path == "/news.htm" {
+			_, _ = w.Write([]byte(`<ul class="news-list"><li><a href="/info/1/1.htm">第一页文章标题</a><span class="date">2026-08-31</span></li></ul>`))
+			return
+		}
+		if r.URL.Path == "/news/2.htm" {
+			_, _ = w.Write([]byte(`<ul class="news-list"><li><a href="/info/1/2.htm">第二页文章标题</a><span class="date">2026-08-30</span></li></ul>`))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+
+	oldNoCache := NoCache
+	NoCache = true
+	defer func() { NoCache = oldNoCache }()
+	site := &BodaSite{
+		BaseURL: server.URL,
+		ParseFunc: func(raw []byte, baseURL string) ([]model.NewsItem, error) {
+			return parseBodaNewsList(raw, baseURL)
+		},
+		TotalPagesFunc: func(string) (int, error) { return 2, nil },
+	}
+	items, err := site.ListNewsRange("news", "2026-01-01", "2026-12-31", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("known-total items = %#v", items)
+	}
+	if got, want := strings.Join(paths, ","), "/news.htm,/news/2.htm"; got != want {
+		t.Fatalf("requested paths = %q, want %q", got, want)
+	}
+}
+
 func TestListNewsRangeRetainsPartialItemsWithPageError(t *testing.T) {
 	site := &BodaSite{
 		ListPageFunc: func(_ string, page int) ([]model.NewsItem, int, error) {

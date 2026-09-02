@@ -124,11 +124,11 @@ func listSiteNewsRange(site *BodaSite, from, to string, maxPages int) ([]model.N
 	var failures []string
 	for _, slug := range siteFeedSlugs(site) {
 		pageItems, err := site.ListNewsRange(slug, from, to, maxPages)
+		items = mergeAggregateItems(items, pageItems)
 		if err != nil {
 			failures = append(failures, fmt.Sprintf("%s: %v", slug, err))
 			continue
 		}
-		items = mergeAggregateItems(items, pageItems)
 	}
 	if len(failures) > 0 {
 		return items, fmt.Errorf("%d feed(s) failed: %s", len(failures), strings.Join(failures, "; "))

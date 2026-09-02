@@ -2,11 +2,15 @@ package sdk
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
+	"swjtu-cli/internal/model"
 	"swjtu-cli/internal/scraper"
 )
 
@@ -96,5 +100,51 @@ func TestDownloadResourceWithReferer(t *testing.T) {
 	body, err := io.ReadAll(resource.Body)
 	if err != nil || string(body) != "file" {
 		t.Fatalf("unexpected resource body: %q (%v)", body, err)
+	}
+}
+
+func TestListFeedRangeReturnsPartialItemsWithError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if r.URL.Path == "/news.htm" {
+			_, _ = w.Write([]byte("page-one"))
+			return
+		}
+		if r.URL.Path == "/news/2.htm" {
+			http.Error(w, "upstream page failure", http.StatusBadGateway)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+
+	site := scraper.AllSites["sic"]
+	oldBase, oldParse, oldPage, oldListPage, oldTotal := site.BaseURL, site.ParseFunc, site.PageURL, site.ListPageFunc, site.TotalPagesFunc
+	defer func() {
+		site.BaseURL, site.ParseFunc, site.PageURL, site.ListPageFunc, site.TotalPagesFunc = oldBase, oldParse, oldPage, oldListPage, oldTotal
+	}()
+	site.BaseURL = server.URL
+	site.PageURL = nil
+	site.ListPageFunc = nil
+	site.TotalPagesFunc = func(string) (int, error) { return 3, nil }
+	site.ParseFunc = func(raw []byte, _ string) ([]model.NewsItem, error) {
+		if strings.Contains(string(raw), "page-one") {
+			return []model.NewsItem{{Title: "第一页文章标题", URL: server.URL + "/info/1/1.htm", Date: "2026-08-31"}}, nil
+		}
+		return nil, fmt.Errorf("unexpected list body")
+	}
+
+	oldNoCache := scraper.NoCache
+	scraper.NoCache = true
+	defer func() { scraper.NoCache = oldNoCache }()
+	client := New(Options{})
+	items, err := client.ListFeedRange(context.Background(), Feed{
+		ID: "sic:index", SiteID: "sic", Name: "首页新闻", Slug: "news", BaseURL: server.URL,
+	}, time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC), 0)
+	if err == nil {
+		t.Fatal("expected a surfaced later-page error")
+	}
+	if len(items) != 1 || items[0].Title != "第一页文章标题" {
+		t.Fatalf("SDK partial items = %#v, err=%v", items, err)
 	}
 }
