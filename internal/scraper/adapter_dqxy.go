@@ -514,8 +514,28 @@ func parseDqxyArticle(html []byte, baseURL string) (*model.Article, error) {
 	if typ := dqxyArticleType(doc); typ != "" {
 		art.Type = typ
 	}
+	art.Images = filterDqxyImages(art.Images)
 	appendDqxyAttachments(art, doc, baseURL)
 	return art, nil
+}
+
+// The legacy dqxy template places CMS file-type icons and spacer GIFs inside
+// the same writing container as real article images. They are presentation
+// artifacts, not downloadable article resources; keep them in the rendered
+// HTML but do not make the archive request them.
+func filterDqxyImages(images []string) []string {
+	filtered := images[:0]
+	for _, image := range images {
+		lower := strings.ToLower(strings.TrimSpace(image))
+		if lower == "" || strings.Contains(lower, "/system/resource/images/filetypeimages/") ||
+			strings.HasSuffix(lower, "/doc.gif") || strings.HasSuffix(lower, "/pdf.gif") ||
+			strings.HasSuffix(lower, "/rar.gif") || strings.HasSuffix(lower, "/ecblank.gif") ||
+			strings.HasSuffix(lower, "/spacer.gif") {
+			continue
+		}
+		filtered = append(filtered, image)
+	}
+	return filtered
 }
 
 func dqxyArticleType(doc *goquery.Document) string {

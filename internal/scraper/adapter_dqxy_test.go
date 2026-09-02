@@ -200,3 +200,15 @@ func TestDqxyAdapterExternalAttachments(t *testing.T) {
 		t.Errorf("second attachment = %#v", art.Attachments[1])
 	}
 }
+
+func TestDqxyAdapterFiltersPresentationImages(t *testing.T) {
+	images := filterDqxyImages([]string{
+		"https://dqxy.swjtu.edu.cn/__local/real.png",
+		"https://dqxy.swjtu.edu.cn/system/resource/images/fileTypeImages/icon_pdf.gif",
+		"https://dqxy.swjtu.edu.cn/doc.gif",
+		"https://dqxy.swjtu.edu.cn/spacer.gif",
+	})
+	if len(images) != 1 || images[0] != "https://dqxy.swjtu.edu.cn/__local/real.png" {
+		t.Fatalf("filtered images = %#v", images)
+	}
+}
