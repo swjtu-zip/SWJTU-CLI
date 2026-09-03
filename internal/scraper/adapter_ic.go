@@ -18,15 +18,14 @@ import (
 
 const icCanonicalBaseURL = "https://ic.swjtu.edu.cn"
 
-// The IC site has a small custom front end.  These are the four article-list
-// entry points linked by the current navigation/home page.  gywm, rcpy,
-// wlxy, and ypwm are profile, programme, campus-planning, or recruitment
-// pages; they are deliberately not treated as article feeds.
+// The IC site has a small custom front end.  These are the two article-list
+// entry points linked by the current navigation/home page.  The campus
+// gallery and video center are media surfaces rather than /info article
+// lists, while gywm, rcpy, wlxy, and ypwm are profile, programme,
+// campus-planning, or recruitment pages; none are news feeds.
 var icSubPages = []string{
 	"xwzx",
 	"xwzx/tzgg",
-	"xwzx/xygy",
-	"xwzx/jcsp",
 }
 
 var (
@@ -63,13 +62,16 @@ func icPageURL(baseURL, slug string, page, totalPages int, extension string) str
 	} else if !strings.HasPrefix(extension, ".") {
 		extension = "." + extension
 	}
-	if page <= 1 || totalPages <= 1 {
+	if page < 1 {
+		return ""
+	}
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
-	filePage := totalPages - page + 1
-	if filePage < 1 {
-		filePage = 1
+	if totalPages < 1 || page > totalPages {
+		return ""
 	}
+	filePage := totalPages - page + 1
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, filePage, extension)
 }
 
@@ -77,7 +79,7 @@ func icPageURL(baseURL, slug string, page, totalPages int, extension string) str
 // Referer and so an access-denied HTML shell cannot be mistaken for a list.
 func icListPage(slug string, page int) ([]model.NewsItem, int, error) {
 	if page < 1 {
-		page = 1
+		return nil, 0, fmt.Errorf("ic: page must be positive: %d", page)
 	}
 	firstURL := icPageURL(icCanonicalBaseURL, slug, 1, 0, ".htm")
 	firstBody, err := icFetchHTML(firstURL)
@@ -87,6 +89,9 @@ func icListPage(slug string, page int) ([]model.NewsItem, int, error) {
 	totalPages, err := icTotalPagesFromHTML(firstBody, slug)
 	if err != nil {
 		return nil, 0, err
+	}
+	if page > totalPages {
+		return nil, totalPages, fmt.Errorf("ic: page %d is out of range 1..%d for %s", page, totalPages, slug)
 	}
 	if page == 1 {
 		items, parseErr := parseAdapter_icList(firstBody, icCanonicalBaseURL)
@@ -148,8 +153,8 @@ func icTotalPagesFromHTML(body []byte, slug string) (int, error) {
 			if totalCount == 0 {
 				return 1, nil
 			}
-			if len(items) > 0 {
-				return (totalCount + len(items) - 1) / len(items), nil
+			if rows := icSourceRowCount(doc); rows > 0 {
+				return (totalCount + rows - 1) / rows, nil
 			}
 		}
 	}
@@ -167,6 +172,27 @@ func icTotalPagesFromHTML(body []byte, slug string) (int, error) {
 		return 1, nil
 	}
 	return 0, fmt.Errorf("ic: %s has no source pagination", slug)
+}
+
+// icSourceRowCount counts source rows, not parsed local articles.  The live
+// list can include external notice links which are intentionally filtered;
+// using len(parsedItems) as the page size would then overestimate the number
+// of pages and either duplicate or skip reverse-numbered files.
+func icSourceRowCount(doc *goquery.Document) int {
+	if doc == nil {
+		return 0
+	}
+	for _, selector := range []string{
+		".news-list-page ul.news-list > li",
+		".news-list-page .news-list > li",
+		".news-list > li",
+		".conlistComm > dl",
+	} {
+		if rows := doc.Find(selector).Length(); rows > 0 {
+			return rows
+		}
+	}
+	return 0
 }
 
 func icFetchHTML(rawURL string) ([]byte, error) {

@@ -61,15 +61,15 @@ func jwPageURL(baseURL, slug string, page, totalPages int, extension string) str
 		extension = "." + extension
 	}
 	if page < 1 {
-		page = 1
+		return ""
 	}
-	if page == 1 || totalPages <= 1 {
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
-	physical := totalPages - page + 1
-	if physical < 1 {
-		physical = 1
+	if totalPages < 1 || page > totalPages {
+		return ""
 	}
+	physical := totalPages - page + 1
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, physical, extension)
 }
 

@@ -23,7 +23,7 @@ func TestICAdapterRegistrationAndFeeds(t *testing.T) {
 	if site == nil || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.ListPageFunc == nil {
 		t.Fatal("IC adapter is not fully registered")
 	}
-	want := []string{"xwzx", "xwzx/tzgg", "xwzx/xygy", "xwzx/jcsp"}
+	want := []string{"xwzx", "xwzx/tzgg"}
 	if !reflect.DeepEqual(site.SubPages, want) {
 		t.Fatalf("IC feeds = %#v, want %#v", site.SubPages, want)
 	}
@@ -48,6 +48,20 @@ func TestICPageURLUsesReverseGeneratedFiles(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("reverse page URLs = %#v, want %#v", got, want)
+	}
+	for _, tc := range []struct {
+		page, total int
+	}{
+		{0, 3},
+		{4, 3},
+		{2, 0},
+	} {
+		if got := icPageURL(base, "xwzx", tc.page, tc.total, ".htm"); got != "" {
+			t.Errorf("out-of-range page %d/%d returned %q", tc.page, tc.total, got)
+		}
+	}
+	if _, _, err := icListPage("xwzx", 0); err == nil {
+		t.Fatal("IC custom list accepted page zero")
 	}
 }
 
@@ -101,6 +115,25 @@ func TestICListParsesRowsAndExactPageCount(t *testing.T) {
 	}
 	if total != 3 {
 		t.Fatalf("total pages = %d, want 3 from 共23条/10 rows", total)
+	}
+}
+
+func TestICPageCountUsesSourceRowsWhenExternalRowsAreFiltered(t *testing.T) {
+	body := string(loadICFixture(t, "ic_list.html"))
+	body = strings.Replace(body, "href=\"info/1061/", "href=\"https://external.example/info/1061/", 5)
+	items, err := parseAdapter_icList([]byte(body), icTestBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 5 {
+		t.Fatalf("filtered list items = %d, want 5", len(items))
+	}
+	total, err := icTotalPagesFromHTML([]byte(body), "xwzx")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 3 {
+		t.Fatalf("total pages = %d, want 3 from 23 source rows/10 rows, not parsed-row count", total)
 	}
 }
 

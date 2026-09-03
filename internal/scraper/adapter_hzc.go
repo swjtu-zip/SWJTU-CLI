@@ -65,18 +65,21 @@ func hzcPageURL(baseURL, slug string, page, totalPages int, extension string) st
 		extension = "." + extension
 	}
 	if page < 1 {
-		page = 1
+		return ""
 	}
 	if slug == "" || slug == "index" || slug == "home" {
+		if page != 1 {
+			return ""
+		}
 		return baseURL + "/index" + extension
 	}
-	if page <= 1 || totalPages <= 1 {
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
-	filePage := totalPages - page + 1
-	if filePage < 1 {
-		filePage = 1
+	if totalPages < 1 || page > totalPages {
+		return ""
 	}
+	filePage := totalPages - page + 1
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, filePage, extension)
 }
 
@@ -115,7 +118,10 @@ func hzcTotalPages(slug string) (int, error) {
 	if hzcPageType(doc) != "2" || doc.Find(".conlistComm").Length() == 0 {
 		return 0, fmt.Errorf("hzc: %s is not a list page", slug)
 	}
-	return hzcPaginationTotal(doc), nil
+	if total := hzcPaginationTotal(doc); total > 0 {
+		return total, nil
+	}
+	return 0, fmt.Errorf("hzc: %s has no recognized pagination", slug)
 }
 
 func parseAdapter_hzcList(raw []byte, baseURL string) ([]model.NewsItem, error) {
@@ -296,7 +302,7 @@ func hzcPaginationTotal(doc *goquery.Document) int {
 			total = page
 		}
 	})
-	if total < 1 {
+	if total < 1 && doc.Find(".p_pages").Length() > 0 {
 		return 1
 	}
 	return total

@@ -48,6 +48,17 @@ func TestHzcRegistersAuditedFeedsAndReversePagination(t *testing.T) {
 	if got := hzcPaginationTotal(parseHzcDocument(t, "hzc_list.html")); got != 38 {
 		t.Fatalf("pagination total = %d, want 38", got)
 	}
+	for _, tc := range []struct {
+		page, total int
+	}{
+		{0, 38},
+		{39, 38},
+		{2, 0},
+	} {
+		if got := hzcPageURL(hzcCanonicalBaseURL, "xwdt/zx", tc.page, tc.total, ".htm"); got != "" {
+			t.Errorf("out-of-range page %d/%d returned %q", tc.page, tc.total, got)
+		}
+	}
 }
 
 func parseHzcDocument(t *testing.T, name string) *goquery.Document {

@@ -99,13 +99,16 @@ func jzxyPageURL(baseURL, slug string, page, totalPages int, extension string) s
 	if !strings.HasPrefix(extension, ".") {
 		extension = "." + extension
 	}
-	if page <= 1 || totalPages <= 1 {
+	if page < 1 {
+		return ""
+	}
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, strings.Trim(slug, "/"), extension)
 	}
-	physicalPage := totalPages - page + 1
-	if physicalPage < 1 {
-		physicalPage = 1
+	if totalPages < 1 || page > totalPages {
+		return ""
 	}
+	physicalPage := totalPages - page + 1
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, strings.Trim(slug, "/"), physicalPage, extension)
 }
 
@@ -132,7 +135,10 @@ func jzxyTotalPages(slug string) (int, error) {
 	if doc.Find(".notices .list ul").Length() == 0 {
 		return 0, fmt.Errorf("jzxy %s has no article list shell", slug)
 	}
-	return jzxyPageCount(doc), nil
+	if pages := jzxyPageCount(doc); pages > 0 {
+		return pages, nil
+	}
+	return 0, fmt.Errorf("jzxy %s has no recognized pagination", slug)
 }
 
 func jzxyPageCount(doc *goquery.Document) int {
@@ -143,7 +149,8 @@ func jzxyPageCount(doc *goquery.Document) int {
 			maxPage = value
 		}
 	})
-	if maxPage == 0 && doc.Find(".notices .list ul").Length() > 0 {
+	if maxPage == 0 && doc.Find(".notices .list ul").Length() > 0 &&
+		doc.Find(".pages .p_pages, .p_pages").Length() > 0 {
 		return 1
 	}
 	return maxPage

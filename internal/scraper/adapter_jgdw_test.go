@@ -28,6 +28,17 @@ func TestJgdwAdapterRegistered(t *testing.T) {
 	if got := site.PageURL(site.BaseURL, "jcdj", 38, 38, ".htm"); got != "https://jgdw.swjtu.edu.cn/jcdj/1.htm" {
 		t.Fatalf("last jgdw page = %q", got)
 	}
+	for _, tc := range []struct {
+		page, total int
+	}{
+		{0, 38},
+		{39, 38},
+		{2, 0},
+	} {
+		if got := site.PageURL(site.BaseURL, "jcdj", tc.page, tc.total, ".htm"); got != "" {
+			t.Errorf("out-of-range page %d/%d returned %q", tc.page, tc.total, got)
+		}
+	}
 }
 
 func TestJgdwListParsesTypeDatesAndAbsoluteURLs(t *testing.T) {
@@ -73,6 +84,19 @@ func TestJgdwHomepageIncludesAllVisibleModules(t *testing.T) {
 		if types[typ] == 0 {
 			t.Fatalf("homepage has no %q module: %#v", typ, types)
 		}
+	}
+	const noticeURL = "https://jgdw.swjtu.edu.cn/info/1018/15950.htm"
+	foundNotice := false
+	for _, item := range items {
+		if item.URL == noticeURL {
+			foundNotice = true
+			if item.Title != "关于开展机关教职工世界读书日主题活动的通知" || strings.Contains(item.Title, "04-21") {
+				t.Fatalf("nested notice title = %q, want title without date", item.Title)
+			}
+		}
+	}
+	if !foundNotice {
+		t.Fatalf("homepage omitted nested notice %s", noticeURL)
 	}
 }
 

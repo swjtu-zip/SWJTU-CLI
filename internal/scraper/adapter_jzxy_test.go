@@ -50,6 +50,17 @@ func TestJzxyPageURLUsesReverseGeneratedNumbering(t *testing.T) {
 			t.Errorf("%s page %d/%d URL = %q, want %q", tc.slug, tc.page, tc.total, got, tc.want)
 		}
 	}
+	for _, tc := range []struct {
+		page, total int
+	}{
+		{0, 80},
+		{81, 80},
+		{2, 0},
+	} {
+		if got := jzxyPageURL(jzxyCanonicalBaseURL, "xxzx/xyxw", tc.page, tc.total, ".htm"); got != "" {
+			t.Errorf("out-of-range page %d/%d returned %q", tc.page, tc.total, got)
+		}
+	}
 }
 func TestJzxyListParserScopesRealListAndPreservesType(t *testing.T) {
 	raw := readJzxyFixture(t, "jzxy_list.html")

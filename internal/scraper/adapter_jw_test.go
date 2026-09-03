@@ -43,6 +43,17 @@ func TestJwAdapterRegistrationAndReversePagination(t *testing.T) {
 	if got := jwPageURL(jwBaseURL, "gzdt", 49, 49, ".htm"); got != jwBaseURL+"/gzdt/1.htm" {
 		t.Fatalf("last page URL = %q", got)
 	}
+	for _, tc := range []struct {
+		page, total int
+	}{
+		{0, 49},
+		{50, 49},
+		{2, 0},
+	} {
+		if got := jwPageURL(jwBaseURL, "gzdt", tc.page, tc.total, ".htm"); got != "" {
+			t.Errorf("out-of-range page %d/%d returned %q", tc.page, tc.total, got)
+		}
+	}
 	if got := parseTotalPages(readJwFixture(t, "jw_list.html")); got != 11 {
 		t.Fatalf("pagination total = %d, want 11", got)
 	}

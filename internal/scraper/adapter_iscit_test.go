@@ -2,6 +2,8 @@ package scraper
 
 import (
 	"os"
+	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -9,6 +11,43 @@ func TestIscitAdapterRegistered(t *testing.T) {
 	site := AllSites["iscit"]
 	if site == nil || site.ParseFunc == nil || site.ParseArticleFunc == nil {
 		t.Fatal("iscit adapter hooks are not registered")
+	}
+	want := []string{
+		"xw/zxxw", "xw/xsdt", "dqgz/dqxw", "xsgz/txxw",
+		"tz/yw", "tz/dq", "tz/jx", "tz/xg", "tz/sz", "tz/ky",
+	}
+	if !reflect.DeepEqual(site.SubPages, want) {
+		t.Fatalf("iscit feeds = %#v, want %#v", site.SubPages, want)
+	}
+	if got := iscitPageURL("https://iscit.swjtu.edu.cn", "dqgz/dqxw", 2, 13, ".htm"); got != "https://iscit.swjtu.edu.cn/dqgz/dqxw/12.htm" {
+		t.Fatalf("reverse page URL = %q", got)
+	}
+	for _, tc := range []struct {
+		page, total int
+	}{
+		{0, 13},
+		{14, 13},
+		{2, 0},
+	} {
+		if got := iscitPageURL("https://iscit.swjtu.edu.cn", "dqgz/dqxw", tc.page, tc.total, ".htm"); got != "" {
+			t.Errorf("out-of-range page %d/%d returned %q", tc.page, tc.total, got)
+		}
+	}
+	if _, _, err := iscitListPage("dqgz/dqxw", 0); err == nil {
+		t.Fatal("ISCit custom list accepted page zero")
+	}
+}
+
+func TestIscitListRequiresPaginationEvidence(t *testing.T) {
+	raw := []byte(strings.TrimSpace(`
+<!doctype html>
+<html><head><meta name="pageType" content="2"></head><body>
+<div class="new-list"><div class="newlb-box"><ul>
+  <li><a href="/info/1102/8490.htm">一条新闻</a></li>
+</ul></div></div>
+</body></html>`))
+	if _, err := iscitTotalPagesFromHTML(raw, "dqgz/dqxw"); err == nil {
+		t.Fatal("ISCit short list without pagination was treated as complete")
 	}
 }
 

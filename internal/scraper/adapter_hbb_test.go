@@ -128,6 +128,17 @@ func TestHBBReversePaginationAndPageCount(t *testing.T) {
 	if got := hbbPageCountFromHTML(readHBBFixture(t, "hbb_list.html")); got != 9 {
 		t.Fatalf("page count = %d, want 9", got)
 	}
+	for _, tc := range []struct {
+		page, total int
+	}{
+		{0, 9},
+		{10, 9},
+		{2, 0},
+	} {
+		if got := hbbPageURL(hbbBaseURL, "tzgg/tzgg", tc.page, tc.total, ".htm"); got != "" {
+			t.Errorf("out-of-range page %d/%d returned %q", tc.page, tc.total, got)
+		}
+	}
 }
 
 func itoa(value int) string {

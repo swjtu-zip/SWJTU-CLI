@@ -59,18 +59,18 @@ func jgdwPageURL(baseURL, slug string, page, totalPages int, extension string) s
 		extension = "." + extension
 	}
 	if page < 1 {
-		page = 1
+		return ""
 	}
 	if slug == "" {
 		slug = "index"
 	}
-	if page == 1 || totalPages <= 1 {
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
-	physical := totalPages - page + 1
-	if physical < 1 {
-		physical = 1
+	if totalPages < 1 || page > totalPages {
+		return ""
 	}
+	physical := totalPages - page + 1
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, physical, extension)
 }
 
@@ -89,8 +89,13 @@ func jgdwTotalPages(slug string) (int, error) {
 	}
 	total := parseTotalPages(body)
 	if total < 1 {
-		// A recognized one-page list, including the legal empty tjxw page.
-		return 1, nil
+		// A recognized one-page list, including the legal empty tjxw page, must
+		// still expose a pagination shell. A short response without one is not
+		// enough evidence that older generated pages do not exist.
+		if doc.Find(".pagination, .p_pages, .paging").Length() > 0 {
+			return 1, nil
+		}
+		return 0, fmt.Errorf("jgdw: %s has no recognized pagination", slug)
 	}
 	return total, nil
 }
@@ -127,7 +132,7 @@ func parseAdapter_jgdwList(html []byte, baseURL string) ([]model.NewsItem, error
 		if !ok || seen[fullURL] {
 			return
 		}
-		title := strings.Join(strings.Fields(anchor.Text()), " ")
+		title := jgdwAnchorTitle(anchor)
 		if title == "" || !isValidNewsTitle(title) {
 			return
 		}
@@ -177,7 +182,7 @@ func jgdwParseHomepage(doc *goquery.Document, baseURL string) ([]model.NewsItem,
 			if !ok || seen[fullURL] {
 				return
 			}
-			title := strings.Join(strings.Fields(anchor.Text()), " ")
+			title := jgdwAnchorTitle(anchor)
 			if title == "" || !isValidNewsTitle(title) {
 				return
 			}
@@ -206,6 +211,26 @@ func jgdwParseHomepage(doc *goquery.Document, baseURL string) ([]model.NewsItem,
 		return nil, fmt.Errorf("jgdw homepage contains no scoped article modules")
 	}
 	return items, nil
+}
+
+// jgdwAnchorTitle handles the homepage notice template where the article
+// anchor wraps both <div class="title"> and <div class="time">. Reading the
+// whole anchor would append the month/day to the headline.
+func jgdwAnchorTitle(anchor *goquery.Selection) string {
+	if anchor == nil || anchor.Length() == 0 {
+		return ""
+	}
+	if title := strings.TrimSpace(anchor.AttrOr("title", "")); title != "" {
+		return strings.Join(strings.Fields(title), " ")
+	}
+	for _, selector := range []string{".title", "h1", "h2", "h3", "h4"} {
+		if title := strings.Join(strings.Fields(anchor.Find(selector).First().Text()), " "); title != "" {
+			return title
+		}
+	}
+	clone := anchor.Clone()
+	clone.Find(".time, .date, time, .p_time").Remove()
+	return strings.Join(strings.Fields(clone.Text()), " ")
 }
 
 func jgdwArticleURL(baseURL, href string) (string, bool) {

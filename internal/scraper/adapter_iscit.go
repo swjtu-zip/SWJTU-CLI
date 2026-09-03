@@ -19,8 +19,8 @@ import (
 const iscitCanonicalBaseURL = "https://iscit.swjtu.edu.cn"
 
 // These are the real article-list entry points found in the navigation,
-// homepage tabs, and topic pages. Faculty directories, profile/project pages,
-// and resource indexes are deliberately not feeds.
+// homepage tabs, and notice/news pages. Faculty directories, profile/project
+// pages, and the static recruitment/topic pages are deliberately not feeds.
 var iscitSubPages = []string{
 	"xw/zxxw",
 	"xw/xsdt",
@@ -32,8 +32,6 @@ var iscitSubPages = []string{
 	"tz/xg",
 	"tz/sz",
 	"tz/ky",
-	"zt/b_s_bqgzs",
-	"zt/cptxyc",
 }
 
 func init() {
@@ -72,13 +70,16 @@ func iscitPageURL(baseURL, slug string, page, totalPages int, extension string) 
 	} else if !strings.HasPrefix(extension, ".") {
 		extension = "." + extension
 	}
-	if page <= 1 || totalPages <= 1 {
+	if page < 1 {
+		return ""
+	}
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
-	filePage := totalPages - page + 1
-	if filePage < 1 {
-		filePage = 1
+	if totalPages < 1 || page > totalPages {
+		return ""
 	}
+	filePage := totalPages - page + 1
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, filePage, extension)
 }
 
@@ -86,7 +87,7 @@ func iscitPageURL(baseURL, slug string, page, totalPages int, extension string) 
 // shell cannot be silently accepted by the generic Boda path.
 func iscitListPage(slug string, page int) ([]model.NewsItem, int, error) {
 	if page < 1 {
-		page = 1
+		return nil, 0, fmt.Errorf("iscit: page must be positive: %d", page)
 	}
 	firstURL := iscitPageURL(iscitCanonicalBaseURL, slug, 1, 0, ".htm")
 	firstBody, err := iscitFetchHTML(firstURL)
@@ -96,6 +97,9 @@ func iscitListPage(slug string, page int) ([]model.NewsItem, int, error) {
 	totalPages, err := iscitTotalPagesFromHTML(firstBody, slug)
 	if err != nil {
 		return nil, 0, err
+	}
+	if page > totalPages {
+		return nil, totalPages, fmt.Errorf("iscit: page %d is out of range 1..%d for %s", page, totalPages, slug)
 	}
 	if page == 1 {
 		items, parseErr := parseIscitNews(firstBody, iscitCanonicalBaseURL)
@@ -140,8 +144,25 @@ func iscitTotalPagesFromHTML(body []byte, slug string) (int, error) {
 	if total := iscitPaginationTotal(doc); total > 0 {
 		return total, nil
 	}
-	// A valid one-page list may render only the disabled pagination controls.
-	return 1, nil
+	// A valid one-page list may render only the disabled pagination controls,
+	// but a list shell without any pagination marker is not enough evidence to
+	// conclude that a short response is complete.
+	if doc.Find(".p_pages, .p_t, .pagination, .paging").Length() > 0 || iscitExplicitEmptyList(doc) {
+		return 1, nil
+	}
+	return 0, fmt.Errorf("iscit: %s has no source pagination", slug)
+}
+
+func iscitExplicitEmptyList(doc *goquery.Document) bool {
+	if doc == nil {
+		return false
+	}
+	text := strings.Join(strings.Fields(doc.Text()), "")
+	return strings.Contains(text, "共0条") ||
+		strings.Contains(text, "暂无信息") ||
+		strings.Contains(text, "暂无数据") ||
+		strings.Contains(text, "暂无文章") ||
+		strings.Contains(text, "没有相关内容")
 }
 
 func iscitFetchHTML(rawURL string) ([]byte, error) {

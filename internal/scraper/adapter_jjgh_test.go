@@ -38,6 +38,17 @@ func TestJJGHAdapterRegistrationAndFeeds(t *testing.T) {
 	if got := jjghPageURL(site.BaseURL, "index/xwdt", 7, 7, ".htm"); got != site.BaseURL+"/index/xwdt/1.htm" {
 		t.Fatalf("jjgh last page URL = %q", got)
 	}
+	for _, tc := range []struct {
+		page, total int
+	}{
+		{0, 7},
+		{8, 7},
+		{2, 0},
+	} {
+		if got := jjghPageURL(site.BaseURL, "index/xwdt", tc.page, tc.total, ".htm"); got != "" {
+			t.Errorf("out-of-range page %d/%d returned %q", tc.page, tc.total, got)
+		}
+	}
 }
 
 func TestJJGHHomepageIncludesHiddenTabsCarouselAndAllModules(t *testing.T) {
