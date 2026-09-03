@@ -278,7 +278,21 @@ func mysAppendListRow(items *[]model.NewsItem, seen map[string]bool, row *goquer
 	if title == "" {
 		return
 	}
-	typ := mysCleanText(row.Find(".desc span").First().Text())
+	// In the current template the type is a direct child span of .desc.  Do
+	// not use the first descendant span: the duplicate-tag variant puts the
+	// row date in that nested position, which would turn the date into Type.
+	typ := ""
+	row.Find(".desc > span").EachWithBreak(func(_ int, candidate *goquery.Selection) bool {
+		value := mysCleanText(candidate.Text())
+		if value == "" {
+			return true
+		}
+		if date, _ := mysDateValues(value); date != "" {
+			return true
+		}
+		typ = value
+		return false
+	})
 	if typ == "" {
 		typ = mysCleanText(fallbackType)
 	}
@@ -424,10 +438,13 @@ func mysPageType(doc *goquery.Document) string {
 }
 
 func mysArticleTitle(doc *goquery.Document) string {
-	if title := mysCleanText(doc.Find(`meta[name="pageTitle"]`).First().AttrOr("content", "")); title != "" {
+	// A live detail response can retain the homepage shell's pageTitle meta
+	// before the detail-page meta.  The rendered detail heading is authoritative
+	// for the article title.
+	if title := mysCleanText(doc.Find(".detail-box .hd h3, .detail-box h3").First().Text()); title != "" {
 		return title
 	}
-	return mysCleanText(doc.Find(".detail-box .hd h3, .detail-box h3").First().Text())
+	return mysCleanText(doc.Find(`meta[name="pageTitle"]`).Last().AttrOr("content", ""))
 }
 
 func mysListType(doc *goquery.Document) string {

@@ -63,24 +63,27 @@ func init() {
 func ltcPageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
 	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if page < 1 || totalPages < 0 {
+		return ""
+	}
 	if extension == "" {
 		extension = ".htm"
 	} else if !strings.HasPrefix(extension, ".") {
 		extension = "." + extension
 	}
 	if slug == "" || slug == "index" {
+		if page != 1 || totalPages > 1 {
+			return ""
+		}
 		return baseURL + "/index" + extension
 	}
-	if page < 1 {
-		page = 1
-	}
-	if page == 1 || totalPages <= 1 {
+	if page == 1 {
 		return baseURL + "/" + slug + extension
 	}
-	physical := totalPages - page + 1
-	if physical < 1 {
-		physical = 1
+	if totalPages < 1 || page > totalPages {
+		return ""
 	}
+	physical := totalPages - page + 1
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, physical, extension)
 }
 
@@ -138,18 +141,22 @@ func parseAdapter_ltcList(raw []byte, baseURL string) ([]model.NewsItem, error) 
 	root := doc.Find(".main_right .conlistComm").First()
 	items := make([]model.NewsItem, 0, root.ChildrenFiltered("dl").Length())
 	seen := make(map[string]bool)
+	localRows := make(map[string]bool)
 	missingDate := false
+	invalidRow := false
 	root.ChildrenFiltered("dl").Each(func(_ int, row *goquery.Selection) {
 		anchor := row.Find("dt a[href*='info/']").Last()
 		if anchor.Length() == 0 {
 			return
 		}
 		fullURL, ok := ltcArticleURL(baseURL, anchor.AttrOr("href", ""))
-		if !ok || seen[fullURL] {
+		if !ok || localRows[fullURL] {
 			return
 		}
+		localRows[fullURL] = true
 		title := ltcAnchorTitle(anchor)
 		if title == "" {
+			invalidRow = true
 			return
 		}
 		date, publishedAt := ltcDateFields(row.Find("dd").First().Text())
@@ -158,6 +165,7 @@ func parseAdapter_ltcList(raw []byte, baseURL string) ([]model.NewsItem, error) 
 		}
 		if date == "" {
 			missingDate = true
+			invalidRow = true
 			return
 		}
 		itemType := ltcTypeText(row.Find("dt span a").First().Text())
@@ -176,6 +184,9 @@ func parseAdapter_ltcList(raw []byte, baseURL string) ([]model.NewsItem, error) 
 	})
 	if missingDate {
 		return nil, fmt.Errorf("ltc list: local article row has no publication date")
+	}
+	if invalidRow {
+		return nil, fmt.Errorf("ltc list: local article row could not be parsed")
 	}
 	return items, nil
 }

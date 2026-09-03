@@ -49,6 +49,18 @@ func TestKFJTPageURLUsesReverseGeneratedPages(t *testing.T) {
 	if got := kfjtPageURL(kfjtFixtureBaseURL, "xwzx/xwdt", 14, 14, ".htm"); got != kfjtFixtureBaseURL+"/xwzx/xwdt/1.htm" {
 		t.Fatalf("last page URL = %q", got)
 	}
+	for _, tc := range []struct {
+		page, total int
+	}{
+		{0, 14}, {15, 14}, {2, 0}, {2, 1},
+	} {
+		if got := kfjtPageURL(kfjtFixtureBaseURL, "xwzx/xwdt", tc.page, tc.total, ".htm"); got != "" {
+			t.Errorf("invalid page %d/%d produced %q", tc.page, tc.total, got)
+		}
+	}
+	if got := kfjtPageURL(kfjtFixtureBaseURL, "index", 2, 1, ".htm"); got != "" {
+		t.Fatalf("homepage out-of-range URL = %q", got)
+	}
 }
 
 func TestKFJTHomepageIncludesHiddenTabsAndFiltersExternalRows(t *testing.T) {
@@ -127,6 +139,10 @@ func TestKFJTLegalEmptyAndStrictShellRejection(t *testing.T) {
 	}
 	if _, err := parseAdapter_kfjtList(readKFJTFixture(t, "kfjt_captcha.html"), kfjtFixtureBaseURL); err == nil {
 		t.Fatal("captcha page was accepted as a KFJT list")
+	}
+	malformed := []byte(`<meta name="pageType" content="2"><div class="main"><div class="right"><div class="list"><ul><li><a href="/info/100/200.htm"></a></li></ul></div></div></div>`)
+	if _, err := parseAdapter_kfjtList(malformed, kfjtFixtureBaseURL); err == nil {
+		t.Fatal("malformed local KFJT row was silently discarded")
 	}
 }
 

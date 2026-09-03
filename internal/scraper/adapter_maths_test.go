@@ -43,6 +43,18 @@ func TestMathsAdapterRegistrationAndReversePagination(t *testing.T) {
 			t.Errorf("mathsPageURL(%q, %d/%d) = %q, want %q", tc.slug, tc.page, tc.total, got, tc.want)
 		}
 	}
+	for _, tc := range []struct {
+		page, total int
+	}{
+		{0, 62}, {63, 62}, {2, 0}, {2, 1},
+	} {
+		if got := mathsPageURL(mathsCanonicalBaseURL, "xyxw", tc.page, tc.total, ".htm"); got != "" {
+			t.Errorf("invalid page %d/%d produced %q", tc.page, tc.total, got)
+		}
+	}
+	if got := mathsPageURL(mathsCanonicalBaseURL, "index", 2, 1, ".htm"); got != "" {
+		t.Fatalf("homepage out-of-range URL = %q", got)
+	}
 	if got := mathsPageCount(nil); got != 0 {
 		t.Fatalf("nil page count = %d, want 0", got)
 	}
@@ -105,6 +117,10 @@ func TestMathsListScopesRowsAndPreservesTypeDate(t *testing.T) {
 	}
 	if _, ok := mathsArticleURL(mathsCanonicalBaseURL, "https://example.com/info/1/2.htm"); ok {
 		t.Fatal("external article URL was accepted")
+	}
+	malformed := []byte(`<meta name="pageType" content="2"><div class="lists"><h5>学院公告</h5><ul><li><a href="/info/1150/9001.htm"></a></li></ul></div>`)
+	if _, err := parseAdapter_mathsList(malformed, mathsCanonicalBaseURL); err == nil {
+		t.Fatal("malformed local maths row was silently discarded")
 	}
 }
 

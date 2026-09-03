@@ -58,6 +58,21 @@ func TestOalmReversePagination(t *testing.T) {
 	if got := oalmPageURL("http://oalm.swjtu.edu.cn/", "fwzn/sbjjk", 1, 1, "htm"); got != oalmFixtureBaseURL+"/fwzn/sbjjk.htm" {
 		t.Fatalf("single-page URL = %q", got)
 	}
+	for _, tc := range []struct {
+		page, total int
+	}{
+		{0, 61}, {62, 61}, {2, 0}, {2, 1},
+	} {
+		if got := oalmPageURL(oalmFixtureBaseURL, "xwgg/tzgg", tc.page, tc.total, ".htm"); got != "" {
+			t.Errorf("invalid page %d/%d produced %q", tc.page, tc.total, got)
+		}
+	}
+	if got := oalmPageURL(oalmFixtureBaseURL, "index", 2, 1, ".htm"); got != "" {
+		t.Fatalf("homepage out-of-range URL = %q", got)
+	}
+	if _, _, err := oalmListPage("xwgg/tzgg", 0); err == nil {
+		t.Fatal("oalm custom list page accepted page zero")
+	}
 }
 
 func atoiForOalmTest(t *testing.T, value string) int {
@@ -170,5 +185,9 @@ func TestOalmAllowsExplicitEmptyListsAndRejectsStaticOrCaptchaShells(t *testing.
 		if _, err := parseAdapter_oalmArticle(readOalmFixture(t, name), oalmFixtureBaseURL); err == nil {
 			t.Errorf("%s was accepted as an oalm article", name)
 		}
+	}
+	malformed := []byte(`<meta name="pageType" content="2"><div class="xwdt-right-content"><div class="current-title">新闻动态</div><ul class="news-list"><li id="line_u9_1"><a href="/info/1191/24201.htm"></a><span class="time">2026-09-01</span></li></ul></div>`)
+	if _, err := parseAdapter_oalmList(malformed, oalmFixtureBaseURL); err == nil {
+		t.Fatal("malformed local OALM row was silently discarded")
 	}
 }

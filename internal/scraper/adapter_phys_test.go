@@ -7,7 +7,7 @@ import (
 
 func TestPhysAdapterRegistersAuditedArticleFeeds(t *testing.T) {
 	site := AllSites["phys"]
-	if site == nil || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil {
+	if site == nil || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil {
 		t.Fatal("phys adapter is not registered")
 	}
 	want := map[string]bool{
@@ -27,6 +27,32 @@ func TestPhysAdapterRegistersAuditedArticleFeeds(t *testing.T) {
 		if !got[slug] {
 			t.Errorf("phys audited feed %q is missing", slug)
 		}
+	}
+}
+
+func TestPhysHomepageParsesAllRenderedNewsModules(t *testing.T) {
+	html := []byte(`<html><head><meta name="pageType" content="1"><meta name="pageTitle" content="物理科学与技术学院"></head><body>
+<div class="home1"><div class="title"><div class="con"><h3>学院动态</h3></div></div><ul><li><a href="info/1022/1.htm"><h3>学院动态首页文章</h3><p>2026.07.01</p></a></li></ul></div>
+<div class="home3"><div class="left"><div class="title"><div class="con"><h3>本科生培养</h3></div></div><ul><li><a href="info/1031/2.htm"><h3>本科生培养文章</h3><span>2026.07.02</span></a></li></ul></div><div class="right"><div class="title"><div class="con"><h3>研究生培养</h3></div></div><ul><li><a href="info/1034/3.htm"><h3>研究生培养文章</h3><span>2026.07.03</span></a></li></ul></div></div>
+<div class="home4"><div class="left"><div class="title"><div class="con"><h3>学工动态</h3></div></div><ul><li><a href="info/1040/4.htm"><h3>学工动态文章</h3><p>2026.07.04</p></a></li></ul></div></div></body></html>`)
+	items, err := parseAdapter_physList(html, "http://phys.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 4 {
+		t.Fatalf("phys homepage items = %#v, want all 4 module entries", items)
+	}
+	if items[1].Type != "本科生培养" || items[1].Date != "2026-07-02" || items[2].Type != "研究生培养" || items[3].Type != "学工动态" {
+		t.Fatalf("phys homepage metadata = %#v", items)
+	}
+}
+
+func TestPhysTotalPagesFromHTMLRejectsNonList(t *testing.T) {
+	if got, err := physTotalPagesFromHTML([]byte(`<html><div class="newlist1"><ul class="list"><li><a href="info/1/1.htm">x</a></li></ul><div class="p_pages"><a href="x/4.htm">4</a></div></div></html>`), "xwgg/xydt"); err != nil || got != 4 {
+		t.Fatalf("phys page count = %d, %v; want 4", got, err)
+	}
+	if _, err := physTotalPagesFromHTML([]byte(`<html><div class="home1">首页</div></html>`), "xwgg/xydt"); err == nil {
+		t.Fatal("phys homepage was accepted as an archive list")
 	}
 }
 

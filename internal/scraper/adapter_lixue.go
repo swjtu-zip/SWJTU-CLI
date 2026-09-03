@@ -137,7 +137,7 @@ func init() {
 func lixuePageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	baseURL = lixueBase(baseURL)
 	slug = strings.Trim(strings.TrimSpace(slug), "/")
-	if baseURL == "" || slug == "" || page < 1 {
+	if baseURL == "" || slug == "" || page < 1 || totalPages < 0 {
 		return ""
 	}
 	if extension != ".html" {
@@ -219,23 +219,31 @@ func parseAdapter_lixueList(rawHTML []byte, baseURL string) ([]model.NewsItem, e
 	typ := strings.TrimSpace(doc.Find(`meta[name="pageTitle"]`).AttrOr("content", ""))
 	items := make([]model.NewsItem, 0)
 	seen := make(map[string]bool)
+	localRows := make(map[string]bool)
+	invalidRows := 0
 	for _, row := range lixueListRows(doc) {
 		anchor := lixueFirstArticleAnchor(row, baseURL)
 		if anchor == nil || anchor.Length() == 0 {
 			continue
 		}
 		articleURL, ok := lixueArticleURL(baseURL, anchor.AttrOr("href", ""))
-		if !ok || seen[articleURL] {
+		if !ok || localRows[articleURL] {
 			continue
 		}
+		localRows[articleURL] = true
 		title := lixueRowTitle(row, anchor)
 		if title == "" {
+			invalidRows++
 			continue
 		}
 		date, publishedAt := lixueDateValues(lixueRowDate(row))
 		itemType := lixueTypeForURL(articleURL)
 		if itemType == "" {
 			itemType = typ
+		}
+		if itemType == "" {
+			invalidRows++
+			continue
 		}
 		items = append(items, model.NewsItem{
 			Title:       title,
@@ -246,6 +254,9 @@ func parseAdapter_lixueList(rawHTML []byte, baseURL string) ([]model.NewsItem, e
 			ParsedAt:    time.Now(),
 		})
 		seen[articleURL] = true
+	}
+	if invalidRows > 0 {
+		return nil, fmt.Errorf("lixue: %d local article rows could not be parsed", invalidRows)
 	}
 	return items, nil
 }

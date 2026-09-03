@@ -75,6 +75,15 @@ func TestLixuePageURLAndCount(t *testing.T) {
 	if got := lixuePageURL(base, "xwgg/xyxw", 2, 0, ".htm"); got != "" {
 		t.Fatalf("page URL without source total = %q, want refusal", got)
 	}
+	for _, tc := range []struct {
+		page, total int
+	}{
+		{0, 3}, {4, 3}, {2, 1},
+	} {
+		if got := lixuePageURL(base, "xwgg/xyxw", tc.page, tc.total, ".htm"); got != "" {
+			t.Errorf("invalid page %d/%d produced %q", tc.page, tc.total, got)
+		}
+	}
 }
 
 func lixuePageCountDocument(t *testing.T, body []byte) int {
@@ -106,6 +115,10 @@ func TestLixueListParsingAndStrictShell(t *testing.T) {
 	}
 	if _, err := parseAdapter_lixueList(lixueFixture(t, "lixue_unrecognized.html"), lixueCanonicalBaseURL); err == nil {
 		t.Fatal("unrecognized pageType=2 shell was accepted")
+	}
+	malformed := []byte(`<meta name="pageType" content="2"><div class="page-news"><div class="hots"><ul><li><a href="/info/1059/10101.htm"></a></li></ul></div></div>`)
+	if _, err := parseAdapter_lixueList(malformed, lixueCanonicalBaseURL); err == nil {
+		t.Fatal("malformed local lixue row was silently discarded")
 	}
 }
 

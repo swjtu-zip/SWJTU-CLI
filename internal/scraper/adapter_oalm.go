@@ -97,6 +97,9 @@ func init() {
 func oalmPageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	baseURL = oalmCanonicalBase(baseURL)
 	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if page < 1 || totalPages < 0 {
+		return ""
+	}
 	if slug == "" || strings.EqualFold(slug, "index") {
 		slug = "index"
 	}
@@ -105,16 +108,19 @@ func oalmPageURL(baseURL, slug string, page, totalPages int, extension string) s
 	} else if !strings.HasPrefix(extension, ".") {
 		extension = "." + extension
 	}
-	if page < 1 {
-		page = 1
-	}
-	if page <= 1 || totalPages <= 1 {
+	if slug == "index" {
+		if page != 1 || totalPages > 1 {
+			return ""
+		}
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
-	physical := totalPages - page + 1
-	if physical < 1 {
-		physical = 1
+	if page == 1 {
+		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
+	if totalPages < 1 || page > totalPages {
+		return ""
+	}
+	physical := totalPages - page + 1
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, physical, extension)
 }
 
@@ -144,7 +150,7 @@ func oalmListPage(slug string, page int) ([]model.NewsItem, int, error) {
 		slug = "index"
 	}
 	if page < 1 {
-		page = 1
+		return nil, 0, fmt.Errorf("oalm: requested page must be positive: %d", page)
 	}
 	if !oalmKnownFeed(slug) {
 		return nil, 0, fmt.Errorf("oalm: %q is not an article-list route", slug)
@@ -275,17 +281,21 @@ func parseAdapter_oalmList(raw []byte, baseURL string) ([]model.NewsItem, error)
 	}
 	items := make([]model.NewsItem, 0, rows.Length())
 	seen := make(map[string]bool, rows.Length())
+	localRows := make(map[string]bool, rows.Length())
+	invalidRows := 0
 	rows.Each(func(_ int, row *goquery.Selection) {
 		anchor := row.Find("a[href]").First()
 		if anchor.Length() == 0 {
 			return
 		}
 		fullURL, ok := oalmArticleURL(baseURL, anchor.AttrOr("href", ""))
-		if !ok || seen[fullURL] {
+		if !ok || localRows[fullURL] {
 			return
 		}
+		localRows[fullURL] = true
 		title := oalmRowTitle(row, anchor)
 		if !oalmValidTitle(title) {
+			invalidRows++
 			return
 		}
 		date, publishedAt := oalmRowDate(row)
@@ -299,6 +309,9 @@ func parseAdapter_oalmList(raw []byte, baseURL string) ([]model.NewsItem, error)
 			ParsedAt:    time.Now(),
 		})
 	})
+	if invalidRows > 0 {
+		return nil, fmt.Errorf("oalm: %d local article rows could not be parsed", invalidRows)
+	}
 	return items, nil
 }
 

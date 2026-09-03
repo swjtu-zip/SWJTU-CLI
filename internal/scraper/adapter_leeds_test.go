@@ -8,15 +8,48 @@ import (
 
 func TestLeedsAdapterRegistered(t *testing.T) {
 	site := AllSites["leeds"]
-	if site == nil || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil {
+	if site == nil || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil {
 		t.Fatal("leeds adapter hooks are not registered")
 	}
-	want := []string{"index/xyxw", "xytz/dzbg", "xytz/jwjx", "xytz/xszc", "xxgs/dzbg", "xxgs/jwjx", "xxgs/xszc", "index/hdyg", "djysz/djyd", "djysz/jszj"}
+	want := []string{"index/xyxw", "xytz/dzbg", "xytz/jwjx", "xytz/xszc", "xxgs/dzbg", "xxgs/jwjx", "xxgs/xszc", "index/hdyg", "index/zsxx", "index/zyxz", "xszc/xshd", "xszc/xsfc", "xszc/gjjl", "ztjy/xjpxsdzgtsshzysxztjy/xxdt"}
 	if !reflect.DeepEqual(site.SubPages, want) {
 		t.Fatalf("leeds feeds = %#v, want %#v", site.SubPages, want)
 	}
 	if got := site.PageURL(site.BaseURL, "index/xyxw", 2, 162, ".htm"); got != site.BaseURL+"/index/xyxw/161.htm" {
 		t.Fatalf("leeds reverse page URL = %q", got)
+	}
+	if got := site.PageURL(site.BaseURL, "index/xyxw", 163, 162, ".htm"); got != "" {
+		t.Fatalf("leeds out-of-range page URL = %q, want empty", got)
+	}
+}
+
+func TestLeedsCurrentListTemplatesAndHomepageModules(t *testing.T) {
+	nyNews := []byte(`<html><head><meta name="pageType" content="2"><meta name="pageTitle" content="学院新闻"></head><body><div class="ny_news"><ul><li><div class="txt"><h5>学院新闻完整标题</h5><span>2026.07.31</span></div><a href="../info/1032/1.htm">详情</a></li></ul><div class="pb_sys_common"><span class="p_pages"><span class="p_no_d">1</span><span class="p_no"><a href="xyxw/1.htm">2</a></span></span></div></div></body></html>`)
+	items, err := parseLeedsNews(nyNews, "http://leeds.swjtu.edu.cn/index/")
+	if err != nil || len(items) != 1 || items[0].Title != "学院新闻完整标题" || items[0].Type != "学院新闻" || items[0].Date != "2026-07-31" {
+		t.Fatalf("leeds ny_news = %#v, err=%v", items, err)
+	}
+	nywp := []byte(`<html><head><meta name="pageType" content="2"><meta name="pageTitle" content="活动预告"></head><body><div class="nywp"><ul class="ul-list-d3"><li><a class="con" href="../info/1044/2.htm"><div class="g-info-d"><em>20</em>2026.06</div><div class="text"><h3 class="g-tit-d">活动预告完整标题</h3></div></a></li></ul></div></body></html>`)
+	items, err = parseLeedsNews(nywp, "http://leeds.swjtu.edu.cn/index/")
+	if err != nil || len(items) != 1 || items[0].Date != "2026-06-20" || items[0].Type != "活动预告" {
+		t.Fatalf("leeds nywp = %#v, err=%v", items, err)
+	}
+	home := []byte(`<html><head><meta name="pageType" content="1"></head><body><div class="news_bg"><div class="news_box1"><ul><li><div class="txt"><i>2026.07.31</i><a href="info/1032/3.htm" title="新闻完整标题">截断</a></div></li></ul></div></div><div class="noitce_bg"><div id="NoitceCenterTobox"><ul class="swiper-wrapper"><li class="swiper-slide"><dl><a href="info/1034/4.htm">通知标题</a><span>2026.09.02</span></dl></li><li class="swiper-slide"><dl><a href="info/1039/5.htm">公示标题</a><span>2026.09.01</span></dl></li></ul></div></div><div class="Events"><div class="EventsBoxLTop"><a href="info/1044/6.htm">活动标题</a></div></div></body></html>`)
+	items, err = parseLeedsNews(home, "http://leeds.swjtu.edu.cn")
+	if err != nil || len(items) != 4 {
+		t.Fatalf("leeds homepage = %#v, err=%v", items, err)
+	}
+	if items[0].Title != "新闻完整标题" || items[0].Type != "学院新闻" || items[1].Type != "学院通知" || items[2].Type != "信息公示" || items[3].Type != "活动预告" {
+		t.Fatalf("leeds homepage types/titles = %#v", items)
+	}
+}
+
+func TestLeedsPaginationCountRejectsHomepageAndKeepsSinglePage(t *testing.T) {
+	if got, err := leedsTotalPagesFromHTML([]byte(`<div class="nywp"><ul class="ul-list-d3"><li><a href="info/1/1.htm">标题</a></li></ul><div class="p_pages"><span class="p_no_d">1</span><span class="p_no"><a href="x/9.htm">10</a></span></div></div>`), "index/hdyg"); err != nil || got != 10 {
+		t.Fatalf("leeds total pages = %d, %v; want 10", got, err)
+	}
+	if _, err := leedsTotalPagesFromHTML([]byte(`<meta name="pageType" content="1"><div class="news_bg">home</div>`), "index/hdyg"); err == nil {
+		t.Fatal("leeds homepage accepted as paginated list")
 	}
 }
 

@@ -75,22 +75,27 @@ func init() {
 func mathsPageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	baseURL = mathsCanonicalBaseURL
 	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if page < 1 || totalPages < 0 {
+		return ""
+	}
 	if extension == "" {
 		extension = ".htm"
 	} else if !strings.HasPrefix(extension, ".") {
 		extension = "." + extension
 	}
 	if slug == "" || slug == "index" || slug == "home" {
+		if page != 1 || totalPages > 1 {
+			return ""
+		}
 		return baseURL + "/index" + extension
 	}
-	if page <= 1 {
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
-	physical := totalPages - page + 1
-	if physical < 1 {
-		// Do not silently repeat the oldest page for an out-of-range request.
-		physical = 0
+	if totalPages < 1 || page > totalPages {
+		return ""
 	}
+	physical := totalPages - page + 1
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, physical, extension)
 }
 
@@ -196,6 +201,8 @@ func parseAdapter_mathsList(raw []byte, baseURL string) ([]model.NewsItem, error
 
 	items := make([]model.NewsItem, 0)
 	seen := make(map[string]bool)
+	localRows := make(map[string]bool)
+	invalidRows := 0
 	itemType := mathsListType(doc)
 	rows := region.Find("ul").First().ChildrenFiltered("li")
 	if rows.Length() == 0 {
@@ -204,9 +211,10 @@ func parseAdapter_mathsList(raw []byte, baseURL string) ([]model.NewsItem, error
 	rows.Each(func(_ int, row *goquery.Selection) {
 		anchor := row.Find("a[href]").First()
 		fullURL, ok := mathsArticleURL(mathsCanonicalBaseURL, anchor.AttrOr("href", ""))
-		if !ok || seen[fullURL] {
+		if !ok || localRows[fullURL] {
 			return
 		}
+		localRows[fullURL] = true
 		title := mathsText(row.Find(".txts, .news-title, h3, h4").First().Text())
 		if title == "" {
 			title = mathsText(anchor.AttrOr("title", ""))
@@ -215,6 +223,11 @@ func parseAdapter_mathsList(raw []byte, baseURL string) ([]model.NewsItem, error
 			title = mathsText(anchor.Text())
 		}
 		if title == "" || !isValidNewsTitle(title) {
+			invalidRows++
+			return
+		}
+		if itemType == "" {
+			invalidRows++
 			return
 		}
 		date, publishedAt := mathsDateValues(row.Find(".time, .date, time").First().Text())
@@ -228,6 +241,9 @@ func parseAdapter_mathsList(raw []byte, baseURL string) ([]model.NewsItem, error
 			ParsedAt:    time.Now(),
 		})
 	})
+	if invalidRows > 0 {
+		return nil, fmt.Errorf("maths: %d local article rows could not be parsed", invalidRows)
+	}
 	// A recognized .lists region with no local rows is a legal empty list.
 	// Static pages never reach this branch because they have no list region.
 	return items, nil

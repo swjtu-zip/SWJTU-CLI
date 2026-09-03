@@ -133,12 +133,12 @@ func TestMysPageTypeAcceptsDuplicateMetaTags(t *testing.T) {
 		t.Fatalf("duplicate pageType list = %#v", items)
 	}
 
-	article := []byte(`<html><head><meta name="pageType" content="1"><meta name="pageType" content="3"><meta name="pageTitle" content="重复标签详情标题"></head><body><div class="detail-box"><div class="hd"><h3>重复标签详情标题</h3></div><div class="v_news_content"><p>详情正文内容</p></div><div class="source"><span>发布日期：2026-04-24</span></div></div></body></html>`)
+	article := []byte(`<html><head><meta name="pageType" content="1"><meta name="pageType" content="3"><meta name="pageTitle" content="首页壳标题"><meta name="pageTitle" content="重复标签详情标题"></head><body><div class="detail-box"><div class="hd"><h3>详情 DOM 权威标题</h3></div><div class="v_news_content"><p>详情正文内容</p></div><div class="source"><span>发布日期：2026-04-24</span></div></div></body></html>`)
 	parsed, err := parseAdapter_mysArticle(article, mysFixtureBaseURL)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if parsed.Title != "重复标签详情标题" || !strings.Contains(parsed.Content, "详情正文内容") {
+	if parsed.Title != "详情 DOM 权威标题" || !strings.Contains(parsed.Content, "详情正文内容") {
 		t.Fatalf("duplicate pageType article = %#v", parsed)
 	}
 }

@@ -44,6 +44,18 @@ func TestLTCPageURLUsesReverseGeneratedPages(t *testing.T) {
 	if got := ltcPageURL(ltcBaseURL, "index", 1, 1, ""); got != ltcBaseURL+"/index.htm" {
 		t.Fatalf("homepage URL = %q", got)
 	}
+	for _, tc := range []struct {
+		page, total int
+	}{
+		{0, 66}, {67, 66}, {2, 0}, {2, 1},
+	} {
+		if got := ltcPageURL(ltcBaseURL, "wqdt", tc.page, tc.total, ".htm"); got != "" {
+			t.Errorf("invalid page %d/%d produced %q", tc.page, tc.total, got)
+		}
+	}
+	if got := ltcPageURL(ltcBaseURL, "index", 2, 1, ".htm"); got != "" {
+		t.Fatalf("homepage out-of-range URL = %q", got)
+	}
 }
 
 func TestLTCHomepageIncludesAllArticleModulesAndFiltersExternalLinks(t *testing.T) {
@@ -132,5 +144,9 @@ func TestLTCRejectsStaticVerificationAndExternalArticleShells(t *testing.T) {
 		if _, err := parseAdapter_ltcArticle(readLTCFixture(t, name), ltcBaseURL); err == nil {
 			t.Fatalf("%s was accepted as an LTC article", name)
 		}
+	}
+	malformed := []byte(`<meta name="pageType" content="2"><div class="main_right"><div class="current"><h3>晚晴动态</h3></div><div class="conlistComm"><dl><dt><a href="/info/1042/11526.htm"></a></dt><dd>时间：2026年07月03日</dd></dl></div></div>`)
+	if _, err := parseAdapter_ltcList(malformed, ltcBaseURL); err == nil {
+		t.Fatal("malformed local LTC row was silently discarded")
 	}
 }

@@ -59,21 +59,27 @@ func init() {
 func kfjtPageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	baseURL = kfjtCanonicalBase(baseURL)
 	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if page < 1 || totalPages < 0 {
+		return ""
+	}
 	if extension == "" {
 		extension = ".htm"
 	} else if !strings.HasPrefix(extension, ".") {
 		extension = "." + extension
 	}
 	if slug == "" || slug == "index" || slug == "home" {
+		if page != 1 || totalPages > 1 {
+			return ""
+		}
 		return baseURL + "/index" + extension
 	}
-	if page <= 1 || totalPages <= 1 {
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
-	physical := totalPages - page + 1
-	if physical < 1 {
-		physical = 1
+	if totalPages < 1 || page > totalPages {
+		return ""
 	}
+	physical := totalPages - page + 1
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, physical, extension)
 }
 
@@ -135,14 +141,29 @@ func parseAdapter_kfjtList(raw []byte, baseURL string) ([]model.NewsItem, error)
 
 	items := make([]model.NewsItem, 0)
 	seen := make(map[string]bool)
+	localRows := make(map[string]bool)
+	invalidRows := 0
 	itemType := kfjtListType(doc)
 	rows := list.Find("ul").First().ChildrenFiltered("li")
 	if rows.Length() == 0 {
 		rows = list.Find("li")
 	}
 	rows.Each(func(_ int, row *goquery.Selection) {
+		anchor := row.Find("a[href]").First()
+		articleURL, ok := kfjtArticleURL(baseURL, anchor.AttrOr("href", ""))
+		if !ok || localRows[articleURL] {
+			return
+		}
+		localRows[articleURL] = true
+		before := len(items)
 		kfjtAppendListRow(&items, seen, row, itemType, baseURL)
+		if len(items) == before {
+			invalidRows++
+		}
 	})
+	if invalidRows > 0 {
+		return nil, fmt.Errorf("kfjt: %d local article rows could not be parsed", invalidRows)
+	}
 	return items, nil
 }
 
