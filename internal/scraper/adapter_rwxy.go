@@ -84,13 +84,22 @@ func parseAdapter_rwxyArticle(html []byte, baseURL string) (*model.Article, erro
 		if date, publishedAt := rwxyDateValues(meta.Text()); date != "" {
 			article.Date = date
 			article.PublishedAt = publishedAt
+		} else if rwxyHasLegacyPlaceholder(meta.Text()) {
+			article.Date = ""
+			article.PublishedAt = ""
 		}
+	}
+	if rwxyHasLegacyPlaceholder(article.Date) || rwxyHasLegacyPlaceholder(article.PublishedAt) {
+		article.Date = ""
+		article.PublishedAt = ""
 	}
 	return article, nil
 }
 
 var rwxyDateRe = regexp.MustCompile(`20\d{2}\s*(?:[-/.年]\s*\d{1,2}\s*[-/.月]\s*\d{1,2}日?)(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?`)
 var rwxyPageIndicatorRe = regexp.MustCompile(`\b1\s*/\s*(\d+)\b`)
+
+const rwxyLegacyPlaceholderDate = "2013-01-01"
 
 func rwxyDateValues(text string) (string, string) {
 	match := rwxyDateRe.FindString(strings.Join(strings.Fields(text), " "))
@@ -101,7 +110,14 @@ func rwxyDateValues(text string) (string, string) {
 	if precise == "" {
 		return "", ""
 	}
+	if rwxyHasLegacyPlaceholder(precise) {
+		return "", ""
+	}
 	return precise[:10], precise
+}
+
+func rwxyHasLegacyPlaceholder(value string) bool {
+	return strings.HasPrefix(strings.TrimSpace(value), rwxyLegacyPlaceholderDate)
 }
 
 func rwxyListType(doc *goquery.Document) string {

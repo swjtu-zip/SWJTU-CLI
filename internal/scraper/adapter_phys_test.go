@@ -70,6 +70,21 @@ func TestPhysListKeepsHeadingTypeAndDatePrecision(t *testing.T) {
 	}
 }
 
+func TestPhysLegacyMigrationDateIsNotPublishedDate(t *testing.T) {
+	if date, publishedAt := physNormalizeDate("2017-04-24"); date != "" || publishedAt != "" {
+		t.Fatalf("legacy migration date leaked from list: %q/%q", date, publishedAt)
+	}
+
+	html := []byte(`<html><body><h1>旧物理学院文章</h1><div class="news_source"><span>发布时间：2017-04-24</span></div><div class="v_news_content"><p>这是一段完整的旧文章正文，日期来自迁移模板。</p></div></body></html>`)
+	article, err := parseAdapter_physArticle(html, "http://phys.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Date != "" || article.PublishedAt != "" {
+		t.Fatalf("legacy migration date leaked from article: %q/%q", article.Date, article.PublishedAt)
+	}
+}
+
 func TestPhysArticleKeepsBodyImageAndAttachment(t *testing.T) {
 	html := []byte(`<html><body><div class="loaction"><a>首页</a><a>学院动态</a></div><h1>物理学院文章标题</h1><div class="news_source"><span class="date">2026-07-01</span></div><div class="v_news_content"><p>物理学院正文内容。</p><img data-src="/images/body.jpg"><a download="附件.pdf" href="/download?id=1">下载附件</a></div></body></html>`)
 	article, err := parseAdapter_physArticle(html, "http://phys.swjtu.edu.cn")

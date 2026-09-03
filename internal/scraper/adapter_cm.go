@@ -168,11 +168,17 @@ func parseAdapter_cmList(html []byte, baseURL string) ([]model.NewsItem, error) 
 		return nil, fmt.Errorf("parse cm list: %w", err)
 	}
 
-	// Ordinary list pages use n_list; the two 师生风采 child pages use the
+	// Ordinary list pages use n_list. The two 师生风采 child pages use the
 	// older n_listTxt name. Scoping to these containers is what keeps the
 	// navigation links (including the mobile 首页 h1) out of the feed.
-	if list := doc.Find(".n_list > ul, .n_listTxt > ul").First(); list.Length() > 0 {
-		return parseCmListRows(list.ChildrenFiltered("li"), cmPageType(doc), baseURL), nil
+	if list := doc.Find(".n_list > ul").First(); list.Length() > 0 {
+		return parseCmListRows(list.ChildrenFiltered("li"), cmPageType(doc), baseURL, true), nil
+	}
+	if list := doc.Find(".n_listTxt > ul").First(); list.Length() > 0 {
+		// CM's legacy 师生风采 template currently emits the same stale
+		// 2023-04-12 value for every row. The detail page has the real
+		// publication date, so do not expose this list-only placeholder.
+		return parseCmListRows(list.ChildrenFiltered("li"), cmPageType(doc), baseURL, false), nil
 	}
 
 	// index.htm is an aggregation page. Each home section has its own heading;
@@ -190,7 +196,7 @@ func parseAdapter_cmList(html []byte, baseURL string) ([]model.NewsItem, error) 
 	return nil, fmt.Errorf("cm page is not a supported article list")
 }
 
-func parseCmListRows(rows *goquery.Selection, pageType, baseURL string) []model.NewsItem {
+func parseCmListRows(rows *goquery.Selection, pageType, baseURL string, includeDates bool) []model.NewsItem {
 	items := make([]model.NewsItem, 0, rows.Length())
 	seen := make(map[string]bool, rows.Length())
 	rows.Each(func(_ int, row *goquery.Selection) {
@@ -207,9 +213,12 @@ func parseCmListRows(rows *goquery.Selection, pageType, baseURL string) []model.
 		if title == "" || !isValidNewsTitle(title) || len([]rune(title)) > 160 {
 			return
 		}
-		date, publishedAt := cmDateFromScope(row.Find("time, .time, .date").First())
-		if date == "" {
-			date, publishedAt = cmDateFromScope(row)
+		date, publishedAt := "", ""
+		if includeDates {
+			date, publishedAt = cmDateFromScope(row.Find("time, .time, .date").First())
+			if date == "" {
+				date, publishedAt = cmDateFromScope(row)
+			}
 		}
 
 		seen[fullURL] = true

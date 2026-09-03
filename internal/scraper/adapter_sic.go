@@ -308,7 +308,7 @@ func parseSicNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 		}
 
 		title := sicTitle(sel)
-		if title == "" || utf8.RuneCountInString(title) > 100 || !isValidNewsTitle(title) {
+		if title == "" || utf8.RuneCountInString(title) > 100 || !isSicNewsTitle(title) {
 			return
 		}
 		date, publishedAt := sicDateValuesForAnchor(sel)
@@ -373,7 +373,7 @@ func parseSicHomepageItems(doc *goquery.Document, baseURL string) []model.NewsIt
 			return
 		}
 		title := sicTitle(sel)
-		if title == "" || utf8.RuneCountInString(title) > 100 || !isValidNewsTitle(title) {
+		if title == "" || utf8.RuneCountInString(title) > 100 || !isSicNewsTitle(title) {
 			return
 		}
 		typ := sicHomepageType(sel)
@@ -608,6 +608,23 @@ func sicTitle(sel *goquery.Selection) string {
 		title = strings.TrimSpace(sel.Text())
 	}
 	return cleanTitle(title)
+}
+
+// isValidNewsTitle rejects every headline ending in the Chinese closing book
+// quote because that suffix is also common on navigation labels. SIC has
+// legitimate articles whose actual headline ends in a quoted work name, so
+// allow that narrow case after still applying the shared navigation filters
+// to the title without its final quote.
+func isSicNewsTitle(title string) bool {
+	title = cleanTitle(title)
+	if isValidNewsTitle(title) {
+		return true
+	}
+	if !strings.HasSuffix(title, "》") {
+		return false
+	}
+	withoutQuote := strings.TrimSpace(strings.TrimSuffix(title, "》"))
+	return len([]rune(title)) >= 6 && isValidNewsTitle(withoutQuote)
 }
 
 var sicDateSelectors = []string{

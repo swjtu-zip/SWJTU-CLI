@@ -124,9 +124,10 @@ func TestSicParseListFiltersBannerAndMergesDuplicate(t *testing.T) {
 <header><a href="info/9999/1.htm" title="首页导航">首页导航</a></header>
 <div class="bannerBox"><a href="info/9999/2.htm" title="横幅链接">横幅链接</a></div>
 <main><ul>
-  <li><a href="info/1381/1001.htm"><div class="date"><i>07</i><span>2026.08</span></div><h5>第一条学院新闻</h5></a></li>
-  <li><a href="info/1381/1001.htm" title="第一条学院新闻"><i>2026.08.07</i></a></li>
-  <li><a href="info/1381/1002.htm" title="第二条学院新闻"><time>2026/08/06 12:00</time></a></li>
+	<li><a href="info/1381/1001.htm"><div class="date"><i>07</i><span>2026.08</span></div><h5>第一条学院新闻</h5></a></li>
+	<li><a href="info/1381/1001.htm" title="第一条学院新闻"><i>2026.08.07</i></a></li>
+	<li><a href="info/1381/1002.htm" title="第二条学院新闻"><time>2026/08/06 12:00</time></a></li>
+	<li><a href="info/1381/1003.htm" title="学院纪委参与拍摄制作学校首部廉洁微短剧《守》"><time>2026/08/05</time></a></li>
 </ul></main>
 </body></html>`)
 
@@ -134,14 +135,17 @@ func TestSicParseListFiltersBannerAndMergesDuplicate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(items) != 2 {
-		t.Fatalf("expected two content articles, got %d: %#v", len(items), items)
+	if len(items) != 3 {
+		t.Fatalf("expected three content articles, got %d: %#v", len(items), items)
 	}
 	if items[0].URL != "https://sic.swjtu.edu.cn/info/1381/1001.htm" || items[0].Title != "第一条学院新闻" || items[0].Date != "2026-08-07" {
 		t.Fatalf("unexpected merged item: %+v", items[0])
 	}
 	if items[1].URL != "https://sic.swjtu.edu.cn/info/1381/1002.htm" || items[1].Date != "2026-08-06" {
 		t.Fatalf("unexpected second item: %+v", items[1])
+	}
+	if items[2].URL != "https://sic.swjtu.edu.cn/info/1381/1003.htm" || items[2].Date != "2026-08-05" {
+		t.Fatalf("unexpected quoted-headline item: %+v", items[2])
 	}
 }
 

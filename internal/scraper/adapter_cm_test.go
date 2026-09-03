@@ -152,6 +152,11 @@ func TestCmFengcaiListUsesNListTxt(t *testing.T) {
 	if len(items) != 2 || items[0].Type != "教师风采" || items[1].Title != "第二位教师风采" {
 		t.Fatalf("unexpected n_listTxt items: %#v", items)
 	}
+	for _, item := range items {
+		if item.Date != "" || item.PublishedAt != "" {
+			t.Fatalf("legacy n_listTxt placeholder date leaked: %+v", item)
+		}
+	}
 }
 
 func TestCmArticleParserPrefersDtlTitleOverSidebarHome(t *testing.T) {

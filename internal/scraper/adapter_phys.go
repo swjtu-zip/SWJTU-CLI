@@ -112,6 +112,10 @@ func parseAdapter_physArticle(html []byte, baseURL string) (*model.Article, erro
 	if err != nil {
 		return nil, err
 	}
+	if physHasLegacyPlaceholder(article.Date) || physHasLegacyPlaceholder(article.PublishedAt) {
+		article.Date = ""
+		article.PublishedAt = ""
+	}
 	if article.Type == "" {
 		if doc, parseErr := goquery.NewDocumentFromReader(strings.NewReader(string(html))); parseErr == nil {
 			article.Type = physPageType(doc)
@@ -121,6 +125,8 @@ func parseAdapter_physArticle(html []byte, baseURL string) (*model.Article, erro
 }
 
 var physShortDateRE = regexp.MustCompile(`(?:^|\D)(\d{1,2})\s*[-/.]\s*(\d{1,2})(?:\D|$)`)
+
+const physLegacyPlaceholderDate = "2017-04-24"
 
 func parsePhysInfoRows(doc *goquery.Document, baseURL string) []model.NewsItem {
 	if doc == nil {
@@ -362,6 +368,9 @@ func physNormalizeDate(raw string) (string, string) {
 		return "", ""
 	}
 	if publishedAt := normalizePublishedAt(raw); publishedAt != "" {
+		if physHasLegacyPlaceholder(publishedAt) {
+			return "", ""
+		}
 		if publishedAtHasClock(publishedAt) {
 			return publishedAt[:10], publishedAt
 		}
@@ -371,4 +380,8 @@ func physNormalizeDate(raw string) (string, string) {
 		return fmt.Sprintf("%02s-%02s", match[1], match[2]), ""
 	}
 	return raw, ""
+}
+
+func physHasLegacyPlaceholder(value string) bool {
+	return strings.HasPrefix(strings.TrimSpace(value), physLegacyPlaceholderDate)
 }

@@ -41,6 +41,21 @@ func TestRwxyArticleParsesPreciseDate(t *testing.T) {
 	}
 }
 
+func TestRwxyLegacyMigrationDateIsNotPublishedDate(t *testing.T) {
+	if date, publishedAt := rwxyDateValues("日期：2013-01-01 00:00"); date != "" || publishedAt != "" {
+		t.Fatalf("legacy migration date leaked: %q/%q", date, publishedAt)
+	}
+
+	html := []byte(`<html><body><form name="_newscontent_fromname"><div class="title"><h3>旧文章</h3><div class="info">日期：2013-01-01 00:00</div></div><div class="detail"><div class="v_news_content"><p>这是一段完整的旧文章正文，日期来自迁移模板。</p></div></div></form></body></html>`)
+	article, err := parseAdapter_rwxyArticle(html, "https://rwxy.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Date != "" || article.PublishedAt != "" {
+		t.Fatalf("legacy migration date leaked from article: %q/%q", article.Date, article.PublishedAt)
+	}
+}
+
 func TestRwxyHomeParsesLiveDatesAndTypes(t *testing.T) {
 	html := []byte(`<html><body>
 <div class="news"><div class="conts"><div class="title"><b>学院新闻</b></div>
