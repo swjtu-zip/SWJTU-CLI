@@ -107,6 +107,11 @@ func parseAdapter_bioengList(html []byte, baseURL string) ([]model.NewsItem, err
 	// header, side navigation, breadcrumb, footer and related links.
 	rows := doc.Find(".content dl")
 	if rows.Length() == 0 {
+		// Nested menu pages use the older site-wide list component.  It is a
+		// real article list, but sits beside .content rather than inside it.
+		rows = doc.Find(".conlistComm > dl")
+	}
+	if rows.Length() == 0 {
 		return nil, fmt.Errorf("bioeng page has no article list rows")
 	}
 

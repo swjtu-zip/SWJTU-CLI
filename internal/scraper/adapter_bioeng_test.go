@@ -147,6 +147,27 @@ func TestBioengListPrefersHeadlineLinkAndKeepsType(t *testing.T) {
 	}
 }
 
+func TestBioengListParsesLegacyConlistCommMenus(t *testing.T) {
+	html := []byte(`<html><head><meta name="pageTitle" content="党委简介"></head><body>
+<div class="main_right"><div class="current"><h3>党委简介</h3></div>
+<div class="conlistComm">
+<dl><dt><span class="spp"><a href="dwjj.htm">[党委简介]</a></span><a href="../info/1162/8978.htm">党委简介</a></dt><dd>发布时间：2022-12-23</dd></dl>
+<dl><dt><span class="spp"><a href="dwjj.htm">[党委简介]</a></span><a href="../info/1162/13066.htm">党章党规（常用）</a></dt><dd>发布时间：2024-06-07</dd></dl>
+</div></div></body></html>`)
+	items, err := parseAdapter_bioengList(html, "https://bioeng.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 || items[0].Title != "党委简介" || items[0].Date != "2022-12-23" || items[1].Date != "2024-06-07" {
+		t.Fatalf("legacy menu items = %#v", items)
+	}
+	for _, item := range items {
+		if item.Type != "党委简介" {
+			t.Fatalf("legacy menu type = %q, want 党委简介", item.Type)
+		}
+	}
+}
+
 func TestBioengArticleParsesSourceBodyTypeAndExternalAttachments(t *testing.T) {
 	html := loadTestHTML("bioeng_article.html")
 	article, err := parseAdapter_bioengArticle(html, "https://bioeng.swjtu.edu.cn")
