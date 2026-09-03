@@ -340,6 +340,24 @@ func TestArticleParserKeepsListTableAndLazyImageContent(t *testing.T) {
 	}
 }
 
+func TestArticleParserDoesNotTreatOrdinaryListLinksAsAttachments(t *testing.T) {
+	html := []byte(`<html><body>
+<h1 class="news_tit">普通正文链接</h1>
+<div class="v_news_content">
+<p>正文中提到附件说明，但下面的链接不是附件。</p>
+<ul><li>附件说明：<a href="https://example.com/reference">相关说明</a></li></ul>
+<p><a href="mailto:example@example.com">联系邮箱</a></p>
+<div class="attachments"><a href="/download?id=1">无扩展名附件</a></div>
+</div></body></html>`)
+	article, err := parseBodaArticle(html, "https://news.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].URL != "https://news.swjtu.edu.cn/download?id=1" {
+		t.Fatalf("ordinary links were classified as attachments: %#v", article.Attachments)
+	}
+}
+
 func TestArticleParserPreservesPublishedTimeAndType(t *testing.T) {
 	html := []byte(`<html><body>
 <h1 class="news_tit">带发布时间的文章</h1>

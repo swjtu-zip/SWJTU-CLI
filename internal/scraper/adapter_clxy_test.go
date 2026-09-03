@@ -197,6 +197,25 @@ func TestClxyArticleParserExtractsMetadataImagesAndExternalAttachment(t *testing
 	}
 }
 
+func TestClxyArticleParserIgnoresBodyNavigationAndMailLinks(t *testing.T) {
+	html := []byte(`<html><body><div class="content"><div class="article">
+<h1>材料学院链接分类测试</h1>
+<div class="source">来源：材料学院&nbsp;&nbsp;日期：2026年08月28日 10:20</div>
+<div class="v_news_content"><p>正文。</p>
+<p><a href="mailto:example@example.com">联系邮箱</a></p>
+<p><a href="http://jwc.swjtu.edu.cn/vatuu/WebAction?setAction=download&amp;fileType=rule&amp;fileId=RULE1">相关规章</a></p>
+</div>
+<div class="attachments"><a href="/system/_content/download.jsp?id=FILE1">通知附件</a></div>
+</div></div></body></html>`)
+	article, err := parseAdapter_clxyArticle(html, "https://clxy.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].URL != "https://clxy.swjtu.edu.cn/system/_content/download.jsp?id=FILE1" {
+		t.Fatalf("body navigation links were classified as attachments: %#v", article.Attachments)
+	}
+}
+
 func TestClxyParserRejectsErrorAndNonArticleShells(t *testing.T) {
 	if _, err := parseAdapter_clxyList([]byte(`<html><head><title>系统提示</title></head><body>您没有访问当前栏目的权限。</body></html>`), "https://clxy.swjtu.edu.cn"); err == nil {
 		t.Fatal("error page was accepted as a list")

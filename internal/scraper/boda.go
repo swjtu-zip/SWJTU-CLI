@@ -1047,8 +1047,21 @@ func bodaResourceURL(baseURL, raw string) string {
 
 var bodaAttachmentExts = []string{".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".pdf", ".zip", ".rar", ".7z", ".txt", ".csv"}
 
+func bodaIsPseudoResourceHref(href string) bool {
+	lower := strings.ToLower(strings.TrimSpace(href))
+	for _, prefix := range []string{"#", "data:", "file:", "javascript:", "mailto:", "tel:", "blob:"} {
+		if strings.HasPrefix(lower, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 func bodaLooksLikeAttachmentLink(sel *goquery.Selection, href string) bool {
 	if sel == nil || sel.Length() == 0 || href == "" {
+		return false
+	}
+	if bodaIsPseudoResourceHref(href) {
 		return false
 	}
 	if strings.TrimSpace(sel.AttrOr("download", "")) != "" {
@@ -1064,7 +1077,11 @@ func bodaLooksLikeAttachmentLink(sel *goquery.Selection, href string) bool {
 			return true
 		}
 	}
-	for _, selector := range []string{"li", ".attachment", ".attachments", ".news-attachment", ".download"} {
+	// A generic <li> is not enough evidence: ordinary article links are often
+	// placed in list items whose surrounding prose happens to mention “附件”.
+	// Keep only explicit attachment/download containers here; real file URLs
+	// and CMS download endpoints are already covered above.
+	for _, selector := range []string{".attachment", ".attachments", ".news-attachment", ".download"} {
 		if ancestor := sel.Closest(selector); ancestor.Length() > 0 && strings.Contains(ancestor.Text(), "附件") {
 			return true
 		}

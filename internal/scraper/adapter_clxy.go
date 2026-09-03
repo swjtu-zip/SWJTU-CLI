@@ -436,8 +436,11 @@ func appendClxyAttachments(article *model.Article, doc *goquery.Document, baseUR
 }
 
 func clxyAttachmentLink(anchor *goquery.Selection, href string) bool {
+	if anchor == nil || anchor.Length() == 0 || bodaIsPseudoResourceHref(href) {
+		return false
+	}
 	hrefLower := strings.ToLower(href)
-	if strings.Contains(hrefLower, "download.jsp") || strings.Contains(hrefLower, "download") {
+	if strings.Contains(hrefLower, "download.jsp") || strings.Contains(hrefLower, "downloadattachurl") || strings.TrimSpace(anchor.AttrOr("download", "")) != "" {
 		return true
 	}
 	for _, ext := range []string{".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".pdf", ".zip", ".rar", ".7z", ".txt", ".csv"} {
@@ -445,8 +448,8 @@ func clxyAttachmentLink(anchor *goquery.Selection, href string) bool {
 			return true
 		}
 	}
-	for _, ancestor := range []*goquery.Selection{anchor, anchor.Parent(), anchor.Parent().Parent()} {
-		if ancestor != nil && strings.Contains(strings.TrimSpace(ancestor.Text()), "附件") {
+	for _, selector := range []string{".attachment", ".attachments", ".news-attachment", ".download"} {
+		if ancestor := anchor.Closest(selector); ancestor.Length() > 0 && strings.Contains(strings.TrimSpace(ancestor.Text()), "附件") {
 			return true
 		}
 	}

@@ -249,6 +249,7 @@ func TestDqxyAdapterExternalAttachments(t *testing.T) {
 func TestDqxyAdapterFiltersPresentationImages(t *testing.T) {
 	images := filterDqxyImages([]string{
 		"https://dqxy.swjtu.edu.cn/__local/real.png",
+		"https://dqxy.swjtu.edu.cn/_mediafile/%7Bownername%7D/ueditor/upload/image/20170101/broken.png",
 		"https://dqxy.swjtu.edu.cn/system/resource/images/fileTypeImages/icon_pdf.gif",
 		"https://dqxy.swjtu.edu.cn/doc.gif",
 		"https://dqxy.swjtu.edu.cn/spacer.gif",
