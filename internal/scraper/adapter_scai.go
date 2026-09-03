@@ -32,6 +32,8 @@ func init() {
 var (
 	scaiJavaDateRe      = regexp.MustCompile("(?i)\\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2}\\s+[A-Z]{2,5}\\s+\\d{4}\\b")
 	scaiNumericDateRe   = regexp.MustCompile("(20\\d{2})[\\s\\x{a0}]*[-/.年][\\s\\x{a0}]*(\\d{1,2})[\\s\\x{a0}]*[-/.月][\\s\\x{a0}]*(\\d{1,2})")
+	scaiYearMonthRe     = regexp.MustCompile("(20\\d{2})[\\s\\x{a0}]*[-/.年][\\s\\x{a0}]*([01]?\\d)")
+	scaiDayRe           = regexp.MustCompile(`^\s*([0-3]?\d)\s*$`)
 	scaiPublishLabelRe  = regexp.MustCompile("(?:发布日期|发布时间|发表日期|发表时间)\\s*[:：]?")
 	scaiBlockedPageRe   = regexp.MustCompile("(?:您的访问请求可能对网站造成安全威胁|您的请求可能存在威胁，已被拦截)")
 	scaiAttachmentNumRe = regexp.MustCompile(`^\s*\d+\.\s*`)
@@ -171,6 +173,11 @@ func scaiPageURL(baseURL, slug string, page, _ int, extension string) string {
 	}
 	if page > 1 {
 		query.Set("page", strconv.Itoa(page))
+		// The live site is served by a cache layer which has intermittently
+		// returned page 1 for the canonical page=2 URL. An ignored, stable
+		// adapter parameter gives each logical page its own cache key while
+		// leaving the site's page parameter untouched.
+		query.Set("swjtu_adapter_page", strconv.Itoa(page))
 	}
 	return baseURL + "/web/page-module.html?" + query.Encode()
 }
@@ -394,6 +401,32 @@ func scaiListType(doc *goquery.Document) string {
 }
 
 func scaiDateInSelection(sel *goquery.Selection) string {
+	if sel == nil || sel.Length() == 0 {
+		return ""
+	}
+	// The same live template has two renderings: some responses contain a
+	// complete Java Date in .day, while others split it into .date=2026/08
+	// and .day=03. Check the calendar as a unit before checking individual
+	// date nodes so the latter is not discarded as an incomplete date.
+	var calendarDate string
+	sel.Find(".calendar").EachWithBreak(func(_ int, calendar *goquery.Selection) bool {
+		if date := scaiDateFromText(calendar.Text()); date != "" {
+			calendarDate = date
+			return false
+		}
+		month := strings.TrimSpace(calendar.Find(".date").First().Text())
+		day := strings.TrimSpace(calendar.Find(".day").First().Text())
+		if monthMatch := scaiYearMonthRe.FindStringSubmatch(month); monthMatch != nil {
+			if dayMatch := scaiDayRe.FindStringSubmatch(day); dayMatch != nil {
+				calendarDate = normalizeDateParts(monthMatch[1], monthMatch[2], dayMatch[1])
+				return calendarDate == ""
+			}
+		}
+		return true
+	})
+	if calendarDate != "" {
+		return calendarDate
+	}
 	for _, selector := range []string{
 		".calendar .day",
 		".calendar .date",

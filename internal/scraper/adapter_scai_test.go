@@ -145,15 +145,28 @@ func TestScaiAdapterListUsesModuleRowsAndRejectsWAFPage(t *testing.T) {
 	}
 }
 
+func TestScaiAdapterParsesSplitLiveCalendarDate(t *testing.T) {
+	html := []byte(`<div class="container"><h1 class="list-big-title">学院新闻</h1>
+<div class="list-top-item"><div class="calendar"><div class="day">03</div><div class="date">2026/08</div></div>
+<a href="/web/page-newsDetail.html?nid=split-date">分栏日期文章标题</a></div></div>`)
+	items, err := parseScaiAdapterList(html, "https://scai.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].Date != "2026-08-03" {
+		t.Fatalf("split calendar item = %#v, want date 2026-08-03", items)
+	}
+}
+
 func TestScaiPageURLPreservesSubTabAndUsesIndexHTML(t *testing.T) {
 	base := "https://scai.swjtu.edu.cn"
 	if got := scaiPageURL(base, "index", 1, 0, ".htm"); got != base+"/index.html" {
 		t.Fatalf("index page URL = %q", got)
 	}
-	if got := scaiPageURL(base, "undergraduate/notice", 2, 31, ".htm"); got != base+"/web/page-module.html?mid=B730BEB095B31840&page=2&tid=350" {
+	if got := scaiPageURL(base, "undergraduate/notice", 2, 31, ".htm"); got != base+"/web/page-module.html?mid=B730BEB095B31840&page=2&swjtu_adapter_page=2&tid=350" {
 		t.Fatalf("sub-tab page URL = %q", got)
 	}
-	if got := scaiPageURL(base, "notice/files", 7, 7, ".html"); got != base+"/web/page-module.html?mid=F4DFBF47DF89091A&page=7&tid=360" {
+	if got := scaiPageURL(base, "notice/files", 7, 7, ".html"); got != base+"/web/page-module.html?mid=F4DFBF47DF89091A&page=7&swjtu_adapter_page=7&tid=360" {
 		t.Fatalf("notice file-tab page URL = %q", got)
 	}
 }
