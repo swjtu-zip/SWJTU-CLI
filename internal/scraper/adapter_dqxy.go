@@ -595,12 +595,24 @@ func filterDqxyImages(images []string) []string {
 		if lower == "" || strings.Contains(lower, "/system/resource/images/filetypeimages/") ||
 			strings.HasSuffix(lower, "/doc.gif") || strings.HasSuffix(lower, "/pdf.gif") ||
 			strings.HasSuffix(lower, "/rar.gif") || strings.HasSuffix(lower, "/ecblank.gif") ||
-			strings.HasSuffix(lower, "/spacer.gif") {
+			strings.HasSuffix(lower, "/spacer.gif") || dqxyIsNullPlaceholderImage(lower) {
 			continue
 		}
 		filtered = append(filtered, image)
 	}
 	return filtered
+}
+
+func dqxyIsNullPlaceholderImage(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	path := strings.ToLower(u.Path)
+	if !strings.Contains(path, ".files/") || !strings.HasSuffix(path, "null") {
+		return false
+	}
+	return strings.HasPrefix(pathpkg.Base(path), "file")
 }
 
 func dqxyArticleType(doc *goquery.Document) string {
