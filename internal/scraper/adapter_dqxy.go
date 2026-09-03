@@ -24,6 +24,7 @@ func init() {
 		ParseList:    parseDqxyNews,
 		ParseArticle: parseDqxyArticle,
 		PageURL:      dqxyPageURL,
+		TotalPages:   dqxyTotalPages,
 	})
 }
 
@@ -51,6 +52,10 @@ var dqxySubPages = []string{
 	"xsgz_more/xsfc",
 	"xsgz1/xsdj",
 	"xsgz1/xsfc1",
+	"dqgz1/ghgz",
+	"dqgz1/ltgz",
+	"dqgz1/tzgz",
+	"cyxz/zlwj/djgz",
 }
 
 var (
@@ -77,17 +82,77 @@ type dqxyLatestMeta struct {
 }
 
 // dqxyPageURL maps logical page numbers to the generated filenames used by
-// dqxy. Returning page 1 for an unknown total is intentional: without the
-// pagination total there is no safe way to reverse-map a later page.
+// dqxy. A later page cannot be reverse-mapped without a known, valid total;
+// return an empty URL instead of repeating the newest page or clamping to the
+// oldest page.
 func dqxyPageURL(baseURL, slug string, page, totalPages int, extension string) string {
-	if page <= 1 || totalPages <= 1 {
+	if page < 1 {
+		return ""
+	}
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
+	}
+	if totalPages <= 1 || page > totalPages {
+		return ""
 	}
 	filePage := totalPages - page + 1
 	if filePage < 1 {
-		filePage = 1
+		return ""
 	}
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, filePage, extension)
+}
+
+func dqxyTotalPages(slug string) (int, error) {
+	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if !dqxyKnownSubPage(slug) {
+		return 0, fmt.Errorf("dqxy: %q is not an audited article-list route", slug)
+	}
+	site := AllSites["dqxy"]
+	if site == nil {
+		return 0, fmt.Errorf("dqxy: site registration is missing")
+	}
+
+	var lastErr error
+	for _, extension := range []string{".htm", ".html"} {
+		body, err := fetch(dqxyPageURL(site.BaseURL, slug, 1, 0, extension))
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if total := dqxyTotalPagesFromHTML(body); total > 0 {
+			return total, nil
+		}
+		lastErr = fmt.Errorf("dqxy: %s has no recognized pagination", slug)
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("dqxy: unable to read page count for %s", slug)
+	}
+	return 0, lastErr
+}
+
+func dqxyKnownSubPage(slug string) bool {
+	for _, known := range dqxySubPages {
+		if known == slug {
+			return true
+		}
+	}
+	return false
+}
+
+func dqxyTotalPagesFromHTML(raw []byte) int {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(raw)))
+	if err != nil || doc.Find(".tzgg_page_base").Length() == 0 {
+		return 0
+	}
+	if total := parseTotalPages(raw); total > 0 {
+		return total
+	}
+	if doc.Find(".p_pages").Length() > 0 {
+		// The page controls may contain only the disabled logical page 1 on a
+		// legal empty/single-page list. It is still exactly one page.
+		return 1
+	}
+	return 0
 }
 
 func parseDqxyNews(html []byte, baseURL string) ([]model.NewsItem, error) {

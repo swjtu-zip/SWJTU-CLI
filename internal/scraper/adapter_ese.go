@@ -24,12 +24,14 @@ func init() {
 		ParseList:    parseAdapter_eseList,
 		ParseArticle: parseAdapter_eseArticle,
 		PageURL:      esePageURL,
+		TotalPages:   eseTotalPages,
 	})
 }
 
 // These are the navigation leaves that currently expose real internal
-// article rows. Profile, static, download, platform/resource, external-link,
-// and placeholder (#) pages are deliberately not presented as news feeds.
+// article rows. Profile/static pages, external links, and placeholder (#)
+// pages are deliberately not presented as news feeds. Platform/download
+// pages remain here when they expose a real CMS article list.
 var eseSubPages = []string{
 	"index/xwgg/hjyw",
 	"index/xwgg/tzgg1/qb",
@@ -48,29 +50,21 @@ var eseSubPages = []string{
 	"xsgz/xsfc",
 	"xywh/hjsg",
 	"xyyd/xyqy",
-}
-
-// Audited totals are only a fallback for callers asking for page 2 before a
-// total-page request has succeeded. A total parsed from the live pagination
-// always takes precedence.
-var esePageTotals = map[string]int{
-	"index/xwgg/hjyw":       38,
-	"index/xwgg/tzgg1/qb":   1,
-	"index/xwgg/tzgg1/dzbg": 1,
-	"index/xwgg/tzgg1/bks":  1,
-	"index/xwgg/tzgg1/yjs":  1,
-	"index/xwgg/tzgg1/kygz": 1,
-	"index/xwgg/tzgg1/xsgz": 1,
-	"index/xwgg/tzgg1/qt":   1,
-	"djgz/djdt":             23,
-	"djgz/jwgz":             2,
-	"djgz/ghgz":             1,
-	"kxyj/xsdt":             2,
-	"xsgz/tzjgg":            24,
-	"xsgz/txdt":             10,
-	"xsgz/xsfc":             1,
-	"xywh/hjsg":             1,
-	"xyyd/xyqy":             1,
+	"index/cyxz",
+	"jyjx/jxcg/jxcgj",
+	"jyjx/jypt/syjx/bksyjxxm",
+	"jyjx/jypt/sysaq/sysaqgd",
+	"jyjx/rcpy/bkspy",
+	"kxyj/kypt",
+	"kxyj/kytd",
+	"szdw/wjxz",
+	"xsgz/wjxz",
+	"xywh/whhd",
+	"xywh/whly",
+	"xyyd/xyfc",
+	"xyyd/xyhbqysy",
+	"cpyc/szzp",
+	"cpyc/zzbshzp",
 }
 
 var eseAttachmentExtensions = []string{
@@ -84,32 +78,82 @@ var (
 )
 
 // esePageURL maps logical pages (1 = newest) to ESE's reverse-numbered files.
-// The first page is always the unsuffixed list page, as on the live site.
+// The first page is always the unsuffixed list page, as on the live site. A
+// later page requires a known in-range total; returning an empty URL prevents
+// an unknown or out-of-range request from becoming a duplicate old page.
 func esePageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	baseURL = strings.TrimRight(baseURL, "/")
 	slug = strings.Trim(slug, "/")
 	if page < 1 {
-		page = 1
+		return ""
 	}
-	if page <= 1 {
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
-	if totalPages <= 1 {
-		if knownTotal, ok := esePageTotals[slug]; ok {
-			totalPages = knownTotal
-		}
-	}
-	if totalPages <= 1 {
-		// Do not silently repeat page 1 when a page count is unavailable.
-		return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, page, extension)
+	if totalPages <= 1 || page > totalPages {
+		return ""
 	}
 	filePage := totalPages - page + 1
 	if filePage < 1 {
-		// An out-of-range request should become a miss/404, not a duplicate of
-		// the oldest page.
-		filePage = 0
+		return ""
 	}
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, filePage, extension)
+}
+
+func eseTotalPages(slug string) (int, error) {
+	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if !eseKnownSubPage(slug) {
+		return 0, fmt.Errorf("ese: %q is not an audited article-list route", slug)
+	}
+	site := AllSites["ese"]
+	if site == nil {
+		return 0, fmt.Errorf("ese: site registration is missing")
+	}
+
+	var lastErr error
+	for _, extension := range []string{".htm", ".html"} {
+		body, err := fetch(esePageURL(site.BaseURL, slug, 1, 0, extension))
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if total := eseTotalPagesFromHTML(body); total > 0 {
+			return total, nil
+		}
+		lastErr = fmt.Errorf("ese: %s has no recognized pagination", slug)
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("ese: unable to read page count for %s", slug)
+	}
+	return 0, lastErr
+}
+
+func eseKnownSubPage(slug string) bool {
+	for _, known := range eseSubPages {
+		if known == slug {
+			return true
+		}
+	}
+	return false
+}
+
+func eseTotalPagesFromHTML(raw []byte) int {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(raw)))
+	if err != nil || eseAdapterLooksLikeErrorPage(doc) {
+		return 0
+	}
+	if _, recognized := eseAdapterListRows(doc); !recognized {
+		return 0
+	}
+	if total := parseTotalPages(raw); total > 0 {
+		return total
+	}
+	if doc.Find(".p_pages").Length() > 0 {
+		// A recognized list with only disabled page-1 controls is a legal
+		// empty/single-page list, not an unknown multi-page source.
+		return 1
+	}
+	return 0
 }
 
 func parseAdapter_eseList(raw []byte, baseURL string) ([]model.NewsItem, error) {
@@ -186,19 +230,24 @@ var eseAdapterListRowSelectors = []string{
 	".ny-right .tw-list li",
 	".ny-right .list > ul > li",
 	".ny-right .list li",
+	".ny-right .xyhb > ul > li",
+	".ny-right .xyhb li",
 	".ny-right .img-lists > ul > li",
 	".ny-right .img-lists li",
 	"#main-cont .tw-list li",
 	"#main-cont .list li",
+	"#main-cont .xyhb li",
 	"#main-cont .img-lists li",
 }
 
 var eseAdapterListRegionSelectors = []string{
 	".ny-right .tw-list",
 	".ny-right .list",
+	".ny-right .xyhb",
 	".ny-right .img-lists",
 	"#main-cont .tw-list",
 	"#main-cont .list",
+	"#main-cont .xyhb",
 	"#main-cont .img-lists",
 }
 

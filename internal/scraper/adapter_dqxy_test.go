@@ -11,7 +11,7 @@ func TestDqxyAdapterRegistration(t *testing.T) {
 	if !ok {
 		t.Fatal("dqxy site is not registered")
 	}
-	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil {
+	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil {
 		t.Fatal("dqxy adapter hooks are incomplete")
 	}
 	if len(site.SubPages) != len(dqxySubPages) {
@@ -20,6 +20,23 @@ func TestDqxyAdapterRegistration(t *testing.T) {
 	for i, want := range dqxySubPages {
 		if site.SubPages[i] != want {
 			t.Errorf("sub-page[%d] = %q, want %q", i, site.SubPages[i], want)
+		}
+	}
+	for _, want := range []string{
+		"dqgz1/ghgz",
+		"dqgz1/ltgz",
+		"dqgz1/tzgz",
+		"cyxz/zlwj/djgz",
+	} {
+		found := false
+		for _, slug := range site.SubPages {
+			if slug == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("confirmed live list route %q is not registered", want)
 		}
 	}
 
@@ -35,6 +52,34 @@ func TestDqxyAdapterRegistration(t *testing.T) {
 	}
 	if got := site.PageURL(base, "xsgz1/xsfc1", 2, 53, ".htm"); got != base+"/xsgz1/xsfc1/52.htm" {
 		t.Fatalf("xsgz1 page 2 URL = %q", got)
+	}
+	if got := site.PageURL(base, "xwdt/qb", 2, 0, ".htm"); got != "" {
+		t.Fatalf("unknown total must not repeat page 1: %q", got)
+	}
+	if got := site.PageURL(base, "xwdt/qb", 22, 21, ".htm"); got != "" {
+		t.Fatalf("out-of-range page must not clamp to an old page: %q", got)
+	}
+	if got := site.PageURL(base, "xwdt/qb", 0, 21, ".htm"); got != "" {
+		t.Fatalf("non-positive page must be rejected: %q", got)
+	}
+}
+
+func TestDqxyPageCountAcceptsOnlyRecognizedListPagination(t *testing.T) {
+	paged := []byte(`<main class="tzgg_page"><div class="tzgg_page_base">
+<div class="item"><a href="/info/2926/200001.htm">真实文章</a></div>
+</div><div class="p_pages"><span class="p_no_d">1</span><span class="p_no"><a href="qb/20.htm">2</a></span><span class="p_no"><a href="qb/1.htm">21</a></span></div></main>`)
+	if got := dqxyTotalPagesFromHTML(paged); got != 21 {
+		t.Fatalf("paged dqxy total = %d, want 21", got)
+	}
+
+	empty := []byte(`<main class="tzgg_page"><div class="tzgg_page_base"><div class="item"></div></div>
+<div class="p_pages"><span class="p_no_d">1</span></div></main>`)
+	if got := dqxyTotalPagesFromHTML(empty); got != 1 {
+		t.Fatalf("empty dqxy total = %d, want 1", got)
+	}
+
+	if got := dqxyTotalPagesFromHTML([]byte(`<main><div class="content">静态页面</div></main>`)); got != 0 {
+		t.Fatalf("static dqxy page total = %d, want 0", got)
 	}
 }
 

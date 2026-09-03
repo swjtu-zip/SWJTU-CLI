@@ -38,6 +38,15 @@ var glxySubPages = []string{
 	"xwtz/xsdt",
 	"kxyj2/kycg", "kxyj2/kytj",
 	"zthd",
+	"gjhz/gjjl",
+	"gjhz/hzxm",
+	"mkslj/cyxz",
+	"xsgz/btkx",
+	"xsgz/txzz",
+	"yyzj/yyhd",
+	"yyzj/yyjz",
+	"sztd2/tdjs",
+	"sztd2/jzjs",
 }
 
 var (
@@ -77,17 +86,17 @@ func glxyPageURL(baseURL, slug string, page, totalPages int, extension string) s
 		extension = "." + extension
 	}
 	if page < 1 {
-		page = 1
+		return ""
 	}
-	if page <= 1 {
+	if page == 1 {
 		return baseURL + "/" + slug + extension
 	}
-	filePage := page
-	if totalPages > 1 {
-		filePage = totalPages - page + 1
+	if totalPages <= 1 || page > totalPages {
+		return ""
 	}
+	filePage := totalPages - page + 1
 	if filePage < 1 {
-		filePage = 1
+		return ""
 	}
 	return baseURL + "/" + slug + "/" + strconv.Itoa(filePage) + extension
 }

@@ -34,6 +34,28 @@ func TestGlxyAdapterRegistrationAndPageURL(t *testing.T) {
 			t.Fatalf("sub-page %d = %q, want %q", i, site.SubPages[i], want)
 		}
 	}
+	for _, want := range []string{
+		"gjhz/gjjl",
+		"gjhz/hzxm",
+		"mkslj/cyxz",
+		"xsgz/btkx",
+		"xsgz/txzz",
+		"yyzj/yyhd",
+		"yyzj/yyjz",
+		"sztd2/tdjs",
+		"sztd2/jzjs",
+	} {
+		found := false
+		for _, slug := range site.SubPages {
+			if slug == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("confirmed live list route %q is not registered", want)
+		}
+	}
 
 	const base = "https://glxy.swjtu.edu.cn/"
 	cases := []struct {
@@ -46,7 +68,9 @@ func TestGlxyAdapterRegistrationAndPageURL(t *testing.T) {
 		{"xwtz/xyxw", ".htm", base + "xwtz/xyxw/1.htm", 118, 118},
 		{"zthd", ".htm", base + "zthd.htm", 1, 1},
 		{"xwtz/xyxw", "html", base + "xwtz/xyxw/117.html", 2, 118},
-		{"xwtz/xyxw", ".htm", base + "xwtz/xyxw/2.htm", 2, 0},
+		{"xwtz/xyxw", ".htm", "", 2, 0},
+		{"xwtz/xyxw", ".htm", "", 119, 118},
+		{"xwtz/xyxw", ".htm", "", 0, 118},
 	}
 	for _, tc := range cases {
 		if got := glxyPageURL(base, tc.slug, tc.page, tc.total, tc.extension); got != tc.want {

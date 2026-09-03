@@ -19,7 +19,7 @@ func loadESEFixture(t *testing.T, name string) []byte {
 
 func TestESEAdapterRegistrationAndReversePagination(t *testing.T) {
 	site := AllSites["ese"]
-	if site == nil || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil {
+	if site == nil || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil {
 		t.Fatal("ESE adapter hooks are incomplete")
 	}
 	wantSubPages := []string{
@@ -40,6 +40,21 @@ func TestESEAdapterRegistrationAndReversePagination(t *testing.T) {
 		"xsgz/xsfc",
 		"xywh/hjsg",
 		"xyyd/xyqy",
+		"index/cyxz",
+		"jyjx/jxcg/jxcgj",
+		"jyjx/jypt/syjx/bksyjxxm",
+		"jyjx/jypt/sysaq/sysaqgd",
+		"jyjx/rcpy/bkspy",
+		"kxyj/kypt",
+		"kxyj/kytd",
+		"szdw/wjxz",
+		"xsgz/wjxz",
+		"xywh/whhd",
+		"xywh/whly",
+		"xyyd/xyfc",
+		"xyyd/xyhbqysy",
+		"cpyc/szzp",
+		"cpyc/zzbshzp",
 	}
 	if len(site.SubPages) != len(wantSubPages) {
 		t.Fatalf("ESE sub-pages = %#v, want %#v", site.SubPages, wantSubPages)
@@ -61,8 +76,10 @@ func TestESEAdapterRegistrationAndReversePagination(t *testing.T) {
 		{name: "second", slug: "index/xwgg/hjyw", page: 2, total: 38, want: eseTestBaseURL + "/index/xwgg/hjyw/37.htm"},
 		{name: "middle", slug: "index/xwgg/hjyw", page: 19, total: 38, want: eseTestBaseURL + "/index/xwgg/hjyw/20.htm"},
 		{name: "last", slug: "index/xwgg/hjyw", page: 38, total: 38, want: eseTestBaseURL + "/index/xwgg/hjyw/1.htm"},
-		{name: "stale-total", slug: "index/xwgg/hjyw", page: 2, total: 1, want: eseTestBaseURL + "/index/xwgg/hjyw/37.htm"},
-		{name: "one-page-out-of-range", slug: "djgz/ghgz", page: 2, total: 1, want: eseTestBaseURL + "/djgz/ghgz/2.htm"},
+		{name: "unknown-total", slug: "index/xwgg/hjyw", page: 2, total: 0, want: ""},
+		{name: "one-page-out-of-range", slug: "djgz/ghgz", page: 2, total: 1, want: ""},
+		{name: "past-last-page", slug: "index/xwgg/hjyw", page: 39, total: 38, want: ""},
+		{name: "non-positive-page", slug: "index/xwgg/hjyw", page: 0, total: 38, want: ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -70,6 +87,49 @@ func TestESEAdapterRegistrationAndReversePagination(t *testing.T) {
 				t.Fatalf("esePageURL(%q, %d/%d) = %q, want %q", tc.slug, tc.page, tc.total, got, tc.want)
 			}
 		})
+	}
+}
+
+func TestESEPageCountAcceptsRecognizedEmptyAndXYHBLists(t *testing.T) {
+	xyhb := []byte(`<html><body><div class="ny-right"><div class="xyhb"><ul>
+<li><a href="/info/1771/10601.htm"><p>安徽合肥</p></a></li>
+</ul><div class="pagination"><span class="p_pages"><span class="p_no_d">1</span><span class="p_no"><a href="xyhbqysy/1.htm">2</a></span></span></div></div></div></body></html>`)
+	if got := eseTotalPagesFromHTML(xyhb); got != 2 {
+		t.Fatalf("xyhb ESE total = %d, want 2", got)
+	}
+
+	empty := []byte(`<html><body><div class="ny-right"><div class="list"><ul></ul></div>
+<div class="p_pages"><span class="p_no_d">1</span></div></div></body></html>`)
+	if got := eseTotalPagesFromHTML(empty); got != 1 {
+		t.Fatalf("empty ESE total = %d, want 1", got)
+	}
+
+	if got := eseTotalPagesFromHTML([]byte(`<html><body><div class="banner">静态页面</div></body></html>`)); got != 0 {
+		t.Fatalf("static ESE total = %d, want 0", got)
+	}
+}
+
+func TestESEListParserSupportsXYHBRegion(t *testing.T) {
+	html := []byte(`<html><head><meta name="pageType" content="2"></head><body>
+<div class="ny-right">
+  <div class="position"><h3>校友环保企业索引</h3></div>
+  <div class="xyhb"><ul>
+    <li><a href="/info/1771/10601.htm" target="_blank"><p>安徽合肥</p></a></li>
+    <li><a href="/info/1771/10591.htm" target="_blank"><p>北京</p></a></li>
+  </ul><div class="pagination"><span class="p_pages"><span class="p_no_d">1</span><span class="p_no"><a href="xyhbqysy/1.htm">2</a></span></span></div></div>
+</div></body></html>`)
+	items, err := parseAdapter_eseList(html, eseTestBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("got %d xyhb items, want 2: %#v", len(items), items)
+	}
+	if items[0].Title != "安徽合肥" || items[0].URL != eseTestBaseURL+"/info/1771/10601.htm" || items[0].Type != "校友环保企业索引" {
+		t.Fatalf("unexpected first xyhb item: %#v", items[0])
+	}
+	if items[1].Title != "北京" || items[1].URL != eseTestBaseURL+"/info/1771/10591.htm" {
+		t.Fatalf("unexpected second xyhb item: %#v", items[1])
 	}
 }
 

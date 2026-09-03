@@ -30,7 +30,6 @@ var emSubPages = []string{
 	"rcpy/glgd",
 	"rcpy/wdxz",
 	"rcpy/zyjj",
-	"jypx3",
 	"jypx3/pxdt",
 	"jypx3/tzgg",
 	"tzgg",
@@ -81,9 +80,9 @@ func emPageURL(baseURL, slug string, page, totalPages int, extension string) str
 		extension = "." + extension
 	}
 	if page < 1 {
-		page = 1
+		return ""
 	}
-	if page <= 1 {
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
 	if totalPages < 1 || page > totalPages {
