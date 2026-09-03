@@ -11,9 +11,10 @@ import (
 )
 
 var ottSubPages = []string{
-	"xwdt1/gzdt", "xwdt1/rdxw", "tzgong/tzgg", "kjhz/hzdt", "kjhz/xqfb",
-	"jszyzx/zxdt", "zcfg/dfzc", "zcfg/gjzc", "zcfg/xxzc", "cgzh/gsgg",
-	"bslc__/xmsb", "jszyzx/jsjlr",
+	"xwdt1/gzdt", "xwdt1/rdxw", "xwdt1/xydt", "y_j_y/yjydt", "tzgong/tzgg",
+	"kjhz/hzdt", "kjhz/xqfb", "jszyzx/zxdt", "g_j_d_x_k_j_y/kjydt",
+	"zcfg/dfzc", "zcfg/gjzc", "zcfg/xxzc", "cgzh/gsgg", "bslc__/xmsb",
+	"jszyzx/jsjlr",
 }
 
 var ottMonthRE = regexp.MustCompile(`(20\d{2})\s*[./-]\s*(\d{1,2})`)
@@ -37,13 +38,13 @@ func ottPageURL(baseURL, slug string, page, totalPages int, extension string) st
 	if !strings.HasPrefix(extension, ".") {
 		extension = "." + extension
 	}
-	if page <= 1 || totalPages <= 1 {
+	if page < 1 || (page > 1 && totalPages < 1) || (totalPages > 0 && page > totalPages) {
+		return ""
+	}
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
 	physical := totalPages - page + 1
-	if physical < 1 || page > totalPages {
-		return ""
-	}
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, physical, extension)
 }
 

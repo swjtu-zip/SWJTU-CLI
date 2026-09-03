@@ -58,6 +58,12 @@ func TestMysAdapterRegistrationAndReversePagination(t *testing.T) {
 			t.Errorf("mysPageURL(%q, page %d/%d) = %q, want %q", tc.slug, tc.page, tc.total, got, tc.want)
 		}
 	}
+	if got := mysPageURL("http://mys.swjtu.edu.cn", "xyt", 59, 58, ".htm"); got != "" {
+		t.Fatalf("out-of-range mys page URL = %q, want empty", got)
+	}
+	if got := mysPageURL("http://mys.swjtu.edu.cn", "xyt", 2, 0, ".htm"); got != "" {
+		t.Fatalf("unknown-total mys page URL = %q, want empty", got)
+	}
 	if got := mysPageCount(readMysFixture(t, "mys_list.html")); got != 58 {
 		t.Fatalf("mys page count = %d, want 58", got)
 	}
@@ -114,6 +120,26 @@ func TestMysListExtractsTypeTimeAndRejectsExternal(t *testing.T) {
 		if strings.Contains(item.URL, "evil.example") || strings.Contains(item.Title, "外链") {
 			t.Fatalf("external list link leaked: %#v", item)
 		}
+	}
+}
+
+func TestMysPageTypeAcceptsDuplicateMetaTags(t *testing.T) {
+	list := []byte(`<html><head><meta name="pageType" content="1"><meta name="pageType" content="2"></head><body><div class="news-list-box"><div class="title"><h4>重复标签列表</h4></div><ul class="list"><li><a href="/info/1059/10513.htm"><span class="desc">列表文章标题<span>重复标签列表</span></span><span class="state">2026-04-24</span></a></li></ul></div></body></html>`)
+	items, err := parseAdapter_mysList(list, mysFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].Type != "重复标签列表" {
+		t.Fatalf("duplicate pageType list = %#v", items)
+	}
+
+	article := []byte(`<html><head><meta name="pageType" content="1"><meta name="pageType" content="3"><meta name="pageTitle" content="重复标签详情标题"></head><body><div class="detail-box"><div class="hd"><h3>重复标签详情标题</h3></div><div class="v_news_content"><p>详情正文内容</p></div><div class="source"><span>发布日期：2026-04-24</span></div></div></body></html>`)
+	parsed, err := parseAdapter_mysArticle(article, mysFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parsed.Title != "重复标签详情标题" || !strings.Contains(parsed.Content, "详情正文内容") {
+		t.Fatalf("duplicate pageType article = %#v", parsed)
 	}
 }
 

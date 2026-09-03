@@ -37,6 +37,12 @@ func TestNewsAdapterRegistrationAndPageURL(t *testing.T) {
 			}
 		})
 	}
+	if got := newsPageURL(base, "jdyw2", 114, 113, ".htm"); got != "" {
+		t.Fatalf("out-of-range news page URL = %q, want empty", got)
+	}
+	if got := newsPageURL(base, "jdyw2", 2, 0, ".htm"); got != "" {
+		t.Fatalf("unknown-total news page URL = %q, want empty", got)
+	}
 }
 
 func TestNewsListParserOnlyReadsMainList(t *testing.T) {

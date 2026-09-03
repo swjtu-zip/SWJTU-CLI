@@ -65,15 +65,17 @@ func init() {
 // routes are MVC endpoints, not generated .htm files.
 func libPageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	_ = baseURL
-	_ = totalPages
 	_ = extension
 
 	route := strings.Trim(strings.TrimSpace(slug), "/")
 	if route == "" || route == "index" {
+		if page != 1 {
+			return ""
+		}
 		return libCanonicalBaseURL + "/"
 	}
-	if page < 1 {
-		page = 1
+	if page < 1 || (page > 1 && totalPages < 1) || (totalPages > 0 && page > totalPages) {
+		return ""
 	}
 
 	u, err := url.Parse("/" + route)
@@ -103,6 +105,9 @@ func libTotalPages(slug string) (int, error) {
 	if libBlockedResponse(body) {
 		return 0, fmt.Errorf("lib page %q is a CAPTCHA/WAF or error response", slug)
 	}
+	if libIsSPAShell(doc) {
+		return 0, fmt.Errorf("lib page %q is an unrendered SPA shell; article API response is unavailable", slug)
+	}
 	if slug == "" || slug == "index" {
 		if !libIsHomepage(doc) {
 			return 0, fmt.Errorf("lib homepage is not a supported portal page")
@@ -116,7 +121,10 @@ func libTotalPages(slug string) (int, error) {
 	if pages, known := libPageCount(doc); known {
 		return pages, nil
 	}
-	return 1, nil
+	if libExplicitEmptyList(doc) {
+		return 1, nil
+	}
+	return 0, fmt.Errorf("lib page %q has article rows but no reliable page count", slug)
 }
 
 func parseAdapter_libList(raw []byte, baseURL string) ([]model.NewsItem, error) {
@@ -134,6 +142,9 @@ func parseAdapter_libList(raw []byte, baseURL string) ([]model.NewsItem, error) 
 			return nil, fmt.Errorf("lib homepage contains no local article entries")
 		}
 		return items, nil
+	}
+	if libIsSPAShell(doc) {
+		return nil, fmt.Errorf("lib page is an unrendered SPA shell; article API response is unavailable")
 	}
 
 	if libIsResourcePage(doc) {
@@ -348,8 +359,15 @@ func parseAdapter_libArticle(raw []byte, baseURL string) (*model.Article, error)
 	}
 
 	seenImages := make(map[string]bool)
-	contentSel.Find("img[src]").Each(func(_ int, image *goquery.Selection) {
-		resolved := libResolveURL(baseURL, image.AttrOr("src", ""))
+	contentSel.Find("img").Each(func(_ int, image *goquery.Selection) {
+		var source string
+		for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			if value := strings.TrimSpace(image.AttrOr(attr, "")); value != "" {
+				source = value
+				break
+			}
+		}
+		resolved := libImageURL(baseURL, source)
 		if resolved == "" || seenImages[resolved] {
 			return
 		}
@@ -410,6 +428,35 @@ func libListContainer(doc *goquery.Document) *goquery.Selection {
 
 func libIsHomepage(doc *goquery.Document) bool {
 	return doc.Find("#part2 .m-box").Length() > 0 && doc.Find("#header, #top-nav").Length() > 0
+}
+
+func libIsSPAShell(doc *goquery.Document) bool {
+	if doc == nil || doc.Find("#home_page").Length() == 0 {
+		return false
+	}
+	return doc.Find(".m-box, .main-content .news-list, .news-detail").Length() == 0
+}
+
+func libImageURL(baseURL, raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	lower := strings.ToLower(raw)
+	for _, prefix := range []string{"data:", "javascript:", "file:", "blob:"} {
+		if strings.HasPrefix(lower, prefix) {
+			return ""
+		}
+	}
+	resolved := libResolveURL(baseURL, raw)
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Hostname() == "" {
+		return ""
+	}
+	if scheme := strings.ToLower(parsed.Scheme); scheme != "http" && scheme != "https" {
+		return ""
+	}
+	return resolved
 }
 
 func libIsResourcePage(doc *goquery.Document) bool {

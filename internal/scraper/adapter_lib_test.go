@@ -43,6 +43,12 @@ func TestLibAdapterRegistrationAndCanonicalPagination(t *testing.T) {
 	if got := libPageURL("http://www.lib.swjtu.edu.cn", "index", 1, 1, ".htm"); got != libCanonicalBaseURL+"/" {
 		t.Fatalf("homepage URL = %q", got)
 	}
+	if got := libPageURL("http://www.lib.swjtu.edu.cn", "home/service/1005/0", 133, 132, ".htm"); got != "" {
+		t.Fatalf("out-of-range page URL = %q, want empty", got)
+	}
+	if got := libPageURL("http://www.lib.swjtu.edu.cn", "home/service/1005/0", 2, 0, ".htm"); got != "" {
+		t.Fatalf("unknown-total page URL = %q, want empty", got)
+	}
 }
 
 func TestLibHomepageParsesEveryArticleModuleAndDropsResources(t *testing.T) {
@@ -140,6 +146,20 @@ func TestLibArticleParsesMetadataBodyImagesAndAttachments(t *testing.T) {
 	}
 }
 
+func TestLibArticleAcceptsLazyBodyImages(t *testing.T) {
+	html := []byte(`<html><body><div class="news-detail"><h1>懒加载图片测试标题</h1><em><span>发布时间：2026-08-31</span></em><div class="news-content"><p>正文内容</p><img data-original="/images/lazy.jpg"><img src="data:image/gif;base64,placeholder"><a href="/files/test.pdf">附件</a></div></div></body></html>`)
+	article, err := parseAdapter_libArticle(html, libCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(article.Images) != 1 || article.Images[0] != libCanonicalBaseURL+"/images/lazy.jpg" {
+		t.Fatalf("lazy images = %#v", article.Images)
+	}
+	if !strings.Contains(article.ContentHTML, `src="`+libCanonicalBaseURL+`/images/lazy.jpg"`) {
+		t.Fatalf("lazy image was not written to ContentHTML: %q", article.ContentHTML)
+	}
+}
+
 func TestLibEmptyAndNonArticleResponsesAreStrict(t *testing.T) {
 	items, err := parseAdapter_libList(readLibFixture(t, "lib_empty_list.html"), libCanonicalBaseURL)
 	if err != nil {
@@ -148,7 +168,7 @@ func TestLibEmptyAndNonArticleResponsesAreStrict(t *testing.T) {
 	if items == nil || len(items) != 0 {
 		t.Fatalf("legal empty lib list = %#v, want non-nil empty slice", items)
 	}
-	for _, name := range []string{"lib_static.html", "lib_captcha.html"} {
+	for _, name := range []string{"lib_static.html", "lib_captcha.html", "lib.html"} {
 		if items, err := parseAdapter_libList(readLibFixture(t, name), libCanonicalBaseURL); err == nil || items != nil {
 			t.Fatalf("%s was accepted as a list: items=%#v err=%v", name, items, err)
 		}

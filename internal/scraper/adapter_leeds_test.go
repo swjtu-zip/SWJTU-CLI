@@ -1,14 +1,36 @@
 package scraper
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
 
 func TestLeedsAdapterRegistered(t *testing.T) {
 	site := AllSites["leeds"]
-	if site == nil || site.ParseFunc == nil || site.ParseArticleFunc == nil {
+	if site == nil || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil {
 		t.Fatal("leeds adapter hooks are not registered")
+	}
+	want := []string{"index/xyxw", "xytz/dzbg", "xytz/jwjx", "xytz/xszc", "xxgs/dzbg", "xxgs/jwjx", "xxgs/xszc", "index/hdyg", "djysz/djyd", "djysz/jszj"}
+	if !reflect.DeepEqual(site.SubPages, want) {
+		t.Fatalf("leeds feeds = %#v, want %#v", site.SubPages, want)
+	}
+	if got := site.PageURL(site.BaseURL, "index/xyxw", 2, 162, ".htm"); got != site.BaseURL+"/index/xyxw/161.htm" {
+		t.Fatalf("leeds reverse page URL = %q", got)
+	}
+}
+
+func TestLeedsListNormalizesDateAndKeepsSectionType(t *testing.T) {
+	html := []byte(`<html><body>
+<div class="loaction"><a>首页</a><a>学院通知</a><a>教务教学</a></div>
+<ul class="list_zx"><li><a href="info/1037/22074.htm"><span class="xw-ul-tt">利兹学院关于教学工作的通知</span></a><span class="time">2026.07.08 14:03</span></li></ul>
+</body></html>`)
+	items, err := parseLeedsNews(html, "http://leeds.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].Title != "利兹学院关于教学工作的通知" || items[0].Type != "教务教学" || items[0].Date != "2026-07-08" || items[0].PublishedAt != "2026-07-08 14:03:00" {
+		t.Fatalf("leeds list item = %#v", items)
 	}
 }
 

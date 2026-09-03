@@ -102,13 +102,13 @@ func mysPageURL(baseURL, slug string, page, totalPages int, extension string) st
 	} else if !strings.HasPrefix(extension, ".") {
 		extension = "." + extension
 	}
-	if page <= 1 || totalPages <= 1 {
+	if page < 1 || (page > 1 && totalPages < 1) || (totalPages > 0 && page > totalPages) {
+		return ""
+	}
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
 	physical := totalPages - page + 1
-	if physical < 1 {
-		physical = 1
-	}
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, physical, extension)
 }
 
@@ -125,13 +125,17 @@ func mysTotalPages(slug string) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("mys: parse first page for %s: %w", slug, err)
 	}
-	if strings.TrimSpace(doc.Find(`meta[name="pageType"]`).AttrOr("content", "")) == "3" {
+	if mysPageType(doc) == "3" {
 		return 0, fmt.Errorf("mys: %s is an article, not a list", slug)
 	}
 	if doc.Find(".news-list-box ul.list").First().Length() == 0 {
 		return 0, fmt.Errorf("mys: %s is not an article list", slug)
 	}
-	return mysPageCount(body), nil
+	pages := mysPageCount(body)
+	if pages < 1 {
+		return 0, fmt.Errorf("mys: %s has no reliable page count", slug)
+	}
+	return pages, nil
 }
 
 func mysKnownFeed(slug string) bool {
@@ -162,7 +166,7 @@ func parseAdapter_mysList(raw []byte, baseURL string) ([]model.NewsItem, error) 
 	if err != nil {
 		return nil, fmt.Errorf("mys: parse list HTML: %w", err)
 	}
-	pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"]`).First().AttrOr("content", ""))
+	pageType := mysPageType(doc)
 	if pageType == "3" {
 		return nil, fmt.Errorf("mys: article page supplied to list parser")
 	}
@@ -344,7 +348,7 @@ func parseAdapter_mysArticle(raw []byte, baseURL string) (*model.Article, error)
 	if err != nil {
 		return nil, fmt.Errorf("mys: parse article HTML: %w", err)
 	}
-	if pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"]`).First().AttrOr("content", "")); pageType != "3" {
+	if pageType := mysPageType(doc); pageType != "3" {
 		return nil, fmt.Errorf("mys: response is not an article (pageType %q)", pageType)
 	}
 
@@ -377,6 +381,46 @@ func parseAdapter_mysArticle(raw []byte, baseURL string) (*model.Article, error)
 	mysAppendAttachments(article, doc, baseURL)
 	normalizeArticlePublishedAt(article)
 	return article, nil
+}
+
+// mysPageType tolerates duplicate CMS meta tags.  Some live detail responses
+// include a shell tag for the surrounding page in addition to the detail tag;
+// the DOM shape is the authority in that case, not the first meta element.
+func mysPageType(doc *goquery.Document) string {
+	if doc == nil {
+		return ""
+	}
+	values := make([]string, 0)
+	doc.Find(`meta[name="pageType"], meta[name="pagetype"]`).Each(func(_ int, meta *goquery.Selection) {
+		if value := strings.TrimSpace(meta.AttrOr("content", "")); value != "" {
+			values = append(values, value)
+		}
+	})
+	if doc.Find(".detail-box .v_news_content, .detail-box").Length() > 0 {
+		for _, value := range values {
+			if value == "3" {
+				return value
+			}
+		}
+	}
+	if doc.Find(".news-list-box ul.list").Length() > 0 {
+		for _, value := range values {
+			if value == "2" {
+				return value
+			}
+		}
+	}
+	if doc.Find(".banner .swiper-wrapper, .news-list").Length() > 0 {
+		for _, value := range values {
+			if value == "1" {
+				return value
+			}
+		}
+	}
+	if len(values) > 0 {
+		return values[0]
+	}
+	return ""
 }
 
 func mysArticleTitle(doc *goquery.Document) string {

@@ -68,14 +68,19 @@ func newsPageURL(baseURL, slug string, page, totalPages int, extension string) s
 	if canonical, ok := newsCanonicalSlugs[slug]; ok {
 		slug = canonical
 	}
-	if page <= 1 || totalPages <= 1 {
+	if extension == "" {
+		extension = ".htm"
+	} else if !strings.HasPrefix(extension, ".") {
+		extension = "." + extension
+	}
+	if page < 1 || (page > 1 && totalPages < 1) || (totalPages > 0 && page > totalPages) {
+		return ""
+	}
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
 
 	filePage := totalPages + 1 - page
-	if filePage < 1 {
-		filePage = 1
-	}
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, filePage, extension)
 }
 
