@@ -67,6 +67,24 @@ func TestGenericListRejectsExternalAndPseudoURLs(t *testing.T) {
 	}
 }
 
+func TestCleanURLOnlyRemovesBraceArtifacts(t *testing.T) {
+	valid := "https://civil.swjtu.edu.cn/system/_content/download.jsp?wbfileid=9A534B673B32F66592A8A1C5E4CBE397"
+	if got := cleanURL(valid); got != valid {
+		t.Fatalf("cleanURL removed a valid trailing digit: got %q, want %q", got, valid)
+	}
+	if got := cleanURL(valid + "%7D}"); got != valid {
+		t.Fatalf("cleanURL did not remove encoded brace artifacts: got %q, want %q", got, valid)
+	}
+}
+
+func TestBodaResourceURLRejectsKnownPlaceholderImages(t *testing.T) {
+	for _, raw := range []string{"/system/editor/ueditor_news/themes/default/images/spacer.gif", "/blank.gif", "/assets/transparent.gif"} {
+		if got := bodaResourceURL("https://civil.swjtu.edu.cn", raw); got != "" {
+			t.Fatalf("placeholder %q was treated as an article resource: %q", raw, got)
+		}
+	}
+}
+
 func TestGenericListCarriesSectionTypeAndPreciseDate(t *testing.T) {
 	html := []byte(`<html><head><meta name="pageType" content="2"><meta name="pageTitle" content="通知公告"></head><body><ul class="news-list"><li><a href="/info/1/2.htm">本站精确时间通知标题</a><span class="date">2026-08-31 14:03</span></li></ul></body></html>`)
 	items, err := parseBodaNewsList(html, "https://news.swjtu.edu.cn")

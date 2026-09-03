@@ -555,9 +555,18 @@ func extractDomain(u string) string {
 
 // cleanURL removes trailing %7D and other artifacts.
 func cleanURL(u string) string {
-	u = strings.TrimRight(u, "%7D")
-	u = strings.TrimRight(u, "}")
-	return u
+	for {
+		switch {
+		case strings.HasSuffix(u, "%7D"):
+			u = strings.TrimSuffix(u, "%7D")
+		case strings.HasSuffix(u, "%7d"):
+			u = strings.TrimSuffix(u, "%7d")
+		case strings.HasSuffix(u, "}"):
+			u = strings.TrimSuffix(u, "}")
+		default:
+			return u
+		}
+	}
 }
 
 // isInNavArea checks if a selection is inside a navigation/header/footer area.
@@ -1023,6 +1032,12 @@ func bodaResourceURL(baseURL, raw string) string {
 	parsed, err := url.Parse(resolved)
 	if err != nil || parsed.Host == "" {
 		return ""
+	}
+	path := strings.ToLower(parsed.Path)
+	for _, placeholder := range []string{"/spacer.gif", "/blank.gif", "/transparent.gif"} {
+		if strings.HasSuffix(path, placeholder) {
+			return ""
+		}
 	}
 	if scheme := strings.ToLower(parsed.Scheme); scheme != "http" && scheme != "https" {
 		return ""
