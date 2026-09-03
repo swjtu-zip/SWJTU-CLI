@@ -592,7 +592,7 @@ func filterDqxyImages(images []string) []string {
 	filtered := images[:0]
 	for _, image := range images {
 		lower := strings.ToLower(strings.TrimSpace(image))
-		if lower == "" || strings.Contains(lower, "/system/resource/images/filetypeimages/") ||
+		if lower == "" || strings.Contains(lower, ";base64,") || strings.Contains(lower, "/system/resource/images/filetypeimages/") ||
 			strings.HasSuffix(lower, "/doc.gif") || strings.HasSuffix(lower, "/pdf.gif") ||
 			strings.HasSuffix(lower, "/rar.gif") || strings.HasSuffix(lower, "/ecblank.gif") ||
 			strings.HasSuffix(lower, "/spacer.gif") || dqxyIsNullPlaceholderImage(lower) {

@@ -253,6 +253,7 @@ func TestDqxyAdapterFiltersPresentationImages(t *testing.T) {
 		"https://dqxy.swjtu.edu.cn/doc.gif",
 		"https://dqxy.swjtu.edu.cn/spacer.gif",
 		"https://dqxy.swjtu.edu.cn/KopPONA92JcsjYP6auanFNnx.files/file0003NULL",
+		"https://dqxy.swjtu.edu.cn/png;base64,R0lGODlhTQIDAHcA",
 	})
 	if len(images) != 1 || images[0] != "https://dqxy.swjtu.edu.cn/__local/real.png" {
 		t.Fatalf("filtered images = %#v", images)
