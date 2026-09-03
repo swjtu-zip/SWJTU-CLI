@@ -56,10 +56,14 @@ var (
 	sicCompactDayYMRe = regexp.MustCompile(`^\s*([0-9]{1,2})(20[0-9]{2})\s*[-/.年]\s*([0-9]{1,2})`)
 	sicYMBeforeDayRe  = regexp.MustCompile(`^\s*(20[0-9]{2})\s*[-/.年]\s*([0-9]{1,2})\D+([0-9]{1,2})\s*(?:日)?\s*$`)
 	sicDayOnlyRe      = regexp.MustCompile(`^\s*([0-9]{1,2})\s*(?:日)?\s*$`)
+	sicClockRe        = regexp.MustCompile(`(?:^|[^0-9])(?:[01]?[0-9]|2[0-3])\s*[:：]\s*[0-5][0-9](?:\s*[:：]\s*[0-5][0-9])?(?:$|[^0-9])`)
 	sicTotalCountRe   = regexp.MustCompile(`共\s*([0-9]+)\s*条`)
 )
 
-const sicCanonicalBaseURL = "https://sic.swjtu.edu.cn"
+const (
+	sicCanonicalBaseURL = "https://sic.swjtu.edu.cn"
+	sicListPageSize     = 10
+)
 
 // sicListPage owns the HTTP request for this site because the origin returns
 // an access-denied shell when a category page is requested without a browser
@@ -79,6 +83,9 @@ func sicListPage(slug string, page int) ([]model.NewsItem, int, error) {
 	if err != nil {
 		return nil, 0, err
 	}
+	if page > totalPages {
+		return nil, 0, fmt.Errorf("sic: requested page %d but %s has %d pages", page, slug, totalPages)
+	}
 	if page == 1 {
 		items, parseErr := parseSicNews(firstBody, sicCanonicalBaseURL)
 		return items, totalPages, parseErr
@@ -89,6 +96,12 @@ func sicListPage(slug string, page int) ([]model.NewsItem, int, error) {
 		return nil, 0, err
 	}
 	items, err := parseSicNews(body, sicCanonicalBaseURL)
+	if err != nil {
+		return nil, 0, err
+	}
+	if err := sicValidateListPage(body, slug, page, totalPages, items); err != nil {
+		return nil, 0, err
+	}
 	return items, totalPages, err
 }
 
@@ -98,32 +111,99 @@ func sicListPage(slug string, page int) ([]model.NewsItem, int, error) {
 // exception and has exactly one page.
 func sicTotalPagesFromHTML(body []byte, slug string) (int, error) {
 	if strings.Trim(slug, "/") == "index" {
+		if _, err := parseSicNews(body, sicCanonicalBaseURL); err != nil {
+			return 0, err
+		}
 		return 1, nil
 	}
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
 	if err != nil {
 		return 0, fmt.Errorf("sic: parse first page for %s: %w", slug, err)
 	}
-	countText := strings.TrimSpace(doc.Find(".p_t").First().Text())
-	match := sicTotalCountRe.FindStringSubmatch(countText)
-	if match == nil {
+	if err := sicResponseError(doc); err != nil {
+		return 0, err
+	}
+	total, ok, err := sicSourceArticleTotal(doc, slug)
+	if err != nil {
+		return 0, err
+	}
+	if !ok {
 		return 0, fmt.Errorf("sic: %s has no source article total", slug)
-	}
-	total, err := strconv.Atoi(match[1])
-	if err != nil || total < 0 {
-		return 0, fmt.Errorf("sic: invalid article total %q for %s", match[1], slug)
-	}
-	if total == 0 {
-		return 1, nil
 	}
 	items, err := parseSicNews(body, sicCanonicalBaseURL)
 	if err != nil {
 		return 0, err
 	}
-	if len(items) == 0 {
-		return 0, fmt.Errorf("sic: %s reports %d articles but first page has none", slug, total)
+	totalPages := (total + sicListPageSize - 1) / sicListPageSize
+	if totalPages < 1 {
+		totalPages = 1
 	}
-	return (total + len(items) - 1) / len(items), nil
+	if err := sicValidateListPageItems(slug, 1, totalPages, total, len(items)); err != nil {
+		return 0, err
+	}
+	return totalPages, nil
+}
+
+func sicSourceArticleTotal(doc *goquery.Document, slug string) (int, bool, error) {
+	if doc == nil {
+		return 0, false, fmt.Errorf("sic: %s has an empty document", slug)
+	}
+	countText := strings.TrimSpace(doc.Find(".p_t").First().Text())
+	match := sicTotalCountRe.FindStringSubmatch(countText)
+	if match == nil {
+		return 0, false, nil
+	}
+	total, err := strconv.Atoi(match[1])
+	if err != nil || total < 0 {
+		return 0, false, fmt.Errorf("sic: invalid article total %q for %s", match[1], slug)
+	}
+	return total, true, nil
+}
+
+func sicValidateListPage(body []byte, slug string, page, totalPages int, items []model.NewsItem) error {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
+	if err != nil {
+		return fmt.Errorf("sic: parse page %d for %s: %w", page, slug, err)
+	}
+	if err := sicResponseError(doc); err != nil {
+		return err
+	}
+	total, ok, err := sicSourceArticleTotal(doc, slug)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("sic: page %d/%d for %s has no source article total", page, totalPages, slug)
+	}
+	expectedPages := (total + sicListPageSize - 1) / sicListPageSize
+	if expectedPages < 1 {
+		expectedPages = 1
+	}
+	if expectedPages != totalPages {
+		return fmt.Errorf("sic: page %d for %s reports %d pages, expected %d", page, slug, expectedPages, totalPages)
+	}
+	return sicValidateListPageItems(slug, page, totalPages, total, len(items))
+}
+
+func sicValidateListPageItems(slug string, page, totalPages, total, itemCount int) error {
+	if page < 1 || page > totalPages {
+		return fmt.Errorf("sic: invalid page %d/%d for %s", page, totalPages, slug)
+	}
+	remaining := total - (page-1)*sicListPageSize
+	if remaining < 0 {
+		remaining = 0
+	}
+	expected := remaining
+	if expected > sicListPageSize {
+		expected = sicListPageSize
+	}
+	if total == 0 {
+		expected = 0
+	}
+	if itemCount != expected {
+		return fmt.Errorf("sic: page %d/%d for %s returned %d articles, expected %d", page, totalPages, slug, itemCount, expected)
+	}
+	return nil
 }
 
 func sicFetchHTML(rawURL string) ([]byte, error) {
@@ -186,6 +266,19 @@ func parseSicNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse sic html: %w", err)
 	}
+	if err := sicResponseError(doc); err != nil {
+		return nil, err
+	}
+	if sicIsHomepage(doc) {
+		items := parseSicHomepageItems(doc, baseURL)
+		if len(items) == 0 {
+			return nil, fmt.Errorf("sic: homepage contains no article modules")
+		}
+		return items, nil
+	}
+	if pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"]`).AttrOr("content", "")); pageType == "3" {
+		return nil, fmt.Errorf("sic: article shell passed to list parser")
+	}
 
 	itemType := sicSectionType(doc)
 	items := make([]model.NewsItem, 0)
@@ -208,7 +301,8 @@ func parseSicNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 		if title == "" || utf8.RuneCountInString(title) > 100 || !isValidNewsTitle(title) {
 			return
 		}
-		date := sicDateForAnchor(sel)
+		date, publishedAt := sicDateValuesForAnchor(sel)
+		typ := sicTypeForAnchor(sel, itemType)
 
 		if index, ok := seen[fullURL]; ok {
 			// A feature image can be the first occurrence of an article and
@@ -219,21 +313,203 @@ func parseSicNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 			}
 			if items[index].Date == "" && date != "" {
 				items[index].Date = date
+				items[index].PublishedAt = publishedAt
+			}
+			if items[index].PublishedAt == "" && publishedAt != "" {
+				items[index].PublishedAt = publishedAt
+			}
+			if sicTypeIsBetter(typ, items[index].Type) {
+				items[index].Type = typ
 			}
 			return
 		}
 
 		seen[fullURL] = len(items)
 		items = append(items, model.NewsItem{
-			Title:    title,
-			URL:      fullURL,
-			Date:     date,
-			Type:     itemType,
-			ParsedAt: time.Now(),
+			Title:       title,
+			URL:         fullURL,
+			Date:        date,
+			PublishedAt: publishedAt,
+			Type:        typ,
+			ParsedAt:    time.Now(),
 		})
 	})
 
+	if total, ok, totalErr := sicSourceArticleTotal(doc, itemType); totalErr != nil {
+		return nil, totalErr
+	} else if ok {
+		if err := sicValidateParsedItemCount(itemType, total, len(items)); err != nil {
+			return nil, err
+		}
+	}
+	if len(items) == 0 {
+		if total, ok, _ := sicSourceArticleTotal(doc, itemType); ok && total == 0 {
+			return items, nil
+		}
+		return nil, fmt.Errorf("sic: %s is not an article list or explicit empty tab", itemType)
+	}
 	return items, nil
+}
+
+func parseSicHomepageItems(doc *goquery.Document, baseURL string) []model.NewsItem {
+	items := make([]model.NewsItem, 0)
+	seen := make(map[string]int)
+	doc.Find("a[href]").Each(func(_ int, sel *goquery.Selection) {
+		if sicIsNonContentAnchor(sel) || !sicIsArticleHref(sel.AttrOr("href", "")) {
+			return
+		}
+		fullURL := cleanURL(resolveURL(baseURL, strings.TrimSpace(sel.AttrOr("href", ""))))
+		if isExternalURL(fullURL, baseURL) || !isValidNewsURL(fullURL) {
+			return
+		}
+		title := sicTitle(sel)
+		if title == "" || utf8.RuneCountInString(title) > 100 || !isValidNewsTitle(title) {
+			return
+		}
+		typ := sicHomepageType(sel)
+		if typ == "" {
+			return
+		}
+		date, publishedAt := sicDateValuesForAnchor(sel)
+		item := model.NewsItem{
+			Title:       title,
+			URL:         fullURL,
+			Date:        date,
+			PublishedAt: publishedAt,
+			Type:        typ,
+			ParsedAt:    time.Now(),
+		}
+		if index, ok := seen[fullURL]; ok {
+			if items[index].Title == "" {
+				items[index].Title = item.Title
+			}
+			if items[index].Date == "" && item.Date != "" {
+				items[index].Date = item.Date
+				items[index].PublishedAt = item.PublishedAt
+			}
+			if items[index].PublishedAt == "" && item.PublishedAt != "" {
+				items[index].PublishedAt = item.PublishedAt
+			}
+			if sicTypeIsBetter(item.Type, items[index].Type) {
+				items[index].Type = item.Type
+			}
+			return
+		}
+		seen[fullURL] = len(items)
+		items = append(items, item)
+	})
+	return items
+}
+
+func sicValidateParsedItemCount(slug string, total, itemCount int) error {
+	if total < 0 {
+		return fmt.Errorf("sic: invalid article total %d for %s", total, slug)
+	}
+	if total == 0 {
+		if itemCount != 0 {
+			return fmt.Errorf("sic: %s reports no articles but parser returned %d", slug, itemCount)
+		}
+		return nil
+	}
+	if itemCount == 0 {
+		return fmt.Errorf("sic: %s reports %d articles but parser returned none", slug, total)
+	}
+	if total <= sicListPageSize && itemCount != total {
+		return fmt.Errorf("sic: %s reports %d articles but parser returned %d", slug, total, itemCount)
+	}
+	if total > sicListPageSize && (itemCount < 1 || itemCount > sicListPageSize) {
+		return fmt.Errorf("sic: %s page returned %d articles for total %d; expected between 1 and %d", slug, itemCount, total, sicListPageSize)
+	}
+	return nil
+}
+
+func sicHomepageType(anchor *goquery.Selection) string {
+	if anchor == nil || anchor.Length() == 0 {
+		return ""
+	}
+	if anchor.Closest(".part1").Length() > 0 {
+		return "学院动态"
+	}
+	if anchor.Closest(".part2").Length() > 0 {
+		if row := anchor.Closest("li"); row.Length() > 0 {
+			if typ := cleanTitle(strings.TrimSpace(row.Find("b").First().Text())); typ != "" && typ != "全部" {
+				return typ
+			}
+		}
+		if slide := anchor.Closest(".swiper-slide"); slide.Length() > 0 {
+			if typ := cleanTitle(strings.TrimSpace(slide.Find(".Cotitle h5, .Btitle h5").First().Text())); typ != "" {
+				return sicNoticeType(typ)
+			}
+		}
+		return "通知公告"
+	}
+	if anchor.Closest(".part3").Length() > 0 {
+		return "学术交流"
+	}
+	if anchor.Closest(".part4").Length() > 0 {
+		return "教学活动"
+	}
+	return ""
+}
+
+func sicNoticeType(value string) string {
+	value = cleanTitle(value)
+	if value == "全部" {
+		return "通知公告"
+	}
+	return value
+}
+
+func sicTypeForAnchor(anchor *goquery.Selection, fallback string) string {
+	if typ := sicHomepageType(anchor); typ != "" {
+		return typ
+	}
+	if row := anchor.Closest("li"); row.Length() > 0 {
+		if typ := cleanTitle(strings.TrimSpace(row.Find("b").First().Text())); typ != "" {
+			return sicNoticeType(typ)
+		}
+	}
+	return fallback
+}
+
+func sicTypeIsBetter(candidate, current string) bool {
+	candidate = strings.TrimSpace(candidate)
+	current = strings.TrimSpace(current)
+	if candidate == "" || candidate == current {
+		return false
+	}
+	return current == "" || sicTypeIsGeneric(current)
+}
+
+func sicTypeIsGeneric(value string) bool {
+	switch strings.TrimSpace(value) {
+	case "", "全部", "通知公告", "首页新闻":
+		return true
+	default:
+		return false
+	}
+}
+
+func sicIsHomepage(doc *goquery.Document) bool {
+	if doc == nil {
+		return false
+	}
+	return doc.Find(".part1, .part2, .part3, .part4").Length() > 0
+}
+
+func sicResponseError(doc *goquery.Document) error {
+	if doc == nil {
+		return fmt.Errorf("sic: empty response")
+	}
+	title := strings.ToLower(strings.Join(strings.Fields(doc.Find("title").First().Text()), " "))
+	body := strings.ToLower(strings.Join(strings.Fields(doc.Find("body").First().Text()), " "))
+	if strings.Contains(title, "access denied") || strings.Contains(title, "404") || strings.Contains(title, "not found") ||
+		strings.Contains(title, "访问限制") || strings.Contains(title, "访问受限") || strings.Contains(title, "错误") ||
+		strings.Contains(body, "access denied") || strings.Contains(body, "暂无权限访问") || strings.Contains(body, "无权访问") ||
+		strings.Contains(body, "验证码") {
+		return fmt.Errorf("sic: source returned an access-denied, error, or verification shell")
+	}
+	return nil
 }
 
 // sicSectionType reads the category heading from both list and detail pages.
@@ -339,8 +615,13 @@ var sicDateSelectors = []string{
 }
 
 func sicDateForAnchor(anchor *goquery.Selection) string {
-	if date := sicDateFromSelection(anchor); date != "" {
-		return date
+	date, _ := sicDateValuesForAnchor(anchor)
+	return date
+}
+
+func sicDateValuesForAnchor(anchor *goquery.Selection) (string, string) {
+	if date, publishedAt := sicDateValuesFromSelection(anchor); date != "" {
+		return date, publishedAt
 	}
 
 	// On the academic-exchange cards the date is a sibling of the headline
@@ -348,13 +629,13 @@ func sicDateForAnchor(anchor *goquery.Selection) string {
 	parent := anchor.Parent()
 	for depth := 0; parent.Length() > 0 && depth < 4; depth++ {
 		if sicIsDateContext(parent) {
-			if date := sicDateFromSelection(parent); date != "" {
-				return date
+			if date, publishedAt := sicDateValuesFromSelection(parent); date != "" {
+				return date, publishedAt
 			}
 		}
 		parent = parent.Parent()
 	}
-	return ""
+	return "", ""
 }
 
 func sicIsDateContext(sel *goquery.Selection) bool {
@@ -381,39 +662,61 @@ func sicIsDateContext(sel *goquery.Selection) bool {
 }
 
 func sicDateFromSelection(sel *goquery.Selection) string {
+	date, _ := sicDateValuesFromSelection(sel)
+	return date
+}
+
+func sicDateValuesFromSelection(sel *goquery.Selection) (string, string) {
+	if sel == nil || sel.Length() == 0 {
+		return "", ""
+	}
 	for _, selector := range sicDateSelectors {
-		var date string
+		var date, publishedAt string
+		if sel.Is(selector) {
+			date, publishedAt = sicDateValuesFromDateBlock(sel)
+			if date != "" {
+				return date, publishedAt
+			}
+		}
 		sel.Find(selector).EachWithBreak(func(_ int, dateSel *goquery.Selection) bool {
-			date = sicDateFromDateBlock(dateSel)
+			date, publishedAt = sicDateValuesFromDateBlock(dateSel)
 			return date == ""
 		})
 		if date != "" {
-			return date
+			return date, publishedAt
 		}
 	}
-	return ""
+	return "", ""
 }
 
 func sicDateFromDateBlock(sel *goquery.Selection) string {
+	date, _ := sicDateValuesFromDateBlock(sel)
+	return date
+}
+
+func sicDateValuesFromDateBlock(sel *goquery.Selection) (string, string) {
+	if sel == nil || sel.Length() == 0 {
+		return "", ""
+	}
 	text := strings.Join(strings.Fields(sel.Text()), " ")
-	if date := normalizeSicDate(text); date != "" {
-		return date
+	if date, publishedAt := sicDateValuesFromText(text); date != "" {
+		return date, publishedAt
 	}
 
 	day := strings.TrimSpace(sel.Find(".day, .date-day").First().Text())
 	yearMonth := strings.TrimSpace(sel.Find(".year, .date-year").First().Text())
 	if date := normalizeSicYearMonthDay(yearMonth, day); date != "" {
-		return date
+		return date, ""
 	}
 
 	if match := sicDayBeforeYMRe.FindStringSubmatch(text); match != nil {
-		return normalizeDateParts(match[2], match[3], match[1])
+		return normalizeDateParts(match[2], match[3], match[1]), ""
 	}
 	if match := sicCompactDayYMRe.FindStringSubmatch(text); match != nil {
-		return normalizeDateParts(match[2], match[3], match[1])
+		return normalizeDateParts(match[2], match[3], match[1]), ""
 	}
 	if match := sicYMBeforeDayRe.FindStringSubmatch(text); match != nil {
-		return normalizeDateParts(match[1], match[2], match[3])
+		return normalizeDateParts(match[1], match[2], match[3]), ""
 	}
 
 	var childDay, childYearMonth string
@@ -427,9 +730,26 @@ func sicDateFromDateBlock(sel *goquery.Selection) string {
 		}
 	})
 	if date := normalizeSicYearMonthDay(childYearMonth, childDay); date != "" {
-		return date
+		return date, ""
 	}
-	return ""
+	return "", ""
+}
+
+func sicDateValuesFromText(text string) (string, string) {
+	text = strings.Join(strings.Fields(text), " ")
+	if text == "" {
+		return "", ""
+	}
+	if publishedAt := normalizePublishedAt(text); publishedAt != "" && len(publishedAt) >= 10 {
+		if sicClockRe.MatchString(text) {
+			return publishedAt[:10], publishedAt
+		}
+		return publishedAt[:10], ""
+	}
+	if date := normalizeSicDate(text); date != "" {
+		return date, ""
+	}
+	return "", ""
 }
 
 func normalizeSicYearMonthDay(yearMonth, day string) string {
@@ -457,33 +777,52 @@ func parseSicArticle(html []byte, baseURL string) (*model.Article, error) {
 		return nil, err
 	}
 	doc, docErr := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
-	if docErr == nil {
-		if pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"]`).AttrOr("content", "")); pageType != "" && pageType != "3" {
-			return nil, fmt.Errorf("sic: page type %q is not an article", pageType)
-		}
+	if docErr != nil {
+		return nil, fmt.Errorf("sic: parse article html: %w", docErr)
+	}
+	if pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"]`).AttrOr("content", "")); pageType != "" && pageType != "3" {
+		return nil, fmt.Errorf("sic: page type %q is not an article", pageType)
+	}
 
-		// SIC detail pages put the real headline in .show01 h5; the shared
-		// parser can otherwise see the breadcrumb/sidebar heading "学院动态"
-		// first and return that as the article title.
-		for _, selector := range []string{".show01 h5", ".show01 h1", ".show01 .title"} {
-			if title := cleanTitle(strings.TrimSpace(doc.Find(selector).First().Text())); title != "" {
-				article.Title = title
-				break
-			}
+	// SIC detail pages put the real headline in .show01 h5; the shared
+	// parser can otherwise see the breadcrumb/sidebar heading "学院动态"
+	// first and return that as the article title.
+	for _, selector := range []string{".show01 h5", ".show01 h1", ".show01 .title"} {
+		if title := cleanTitle(strings.TrimSpace(doc.Find(selector).First().Text())); title != "" {
+			article.Title = title
+			break
 		}
-		if article.Title == "" {
-			return nil, fmt.Errorf("sic: article headline is missing")
-		}
-		if typ := sicSectionType(doc); typ != "" {
-			article.Type = typ
-		}
+	}
+	if article.Title == "" {
+		return nil, fmt.Errorf("sic: article headline is missing")
+	}
+	content := doc.Find(".show02 .v_news_content, .show02 #vsb_content, .show02 [id^='vsb_content'], .v_news_content").First()
+	if content.Length() == 0 {
+		return nil, fmt.Errorf("sic: article body container is missing")
+	}
+	if strings.TrimSpace(content.Text()) == "" && content.Find("img, table, a, object, iframe").Length() == 0 {
+		return nil, fmt.Errorf("sic: article body is empty")
+	}
+	if typ := sicSectionType(doc); typ != "" {
+		article.Type = typ
+	}
 
-		// The SIC source puts its precise timestamp in the show01 metadata
-		// line using <em>, not the shared parser's older <span> shape.
-		if meta := doc.Find(".show01").First(); meta.Length() > 0 {
-			if precise := normalizePublishedAt(flattenedText(meta)); precise != "" {
-				article.PublishedAt = precise
-				article.Date = precise[:10]
+	// The SIC source puts its precise timestamp in the show01 metadata
+	// line using <em>, not the shared parser's older <span> shape.
+	if meta := doc.Find(".show01").First(); meta.Length() > 0 {
+		if precise := normalizePublishedAt(flattenedText(meta)); precise != "" {
+			article.PublishedAt = precise
+			article.Date = precise[:10]
+		}
+	}
+	if article.PublishedAt == "" {
+		for _, selector := range []string{".news_source", ".article-meta", ".article-info", ".news-info", ".tips", ".top-info"} {
+			if meta := doc.Find(selector).First(); meta.Length() > 0 {
+				if precise := normalizePublishedAt(flattenedText(meta)); precise != "" && len(precise) > 10 {
+					article.PublishedAt = precise
+					article.Date = precise[:10]
+					break
+				}
 			}
 		}
 	}
@@ -508,6 +847,7 @@ func parseSicArticle(html []byte, baseURL string) (*model.Article, error) {
 			}
 		}
 	}
+	normalizeArticlePublishedAt(article)
 	sicDeduplicateResources(article)
 	return article, nil
 }

@@ -157,6 +157,36 @@ func TestListNewsRangeUsesForwardURLsWhenTotalUnknown(t *testing.T) {
 	}
 }
 
+func TestListNewsRangeTreatsReverseHomepageAsOnePage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/index.htm" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(`<ul class="news-list"><li><a href="/info/1/1.htm">首页真实文章标题</a><span class="date">2026-08-31</span></li></ul>`))
+	}))
+	defer server.Close()
+
+	oldNoCache := NoCache
+	NoCache = true
+	defer func() { NoCache = oldNoCache }()
+	site := &BodaSite{
+		BaseURL: server.URL,
+		PageURL: reverseBodaPageURL,
+		ParseFunc: func(raw []byte, baseURL string) ([]model.NewsItem, error) {
+			return parseBodaNewsList(raw, baseURL)
+		},
+	}
+	items, err := site.ListNewsRange("index", "2026-01-01", "2026-12-31", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].Title != "首页真实文章标题" {
+		t.Fatalf("homepage items = %#v", items)
+	}
+}
+
 func TestListNewsRangeUsesForwardURLsWhenTotalIsKnown(t *testing.T) {
 	var paths []string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

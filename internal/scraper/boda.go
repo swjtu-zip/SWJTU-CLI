@@ -168,7 +168,14 @@ func (s *BodaSite) ListNewsRange(slug string, from, to string, maxPages int) ([]
 		return nil, err
 	}
 
-	totalPages, totalPagesErr := s.GetTotalPages(slug)
+	// Every registered site gets an implicit homepage feed named index.  It is
+	// a preview page, not a reverse-numbered archive; requiring a pagination
+	// total here made otherwise healthy index feeds fail with "total page count
+	// unavailable" when their adapter intentionally had no homepage total.
+	totalPages, totalPagesErr := 1, error(nil)
+	if !(strings.Trim(slug, "/") == "index" && s.PageURL != nil && s.ListPageFunc == nil && s.TotalPagesFunc == nil) {
+		totalPages, totalPagesErr = s.GetTotalPages(slug)
+	}
 	usingFallbackPages := totalPagesErr != nil || totalPages == 0
 
 	for _, item := range items {

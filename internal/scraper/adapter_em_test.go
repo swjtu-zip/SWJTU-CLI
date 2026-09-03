@@ -34,7 +34,7 @@ func TestEmAdapterRegisteredWithAllArticleFeeds(t *testing.T) {
 		"rcpy/glgd",
 		"rcpy/wdxz",
 		"rcpy/zyjj",
-		"jypx3/pxfw",
+		"jypx3",
 		"jypx3/pxdt",
 		"jypx3/tzgg",
 		"tzgg",
@@ -65,6 +65,9 @@ func TestEmPageURLUsesReverseGeneratedNumbers(t *testing.T) {
 		{"middle", "xwdt", 36, 71, ".htm", emFixtureBaseURL + "/xwdt/36.htm"},
 		{"last", "xwdt", 71, 71, ".htm", emFixtureBaseURL + "/xwdt/1.htm"},
 		{"nested", "rcpy/tzgg", 7, 7, ".html", emFixtureBaseURL + "/rcpy/tzgg/1.html"},
+		{"unknown total cannot guess", "xwdt", 2, 0, ".htm", ""},
+		{"past last page cannot clamp", "xwdt", 72, 71, ".htm", ""},
+		{"past one-page feed cannot repeat first", "rcpy/zyjj", 2, 1, ".htm", ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
