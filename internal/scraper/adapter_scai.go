@@ -264,6 +264,7 @@ func parseScaiAdapterList(html []byte, baseURL string) ([]model.NewsItem, error)
 			Title:    title,
 			URL:      fullURL,
 			Date:     scaiListDate(sel),
+			Type:     scaiListTypeForAnchor(sel, doc),
 			ParsedAt: time.Now(),
 		})
 	})
@@ -363,6 +364,35 @@ func scaiListDate(anchor *goquery.Selection) string {
 	return ""
 }
 
+func scaiListTypeForAnchor(anchor *goquery.Selection, doc *goquery.Document) string {
+	if anchor != nil && anchor.Length() > 0 {
+		if container := anchor.Closest(".container"); container.Length() > 0 {
+			for _, selector := range []string{".list-big-title", ".big-title span", ".title-wrapper h1", ".title-wrapper h2"} {
+				if value := strings.TrimSpace(container.Find(selector).First().Text()); value != "" {
+					return value
+				}
+			}
+		}
+	}
+	return scaiListType(doc)
+}
+
+func scaiListType(doc *goquery.Document) string {
+	if doc == nil {
+		return ""
+	}
+	for _, selector := range []string{".list-big-title", ".big-title span", ".news-title-wrapper", ".banner .title-wrapper h1"} {
+		values := doc.Find(selector)
+		for i := values.Length() - 1; i >= 0; i-- {
+			value := strings.Join(strings.Fields(values.Eq(i).Text()), " ")
+			if value != "" && value != "首页" && value != "更多" {
+				return value
+			}
+		}
+	}
+	return ""
+}
+
 func scaiDateInSelection(sel *goquery.Selection) string {
 	for _, selector := range []string{
 		".calendar .day",
@@ -429,6 +459,9 @@ func parseScaiArticle(html []byte, baseURL string) (*model.Article, error) {
 	}
 	if source := scaiArticleSource(doc); source != "" {
 		article.Source = source
+	}
+	if typ := scaiArticleType(doc); typ != "" {
+		article.Type = typ
 	}
 	if date := scaiArticleDate(doc); date != "" {
 		article.Date = date
@@ -635,4 +668,26 @@ func scaiArticleDate(doc *goquery.Document) string {
 		return date == ""
 	})
 	return date
+}
+
+func scaiArticleType(doc *goquery.Document) string {
+	if doc == nil {
+		return ""
+	}
+	for _, selector := range []string{
+		".banner .title-wrapper h1",
+		".banner h1",
+		".breadcrumb .on a",
+		".breadcrumb a",
+		".news-title-wrapper",
+	} {
+		values := doc.Find(selector)
+		for i := values.Length() - 1; i >= 0; i-- {
+			value := strings.Join(strings.Fields(values.Eq(i).Text()), " ")
+			if value != "" && value != "首页" && value != "更多" && value != "返回列表" {
+				return value
+			}
+		}
+	}
+	return ""
 }

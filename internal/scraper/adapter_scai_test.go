@@ -109,6 +109,9 @@ func TestScaiAdapterArticleTitleUsesContentHeadline(t *testing.T) {
 	if article.Date != "2026-07-07" {
 		t.Errorf("date = %q, want 2026-07-07", article.Date)
 	}
+	if article.Type != "学院新闻" {
+		t.Errorf("type = %q, want 学院新闻", article.Type)
+	}
 	if !strings.Contains(article.Content, "学院召开党委理论学习中心组") {
 		t.Errorf("content = %q", article.Content)
 	}
@@ -132,6 +135,9 @@ func TestScaiAdapterListUsesModuleRowsAndRejectsWAFPage(t *testing.T) {
 	}
 	if items[1].Title != "普通列表真实文章标题" || items[1].Date != "2026-07-07" {
 		t.Errorf("ordinary item = %#v", items[1])
+	}
+	if items[0].Type != "学院新闻" || items[1].Type != "学院新闻" {
+		t.Errorf("types = %q/%q", items[0].Type, items[1].Type)
 	}
 
 	if _, err := parseScaiAdapterList([]byte(`<html><head><title>您的访问请求可能对网站造成安全威胁，请求已被阻断。</title></head></html>`), "https://scai.swjtu.edu.cn"); err == nil {

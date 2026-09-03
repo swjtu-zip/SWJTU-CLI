@@ -7,7 +7,7 @@ import "testing"
 // prevents a future cleanup from silently reverting to one homepage feed.
 func TestAuditedBodaAdaptersExposeAllDiscoveredFeeds(t *testing.T) {
 	want := map[string]int{
-		"phys": 12, "ott": 12, "rsc": 11, "rvl": 11, "rwxy": 15,
+		"phys": 12, "ott": 12, "rsc": 11, "rvl": 13, "rwxy": 15,
 		"scyshj": 8, "sj": 8, "sports": 6, "talent": 5, "xb": 7,
 		"xczx": 11, "xgh": 8, "xuncha": 5, "xyb": 9, "ygb": 6, "zzxy": 7,
 	}

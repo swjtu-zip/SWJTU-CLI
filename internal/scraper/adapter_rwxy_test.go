@@ -40,3 +40,43 @@ func TestRwxyArticleParsesPreciseDate(t *testing.T) {
 		t.Fatalf("content = %q", article.Content)
 	}
 }
+
+func TestRwxyHomeParsesLiveDatesAndTypes(t *testing.T) {
+	html := []byte(`<html><body>
+<div class="news"><div class="conts"><div class="title"><b>学院新闻</b></div>
+  <div class="item"><div class="imgs"><div class="labs"><em>07-14</em><b>2026</b></div></div><div class="text"><div class="tits"><a href="info/1142/28674.htm">学院新闻标题</a></div></div></div>
+</div></div>
+<div class="activity"><div class="title"><b>学术活动</b></div><div class="conts"><div class="swiper-slide">
+  <div class="inform"><div class="time"><span>2026/06/02</span></div></div><div class="tits"><a href="info/1143/27964.htm">学术活动标题</a></div>
+</div></div></div>
+</body></html>`)
+
+	items, err := parseAdapter_rwxyList(html, "https://rwxy.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("got %d items, want 2", len(items))
+	}
+	if items[0].Date != "2026-07-14" || items[0].Type != "学院新闻" {
+		t.Errorf("home news item = %#v", items[0])
+	}
+	if items[1].Date != "2026-06-02" || items[1].Type != "学术活动" {
+		t.Errorf("home activity item = %#v", items[1])
+	}
+}
+
+func TestRwxyAdapterOwnsDisplayedReversePagination(t *testing.T) {
+	html := []byte(`<div class="list-news"><ul><li><a href="info/1142/28674.htm"><div class="time"><!-- 2026年7月14日-->标题</div></a></li></ul></div>
+<div class="p_pages"><span class="p_no_d">1</span><a href="xyxw/215.htm">2</a><a href="xyxw/1.htm">216</a></div>`)
+	if got := rwxyTotalPagesFromHTML(html); got != 216 {
+		t.Fatalf("total pages = %d, want 216", got)
+	}
+	base := "http://rwxy.swjtu.edu.cn"
+	if got := rwxyPageURL(base, "xyxw", 2, 216, ".htm"); got != base+"/xyxw/215.htm" {
+		t.Fatalf("logical page 2 URL = %q", got)
+	}
+	if got := rwxyPageURL(base, "xyxw", 217, 216, ".htm"); got != "" {
+		t.Fatalf("out-of-range URL = %q", got)
+	}
+}
