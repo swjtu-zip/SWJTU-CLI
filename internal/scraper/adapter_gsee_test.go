@@ -174,6 +174,22 @@ func TestGseeDistinguishesEmptyStaticResourceAndVerificationPages(t *testing.T) 
 	}
 }
 
+func TestGseeArticleAcceptsWrapperAndArticlePageTypesTogether(t *testing.T) {
+	html := []byte(`<html><head>
+<meta name="pageType" content="1"><meta name="pageType" content="3">
+</head><body><div class="article"><h3>本科教育文章</h3>
+<div class="source">日期：2025-05-04</div>
+<div class="content14"><div class="v_news_content"><p>这是一个足够完整的本科教育文章正文，用于验证重复模板元数据。</p></div></div>
+</div></body></html>`)
+	article, err := parseGseeArticle(html, gseeFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title != "本科教育文章" || article.Date != "2025-05-04" {
+		t.Fatalf("duplicate pageType article = %#v", article)
+	}
+}
+
 func readGseeFixture(t *testing.T, name string) []byte {
 	t.Helper()
 	body, err := os.ReadFile("testdata/" + name)

@@ -544,7 +544,8 @@ func parseGseeArticle(html []byte, baseURL string) (*model.Article, error) {
 	if err := gseeResponseError(doc); err != nil {
 		return nil, err
 	}
-	if pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"], meta[name="pagetype"]`).First().AttrOr("content", "")); pageType != "" && pageType != "3" {
+	pageType, hasArticlePageType := gseePageType(doc)
+	if pageType != "" && !hasArticlePageType {
 		return nil, fmt.Errorf("gsee: page is not an article (pageType %q)", pageType)
 	}
 	title := gseeArticleTitle(doc)
@@ -590,6 +591,30 @@ func parseGseeArticle(html []byte, baseURL string) (*model.Article, error) {
 	gseeAppendAttachments(article, doc, baseURL)
 	gseeFinalizeArticleContent(article, doc, baseURL)
 	return article, nil
+}
+
+// gseePageType sees duplicate CMS metadata emitted by the live template.  A
+// wrapper can carry pageType=1 before the actual article metadata carries
+// pageType=3; the latter is authoritative whenever it is present.
+func gseePageType(doc *goquery.Document) (first string, hasArticle bool) {
+	if doc == nil {
+		return "", false
+	}
+	doc.Find(`meta[name="pageType"], meta[name="pagetype"]`).EachWithBreak(func(_ int, meta *goquery.Selection) bool {
+		value := strings.TrimSpace(meta.AttrOr("content", ""))
+		if value == "" {
+			return true
+		}
+		if first == "" {
+			first = value
+		}
+		if value == "3" {
+			hasArticle = true
+			return false
+		}
+		return true
+	})
+	return first, hasArticle
 }
 
 func gseeArticleTitle(doc *goquery.Document) string {
