@@ -146,6 +146,21 @@ func TestMathsArticleUsesDetailTitleTypeBodyImagesAndAttachments(t *testing.T) {
 	}
 }
 
+func TestMathsArticleDoesNotUseEventTimeAsPublicationDate(t *testing.T) {
+	const html = `<html><head><meta name="pageType" content="3"></head><body>
+<div class="page-bann"><h5>学术交流</h5></div>
+<div class="inform"><h1>学术讲座通知</h1><div>2026-09-02 点击：0</div>
+<div class="v_news_content"><p>报告时间：2026年9月6日16:00-17:00。</p></div></div>
+</body></html>`
+	article, err := parseAdapter_mathsArticle([]byte(html), mathsCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Date != "2026-09-02" || article.PublishedAt != "2026-09-02" {
+		t.Fatalf("event time replaced publication date: date=%q published_at=%q", article.Date, article.PublishedAt)
+	}
+}
+
 func TestMathsDistinguishesEmptyStaticAndVerificationPages(t *testing.T) {
 	items, err := parseAdapter_mathsList(readMathsFixture(t, "maths_empty.html"), mathsCanonicalBaseURL)
 	if err != nil {

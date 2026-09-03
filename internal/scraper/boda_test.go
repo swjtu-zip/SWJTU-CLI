@@ -373,6 +373,20 @@ func TestArticleParserPreservesPublishedTimeAndType(t *testing.T) {
 	}
 }
 
+func TestArticleParserDoesNotUseBodyEventDateWhenMetaHasNoSpecialClass(t *testing.T) {
+	html := []byte(`<html><body>
+<h1>推免申请通知</h1><div class="meta">发布日期：2026-09-02</div>
+<div class="v_news_content"><p>请于2026年9月4日17:00前提交材料。</p></div>
+</body></html>`)
+	article, err := parseBodaArticle(html, "https://news.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Date != "2026-09-02" {
+		t.Fatalf("body event date replaced publication date: %q", article.Date)
+	}
+}
+
 func TestBodaFallbackCleansListTitlesAndFindsSectionTypes(t *testing.T) {
 	if got := cleanTitle("09.302024 技术转移研究院2024年国庆节值班安排表"); got != "技术转移研究院2024年国庆节值班安排表" {
 		t.Fatalf("cleaned title = %q", got)

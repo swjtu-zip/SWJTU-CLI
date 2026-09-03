@@ -183,6 +183,21 @@ func TestGGDateValuesDoNotInventClock(t *testing.T) {
 	}
 }
 
+func TestGGArticleDoesNotUseBodyDeadlineAsPublicationDate(t *testing.T) {
+	const html = `<html><head><meta name="pageType" content="3"></head><body>
+<div class="article"><h1>推免加分申请补充通知</h1>
+<div class="source">日期：2026-09-03</div>
+<div class="v_news_content"><p>请于2026年9月6日12:00前提交申请。</p></div>
+</div></body></html>`
+	article, err := parseAdapter_ggArticle([]byte(html), ggFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Date != "2026-09-03" || article.PublishedAt != "" {
+		t.Fatalf("body deadline replaced publication date: date=%q published_at=%q", article.Date, article.PublishedAt)
+	}
+}
+
 func ggContainsString(values []string, want string) bool {
 	for _, value := range values {
 		if value == want {

@@ -114,3 +114,19 @@ func TestLeedsArticleDateNormalizesDotFormat(t *testing.T) {
 		t.Fatalf("article date = %q, want 2026-07-08", article.Date)
 	}
 }
+
+func TestLeedsArticleDoesNotUseBodyDeadlineAsPublicationDate(t *testing.T) {
+	const html = `<html><body><div class="m-textq1">
+<h1>迎新志愿者拟选人员名单公示</h1>
+<div class="info"><span class="date">2026-09-02</span></div>
+<div class="txt"><div class="v_news_content">
+<p>名单公示正文。</p><p>如有异议，请于2026年9月4日17:30前反馈。</p>
+</div></div></div></body></html>`
+	article, err := parseLeedsArticle([]byte(html), "http://leeds.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Date != "2026-09-02" || article.PublishedAt != "2026-09-02" {
+		t.Fatalf("body deadline replaced publication date: date=%q published_at=%q", article.Date, article.PublishedAt)
+	}
+}

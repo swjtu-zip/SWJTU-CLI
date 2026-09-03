@@ -84,6 +84,21 @@ func TestScaiAdapterArticleDate(t *testing.T) {
 	}
 }
 
+func TestScaiAdapterArticleDoesNotUseBodyDeadlineAsPublicationDate(t *testing.T) {
+	const articleHTML = `<html><body><div class="news-content-wrapper"><div class="content">
+<h1 class="news-title">推免排名成绩计算通知</h1>
+<div class="news-info"><span>来源：计算机与人工智能学院</span><span>发布日期：2026-09-02</span></div>
+<div class="content-main"><p>请于2026年9月4日17:00前提交材料。</p></div>
+</div></div></body></html>`
+	article, err := parseScaiArticle([]byte(articleHTML), "https://scai.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Date != "2026-09-02" {
+		t.Fatalf("body deadline replaced publication date: %q", article.Date)
+	}
+}
+
 func TestScaiAdapterArticleTitleUsesContentHeadline(t *testing.T) {
 	data, err := os.ReadFile("testdata/scai_article.html")
 	if err != nil {
