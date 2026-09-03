@@ -85,6 +85,24 @@ func TestChemAdapterRegistrationAndPageURL(t *testing.T) {
 	}
 }
 
+func TestChemPageURLRejectsOutOfRange(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		page       int
+		totalPages int
+	}{
+		{name: "zero", page: 0, totalPages: 31},
+		{name: "past last", page: 32, totalPages: 31},
+		{name: "past one-page feed", page: 2, totalPages: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := chemPageURL(chemFixtureBaseURL, "index/xyxw", tc.page, tc.totalPages, ".htm"); got != "" {
+				t.Fatalf("chemPageURL() = %q for page %d/%d, want empty URL", got, tc.page, tc.totalPages)
+			}
+		})
+	}
+}
+
 func TestChemHomeParserScopesRealModulesAndTabs(t *testing.T) {
 	html, err := os.ReadFile("testdata/chem_home.html")
 	if err != nil {

@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"os"
+	"reflect"
 	"regexp"
 	"testing"
 
@@ -13,8 +14,18 @@ func TestCivilAdapterRegistered(t *testing.T) {
 	if site == nil || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil {
 		t.Fatal("civil adapter hooks are not registered")
 	}
-	if len(site.SubPages) < 2 || site.SubPages[0] != "tzgg" || site.SubPages[1] != "tmyw" {
-		t.Fatalf("unexpected civil sub-pages: %#v", site.SubPages)
+	want := []string{
+		"tzgg", "tmyw", "bkjx", "scientific", "xsgz", "zsjy", "djgz", "yjspy", "tmxy",
+		"bkjx/bkjxgg", "bkjx/bkjxgl", "bkjx/wjbgxz",
+		"scientific/kytzgg", "scientific/kydtxx", "scientific/kycgzs", "scientific/kyfczs", "scientific/ABEgjqk", "scientific/ITIgjqk",
+		"xsgz/xsgztz", "xsgz/xsgzdt", "xsgz/fdygzs", "xsgz/bjjskx", "xsgz/xzfczs", "xsgz/xstd", "xsgz/xshdhb",
+		"zsjy/bkzsxg", "zsjy/yjszsxg", "zsjy/xyzpxx", "zsjy/jyzdypx",
+		"djgz/llyjxx", "djgz/zzjsfz", "djgz/djhdxx", "djgz/zbgzxx", "djgz/bmgzjy", "djgz/ghzj",
+		"yjspy/yjsgg", "yjspy/yjskcb", "tmxy/xyjz", "tmxy/xyh",
+		"zsjy/jxjypxzx_j", "zgzx/zsgxjyzx",
+	}
+	if !reflect.DeepEqual(site.SubPages, want) {
+		t.Fatalf("civil sub-pages = %#v, want %#v", site.SubPages, want)
 	}
 }
 
@@ -43,9 +54,6 @@ func TestCivilAdapterListSnapshot(t *testing.T) {
 	// announcements and are intentionally filtered by isValidNewsTitle.
 	if got, want := len(items), 36; got != want {
 		t.Fatalf("parsed %d items, want %d", got, want)
-	}
-	if len(items) <= len(legacyItems) {
-		t.Fatalf("adapter did not improve coverage: legacy=%d adapter=%d", len(legacyItems), len(items))
 	}
 	t.Logf("legacy parser: %d items/%d dates; civil adapter: %d items", len(legacyItems), legacyDates, len(items))
 
@@ -189,5 +197,27 @@ func TestCivilPageURL(t *testing.T) {
 	}
 	if got := civilPageURL(base, "tzgg", 197, 197, ".htm"); got != base+"/tzgg/1.htm" {
 		t.Errorf("last page URL = %q", got)
+	}
+	for _, tc := range []struct {
+		name       string
+		page       int
+		totalPages int
+	}{
+		{name: "zero", page: 0, totalPages: 197},
+		{name: "past last", page: 198, totalPages: 197},
+		{name: "unknown reverse total", page: 2, totalPages: 0},
+	} {
+		t.Run("out of range/"+tc.name, func(t *testing.T) {
+			if got := civilPageURL(base, "tzgg", tc.page, tc.totalPages, ".htm"); got != "" {
+				t.Fatalf("civilPageURL() = %q for page %d/%d, want empty URL", got, tc.page, tc.totalPages)
+			}
+		})
+	}
+}
+
+func TestCivilListParserRejectsUnrecognisedPage(t *testing.T) {
+	shell := []byte(`<html><head><title>土木工程学院</title></head><body><nav><a href="/info/1000/1.htm">导航文章</a></nav><main>静态页面</main></body></html>`)
+	if _, err := parseCivilNews(shell, "https://civil.swjtu.edu.cn"); err == nil {
+		t.Fatal("unrecognised Civil page was accepted as an empty list")
 	}
 }

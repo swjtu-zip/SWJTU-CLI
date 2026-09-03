@@ -51,7 +51,15 @@ var aiAttachmentExtensions = []string{
 func aiPageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	baseURL = strings.TrimRight(baseURL, "/")
 	slug = strings.Trim(slug, "/")
-	if page <= 1 {
+	if baseURL == "" || slug == "" || page < 1 {
+		return ""
+	}
+	if extension == "" {
+		extension = ".htm"
+	} else if !strings.HasPrefix(extension, ".") {
+		extension = "." + extension
+	}
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
 
@@ -61,14 +69,17 @@ func aiPageURL(baseURL, slug string, page, totalPages int, extension string) str
 		}
 	}
 	if totalPages <= 1 {
-		return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, page, extension)
+		return ""
+	}
+	if page > totalPages {
+		return ""
 	}
 
 	filePage := totalPages - page + 1
 	if filePage < 1 {
 		// A request beyond the audited archive must not silently repeat the last
 		// page and create duplicate news.
-		filePage = 0
+		return ""
 	}
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, filePage, extension)
 }

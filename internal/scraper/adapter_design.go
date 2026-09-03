@@ -67,16 +67,23 @@ func init() {
 func designPageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	baseURL = strings.TrimRight(baseURL, "/")
 	slug = strings.Trim(slug, "/")
-	if page <= 1 {
+	if baseURL == "" || slug == "" || page < 1 {
+		return ""
+	}
+	if extension == "" {
+		extension = ".htm"
+	} else if !strings.HasPrefix(extension, ".") {
+		extension = "." + extension
+	}
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
-
-	filePage := page
-	if totalPages > 1 {
-		filePage = totalPages - page + 1
+	if totalPages < 1 || page > totalPages {
+		return ""
 	}
+	filePage := totalPages - page + 1
 	if filePage < 1 {
-		filePage = 1
+		return ""
 	}
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, filePage, extension)
 }

@@ -79,18 +79,24 @@ func bwcPageURL(baseURL, slug string, page, totalPages int, extension string) st
 	if !strings.HasPrefix(extension, ".") {
 		extension = "." + extension
 	}
-	if page < 1 {
-		page = 1
+	if page < 1 || (totalPages > 0 && page > totalPages) {
+		return ""
 	}
 	if slug == "" || strings.EqualFold(slug, "index") {
+		if page > 1 {
+			return ""
+		}
 		return baseURL + "/index" + extension
 	}
-	if page <= 1 || totalPages <= 1 {
+	if page == 1 {
 		return baseURL + "/" + slug + extension
+	}
+	if totalPages <= 1 {
+		return ""
 	}
 	generatedPage := totalPages - page + 1
 	if generatedPage < 1 {
-		generatedPage = 1
+		return ""
 	}
 	return baseURL + "/" + slug + "/" + strconv.Itoa(generatedPage) + extension
 }

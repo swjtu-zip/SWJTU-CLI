@@ -68,15 +68,18 @@ func incPageURL(baseURL, slug string, page, totalPages int, extension string) st
 	} else if !strings.HasPrefix(extension, ".") {
 		extension = "." + extension
 	}
-	if page < 1 {
-		page = 1
+	if baseURL == "" || slug == "" || page < 1 {
+		return ""
 	}
-	if page <= 1 || totalPages <= 1 {
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
+	}
+	if totalPages < 1 || page > totalPages {
+		return ""
 	}
 	physicalPage := totalPages - page + 1
 	if physicalPage < 1 {
-		physicalPage = 1
+		return ""
 	}
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, physicalPage, extension)
 }
@@ -86,7 +89,7 @@ func incPageURL(baseURL, slug string, page, totalPages int, extension string) st
 // so the first page is read before the requested logical page is resolved.
 func incListPage(slug string, page int) ([]model.NewsItem, int, error) {
 	if page < 1 {
-		page = 1
+		return nil, 0, fmt.Errorf("inc: page must be positive: %d", page)
 	}
 	firstURL := incPageURL(incBaseURL, slug, 1, 0, ".htm")
 	firstBody, err := incFetchHTML(firstURL)

@@ -61,6 +61,25 @@ func TestClxyPageURLUsesReverseGeneratedNumbering(t *testing.T) {
 	}
 }
 
+func TestClxyPageURLRejectsOutOfRange(t *testing.T) {
+	const baseURL = "https://clxy.swjtu.edu.cn"
+	for _, tc := range []struct {
+		name       string
+		page       int
+		totalPages int
+	}{
+		{name: "zero", page: 0, totalPages: 112},
+		{name: "past last", page: 113, totalPages: 112},
+		{name: "past one-page feed", page: 2, totalPages: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := clxyPageURL(baseURL, "sylm_xwgg/xyxw", tc.page, tc.totalPages, ".htm"); got != "" {
+				t.Fatalf("clxyPageURL() = %q for page %d/%d, want empty URL", got, tc.page, tc.totalPages)
+			}
+		})
+	}
+}
+
 func TestClxyListParserExtractsRowsDatesAndTypes(t *testing.T) {
 	html, err := os.ReadFile("testdata/clxy_list.html")
 	if err != nil {

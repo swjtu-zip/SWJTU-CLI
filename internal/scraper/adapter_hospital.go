@@ -186,14 +186,23 @@ func hospitalPageURL(baseURL, slug string, page, totalPages int, extension strin
 		extension = "." + extension
 	}
 	if slug == "" || slug == "index" || slug == "home" {
+		if page < 1 || page > 1 {
+			return ""
+		}
 		return baseURL + "/index" + extension
 	}
-	if page <= 1 || totalPages <= 1 {
+	if page < 1 {
+		return ""
+	}
+	if page == 1 {
 		return baseURL + "/" + slug + extension
+	}
+	if totalPages < 1 || page > totalPages {
+		return ""
 	}
 	filePage := totalPages - page + 1
 	if filePage < 1 {
-		filePage = 1
+		return ""
 	}
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, filePage, extension)
 }

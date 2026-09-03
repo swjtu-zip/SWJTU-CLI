@@ -67,6 +67,17 @@ func TestGenericListRejectsExternalAndPseudoURLs(t *testing.T) {
 	}
 }
 
+func TestGenericListCarriesSectionTypeAndPreciseDate(t *testing.T) {
+	html := []byte(`<html><head><meta name="pageType" content="2"><meta name="pageTitle" content="通知公告"></head><body><ul class="news-list"><li><a href="/info/1/2.htm">本站精确时间通知标题</a><span class="date">2026-08-31 14:03</span></li></ul></body></html>`)
+	items, err := parseBodaNewsList(html, "https://news.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].Type != "通知公告" || items[0].PublishedAt != "2026-08-31 14:03:00" {
+		t.Fatalf("generic metadata = %#v", items)
+	}
+}
+
 func TestGenericTitleLinkPatternRejectsExternalURL(t *testing.T) {
 	html := []byte(`<html><body><div class="content">
 <a title="外部文章标题足够长" href="https://other.example/news.htm">外部文章标题足够长</a>
@@ -241,6 +252,13 @@ func TestListNewsRangeRetainsPartialItemsWithPageError(t *testing.T) {
 	}
 	if len(items) != 1 || items[0].Title != "第一页文章标题" {
 		t.Fatalf("partial items = %#v, err=%v", items, err)
+	}
+}
+
+func TestParseTotalPagesRecognizesLegacyFanyeCounter(t *testing.T) {
+	raw := []byte(`<div id="fanye123">共1175条&nbsp;1/59</div><span class="p_no_d">1</span>`)
+	if got := parseTotalPages(raw); got != 59 {
+		t.Fatalf("legacy fanye total = %d, want 59", got)
 	}
 }
 

@@ -32,8 +32,12 @@ var cttSubPages = []string{
 	"xyywlist/wjxz",
 	"xyywlist/gzzd",
 	"tzgg/xytz",
+	"tzgg/rsxg",
+	"tzgg/tzzf",
+	"tzgg/wjxz",
 	"bkjxnew/jxgg",
 	"yjsjxnew/tzgg",
+	"yjsjxnew/wjxz",
 	"kxyjNew/kytz",
 	"sysglnew/tzgg",
 	"shpxnew/jxjyxx",
@@ -87,8 +91,14 @@ func cttPageURL(baseURL, slug string, page, totalPages int, extension string) st
 	if !strings.HasPrefix(extension, ".") {
 		extension = "." + extension
 	}
-	if page <= 1 {
+	if page < 1 || (totalPages > 0 && page > totalPages) {
+		return ""
+	}
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
+	}
+	if totalPages <= 1 {
+		return ""
 	}
 
 	filePage := page
@@ -96,7 +106,7 @@ func cttPageURL(baseURL, slug string, page, totalPages int, extension string) st
 		filePage = totalPages - page + 1
 	}
 	if filePage < 1 {
-		filePage = 1
+		return ""
 	}
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, filePage, extension)
 }

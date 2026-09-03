@@ -65,6 +65,24 @@ func TestBwcPageURLUsesReverseGeneratedNumbering(t *testing.T) {
 	}
 }
 
+func TestBwcPageURLRejectsOutOfRange(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		page       int
+		totalPages int
+	}{
+		{name: "zero", page: 0, totalPages: 87},
+		{name: "past last", page: 88, totalPages: 87},
+		{name: "past one-page feed", page: 2, totalPages: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := bwcPageURL(bwcFixtureBase, "tzgg", tc.page, tc.totalPages, ".htm"); got != "" {
+				t.Fatalf("bwcPageURL() = %q for page %d/%d, want empty URL", got, tc.page, tc.totalPages)
+			}
+		})
+	}
+}
+
 func TestBwcHomepageScopesOnlyRealTabs(t *testing.T) {
 	items, err := parseAdapter_bwcList(readBWCFixture(t, "bwc_home.html"), bwcFixtureBase)
 	if err != nil {

@@ -27,6 +27,7 @@ func TestBioengAdapterRegistered(t *testing.T) {
 		"rcpy/yjspy",
 		"rcpy/zwhzbx",
 		"xsgz",
+		"wjxz",
 		"sypt",
 		"sypt/tzgg",
 		"sypt/gzzd",
@@ -61,6 +62,21 @@ func TestBioengPageURLUsesReverseGeneratedPages(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := bioengPageURL(base, tt.slug, tt.page, tt.totalPages, ".htm"); got != tt.want {
 				t.Fatalf("bioengPageURL() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+	for _, tt := range []struct {
+		name       string
+		page       int
+		totalPages int
+	}{
+		{name: "zero", page: 0, totalPages: 47},
+		{name: "past last", page: 48, totalPages: 47},
+		{name: "unknown reverse total", page: 2, totalPages: 0},
+	} {
+		t.Run("out of range/"+tt.name, func(t *testing.T) {
+			if got := bioengPageURL(base, "xydt", tt.page, tt.totalPages, ".htm"); got != "" {
+				t.Fatalf("bioengPageURL() = %q for page %d/%d, want empty URL", got, tt.page, tt.totalPages)
 			}
 		})
 	}
@@ -162,6 +178,10 @@ func TestBioengParsersRejectShellsAndNonArticles(t *testing.T) {
 	homeShell := []byte(`<html><body><nav><a href="info/1000/1.htm">导航文章标题</a></nav><div class="main_visual"><a href="info/1000/2.htm">轮播文章标题</a></div></body></html>`)
 	if _, err := parseAdapter_bioengList(homeShell, "https://bioeng.swjtu.edu.cn"); err == nil {
 		t.Fatal("homepage shell with navigation/carousel was accepted as a list")
+	}
+	listShell := []byte(`<html><body><div class="content"><dl><dt>非文章链接</dt></dl></div></body></html>`)
+	if _, err := parseAdapter_bioengList(listShell, "https://bioeng.swjtu.edu.cn"); err == nil {
+		t.Fatal("list shell without valid article rows was accepted as a list")
 	}
 	nonArticle := []byte(`<html><head><meta name="pageType" content="1"></head><body><h1>错误页面</h1><div class="v_news_content"><p>不是文章</p></div></body></html>`)
 	if _, err := parseAdapter_bioengArticle(nonArticle, "https://bioeng.swjtu.edu.cn"); err == nil {

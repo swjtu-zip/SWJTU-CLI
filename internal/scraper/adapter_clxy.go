@@ -61,8 +61,14 @@ func init() {
 func clxyPageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	baseURL = strings.TrimRight(baseURL, "/")
 	slug = strings.Trim(slug, "/")
-	if page <= 1 {
+	if page < 1 || (totalPages > 0 && page > totalPages) {
+		return ""
+	}
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
+	}
+	if totalPages <= 1 {
+		return ""
 	}
 
 	filePage := page
@@ -70,7 +76,7 @@ func clxyPageURL(baseURL, slug string, page, totalPages int, extension string) s
 		filePage = totalPages - page + 1
 	}
 	if filePage < 1 {
-		filePage = 1
+		return ""
 	}
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, filePage, extension)
 }

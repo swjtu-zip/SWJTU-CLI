@@ -50,13 +50,31 @@ func TestBksyAdapterPageURLUsesReverseStaticNumbering(t *testing.T) {
 		{"tzgg/qb", "https://bksy.swjtu.edu.cn/tzgg/qb/2.htm", 242, 243},
 		{"tzgg/qb", "https://bksy.swjtu.edu.cn/tzgg/qb/1.htm", 243, 243},
 		{"tzgg/syjx", "https://bksy.swjtu.edu.cn/tzgg/syjx/2.htm", 2, 3},
-		{"tzgg/tsjy", "https://bksy.swjtu.edu.cn/tzgg/tsjy/2.htm", 2, 1},
-		{"tzgg/qb", "https://bksy.swjtu.edu.cn/tzgg/qb/2.htm", 2, 0},
+		{"tzgg/qb", "", 2, 0},
 	}
 	for _, tc := range cases {
 		if got := bksyAdapterPageURL(base, tc.slug, tc.page, tc.total, ".htm"); got != tc.want {
 			t.Errorf("page URL %s page %d/%d = %q, want %q", tc.slug, tc.page, tc.total, got, tc.want)
 		}
+	}
+}
+
+func TestBksyAdapterPageURLRejectsOutOfRange(t *testing.T) {
+	const base = "https://bksy.swjtu.edu.cn/"
+	for _, tc := range []struct {
+		name       string
+		page       int
+		totalPages int
+	}{
+		{name: "zero", page: 0, totalPages: 243},
+		{name: "past last", page: 244, totalPages: 243},
+		{name: "past one-page feed", page: 2, totalPages: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := bksyAdapterPageURL(base, "tzgg/qb", tc.page, tc.totalPages, ".htm"); got != "" {
+				t.Fatalf("bksyAdapterPageURL() = %q for page %d/%d, want empty URL", got, tc.page, tc.totalPages)
+			}
+		})
 	}
 }
 

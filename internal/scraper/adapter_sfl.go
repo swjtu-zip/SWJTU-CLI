@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -19,11 +20,51 @@ import (
 // so image cards and navigation links cannot become news items.
 func init() {
 	registerAdapter("sfl", SiteAdapter{
+		SubPages:     sflSubPages,
 		ParseList:    parseSflNews,
 		ParseArticle: parseSflArticle,
 		PageURL:      sflPageURL,
 		TotalPages:   sflTotalPages,
 	})
+}
+
+// The home page exposes several language/subject tabs.  They are separate
+// generated lists, not merely visual labels on xyxw.htm; keeping every live
+// list here prevents the archive from silently dropping a tab.
+var sflSubPages = []string{
+	"xyxw",
+	"zgzj1/xwgg",
+	"yyx/xwgg",
+	"gjhyx/xwgg",
+	"ryx/xwgg",
+	"swyyx/xwgg",
+	"dyx/xwgg",
+	"fex/xwgg",
+	"fyx/xwgg",
+	"bkjy/xwgg",
+	"ryx1/xwgg",
+	"xsky/xwgg",
+	"xsgz/xgdt",
+	"xsgz/jyxx",
+	"tzgg",
+}
+
+var sflFeedTypes = map[string]string{
+	"xyxw":       "学院新闻",
+	"zgzj1/xwgg": "中国语言文学系",
+	"yyx/xwgg":   "英语系",
+	"gjhyx/xwgg": "高级翻译学院",
+	"ryx/xwgg":   "俄语系",
+	"swyyx/xwgg": "商务英语系",
+	"dyx/xwgg":   "德语系",
+	"fex/xwgg":   "法语系",
+	"fyx/xwgg":   "翻译系",
+	"bkjy/xwgg":  "本科教育",
+	"ryx1/xwgg":  "日语系",
+	"xsky/xwgg":  "研究生教育",
+	"xsgz/xgdt":  "学生工作",
+	"xsgz/jyxx":  "就业信息",
+	"tzgg":       "通知公告",
 }
 
 var (
@@ -34,12 +75,6 @@ var (
 	sflPageCountRe   = regexp.MustCompile(`\b\d+\s*/\s*(\d+)\b`)
 	sflLabeledDateRe = regexp.MustCompile(`(?:发布时间|发布日期|发表日期|发表时间|日期)\s*[:：]\s*(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})`)
 )
-
-// The current xyxw snapshot advertises 58 generated pages. The generic
-// paginator does not recognize this site's old table-based pagination, so
-// this is only a fallback; parseSflNews records the advertised count when it
-// sees a canonical list page.
-const sflFallbackPageCount = 58
 
 var sflState = struct {
 	sync.RWMutex
@@ -63,7 +98,10 @@ func sflTargetSlug(slug string) string {
 func sflPageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	baseURL = strings.TrimRight(baseURL, "/")
 	slug = sflTargetSlug(slug)
-	if page <= 1 {
+	if page < 1 {
+		return ""
+	}
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
 
@@ -73,12 +111,12 @@ func sflPageURL(baseURL, slug string, page, totalPages int, extension string) st
 		pageCount = known
 	}
 	sflState.RUnlock()
-	if pageCount <= 1 {
-		pageCount = sflFallbackPageCount
+	if pageCount <= 1 || page > pageCount {
+		return ""
 	}
 	pageNumber := pageCount - page + 1
 	if pageNumber < 1 {
-		pageNumber = 1
+		return ""
 	}
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, pageNumber, extension)
 }
@@ -99,7 +137,7 @@ func parseSflNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 	if list.Length() > 0 {
 		list.Find("li > a[href]").Each(func(_ int, anchor *goquery.Selection) {
 			item := anchor.Closest("li")
-			addSflItem(&items, seen, anchor, sflDateFromListItem(item), baseURL)
+			addSflItem(&items, seen, anchor, sflDateFromListItem(item), sflTypeFromSelection(item, doc), baseURL)
 		})
 		sflRememberPageCount(list.Parent())
 		return items, nil
@@ -110,7 +148,7 @@ func parseSflNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 	// historical highlights and do not have reliable dates. Restricting the
 	// selector to news-text fixes the old parser's document-wide info/ scan.
 	doc.Find(".product-wrap .product .news-text ul li > a[href]").Each(func(_ int, anchor *goquery.Selection) {
-		addSflItem(&items, seen, anchor, "", baseURL)
+		addSflItem(&items, seen, anchor, "", sflTypeFromSelection(anchor.Closest(".product"), doc), baseURL)
 	})
 
 	// The notice half of the home page uses a split date: <dt>24<em>2026.06
@@ -121,13 +159,13 @@ func parseSflNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 		if anchor.Length() == 0 {
 			return
 		}
-		addSflItem(&items, seen, anchor, sflDateFromNotice(entry), baseURL)
+		addSflItem(&items, seen, anchor, sflDateFromNotice(entry), sflTypeFromSelection(entry.Closest(".product"), doc), baseURL)
 	})
 
 	return items, nil
 }
 
-func addSflItem(items *[]model.NewsItem, seen map[string]int, anchor *goquery.Selection, date, baseURL string) {
+func addSflItem(items *[]model.NewsItem, seen map[string]int, anchor *goquery.Selection, date, typ, baseURL string) {
 	if anchor == nil || anchor.Length() == 0 || isInNavArea(anchor) {
 		return
 	}
@@ -157,19 +195,51 @@ func addSflItem(items *[]model.NewsItem, seen map[string]int, anchor *goquery.Se
 			(*items)[index].Date = date
 			sflRememberDate(fullURL, date)
 		}
+		if (*items)[index].Type == "" && typ != "" {
+			(*items)[index].Type = typ
+		}
 		return
 	}
 
 	seen[fullURL] = len(*items)
 	*items = append(*items, model.NewsItem{
-		Title:    title,
-		URL:      fullURL,
-		Date:     date,
-		ParsedAt: time.Now(),
+		Title:       title,
+		URL:         fullURL,
+		Date:        date,
+		PublishedAt: normalizePublishedAt(date),
+		Type:        typ,
+		ParsedAt:    time.Now(),
 	})
 	if date != "" {
 		sflRememberDate(fullURL, date)
 	}
+}
+
+func sflTypeFromSelection(scope *goquery.Selection, doc *goquery.Document) string {
+	if scope != nil && scope.Length() > 0 {
+		// Do not inspect generic .title/.tit nodes here: on list rows those
+		// selectors are commonly the article headline itself.  Only use an
+		// explicit product heading or heading element outside the row links.
+		for _, selector := range []string{".product-title", ".product-tit", ".product-head", "h2", "h3", "h4"} {
+			value := strings.Join(strings.Fields(scope.Find(selector).First().Text()), " ")
+			if value != "" && !strings.Contains(value, "查看更多") {
+				return value
+			}
+		}
+	}
+	if doc != nil {
+		for _, selector := range []string{"meta[name=pageTitle]", ".inner-tit h6", ".inner-tit h5", ".position h1"} {
+			found := doc.Find(selector).First()
+			value := strings.TrimSpace(found.AttrOr("content", ""))
+			if value == "" {
+				value = strings.Join(strings.Fields(found.Text()), " ")
+			}
+			if value != "" {
+				return value
+			}
+		}
+	}
+	return ""
 }
 
 func sflArticleURL(baseURL, href string) (string, bool) {
@@ -264,15 +334,7 @@ func sflRememberPageCount(scope *goquery.Selection) {
 	if pagination := scope.Find(".lit").First(); pagination.Length() > 0 {
 		scope = pagination
 	}
-	text := strings.Join(strings.Fields(scope.Text()), " ")
-	match := sflPageCountRe.FindStringSubmatch(text)
-	if match == nil {
-		return
-	}
-	// The only configured sfl feed is redirected to xyxw; keeping this keyed
-	// prevents a future category from changing the index's page order.
-	var count int
-	_, _ = fmt.Sscanf(match[1], "%d", &count)
+	count := sflPageCountFromSelection(scope)
 	if count <= 1 {
 		return
 	}
@@ -281,12 +343,32 @@ func sflRememberPageCount(scope *goquery.Selection) {
 	sflState.Unlock()
 }
 
+func sflPageCountFromSelection(scope *goquery.Selection) int {
+	if scope == nil || scope.Length() == 0 {
+		return 0
+	}
+	text := strings.Join(strings.Fields(scope.Text()), " ")
+	match := sflPageCountRe.FindStringSubmatch(text)
+	if match == nil {
+		return 0
+	}
+	count, err := strconv.Atoi(match[1])
+	if err != nil || count < 1 {
+		return 0
+	}
+	return count
+}
+
 func sflTotalPages(slug string) (int, error) {
+	slug = sflTargetSlug(slug)
+	if sflFeedTypes[slug] == "" {
+		return 0, fmt.Errorf("sfl: %q is not an audited article-list route", slug)
+	}
 	baseURL := "http://sfl.swjtu.edu.cn"
 	if site := AllSites["sfl"]; site != nil && strings.TrimSpace(site.BaseURL) != "" {
 		baseURL = strings.TrimRight(site.BaseURL, "/")
 	}
-	body, err := fetch(fmt.Sprintf("%s/%s.htm", baseURL, sflTargetSlug(slug)))
+	body, err := fetch(fmt.Sprintf("%s/%s.htm", baseURL, slug))
 	if err != nil {
 		return 0, err
 	}
@@ -295,13 +377,22 @@ func sflTotalPages(slug string) (int, error) {
 		return 0, fmt.Errorf("sfl parse page count: %w", err)
 	}
 	sflRememberPageCount(doc.Find("body").First())
-	sflState.RLock()
-	count := sflState.pageCounts[sflTargetSlug(slug)]
-	sflState.RUnlock()
-	if count < 1 {
-		return 0, fmt.Errorf("sfl page count is missing")
+	if count := sflPageCountFromSelection(doc.Find("body").First()); count > 0 {
+		sflState.Lock()
+		sflState.pageCounts[slug] = count
+		sflState.Unlock()
+		return count, nil
 	}
-	return count, nil
+	sflState.RLock()
+	count := sflState.pageCounts[slug]
+	sflState.RUnlock()
+	if count > 0 {
+		return count, nil
+	}
+	if doc.Find("ul.list-group.rightnew").Length() > 0 {
+		return 1, nil
+	}
+	return 0, fmt.Errorf("sfl page count is missing for %s", slug)
 }
 
 func parseSflArticle(html []byte, baseURL string) (*model.Article, error) {
@@ -341,6 +432,10 @@ func parseSflArticle(html []byte, baseURL string) (*model.Article, error) {
 			article.Date = sflCachedDate("https://sfl.swjtu.edu.cn/info/" + match[1] + "/" + match[2] + ".htm")
 		}
 	}
+	if article.Type == "" {
+		article.Type = sflTypeFromSelection(doc.Find("body").First(), doc)
+	}
+	normalizeArticlePublishedAt(article)
 	return article, nil
 }
 

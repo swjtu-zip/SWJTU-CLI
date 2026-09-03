@@ -52,16 +52,15 @@ func smePageURL(baseURL, slug string, page, totalPages int, extension string) st
 	baseURL = strings.TrimRight(baseURL, "/")
 	slug = strings.Trim(slug, "/")
 	if page < 1 {
-		page = 1
+		return ""
 	}
 	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
-
-	pageNumber := page
-	if totalPages > 1 {
-		pageNumber = totalPages - page + 1
+	if totalPages < 1 || page > totalPages {
+		return ""
 	}
+	pageNumber := totalPages - page + 1
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, pageNumber, extension)
 }
 
@@ -376,6 +375,7 @@ func addSmeItem(items *[]model.NewsItem, seen map[string]int, item model.NewsIte
 		// occurrence's order, but let a later list copy supply its date.
 		if (*items)[index].Date == "" && item.Date != "" {
 			(*items)[index].Date = item.Date
+			(*items)[index].PublishedAt = item.PublishedAt
 		}
 		if !isSmeNewsTitle((*items)[index].Title) && isSmeNewsTitle(item.Title) {
 			(*items)[index].Title = item.Title

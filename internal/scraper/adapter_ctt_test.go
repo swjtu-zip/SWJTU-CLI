@@ -21,6 +21,11 @@ func TestCttAdapterRegistration(t *testing.T) {
 	if !reflect.DeepEqual(site.SubPages, cttSubPages) {
 		t.Fatalf("CTT sub-pages = %#v, want %#v", site.SubPages, cttSubPages)
 	}
+	for _, slug := range []string{"tzgg/rsxg", "tzgg/tzzf", "tzgg/wjxz", "yjsjxnew/wjxz"} {
+		if !hasCttSubPage(site.SubPages, slug) {
+			t.Errorf("CTT confirmed non-empty feed %q is not registered", slug)
+		}
+	}
 }
 
 func TestCttListParserExtractsCardsAndDates(t *testing.T) {
@@ -171,6 +176,13 @@ func TestCttEmptyListIsAValidEmptyResult(t *testing.T) {
 	}
 }
 
+func TestCttListParserRejectsUnrecognisedPage(t *testing.T) {
+	shell := []byte(`<html><head><title>CTT 首页</title></head><body><nav><a href="/info/1000/1.htm">导航文章</a></nav><main>静态页面</main></body></html>`)
+	if _, err := parseCttNews(shell, cttBaseURL); err == nil {
+		t.Fatal("unrecognised CTT page was accepted as an empty list")
+	}
+}
+
 func TestCttPageURLUsesReverseGeneratedNumbering(t *testing.T) {
 	const baseURL = "http://ctt.swjtu.edu.cn"
 	if got := cttPageURL(baseURL, "tzgg/xytz", 1, 20, ".htm"); got != baseURL+"/tzgg/xytz.htm" {
@@ -181,6 +193,21 @@ func TestCttPageURLUsesReverseGeneratedNumbering(t *testing.T) {
 	}
 	if got := cttPageURL(baseURL, "tzgg/xytz", 20, 20, ".htm"); got != baseURL+"/tzgg/xytz/1.htm" {
 		t.Fatalf("last page URL = %q", got)
+	}
+	for _, tc := range []struct {
+		name       string
+		page       int
+		totalPages int
+	}{
+		{name: "zero", page: 0, totalPages: 20},
+		{name: "past last", page: 21, totalPages: 20},
+		{name: "unknown reverse total", page: 2, totalPages: 0},
+	} {
+		t.Run("out of range/"+tc.name, func(t *testing.T) {
+			if got := cttPageURL(baseURL, "tzgg/xytz", tc.page, tc.totalPages, ".htm"); got != "" {
+				t.Fatalf("cttPageURL() = %q for page %d/%d, want empty URL", got, tc.page, tc.totalPages)
+			}
+		})
 	}
 }
 
@@ -246,4 +273,13 @@ func readCttFixture(t *testing.T, name string) []byte {
 		t.Fatal(err)
 	}
 	return body
+}
+
+func hasCttSubPage(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }

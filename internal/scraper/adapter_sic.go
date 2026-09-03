@@ -72,7 +72,7 @@ const (
 // count (xydt has 17 pages but its largest href is 16.htm).
 func sicListPage(slug string, page int) ([]model.NewsItem, int, error) {
 	if page < 1 {
-		page = 1
+		return nil, 0, fmt.Errorf("sic: requested page must be positive: %d", page)
 	}
 	firstURL := sicPageURL(sicCanonicalBaseURL, slug, 1, 0, ".htm")
 	firstBody, err := sicFetchHTML(firstURL)
@@ -252,10 +252,20 @@ func sicFetchArticle(articleURL string) (*model.Article, []byte, error) {
 func sicPageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	baseURL = strings.TrimRight(baseURL, "/")
 	slug = strings.Trim(slug, "/")
-	if page <= 1 || totalPages <= 1 {
+	if page < 1 || baseURL == "" || slug == "" {
+		return ""
+	}
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
-	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, totalPages-page+1, extension)
+	if totalPages <= 1 || page > totalPages {
+		return ""
+	}
+	physicalPage := totalPages - page + 1
+	if physicalPage < 1 {
+		return ""
+	}
+	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, physicalPage, extension)
 }
 
 // parseSicNews parses both the sic homepage and its static category pages.

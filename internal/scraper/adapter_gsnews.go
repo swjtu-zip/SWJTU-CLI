@@ -146,8 +146,8 @@ func gsnewsPageURL(baseURL, slug string, page, totalPages int, extension string)
 	} else if !strings.HasPrefix(extension, ".") {
 		extension = "." + extension
 	}
-	if page < 1 {
-		page = 1
+	if baseURL == "" || slug == "" || page < 1 {
+		return ""
 	}
 	if page <= 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
@@ -155,12 +155,12 @@ func gsnewsPageURL(baseURL, slug string, page, totalPages int, extension string)
 	if totalPages <= 1 {
 		totalPages = gsnewsPageTotals[slug]
 	}
-	physical := page
-	if totalPages > 1 {
-		physical = totalPages - page + 1
+	if totalPages < 1 || page > totalPages {
+		return ""
 	}
+	physical := totalPages - page + 1
 	if physical < 1 {
-		physical = 0
+		return ""
 	}
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, physical, extension)
 }

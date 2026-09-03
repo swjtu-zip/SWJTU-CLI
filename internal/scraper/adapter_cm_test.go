@@ -51,6 +51,25 @@ func TestCmPageURLUsesReverseGeneratedNumbering(t *testing.T) {
 	}
 }
 
+func TestCmPageURLRejectsOutOfRange(t *testing.T) {
+	const base = "https://cm.swjtu.edu.cn"
+	for _, tc := range []struct {
+		name       string
+		page       int
+		totalPages int
+	}{
+		{name: "zero", page: 0, totalPages: 36},
+		{name: "past last", page: 37, totalPages: 36},
+		{name: "past one-page feed", page: 2, totalPages: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := cmPageURL(base, "index/xyyw", tc.page, tc.totalPages, ".htm"); got != "" {
+				t.Fatalf("cmPageURL() = %q for page %d/%d, want empty URL", got, tc.page, tc.totalPages)
+			}
+		})
+	}
+}
+
 func TestCmHomepageParsesAllNewsModulesAndExcludesChrome(t *testing.T) {
 	body, err := os.ReadFile("testdata/cm_home.html")
 	if err != nil {

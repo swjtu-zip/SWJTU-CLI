@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/PuerkitoBio/goquery"
 
@@ -55,6 +56,9 @@ func fillMissingDates(items []model.NewsItem, parseArticle ParseArticleFunc, bas
 // ListNewsPage fetches a specific page of news.
 // page 1 = first page (slug.htm), page 2+ = slug/{total-page+2-page}.htm
 func (s *BodaSite) ListNewsPage(slug string, page int) ([]model.NewsItem, error) {
+	if page < 1 {
+		return nil, fmt.Errorf("list page must be positive: %d", page)
+	}
 	if s.ListPageFunc != nil {
 		items, _, err := s.ListPageFunc(slug, page)
 		return normalizeNewsItems(items), err
@@ -64,14 +68,24 @@ func (s *BodaSite) ListNewsPage(slug string, page int) ([]model.NewsItem, error)
 	if page > 1 && s.PageURL != nil {
 		// Some static sites number generated files from newest to oldest.
 		// Let the site's URL function map the user-facing page number.
-		totalPages, _ = s.GetTotalPages(slug)
+		var err error
+		totalPages, err = s.GetTotalPages(slug)
+		if err != nil {
+			return nil, fmt.Errorf("get total pages for %q: %w", slug, err)
+		}
 	}
 	listURL := s.listPageURL(slug, page, totalPages, ".htm")
+	if listURL == "" {
+		return nil, fmt.Errorf("no list URL for %q page %d/%d", slug, page, totalPages)
+	}
 
 	body, err := fetch(listURL)
 	if err != nil {
 		// Try .html extension
 		listURL = s.listPageURL(slug, page, totalPages, ".html")
+		if listURL == "" {
+			return nil, fmt.Errorf("no .html list URL for %q page %d/%d", slug, page, totalPages)
+		}
 		body, err = fetch(listURL)
 		if err != nil {
 			return nil, fmt.Errorf("tried .htm and .html: %w", err)
@@ -271,10 +285,20 @@ func parseTotalPages(html []byte) int {
 		return 0
 	}
 
-	// Pattern 1: explicit counters such as "第1/78页" or "共78页".
+	// Pattern 1: explicit counters such as "第1/78页", "共78页", or the
+	// older table-based "共1175条 1/59" counter emitted in #fanye cells.
 	pageCountRe := regexp.MustCompile(`(?:/|共|第)\s*(\d+)\s*页`)
-	for _, value := range []string{doc.Find(".p_t").Text(), doc.Find(".paging, .page, .p_pages").Text()} {
-		if match := pageCountRe.FindStringSubmatch(strings.Join(strings.Fields(value), "")); match != nil {
+	pageFractionRe := regexp.MustCompile(`(?:^|[^0-9])\d+\s*/\s*(\d+)(?:[^0-9]|$)`)
+	pagination := doc.Find(".p_t, .paging, .page, .p_pages, [id^='fanye'], .fanye")
+	for i := 0; i < pagination.Length(); i++ {
+		value := pagination.Eq(i).Text()
+		compact := strings.Join(strings.Fields(value), "")
+		if match := pageCountRe.FindStringSubmatch(compact); match != nil {
+			if total, err := strconv.Atoi(match[1]); err == nil && total > 0 {
+				return total
+			}
+		}
+		if match := pageFractionRe.FindStringSubmatch(value); match != nil {
 			if total, err := strconv.Atoi(match[1]); err == nil && total > 0 {
 				return total
 			}
@@ -292,7 +316,7 @@ func parseTotalPages(html []byte) int {
 
 	// Pattern 3: Find the highest page number in pagination links
 	maxPage := 0
-	doc.Find(".p_no a, .p_pages a").Each(func(i int, sel *goquery.Selection) {
+	pagination.Find(".p_no a, .p_no_d, .p_no, a").Each(func(i int, sel *goquery.Selection) {
 		href, _ := sel.Attr("href")
 		text := strings.TrimSpace(sel.Text())
 		// Try to extract page number from href or text. Handle an all-digit
@@ -546,6 +570,47 @@ func isInNavArea(sel *goquery.Selection) bool {
 	return false
 }
 
+// bodaListType returns the section label published by a list page.  A
+// pageType=1 document is a homepage, where pageTitle normally names the site
+// rather than the individual card's column, so it must not be copied to every
+// homepage item.  Site-specific adapters can still replace this value when a
+// page contains several independently labelled modules.
+func bodaListType(doc *goquery.Document) string {
+	if doc == nil {
+		return ""
+	}
+	pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"], meta[name="pagetype"]`).Last().AttrOr("content", ""))
+	if pageType == "1" || pageType == "3" {
+		return ""
+	}
+	for _, selector := range []string{
+		`meta[name="pageTitle"], meta[name="pagetitle"]`,
+		".main_titT a", ".main_titT h3", ".con_tit h3", ".list-title", ".list-head h1", ".list-head h2", ".list-head h3",
+	} {
+		value := strings.Join(strings.Fields(doc.Find(selector).Last().Text()), " ")
+		if strings.HasPrefix(selector, "meta[") {
+			value = strings.Join(strings.Fields(doc.Find(selector).Last().AttrOr("content", "")), " ")
+		}
+		if value != "" && value != "首页" && value != "网站首页" {
+			return value
+		}
+	}
+	return ""
+}
+
+func bodaRowType(row *goquery.Selection, defaultType string) string {
+	if row != nil && row.Length() > 0 {
+		for _, selector := range []string{".lanmu", ".category", ".type", ".tag"} {
+			value := strings.Join(strings.Fields(row.Find(selector).First().Text()), " ")
+			value = strings.Trim(value, "[]【】()（）")
+			if value != "" && !strings.Contains(value, "更多") {
+				return value
+			}
+		}
+	}
+	return strings.TrimSpace(defaultType)
+}
+
 func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
 	if err != nil {
@@ -554,6 +619,7 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 
 	items := make([]model.NewsItem, 0)
 	seen := make(map[string]bool)
+	defaultType := bodaListType(doc)
 	// A page with a real, but currently empty, list is a valid result.  A
 	// login/static shell with no recognisable list is not: returning nil error
 	// for the latter makes a broken tab look successfully crawled.
@@ -581,10 +647,12 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 		}
 		seen[fullURL] = true
 		items = append(items, model.NewsItem{
-			Title:    title,
-			URL:      fullURL,
-			Date:     date,
-			ParsedAt: time.Now(),
+			Title:       title,
+			URL:         fullURL,
+			Date:        date,
+			PublishedAt: normalizePublishedAt(date),
+			Type:        bodaRowType(sel, defaultType),
+			ParsedAt:    time.Now(),
 		})
 	})
 
@@ -624,7 +692,7 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 			}
 			if title == "" {
 				title = strings.TrimSpace(a.Text())
-				if len(title) > 100 {
+				if utf8.RuneCountInString(title) > 100 {
 					title = strings.TrimSpace(sel.Find(".xw-ul-tt, .line1, .txts, .a_block").Text())
 				}
 			}
@@ -643,7 +711,7 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 			if title == "" || href == "" || !isValidNewsTitle(title) {
 				return
 			}
-			if len(title) > 100 || strings.Contains(title, "来源") {
+			if utf8.RuneCountInString(title) > 100 || strings.Contains(title, "来源") {
 				return
 			}
 			// Try multiple date selectors
@@ -695,10 +763,12 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 			}
 			seen[fullURL] = true
 			items = append(items, model.NewsItem{
-				Title:    title,
-				URL:      fullURL,
-				Date:     date,
-				ParsedAt: time.Now(),
+				Title:       title,
+				URL:         fullURL,
+				Date:        date,
+				PublishedAt: normalizePublishedAt(date),
+				Type:        bodaRowType(sel, defaultType),
+				ParsedAt:    time.Now(),
 			})
 		})
 	}
@@ -733,7 +803,7 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 			if !isValidNewsTitle(title) {
 				return
 			}
-			if len(title) > 100 || strings.Contains(title, "来源") || strings.Contains(title, "日期") {
+			if utf8.RuneCountInString(title) > 100 || strings.Contains(title, "来源") || strings.Contains(title, "日期") {
 				return
 			}
 			fullURL := cleanURL(resolveURL(baseURL, href))
@@ -753,10 +823,12 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 			}
 
 			items = append(items, model.NewsItem{
-				Title:    title,
-				URL:      fullURL,
-				Date:     date,
-				ParsedAt: time.Now(),
+				Title:       title,
+				URL:         fullURL,
+				Date:        date,
+				PublishedAt: normalizePublishedAt(date),
+				Type:        bodaRowType(sel, defaultType),
+				ParsedAt:    time.Now(),
 			})
 		})
 	}
@@ -776,7 +848,7 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 			if title == "" || href == "" {
 				return
 			}
-			if !isValidNewsTitle(title) || len(title) > 100 {
+			if !isValidNewsTitle(title) || utf8.RuneCountInString(title) > 100 {
 				return
 			}
 			fullURL := cleanURL(resolveURL(baseURL, href))
@@ -805,10 +877,12 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 			}
 
 			items = append(items, model.NewsItem{
-				Title:    title,
-				URL:      fullURL,
-				Date:     date,
-				ParsedAt: time.Now(),
+				Title:       title,
+				URL:         fullURL,
+				Date:        date,
+				PublishedAt: normalizePublishedAt(date),
+				Type:        bodaRowType(sel, defaultType),
+				ParsedAt:    time.Now(),
 			})
 		})
 	}
@@ -824,7 +898,7 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 			if title == "" || href == "" {
 				return
 			}
-			if !isValidNewsTitle(title) || len(title) > 100 {
+			if !isValidNewsTitle(title) || utf8.RuneCountInString(title) > 100 {
 				return
 			}
 			fullURL := cleanURL(resolveURL(baseURL, href))
@@ -844,10 +918,12 @@ func parseBodaNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 			}
 
 			items = append(items, model.NewsItem{
-				Title:    title,
-				URL:      fullURL,
-				Date:     date,
-				ParsedAt: time.Now(),
+				Title:       title,
+				URL:         fullURL,
+				Date:        date,
+				PublishedAt: normalizePublishedAt(date),
+				Type:        bodaRowType(sel, defaultType),
+				ParsedAt:    time.Now(),
 			})
 		})
 	}

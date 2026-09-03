@@ -117,7 +117,7 @@ func init() {
 // total page count.
 func sistListPage(slug string, page int) ([]model.NewsItem, int, error) {
 	if page < 1 {
-		page = 1
+		return nil, 0, fmt.Errorf("sist: requested page must be positive: %d", page)
 	}
 	route := sistRouteForSlug(slug)
 	if route.navID == "" {
@@ -154,6 +154,15 @@ func sistListPage(slug string, page int) ([]model.NewsItem, int, error) {
 		total = len(rows)
 	}
 	totalPages := (total + pageSize - 1) / pageSize
+	if totalPages == 0 {
+		if page > 1 {
+			return nil, 0, fmt.Errorf("sist: requested page %d but %s is empty", page, slug)
+		}
+		return items, 0, nil
+	}
+	if page > totalPages {
+		return nil, 0, fmt.Errorf("sist: requested page %d but %s has %d pages", page, slug, totalPages)
+	}
 	return items, totalPages, nil
 }
 

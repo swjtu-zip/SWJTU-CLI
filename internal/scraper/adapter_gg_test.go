@@ -58,7 +58,7 @@ func TestGGPageURLUsesReverseStaticNumbering(t *testing.T) {
 		{"xwgg/xyxw", 13, 26, ggFixtureBaseURL + "/xwgg/xyxw/14.htm"},
 		{"xwgg/xyxw", 26, 26, ggFixtureBaseURL + "/xwgg/xyxw/1.htm"},
 		{"xzzx", 2, 2, ggFixtureBaseURL + "/xzzx/1.html"},
-		{"xwgg/xyxw", 2, 0, ggFixtureBaseURL + "/xwgg/xyxw/2.htm"},
+		{"xwgg/xyxw", 2, 0, ""},
 	}
 	for _, tc := range cases {
 		extension := ".htm"

@@ -77,18 +77,21 @@ func dwtzbPageURL(baseURL, slug string, page, totalPages int, extension string) 
 	if !strings.HasPrefix(extension, ".") {
 		extension = "." + extension
 	}
-	if page < 1 {
-		page = 1
-	}
 	if slug == "" {
 		slug = "index"
 	}
-	if page <= 1 || totalPages <= 1 {
+	if baseURL == "" || page < 1 {
+		return ""
+	}
+	if page == 1 {
 		return baseURL + "/" + slug + extension
+	}
+	if totalPages < 1 || page > totalPages {
+		return ""
 	}
 	generatedPage := totalPages - page + 1
 	if generatedPage < 1 {
-		generatedPage = 1
+		return ""
 	}
 	return baseURL + "/" + slug + "/" + strconv.Itoa(generatedPage) + extension
 }

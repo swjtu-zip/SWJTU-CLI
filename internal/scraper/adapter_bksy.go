@@ -91,13 +91,19 @@ func init() {
 func bksyAdapterPageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	baseURL = strings.TrimRight(baseURL, "/")
 	slug = strings.Trim(slug, "/")
-	if page <= 1 {
+	if baseURL == "" || slug == "" || page < 1 || (totalPages > 0 && page > totalPages) {
+		return ""
+	}
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
 
-	fileNumber := page
-	if totalPages > 1 {
-		fileNumber = totalPages - page + 1
+	if totalPages < 1 {
+		return ""
+	}
+	fileNumber := totalPages - page + 1
+	if fileNumber < 1 {
+		return ""
 	}
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, fileNumber, extension)
 }

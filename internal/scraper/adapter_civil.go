@@ -32,6 +32,35 @@ func init() {
 			"yjspy",
 			"tmxy",
 			"bkjx/bkjxgg",
+			"bkjx/bkjxgl",
+			"bkjx/wjbgxz",
+			"scientific/kytzgg",
+			"scientific/kydtxx",
+			"scientific/kycgzs",
+			"scientific/kyfczs",
+			"scientific/ABEgjqk",
+			"scientific/ITIgjqk",
+			"xsgz/xsgztz",
+			"xsgz/xsgzdt",
+			"xsgz/fdygzs",
+			"xsgz/bjjskx",
+			"xsgz/xzfczs",
+			"xsgz/xstd",
+			"xsgz/xshdhb",
+			"zsjy/bkzsxg",
+			"zsjy/yjszsxg",
+			"zsjy/xyzpxx",
+			"zsjy/jyzdypx",
+			"djgz/llyjxx",
+			"djgz/zzjsfz",
+			"djgz/djhdxx",
+			"djgz/zbgzxx",
+			"djgz/bmgzjy",
+			"djgz/ghzj",
+			"yjspy/yjsgg",
+			"yjspy/yjskcb",
+			"tmxy/xyjz",
+			"tmxy/xyh",
 			"zsjy/jxjypxzx_j",
 			"zgzx/zsgxjyzx",
 		},
@@ -58,10 +87,20 @@ var (
 func civilPageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	baseURL = strings.TrimRight(baseURL, "/")
 	slug = strings.Trim(slug, "/")
-	if page <= 1 || totalPages <= 1 {
+	if page < 1 || (totalPages > 0 && page > totalPages) {
+		return ""
+	}
+	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
 	}
-	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, totalPages-page+1, extension)
+	if totalPages <= 1 {
+		return ""
+	}
+	filePage := totalPages - page + 1
+	if filePage < 1 {
+		return ""
+	}
+	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, filePage, extension)
 }
 
 func parseCivilNews(html []byte, baseURL string) ([]model.NewsItem, error) {
@@ -108,6 +147,9 @@ func parseCivilNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 		})
 	}
 
+	if len(items) == 0 {
+		return nil, fmt.Errorf("civil page contains no recognized article entries")
+	}
 	return items, nil
 }
 

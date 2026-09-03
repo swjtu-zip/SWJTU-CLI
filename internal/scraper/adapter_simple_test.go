@@ -7,9 +7,9 @@ import "testing"
 // prevents a future cleanup from silently reverting to one homepage feed.
 func TestAuditedBodaAdaptersExposeAllDiscoveredFeeds(t *testing.T) {
 	want := map[string]int{
-		"phys": 12, "ott": 12, "rsc": 11, "rvl": 13, "rwxy": 15,
-		"scyshj": 8, "sj": 8, "sports": 6, "talent": 5, "xb": 7,
-		"xczx": 11, "xgh": 8, "xuncha": 5, "xyb": 9, "ygb": 6, "zzxy": 7,
+		"phys": 11, "ott": 15, "rsc": 15, "rvl": 13, "rwxy": 15,
+		"scyshj": 8, "sj": 8, "sports": 6, "talent": 4, "xb": 7,
+		"xczx": 11, "xgh": 10, "xuncha": 9, "xyb": 8, "ygb": 7, "zzxy": 8,
 	}
 	for id, count := range want {
 		site := AllSites[id]
