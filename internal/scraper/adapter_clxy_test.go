@@ -12,7 +12,7 @@ func TestClxyAdapterRegistration(t *testing.T) {
 	if !ok {
 		t.Fatal("clxy site is not registered")
 	}
-	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil {
+	if site.BaseURL != clxyCanonicalBaseURL || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.ArticleFetchFunc == nil {
 		t.Fatalf("clxy adapter hooks are incomplete: %+v", site)
 	}
 	want := []string{
@@ -87,8 +87,8 @@ func TestClxyListParserExtractsRowsDatesAndTypes(t *testing.T) {
 	}
 
 	items, err := parseAdapter_clxyList(html, "https://clxy.swjtu.edu.cn")
-	if err != nil {
-		t.Fatal(err)
+	if err == nil || !strings.Contains(err.Error(), "outside the site") {
+		t.Fatalf("external row was accepted as a successful complete feed: items=%#v err=%v", items, err)
 	}
 	if len(items) != 3 {
 		t.Fatalf("got %d clxy list items, want 3: %#v", len(items), items)
@@ -222,5 +222,155 @@ func TestClxyParserRejectsErrorAndNonArticleShells(t *testing.T) {
 	}
 	if _, err := parseAdapter_clxyArticle([]byte(`<html><head><title>西南交通大学材料科学与工程学院</title></head><body><div class="nav">首页</div></body></html>`), "https://clxy.swjtu.edu.cn"); err == nil {
 		t.Fatal("home shell was accepted as an article")
+	}
+}
+
+func TestClxyLiveHomeAndListFixtures(t *testing.T) {
+	home, err := os.ReadFile("testdata/clxy_home_live.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	items, err := parseAdapter_clxyList(home, clxyCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) == 0 {
+		t.Fatal("live homepage produced no local articles")
+	}
+	for _, typ := range []string{"学院新闻", "学院公告", "本科生", "研究生", "通知公告", "党建新闻", "公示公告", "团学快讯", "学术海报", "学术新闻", "科技动态"} {
+		found := false
+		for _, item := range items {
+			if item.Type == typ {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("live homepage did not expose local tab type %q", typ)
+		}
+	}
+
+	for _, name := range []string{"first", "middle", "last"} {
+		list, err := os.ReadFile("testdata/clxy_list_xyxw_" + name + "_live.html")
+		if err != nil {
+			t.Fatal(err)
+		}
+		parsed, err := parseAdapter_clxyList(list, clxyCanonicalBaseURL)
+		if err != nil || len(parsed) == 0 {
+			t.Fatalf("live xyxw %s page: items=%d err=%v", name, len(parsed), err)
+		}
+		if got := parseTotalPages(list); got != 112 {
+			t.Fatalf("live xyxw %s total pages = %d, want 112", name, got)
+		}
+	}
+	oob, err := os.ReadFile("testdata/clxy_list_404_live.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := parseAdapter_clxyList(oob, clxyCanonicalBaseURL); err == nil {
+		t.Fatal("live out-of-range response was accepted as an empty list")
+	}
+}
+
+func TestClxyLiveExternalOnlyListIsNotSuccessful(t *testing.T) {
+	html, err := os.ReadFile("testdata/clxy_list_jyzp_external_live.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	items, err := parseAdapter_clxyList(html, clxyCanonicalBaseURL)
+	if err == nil || !strings.Contains(err.Error(), "outside the site") {
+		t.Fatalf("external-only employment list was accepted: items=%#v err=%v", items, err)
+	}
+	if len(items) != 0 {
+		t.Fatalf("external-only employment list leaked local items: %#v", items)
+	}
+}
+
+func TestClxyLiveArticlesUseFixedMetadataAndFilterPseudoImages(t *testing.T) {
+	news, err := os.ReadFile("testdata/clxy_article_recent_news_live.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	article, err := parseAdapter_clxyArticle(news, clxyCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title != "材料学院在校企联合科研攻关方面取得重大进展" || article.Date != "2026-06-06" || article.PublishedAt != "2026-06-06 10:07:00" || article.Type != "学院新闻" {
+		t.Fatalf("recent article metadata = %#v", article)
+	}
+	if article.Author != "材料科学与工程学院" {
+		t.Fatalf("recent article author = %q", article.Author)
+	}
+	if len(article.Images) != 1 || !strings.HasSuffix(article.Images[0], ".png") || strings.Contains(article.ContentHTML, "blob:") {
+		t.Fatalf("recent article resources = images=%#v html has blob=%v", article.Images, strings.Contains(article.ContentHTML, "blob:"))
+	}
+
+	notice, err := os.ReadFile("testdata/clxy_article_recent_notice_live.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	noticeArticle, err := parseAdapter_clxyArticle(notice, clxyCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if noticeArticle.Date != "2026-05-28" || noticeArticle.PublishedAt != "2026-05-28 15:50:00" || noticeArticle.Type != "学院公告" {
+		t.Fatalf("notice metadata used a body date or wrong type: %#v", noticeArticle)
+	}
+	if len(noticeArticle.Attachments) != 1 || !strings.Contains(noticeArticle.Attachments[0].Name, "博士") {
+		t.Fatalf("notice attachment was not classified from the fixed content area: %#v", noticeArticle.Attachments)
+	}
+
+	academic, err := os.ReadFile("testdata/clxy_article_academic_live.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	academicArticle, err := parseAdapter_clxyArticle(academic, clxyCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if academicArticle.Date != "2026-05-20" || academicArticle.PublishedAt != "2026-05-20 18:57:00" || academicArticle.Type != "学术新闻" || len(academicArticle.Images) != 4 {
+		t.Fatalf("academic article metadata/resources = %#v", academicArticle)
+	}
+
+	poster, err := os.ReadFile("testdata/clxy_article_poster_live.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	posterArticle, err := parseAdapter_clxyArticle(poster, clxyCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if posterArticle.Date != "2021-04-15" || posterArticle.PublishedAt != "2021-04-15 21:48:00" || posterArticle.Type != "学术海报" {
+		t.Fatalf("poster metadata = %#v", posterArticle)
+	}
+	if len(posterArticle.Images) != 0 || strings.Contains(posterArticle.ContentHTML, "blob:") {
+		t.Fatalf("pseudo image was retained: images=%#v content_html=%q", posterArticle.Images, posterArticle.ContentHTML)
+	}
+}
+
+func TestClxyResourceValidationRejectsCaptchaAndChecksMagic(t *testing.T) {
+	captcha, err := os.ReadFile("testdata/clxy_attachment_captcha_live.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if clxyResourceBodyIsUsable("text/html;charset=UTF-8", captcha, "名单.pdf", false) {
+		t.Fatal("captcha HTML was accepted as a PDF attachment")
+	}
+	if clxyResourceBodyIsUsable("image/png", []byte("\x89PNG\r\n\x1a\n"), "poster.png", true) == false {
+		t.Fatal("valid PNG magic was rejected")
+	}
+	if clxyResourceBodyIsUsable("image/png", []byte("<html>captcha</html>"), "poster.png", true) {
+		t.Fatal("HTML body with an image content type was accepted")
+	}
+	if clxyResourceBodyIsUsable("application/pdf", []byte("%PDF-1.7"), "名单.pdf", false) == false {
+		t.Fatal("valid PDF magic was rejected")
+	}
+
+	permission, err := os.ReadFile("testdata/clxy_permission_live.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := parseAdapter_clxyList(permission, clxyCanonicalBaseURL); err == nil {
+		t.Fatal("live permission response was accepted as a list")
 	}
 }

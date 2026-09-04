@@ -1,10 +1,14 @@
 package scraper
 
 import (
+	"bytes"
 	"fmt"
 	htmlstd "html"
+	"io"
+	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,11 +19,10 @@ import (
 
 const mysCanonicalBaseURL = "https://mys.swjtu.edu.cn"
 
-// mysSubPages is the complete set of article-bearing routes exposed by the
-// current navigation, homepage tiles, and their hidden/secondary tabs.  The
-// pages which are visibly empty are kept as feeds too: the source publishes a
-// real empty list for them, and silently dropping those tabs would make it
-// impossible to distinguish an empty column from an unvisited column.
+// mysSubPages is the complete set of non-empty article-list routes exposed by
+// the current navigation, homepage tiles, and their hidden/secondary tabs.
+// Static detail pages and source pages whose list is empty are deliberately
+// excluded: exposing either as a successful empty feed hides a broken route.
 var mysSubPages = []string{
 	"djgz",
 	"djgz/djfc",
@@ -40,30 +43,22 @@ var mysSubPages = []string{
 	"xsgz/cxsj",
 	"xsgz/jdyd",
 	"xsgz/xswhhd",
-	"xsgz/xsczda",
 	"jxjw/jxgg",
 	"jxjw/pyfa/a2014jbkspyfa",
 	"jxjw/pyfa/a2015jbkspyfa",
 	"jxjw/pyfa/a2016jbkspyfa",
-	"jxjw/rykc",
 	"dwjl",
 	"dwjl/ryzj",
 	"dwjl/tzgg",
-	"dwjl/jhxm/zqjhxm",
-	"dwjl/jhxm/dqjhxm",
 	"dwjl/jhxm/yxxm",
 	"ryyy",
 	"ryyy/ssyhjzhdz",
-	"ryyy/tcjzhdz",
-	"ryyy/xzzhw",
-	"ryyy/yybtx",
 	"ryyy/lrxszx",
 	"ryyy/czzjd",
 	"tcjs",
 	"tcsx",
 	"tckc",
 	"tcqn",
-	"tcxg",
 	"tcsh",
 	"xyt",
 	"tcyw",
@@ -74,6 +69,8 @@ var (
 	mysPageCountRE   = regexp.MustCompile(`_simple_list_gotopage_fun\(\s*(\d+)\s*,`)
 	mysAttachmentRE  = regexp.MustCompile(`(?i)\.(?:docx?|xlsx?|pptx?|pdf|zip|rar|7z|txt|csv|wps|rtf)(?:$|[?#&])`)
 )
+
+const mysMaxResourceBytes = 32 << 20
 
 func init() {
 	// The registry entry predates the HTTPS canonical URL.  Keep all emitted
@@ -88,6 +85,7 @@ func init() {
 		ParseArticle: parseAdapter_mysArticle,
 		PageURL:      mysPageURL,
 		TotalPages:   mysTotalPages,
+		FetchArticle: mysFetchArticle,
 	})
 }
 
@@ -97,6 +95,9 @@ func init() {
 func mysPageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	baseURL = mysCanonicalBase(baseURL)
 	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if baseURL == "" || slug == "" {
+		return ""
+	}
 	if extension == "" {
 		extension = ".htm"
 	} else if !strings.HasPrefix(extension, ".") {
@@ -198,6 +199,10 @@ func parseAdapter_mysList(raw []byte, baseURL string) ([]model.NewsItem, error) 
 	rows.Each(func(_ int, row *goquery.Selection) {
 		mysAppendListRow(&items, seen, row, pageTypeName, baseURL)
 	})
+	// A pageType=2 response with a real list container but no rows is a valid
+	// empty source column.  mysSubPages intentionally excludes the currently
+	// observed empty columns, while keeping this distinction here lets callers
+	// tell an empty list from a static shell or an error response.
 	return items, nil
 }
 
@@ -375,24 +380,29 @@ func parseAdapter_mysArticle(raw []byte, baseURL string) (*model.Article, error)
 	if article.Title == "" {
 		return nil, fmt.Errorf("mys: article has no detail-page title")
 	}
-	if typ := mysArticleType(doc); typ != "" {
-		article.Type = typ
-	}
+	// The common parser has intentionally broad fallbacks for other Boda
+	// templates.  They are unsafe here: this site's body contains event dates,
+	// and a carousel detail can inherit the homepage's pageTitle/pageType.  All
+	// three fields below therefore come from the fixed detail nodes owned by
+	// this template.
+	article.Type = mysArticleType(doc)
+	article.Date, article.PublishedAt = mysArticleDate(doc)
 
 	content := doc.Find(".detail-box .v_news_content").First()
 	if content.Length() == 0 {
 		return nil, fmt.Errorf("mys: article has no .v_news_content container")
 	}
-	if strings.TrimSpace(content.Text()) == "" && content.Find("img, a, table").Length() == 0 {
+	contentForText := content.Clone()
+	contentForText.Find("script, style, noscript").Remove()
+	if strings.TrimSpace(contentForText.Text()) == "" && contentForText.Find("img, a, table").Length() == 0 {
 		return nil, fmt.Errorf("mys: article has empty content")
 	}
-	if strings.TrimSpace(article.Content) == "" {
-		clone := content.Clone()
-		clone.Find("script, style, noscript").Remove()
-		article.Content = mysCleanText(clone.Text())
-	}
+	article.Content = extractBodaContentText(contentForText)
+	article.Images = mysContentImages(content, baseURL)
+	article.Attachments = nil
 
 	mysAppendAttachments(article, doc, baseURL)
+	article.ContentHTML = mysContentHTML(content, baseURL)
 	normalizeArticlePublishedAt(article)
 	return article, nil
 }
@@ -452,18 +462,33 @@ func mysListType(doc *goquery.Document) string {
 }
 
 func mysArticleType(doc *goquery.Document) string {
-	if typ := mysListType(doc); typ != "" && typ != "正文" {
+	if doc == nil {
+		return ""
+	}
+	typ := mysCleanText(doc.Find(".news-list-box > .title > h4").First().Text())
+	if typ == "" {
+		typ = mysListType(doc)
+	}
+	switch typ {
+	case "", "首页", "网站首页", "正文":
+		return ""
+	default:
 		return typ
 	}
-	var result string
-	doc.Find(".crumbs-nav a").Each(func(_ int, anchor *goquery.Selection) {
-		value := mysCleanText(anchor.Text())
-		if value == "" || value == "首页" || value == "正文" || value == ">" {
-			return
-		}
-		result = strings.TrimRight(value, ">")
-	})
-	return strings.TrimSpace(result)
+}
+
+func mysArticleDate(doc *goquery.Document) (string, string) {
+	if doc == nil {
+		return "", ""
+	}
+	// The source emits publication metadata in the paragraph immediately under
+	// .detail-box .hd.  Restricting the search to this node keeps dates in the
+	// article body (活动时间/截止时间/会议时间) out of Article.Date.
+	meta := doc.Find(".detail-box .hd > p").First()
+	if meta.Length() == 0 {
+		return "", ""
+	}
+	return mysDateValues(meta.Text())
 }
 
 func mysAppendAttachments(article *model.Article, doc *goquery.Document, baseURL string) {
@@ -498,7 +523,10 @@ func mysAppendAttachments(article *model.Article, doc *goquery.Document, baseURL
 		if name == "" || (!labeled && !isDownload && !isFile) {
 			return
 		}
-		resolved := resolveURL(baseURL, href)
+		resolved := mysHTTPURL(baseURL, href)
+		if resolved == "" {
+			return
+		}
 		if seen[resolved] {
 			return
 		}
@@ -507,10 +535,78 @@ func mysAppendAttachments(article *model.Article, doc *goquery.Document, baseURL
 	})
 }
 
+func mysContentImages(content *goquery.Selection, baseURL string) []string {
+	images := make([]string, 0)
+	seen := make(map[string]bool)
+	if content == nil || content.Length() == 0 {
+		return images
+	}
+	content.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := mysImageURL(image, baseURL)
+		if resolved == "" || seen[resolved] {
+			return
+		}
+		seen[resolved] = true
+		images = append(images, resolved)
+	})
+	return images
+}
+
+func mysImageURL(image *goquery.Selection, baseURL string) string {
+	if image == nil || image.Length() == 0 {
+		return ""
+	}
+	for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+		if raw := strings.TrimSpace(image.AttrOr(attr, "")); raw != "" {
+			if resolved := mysResourceURL(baseURL, raw); resolved != "" {
+				return resolved
+			}
+		}
+	}
+	return ""
+}
+
+func mysContentHTML(content *goquery.Selection, baseURL string) string {
+	if content == nil || content.Length() == 0 {
+		return ""
+	}
+	clone := content.Clone()
+	clone.Find("script, style, noscript").Remove()
+	clone.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := mysImageURL(image, baseURL)
+		if resolved == "" {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vsbhref", "vurl"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	clone.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
+		href := strings.TrimSpace(anchor.AttrOr("href", ""))
+		if href == "" || strings.HasPrefix(strings.ToLower(href), "javascript:") {
+			return
+		}
+		if resolved := mysHTTPURL(baseURL, href); resolved != "" {
+			anchor.SetAttr("href", resolved)
+		}
+	})
+	result, err := clone.Html()
+	if err != nil {
+		return ""
+	}
+	return result
+}
+
 func mysArticleURL(baseURL, href string) (string, bool) {
 	fullURL := cleanURL(resolveURL(mysCanonicalBase(baseURL), strings.TrimSpace(href)))
 	parsed, err := url.Parse(fullURL)
 	if err != nil || parsed.Host == "" || !mysArticlePathRE.MatchString(parsed.Path) {
+		return "", false
+	}
+	scheme := strings.ToLower(parsed.Scheme)
+	if scheme != "http" && scheme != "https" {
 		return "", false
 	}
 	base, err := url.Parse(mysCanonicalBase(baseURL))
@@ -518,6 +614,327 @@ func mysArticleURL(baseURL, href string) (string, bool) {
 		return "", false
 	}
 	return fullURL, true
+}
+
+func mysHTTPURL(baseURL, raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || bodaIsPseudoResourceHref(raw) {
+		return ""
+	}
+	resolved := cleanURL(resolveURL(mysCanonicalBase(baseURL), raw))
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Host == "" {
+		return ""
+	}
+	scheme := strings.ToLower(parsed.Scheme)
+	if scheme != "http" && scheme != "https" {
+		return ""
+	}
+	return resolved
+}
+
+func mysResourceURL(baseURL, raw string) string {
+	resolved := bodaResourceURL(mysCanonicalBase(baseURL), raw)
+	if resolved == "" {
+		return ""
+	}
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Host == "" {
+		return ""
+	}
+	resourceText := strings.ToLower(parsed.Path + "?" + parsed.RawQuery)
+	for _, marker := range []string{"/captcha", "/verify", "/login", "/signin", "/createimage", "/placeholder", "/transparent", "/spacer", "/blank", "/loading", "/pixel.gif"} {
+		if strings.Contains(resourceText, marker) {
+			return ""
+		}
+	}
+	return resolved
+}
+
+func mysSameOriginResourceURL(baseURL, raw string) (string, bool) {
+	resolved := mysResourceURL(baseURL, raw)
+	if resolved == "" {
+		return "", false
+	}
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Hostname() == "" {
+		return "", false
+	}
+	base, err := url.Parse(mysCanonicalBase(baseURL))
+	if err != nil || base.Hostname() == "" || !strings.EqualFold(parsed.Hostname(), base.Hostname()) {
+		return "", false
+	}
+	return resolved, true
+}
+
+func mysSiteBaseURL() string {
+	if site := AllSites["mys"]; site != nil {
+		if baseURL := strings.TrimSpace(site.BaseURL); baseURL != "" {
+			return mysCanonicalBase(baseURL)
+		}
+	}
+	return mysCanonicalBaseURL
+}
+
+// mysFetchArticle is the live path used by BodaSite.GetArticleSnapshot.  The
+// pure HTML parser deliberately stays deterministic for fixtures; resource
+// URLs become usable only after this path verifies their HTTP response and
+// file signature.
+func mysFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	baseURL := mysSiteBaseURL()
+	fullURL, ok := mysArticleURL(baseURL, articleURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("mys: refusing non-local or non-detail URL %q", articleURL)
+	}
+	body, err := fetch(fullURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("mys: fetch article %s: %w", fullURL, err)
+	}
+	article, err := parseAdapter_mysArticle(body, baseURL)
+	if err != nil {
+		return nil, body, err
+	}
+
+	candidateAttachments := append([]model.Attachment(nil), article.Attachments...)
+	article.Images = mysVerifyImages(article.Images, baseURL)
+	article.Attachments = mysVerifyAttachments(article.Attachments, baseURL)
+	mysSanitizeContentHTML(article, baseURL, candidateAttachments)
+	if strings.TrimSpace(article.Content) == "" && len(article.Images) == 0 && len(article.Attachments) == 0 {
+		return nil, body, fmt.Errorf("mys: article has no usable content or resources")
+	}
+	return article, body, nil
+}
+
+func mysVerifyImages(images []string, baseURL string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool, len(images))
+	for _, image := range images {
+		resolved, ok := mysSameOriginResourceURL(baseURL, image)
+		if !ok || seen[resolved] {
+			continue
+		}
+		body, contentType, err := mysFetchResource(resolved, baseURL, true)
+		if err != nil || !mysResourceBodyIsUsable(contentType, body, resolved, true) {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func mysVerifyAttachments(attachments []model.Attachment, baseURL string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		resolved, ok := mysSameOriginResourceURL(baseURL, attachment.URL)
+		if !ok || seen[resolved] {
+			continue
+		}
+		body, contentType, err := mysFetchResource(resolved, baseURL, false)
+		if err != nil || !mysResourceBodyIsUsable(contentType, body, attachment.Name+" "+resolved, false) {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func mysFetchResource(rawURL, baseURL string, image bool) ([]byte, string, error) {
+	resolved, ok := mysSameOriginResourceURL(baseURL, rawURL)
+	if !ok {
+		return nil, "", fmt.Errorf("mys: refusing non-local resource %q", rawURL)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("mys: create resource request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	if image {
+		req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+	} else {
+		req.Header.Set("Accept", "application/octet-stream,application/pdf,*/*;q=0.8")
+	}
+	client := *defaultClient
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if len(via) == 0 || strings.EqualFold(next.URL.Hostname(), via[len(via)-1].URL.Hostname()) {
+			return nil
+		}
+		return http.ErrUseLastResponse
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("mys: fetch resource %s: %w", resolved, err)
+	}
+	defer response.Body.Close()
+	contentType := response.Header.Get("Content-Type")
+	if response.StatusCode != http.StatusOK {
+		return nil, contentType, fmt.Errorf("mys: resource %s: HTTP %d", resolved, response.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, mysMaxResourceBytes+1))
+	if err != nil {
+		return nil, contentType, fmt.Errorf("mys: read resource %s: %w", resolved, err)
+	}
+	if len(body) > mysMaxResourceBytes {
+		return nil, contentType, fmt.Errorf("mys: resource %s exceeds %d bytes", resolved, mysMaxResourceBytes)
+	}
+	return body, contentType, nil
+}
+
+func mysResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	for _, invalid := range []string{"text/html", "application/xhtml+xml", "application/json", "text/xml", "application/xml"} {
+		if mediaType == invalid {
+			return false
+		}
+	}
+	probe := body
+	if len(probe) > 4096 {
+		probe = probe[:4096]
+	}
+	lowerProbe := strings.ToLower(strings.TrimPrefix(strings.TrimSpace(string(probe)), "\ufeff"))
+	for _, marker := range []string{
+		"<!doctype html", "<html", "<head", "<body", "附件下载", "请输入验证码", "验证码下载附件",
+		"请先登录", "请登录后", "cloudflare", "just a moment", "安全验证", "请求已被阻断",
+	} {
+		if strings.Contains(lowerProbe, marker) {
+			return false
+		}
+	}
+
+	magic := mysResourceMagic(body)
+	if image {
+		return strings.HasPrefix(mediaType, "image/") && mysIsImageMagic(magic)
+	}
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf"):
+		return magic == "pdf"
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml"):
+		return magic == "zip"
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt") || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint":
+		return magic == "ole"
+	case strings.Contains(lowerName, ".zip") || strings.Contains(lowerName, ".rar") || strings.Contains(lowerName, ".7z") || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed":
+		return magic == "zip" || magic == "rar" || magic == "7z"
+	case strings.Contains(lowerName, ".txt") || strings.Contains(lowerName, ".csv"):
+		return mediaType == "text/plain" || mediaType == "text/csv" || mediaType == "application/octet-stream"
+	case mediaType == "text/plain" || mediaType == "text/csv" || mediaType == "text/tab-separated-values":
+		return true
+	case strings.HasPrefix(mediaType, "image/"):
+		return mysIsImageMagic(magic)
+	default:
+		return magic != ""
+	}
+}
+
+func mysIsImageMagic(magic string) bool {
+	switch magic {
+	case "jpeg", "png", "gif", "webp", "bmp", "tiff":
+		return true
+	default:
+		return false
+	}
+}
+
+func mysResourceMagic(body []byte) string {
+	switch {
+	case bytes.HasPrefix(body, []byte("%PDF-")):
+		return "pdf"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x03, 0x04}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x05, 0x06}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x07, 0x08}):
+		return "zip"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}):
+		return "ole"
+	case len(body) >= 3 && bytes.Equal(body[:3], []byte{0xff, 0xd8, 0xff}):
+		return "jpeg"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
+		return "png"
+	case len(body) >= 6 && (bytes.Equal(body[:6], []byte("GIF87a")) || bytes.Equal(body[:6], []byte("GIF89a"))):
+		return "gif"
+	case len(body) >= 12 && bytes.Equal(body[:4], []byte("RIFF")) && bytes.Equal(body[8:12], []byte("WEBP")):
+		return "webp"
+	case len(body) >= 2 && bytes.Equal(body[:2], []byte("BM")):
+		return "bmp"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{'I', 'I', '*', 0}) || bytes.Equal(body[:4], []byte{'M', 'M', 0, '*'})):
+		return "tiff"
+	case len(body) >= 7 && bytes.Equal(body[:7], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x00}):
+		return "rar"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x01, 0x00}):
+		return "rar"
+	case len(body) >= 6 && bytes.Equal(body[:6], []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}):
+		return "7z"
+	default:
+		return ""
+	}
+}
+
+func mysSanitizeContentHTML(article *model.Article, baseURL string, candidates []model.Attachment) {
+	if article == nil || strings.TrimSpace(article.ContentHTML) == "" {
+		return
+	}
+	candidateAttachments := make(map[string]bool, len(candidates))
+	for _, attachment := range candidates {
+		if resolved := mysHTTPURL(baseURL, attachment.URL); resolved != "" {
+			candidateAttachments[resolved] = true
+		}
+	}
+	validAttachments := make(map[string]bool, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		if resolved, ok := mysSameOriginResourceURL(baseURL, attachment.URL); ok {
+			validAttachments[resolved] = true
+		}
+	}
+	validImages := make(map[string]bool, len(article.Images))
+	for _, image := range article.Images {
+		if resolved, ok := mysSameOriginResourceURL(baseURL, image); ok {
+			validImages[resolved] = true
+		}
+	}
+
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader("<div id=\"mys-content-root\">" + article.ContentHTML + "</div>"))
+	if err != nil {
+		return
+	}
+	content := doc.Find("#mys-content-root").First()
+	content.Find("script, style, noscript").Remove()
+	content.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := mysImageURL(image, baseURL)
+		if resolved == "" || !validImages[resolved] {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vsbhref", "vurl"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	content.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
+		href := strings.TrimSpace(anchor.AttrOr("href", ""))
+		resolved := mysHTTPURL(baseURL, href)
+		if candidateAttachments[resolved] {
+			if !validAttachments[resolved] {
+				anchor.Remove()
+				return
+			}
+			anchor.SetAttr("href", resolved)
+			return
+		}
+		if resolved != "" {
+			anchor.SetAttr("href", resolved)
+		}
+	})
+	if html, htmlErr := content.Html(); htmlErr == nil {
+		article.ContentHTML = html
+	}
 }
 
 func mysCanonicalBase(raw string) string {

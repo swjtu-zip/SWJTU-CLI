@@ -1,12 +1,22 @@
 package scraper
 
 import (
+	"io"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
+
+	"swjtu-cli/internal/model"
 )
 
 const eseTestBaseURL = "https://ese.swjtu.edu.cn"
+
+type eseRoundTripper func(*http.Request) (*http.Response, error)
+
+func (roundTripper eseRoundTripper) RoundTrip(request *http.Request) (*http.Response, error) {
+	return roundTripper(request)
+}
 
 func loadESEFixture(t *testing.T, name string) []byte {
 	t.Helper()
@@ -19,10 +29,11 @@ func loadESEFixture(t *testing.T, name string) []byte {
 
 func TestESEAdapterRegistrationAndReversePagination(t *testing.T) {
 	site := AllSites["ese"]
-	if site == nil || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil {
+	if site == nil || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil || site.ArticleFetchFunc == nil {
 		t.Fatal("ESE adapter hooks are incomplete")
 	}
 	wantSubPages := []string{
+		"index/xwgg/zyxw",
 		"index/xwgg/hjyw",
 		"index/xwgg/tzgg1/qb",
 		"index/xwgg/tzgg1/dzbg",
@@ -42,8 +53,13 @@ func TestESEAdapterRegistrationAndReversePagination(t *testing.T) {
 		"xyyd/xyqy",
 		"index/cyxz",
 		"jyjx/jxcg/jxcgj",
+		"jyjx/rcpy/yjspy",
 		"jyjx/jypt/syjx/bksyjxxm",
+		"jyjx/jypt/syjx/yjssjjd",
+		"jyjx/jypt/syjx/syjxcyxz",
+		"jyjx/jypt/syjx/cxsyxm",
 		"jyjx/jypt/sysaq/sysaqgd",
+		"jyjx/jypt/sysaq/aqjsal",
 		"jyjx/rcpy/bkspy",
 		"kxyj/kypt",
 		"kxyj/kytd",
@@ -76,6 +92,12 @@ func TestESEAdapterRegistrationAndReversePagination(t *testing.T) {
 		{name: "second", slug: "index/xwgg/hjyw", page: 2, total: 38, want: eseTestBaseURL + "/index/xwgg/hjyw/37.htm"},
 		{name: "middle", slug: "index/xwgg/hjyw", page: 19, total: 38, want: eseTestBaseURL + "/index/xwgg/hjyw/20.htm"},
 		{name: "last", slug: "index/xwgg/hjyw", page: 38, total: 38, want: eseTestBaseURL + "/index/xwgg/hjyw/1.htm"},
+		{name: "important-middle", slug: "index/xwgg/zyxw", page: 2, total: 3, want: eseTestBaseURL + "/index/xwgg/zyxw/2.htm"},
+		{name: "important-last", slug: "index/xwgg/zyxw", page: 3, total: 3, want: eseTestBaseURL + "/index/xwgg/zyxw/1.htm"},
+		{name: "graduate-first", slug: "jyjx/rcpy/yjspy", page: 1, total: 1, want: eseTestBaseURL + "/jyjx/rcpy/yjspy.htm"},
+		{name: "graduate-out-of-range", slug: "jyjx/rcpy/yjspy", page: 2, total: 1, want: ""},
+		{name: "safety-first", slug: "jyjx/jypt/sysaq/aqjsal", page: 1, total: 1, want: eseTestBaseURL + "/jyjx/jypt/sysaq/aqjsal.htm"},
+		{name: "safety-out-of-range", slug: "jyjx/jypt/sysaq/aqjsal", page: 2, total: 1, want: ""},
 		{name: "unknown-total", slug: "index/xwgg/hjyw", page: 2, total: 0, want: ""},
 		{name: "one-page-out-of-range", slug: "djgz/ghgz", page: 2, total: 1, want: ""},
 		{name: "past-last-page", slug: "index/xwgg/hjyw", page: 39, total: 38, want: ""},
@@ -194,6 +216,94 @@ func TestESEListParserExtractsAllRowsAndPreciseDate(t *testing.T) {
 	}
 }
 
+func TestESENewlyAuditedListFixtures(t *testing.T) {
+	cases := []struct {
+		name          string
+		fixture       string
+		wantTotal     int
+		wantCount     int
+		wantType      string
+		wantFirstDate string
+		wantPublished string
+	}{
+		{
+			name:          "important news",
+			fixture:       "ese_adapter_important.html",
+			wantTotal:     3,
+			wantCount:     8,
+			wantType:      "重要新闻",
+			wantFirstDate: "2026-04-07",
+			wantPublished: "2026-04-07 19:30:29",
+		},
+		{
+			name:          "graduate training",
+			fixture:       "ese_adapter_graduate.html",
+			wantTotal:     1,
+			wantCount:     5,
+			wantType:      "研究生培养",
+			wantFirstDate: "2026-05-19",
+			wantPublished: "2026-05-19 11:15:34",
+		},
+		{
+			name:          "empty graduate practice base",
+			fixture:       "ese_adapter_empty_practice.html",
+			wantTotal:     1,
+			wantCount:     0,
+			wantType:      "",
+			wantFirstDate: "",
+			wantPublished: "",
+		},
+		{
+			name:          "laboratory downloads",
+			fixture:       "ese_adapter_lab_downloads.html",
+			wantTotal:     1,
+			wantCount:     3,
+			wantType:      "实验教学常用下载",
+			wantFirstDate: "2025-12-17",
+			wantPublished: "",
+		},
+		{
+			name:          "innovative projects",
+			fixture:       "ese_adapter_innovative_projects.html",
+			wantTotal:     1,
+			wantCount:     4,
+			wantType:      "创新实验项目",
+			wantFirstDate: "2025-12-22",
+			wantPublished: "",
+		},
+		{
+			name:          "safety cases",
+			fixture:       "ese_adapter_safety_cases.html",
+			wantTotal:     1,
+			wantCount:     3,
+			wantType:      "安全警示案例",
+			wantFirstDate: "2025-12-22",
+			wantPublished: "",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			raw := loadESEFixture(t, tc.fixture)
+			if got := eseTotalPagesFromHTML(raw); got != tc.wantTotal {
+				t.Fatalf("fixture total pages = %d, want %d", got, tc.wantTotal)
+			}
+			items, err := parseAdapter_eseList(raw, eseTestBaseURL)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(items) != tc.wantCount {
+				t.Fatalf("got %d items, want %d: %#v", len(items), tc.wantCount, items)
+			}
+			if tc.wantCount == 0 {
+				return
+			}
+			if items[0].Type != tc.wantType || items[0].Date != tc.wantFirstDate || items[0].PublishedAt != tc.wantPublished {
+				t.Fatalf("first item metadata = %+v, want type=%q date=%q published_at=%q", items[0], tc.wantType, tc.wantFirstDate, tc.wantPublished)
+			}
+		})
+	}
+}
+
 func TestESEArticleParserExtractsMetadataBodyImagesAndAttachment(t *testing.T) {
 	article, err := parseAdapter_eseArticle(loadESEFixture(t, "ese_adapter_article.html"), eseTestBaseURL)
 	if err != nil {
@@ -243,6 +353,115 @@ func TestESEPDFArticleParserExtractsViewerResources(t *testing.T) {
 	}
 }
 
+func TestESEArticleUsesFixedPublicationMetadataAndCompleteBody(t *testing.T) {
+	article, err := parseAdapter_eseArticle(loadESEFixture(t, "ese_adapter_audit_detail.html"), eseTestBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title != "关于开展环境学院年度工作安排的通知" || article.Type != "通知公告" {
+		t.Fatalf("unexpected audit article title/type: %q / %q", article.Title, article.Type)
+	}
+	if article.Source != "环境学院" || article.Author != "审计测试" || article.Date != "2025-12-30" || article.PublishedAt != "2025-12-30 16:50:06" {
+		t.Fatalf("unexpected audit article metadata: %+v", article)
+	}
+	for _, fragment := range []string{"本文正文说明年度工作安排和办理要求", "活动时间：2026年1月13日", "第一项办理事项", "第二项办理事项", "材料提交", "2026-01-08"} {
+		if !strings.Contains(article.Content, fragment) {
+			t.Fatalf("article body lost %q: %q", fragment, article.Content)
+		}
+	}
+	if strings.Contains(article.Date, "2026") || strings.Contains(article.PublishedAt, "2026") {
+		t.Fatalf("body activity date polluted publication metadata: %+v", article)
+	}
+	if len(article.Images) != 1 || article.Images[0] != eseTestBaseURL+"/__local/audit-valid.png" {
+		t.Fatalf("unexpected audit article images: %#v", article.Images)
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].Name != "年度安排.pdf" || article.Attachments[0].URL != eseTestBaseURL+"/system/_content/download.jsp?urltype=news.DownloadAttachUrl&owner=1&wbfileid=ESEAUDIT" {
+		t.Fatalf("unexpected audit article attachments: %#v", article.Attachments)
+	}
+	for _, fragment := range []string{"<table", "材料提交", "https://mp.weixin.qq.com/s/audit", `src="https://ese.swjtu.edu.cn/__local/audit-valid.png"`} {
+		if !strings.Contains(article.ContentHTML, fragment) {
+			t.Fatalf("content HTML lost %q: %s", fragment, article.ContentHTML)
+		}
+	}
+	for _, fragment := range []string{"blank.gif", "javascript:void", "伪图片"} {
+		if strings.Contains(article.ContentHTML, fragment) {
+			t.Fatalf("invalid resource leaked into content HTML: %q in %s", fragment, article.ContentHTML)
+		}
+	}
+}
+
+func TestESEResourceVerificationChecksHTTPStatusTypeAndMagic(t *testing.T) {
+	serverURL := "http://ese.test"
+	originalTransport := defaultClient.Transport
+	defaultClient.Transport = eseRoundTripper(func(request *http.Request) (*http.Response, error) {
+		var statusCode = http.StatusOK
+		contentType := "application/octet-stream"
+		var body []byte
+		switch request.URL.Path {
+		case "/valid.png":
+			contentType = "image/png"
+			body = []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n', 0x00}
+		case "/fake.png":
+			contentType = "image/png"
+			body = []byte("<!doctype html><h1>验证码下载附件</h1>")
+		case "/valid.pdf":
+			contentType = "application/pdf; charset=binary"
+			body = []byte("%PDF-1.7\n")
+		case "/fake.pdf":
+			contentType = "application/pdf"
+			body = []byte("<html><body>登录页面</body></html>")
+		case "/valid.docx":
+			contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+			body = []byte{'P', 'K', 0x03, 0x04, 'E', 'S', 'E'}
+		default:
+			statusCode = http.StatusNotFound
+			contentType = "text/html"
+			body = []byte("not found")
+		}
+		return &http.Response{
+			StatusCode: statusCode,
+			Status:     http.StatusText(statusCode),
+			Header:     http.Header{"Content-Type": []string{contentType}},
+			Body:       io.NopCloser(strings.NewReader(string(body))),
+			Request:    request,
+		}, nil
+	})
+	t.Cleanup(func() { defaultClient.Transport = originalTransport })
+
+	body, contentType, err := eseFetchResource(serverURL+"/valid.png", serverURL, true)
+	if err != nil || contentType != "image/png" || len(body) == 0 {
+		t.Fatalf("valid image fetch = len=%d type=%q err=%v", len(body), contentType, err)
+	}
+	if _, _, err := eseFetchResource(serverURL+"/fake.png", serverURL, true); err == nil {
+		t.Fatal("HTML captcha shell with image content type was accepted")
+	}
+	if _, _, err := eseFetchResource(serverURL+"/missing.pdf", serverURL, false); err == nil {
+		t.Fatal("HTTP 404 resource was accepted")
+	}
+
+	images := eseVerifyImages([]string{
+		serverURL + "/valid.png",
+		serverURL + "/fake.png",
+		serverURL + "/missing.png",
+		"javascript:void(0)",
+	}, serverURL)
+	if len(images) != 1 || images[0] != serverURL+"/valid.png" {
+		t.Fatalf("verified images = %#v", images)
+	}
+
+	attachments := eseVerifyAttachments([]model.Attachment{
+		{Name: "valid.pdf", URL: serverURL + "/valid.pdf"},
+		{Name: "fake.pdf", URL: serverURL + "/fake.pdf"},
+		{Name: "valid.docx", URL: serverURL + "/valid.docx"},
+	}, serverURL)
+	if len(attachments) != 2 {
+		t.Fatalf("verified attachments = %#v", attachments)
+	}
+	if attachments[0].Name != "valid.pdf" || attachments[0].Size != "9" || attachments[1].Name != "valid.docx" || attachments[1].Size != "7" {
+		t.Fatalf("verified attachment metadata = %#v", attachments)
+	}
+}
+
 func TestESEParsersRejectShellsAndKeepLegalEmptyLists(t *testing.T) {
 	empty := []byte(`<html><body><div class="ny-right"><div class="position"><h3>文化活动</h3></div><div class="list"><ul><li><a href="#">尚未发布</a></li></ul></div></div></body></html>`)
 	items, err := parseAdapter_eseList(empty, eseTestBaseURL)
@@ -261,5 +480,13 @@ func TestESEParsersRejectShellsAndKeepLegalEmptyLists(t *testing.T) {
 	verification := []byte(`<html><head><title>附件下载</title></head><body><h1>请输入验证码下载附件</h1></body></html>`)
 	if _, err := parseAdapter_eseArticle(verification, eseTestBaseURL); err == nil {
 		t.Fatal("ESE verification page was accepted as an article")
+	}
+
+	waf := loadESEFixture(t, "ese_adapter_waf.html")
+	if _, err := parseAdapter_eseList(waf, eseTestBaseURL); err == nil {
+		t.Fatal("ESE WAF page was accepted as a list")
+	}
+	if _, err := parseAdapter_eseArticle(waf, eseTestBaseURL); err == nil {
+		t.Fatal("ESE WAF page was accepted as an article")
 	}
 }

@@ -1,7 +1,11 @@
 package scraper
 
 import (
+	"bytes"
 	"fmt"
+	"html"
+	"io"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -14,6 +18,8 @@ import (
 )
 
 const oalmCanonicalBaseURL = "https://oalm.swjtu.edu.cn"
+
+const oalmMaxResourceBytes = 32 << 20
 
 // oalmSubPages is the complete set of article lists found in the live
 // navigation and in the homepage-only cards.  Department profile pages,
@@ -89,6 +95,7 @@ func init() {
 		PageURL:      oalmPageURL,
 		ListPage:     oalmListPage,
 		TotalPages:   oalmTotalPages,
+		FetchArticle: oalmFetchArticle,
 	})
 }
 
@@ -129,7 +136,16 @@ func oalmCanonicalBase(baseURL string) string {
 	if baseURL == "" {
 		return oalmCanonicalBaseURL
 	}
-	return oalmCanonicalBaseURL
+	parsed, err := url.Parse(baseURL)
+	if err != nil || parsed.Hostname() == "" {
+		return oalmCanonicalBaseURL
+	}
+	// Keep the production hostname canonical, while allowing httptest callers
+	// to exercise the complete fetch path without changing global URLs.
+	if strings.EqualFold(parsed.Hostname(), "oalm.swjtu.edu.cn") {
+		return oalmCanonicalBaseURL
+	}
+	return baseURL
 }
 
 func oalmKnownFeed(slug string) bool {
@@ -226,6 +242,9 @@ func oalmDocument(raw []byte) (*goquery.Document, error) {
 }
 
 func oalmPageCount(doc *goquery.Document, slug string) (int, error) {
+	if err := oalmRejectPage(doc, "list"); err != nil {
+		return 0, err
+	}
 	if strings.TrimSpace(doc.Find(`meta[name="pageType"]`).AttrOr("content", "")) != "2" {
 		return 0, fmt.Errorf("oalm: %s is not a list page", slug)
 	}
@@ -255,6 +274,9 @@ func oalmPageCount(doc *goquery.Document, slug string) (int, error) {
 func parseAdapter_oalmList(raw []byte, baseURL string) ([]model.NewsItem, error) {
 	doc, err := oalmDocument(raw)
 	if err != nil {
+		return nil, err
+	}
+	if err := oalmRejectPage(doc, "list"); err != nil {
 		return nil, err
 	}
 	pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"]`).AttrOr("content", ""))
@@ -299,6 +321,10 @@ func parseAdapter_oalmList(raw []byte, baseURL string) ([]model.NewsItem, error)
 			return
 		}
 		date, publishedAt := oalmRowDate(row)
+		if date == "" {
+			invalidRows++
+			return
+		}
 		seen[fullURL] = true
 		items = append(items, model.NewsItem{
 			Title:       title,
@@ -373,7 +399,10 @@ func oalmRowTitle(row, anchor *goquery.Selection) string {
 }
 
 func oalmRowDate(row *goquery.Selection) (string, string) {
-	for _, selector := range []string{".time-author-eyes", ".time-box"} {
+	// The two live list templates expose publication metadata in these fields.
+	// Do not fall back to the whole row: titles and summaries frequently contain
+	// event/deadline dates which are not publication dates.
+	for _, selector := range []string{".time-author-eyes > span:first-child", ".time-author-eyes .time", ".time-author-eyes", ".time", "time"} {
 		if found := row.Find(selector).First(); found.Length() > 0 {
 			if date, publishedAt := oalmDateValues(found.Text()); date != "" {
 				return date, publishedAt
@@ -387,7 +416,7 @@ func oalmRowDate(row *goquery.Selection) (string, string) {
 			return date, publishedAt
 		}
 	}
-	return oalmDateValues(row.Text())
+	return "", ""
 }
 
 func oalmDateValues(raw string) (string, string) {
@@ -547,7 +576,7 @@ func oalmArticleURL(baseURL, href string) (string, bool) {
 	if err != nil || parsed.Hostname() == "" || !oalmArticlePathRE.MatchString(parsed.Path) {
 		return "", false
 	}
-	base, _ := url.Parse(oalmCanonicalBaseURL)
+	base, _ := url.Parse(oalmCanonicalBase(baseURL))
 	if !strings.EqualFold(parsed.Hostname(), base.Hostname()) {
 		return "", false
 	}
@@ -585,11 +614,14 @@ func parseAdapter_oalmArticle(raw []byte, baseURL string) (*model.Article, error
 	if err != nil {
 		return nil, err
 	}
+	if err := oalmRejectPage(doc, "article"); err != nil {
+		return nil, err
+	}
 	pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"]`).AttrOr("content", ""))
 	if pageType != "3" {
 		return nil, fmt.Errorf("oalm: page is not an article (pageType %q)", pageType)
 	}
-	shell := doc.Find(".news-details-desc .zw, .zw").First()
+	shell := doc.Find(".news-details-desc > .zw, .news-details-desc .zw").First()
 	if shell.Length() == 0 {
 		return nil, fmt.Errorf("oalm: article shell is missing")
 	}
@@ -597,24 +629,33 @@ func parseAdapter_oalmArticle(raw []byte, baseURL string) (*model.Article, error
 	if !oalmValidTitle(title) {
 		return nil, fmt.Errorf("oalm: article title is missing")
 	}
-	if shell.Find(".v_news_content").First().Length() == 0 {
+	contentSel := shell.Find("#vsb_content .v_news_content").First()
+	if contentSel.Length() == 0 {
+		contentSel = shell.Find(".v_news_content").First()
+	}
+	if contentSel.Length() == 0 {
 		return nil, fmt.Errorf("oalm: article content shell is missing")
 	}
-
-	article, err := parseBodaArticle(raw, oalmCanonicalBase(baseURL))
-	if err != nil {
-		return nil, fmt.Errorf("oalm: parse article body: %w", err)
+	date, publishedAt := oalmDateValues(shell.Find(".msg").First().Text())
+	if date == "" {
+		return nil, fmt.Errorf("oalm: article publication date is missing")
 	}
-	article.Title = title
-	if date, publishedAt := oalmDateValues(shell.Find(".msg").First().Text()); date != "" {
-		article.Date = date
-		article.PublishedAt = publishedAt
-	}
-	article.Type = oalmArticleType(doc)
-	if article.Type == "" {
+	typ := oalmArticleType(doc)
+	if typ == "" {
 		return nil, fmt.Errorf("oalm: article type is missing")
 	}
-	oalmAppendAttachments(article, doc, oalmCanonicalBase(baseURL))
+
+	baseURL = oalmCanonicalBase(baseURL)
+	article := &model.Article{
+		Title:       title,
+		Date:        date,
+		PublishedAt: publishedAt,
+		Type:        typ,
+		Content:     extractBodaContentText(contentSel),
+	}
+	oalmNormalizeContentResources(article, contentSel, baseURL)
+	oalmAppendAttachments(article, doc, baseURL)
+	oalmParseAdjacentArticles(article, doc, baseURL)
 	normalizeArticlePublishedAt(article)
 	if strings.TrimSpace(article.Content) == "" && len(article.Images) == 0 && len(article.Attachments) == 0 {
 		return nil, fmt.Errorf("oalm: article has no body or resources")
@@ -623,7 +664,10 @@ func parseAdapter_oalmArticle(raw []byte, baseURL string) (*model.Article, error
 }
 
 func oalmArticleType(doc *goquery.Document) string {
-	spans := doc.Find(".news-details-desc .mbx span, .mbx span")
+	spans := doc.Find(".news-details-desc > .top-msg .mbx span, .news-details-desc .top-msg .mbx span").First().Parent().Find("span")
+	if spans.Length() == 0 {
+		spans = doc.Find(".news-details-desc .mbx span").First().Parent().Find("span")
+	}
 	for i := spans.Length() - 1; i >= 0; i-- {
 		text := strings.Join(strings.Fields(spans.Eq(i).Text()), " ")
 		if text != "" && text != "首页" && text != "正文" {
@@ -634,7 +678,7 @@ func oalmArticleType(doc *goquery.Document) string {
 }
 
 func oalmAppendAttachments(article *model.Article, doc *goquery.Document, baseURL string) {
-	if article == nil {
+	if article == nil || doc == nil {
 		return
 	}
 	seen := make(map[string]bool, len(article.Attachments))
@@ -643,17 +687,10 @@ func oalmAppendAttachments(article *model.Article, doc *goquery.Document, baseUR
 	}
 	doc.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
 		href := strings.TrimSpace(anchor.AttrOr("href", ""))
-		if !strings.Contains(strings.ToLower(href), "download.jsp") {
+		if anchor.Closest(".news-details-desc").Length() == 0 || !bodaLooksLikeAttachmentLink(anchor, href) {
 			return
 		}
-		li := anchor.Closest("li")
-		if li.Length() == 0 || !strings.Contains(strings.Join(strings.Fields(li.Text()), " "), "附件") {
-			return
-		}
-		name := strings.Join(strings.Fields(anchor.Text()), " ")
-		if name == "" {
-			name = strings.TrimSpace(anchor.AttrOr("download", ""))
-		}
+		name := oalmAttachmentName(anchor, href)
 		fullURL := resolveURL(baseURL, href)
 		if name == "" || fullURL == "" || seen[fullURL] {
 			return
@@ -661,4 +698,425 @@ func oalmAppendAttachments(article *model.Article, doc *goquery.Document, baseUR
 		seen[fullURL] = true
 		article.Attachments = append(article.Attachments, model.Attachment{Name: name, URL: fullURL})
 	})
+}
+
+// oalmFetchArticle is the live detail path. Parsing remains deterministic for
+// saved fixtures; this wrapper verifies every advertised resource before it is
+// exposed to the archive. The source returns HTTP 200 HTML for some failed
+// attachment/CAPTCHA requests, so status alone is insufficient.
+func oalmFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	baseURL := oalmSiteBaseURL()
+	fullURL, ok := oalmArticleURL(baseURL, articleURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("oalm: refusing non-local or non-detail URL %q", articleURL)
+	}
+	body, err := fetch(fullURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("oalm: fetch article %s: %w", fullURL, err)
+	}
+	article, err := parseAdapter_oalmArticle(body, baseURL)
+	if err != nil {
+		return nil, body, fmt.Errorf("oalm: parse article %s: %w", fullURL, err)
+	}
+	article.Images = oalmVerifyImages(article.Images, baseURL)
+	article.Attachments = oalmVerifyAttachments(article.Attachments, baseURL)
+	oalmSanitizeContentHTML(article, baseURL)
+	return article, body, nil
+}
+
+func oalmSiteBaseURL() string {
+	if site := AllSites["oalm"]; site != nil && strings.TrimSpace(site.BaseURL) != "" {
+		return strings.TrimRight(strings.TrimSpace(site.BaseURL), "/")
+	}
+	return oalmCanonicalBaseURL
+}
+
+func oalmNormalizeContentResources(article *model.Article, content *goquery.Selection, baseURL string) {
+	if article == nil || content == nil || content.Length() == 0 {
+		return
+	}
+	clone := content.Clone()
+	seenImages := make(map[string]bool)
+	clone.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := oalmImageURL(image, baseURL)
+		if resolved == "" {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vurl"} {
+			image.RemoveAttr(attr)
+		}
+		if !seenImages[resolved] {
+			seenImages[resolved] = true
+			article.Images = append(article.Images, resolved)
+		}
+	})
+	clone.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
+		href := html.UnescapeString(strings.TrimSpace(anchor.AttrOr("href", "")))
+		if bodaIsPseudoResourceHref(href) {
+			anchor.RemoveAttr("href")
+			anchor.RemoveAttr("download")
+			return
+		}
+		if !bodaLooksLikeAttachmentLink(anchor, href) {
+			return
+		}
+		resolved := oalmResourceURL(baseURL, href)
+		if resolved == "" {
+			anchor.RemoveAttr("href")
+			anchor.RemoveAttr("download")
+			return
+		}
+		anchor.SetAttr("href", resolved)
+	})
+	if contentHTML, err := clone.Html(); err == nil {
+		article.ContentHTML = contentHTML
+	}
+}
+
+func oalmParseAdjacentArticles(article *model.Article, doc *goquery.Document, baseURL string) {
+	if article == nil || doc == nil {
+		return
+	}
+	doc.Find(".news_sxp li a[href]").Each(func(_ int, link *goquery.Selection) {
+		text := strings.Join(strings.Fields(link.Text()), " ")
+		resolved, ok := oalmArticleURL(baseURL, link.AttrOr("href", ""))
+		if !ok {
+			return
+		}
+		switch {
+		case strings.HasPrefix(text, "上一篇"):
+			article.PrevURL, article.PrevTitle = resolved, text
+		case strings.HasPrefix(text, "下一篇"):
+			article.NextURL, article.NextTitle = resolved, text
+		}
+	})
+}
+
+func oalmAttachmentName(anchor *goquery.Selection, href string) string {
+	for _, value := range []string{anchor.AttrOr("download", ""), anchor.AttrOr("name", ""), anchor.AttrOr("title", ""), anchor.Text()} {
+		value = strings.Join(strings.Fields(value), " ")
+		if value != "" && value != "下载" && value != "点击下载" && value != "附件" {
+			return value
+		}
+	}
+	parsed, err := url.Parse(href)
+	if err != nil {
+		return ""
+	}
+	parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
+	if len(parts) == 0 {
+		return ""
+	}
+	return html.UnescapeString(parts[len(parts)-1])
+}
+
+func oalmImageURL(image *goquery.Selection, baseURL string) string {
+	if image == nil || image.Length() == 0 {
+		return ""
+	}
+	for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+		if value := oalmResourceURL(baseURL, image.AttrOr(attr, "")); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func oalmResourceURL(baseURL, raw string) string {
+	raw = html.UnescapeString(strings.TrimSpace(raw))
+	if raw == "" || bodaIsPseudoResourceHref(raw) {
+		return ""
+	}
+	resolved := cleanURL(resolveURL(baseURL, raw))
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Host == "" {
+		return ""
+	}
+	if scheme := strings.ToLower(parsed.Scheme); scheme != "http" && scheme != "https" {
+		return ""
+	}
+	path := strings.ToLower(parsed.Path)
+	for _, placeholder := range []string{"/spacer.gif", "/blank.gif", "/transparent.gif", "/loading.gif"} {
+		if strings.HasSuffix(path, placeholder) {
+			return ""
+		}
+	}
+	return resolved
+}
+
+func oalmVerifyImages(images []string, baseURL string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool, len(images))
+	for _, raw := range images {
+		resolved := oalmResourceURL(baseURL, raw)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		if _, _, err := oalmFetchResource(resolved, baseURL, true); err != nil {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func oalmVerifyAttachments(attachments []model.Attachment, baseURL string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		resolved := oalmResourceURL(baseURL, attachment.URL)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, _, err := oalmFetchResource(resolved, baseURL, false)
+		if err != nil {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func oalmFetchResource(rawURL, baseURL string, image bool) ([]byte, string, error) {
+	resolved := oalmResourceURL(baseURL, rawURL)
+	if resolved == "" {
+		return nil, "", fmt.Errorf("oalm: refusing invalid resource %q", rawURL)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("oalm: create resource request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+	if !image {
+		req.Header.Set("Accept", "application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	}
+	if strings.TrimSpace(baseURL) != "" {
+		req.Header.Set("Referer", strings.TrimRight(baseURL, "/")+"/")
+	}
+	client := *defaultClient
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if len(via) == 0 || strings.EqualFold(next.URL.Hostname(), via[0].URL.Hostname()) {
+			return nil
+		}
+		return http.ErrUseLastResponse
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("oalm: fetch resource %s: %w", resolved, err)
+	}
+	defer response.Body.Close()
+	contentType := response.Header.Get("Content-Type")
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return nil, contentType, fmt.Errorf("oalm: resource %s: HTTP %d", resolved, response.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, oalmMaxResourceBytes+1))
+	if err != nil {
+		return nil, contentType, fmt.Errorf("oalm: read resource %s: %w", resolved, err)
+	}
+	if len(body) > oalmMaxResourceBytes || !oalmResourceBodyIsUsable(contentType, body, resolved, image) {
+		return nil, contentType, fmt.Errorf("oalm: resource %s returned invalid type, shell, signature, or size", resolved)
+	}
+	return body, contentType, nil
+}
+
+func oalmResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	if mediaType == "" {
+		return false
+	}
+	for _, invalid := range []string{"text/html", "application/xhtml+xml", "application/json", "text/xml", "application/xml"} {
+		if mediaType == invalid {
+			return false
+		}
+	}
+	probe := bytes.TrimSpace(bytes.TrimPrefix(body, []byte{0xef, 0xbb, 0xbf}))
+	if len(probe) > 4096 {
+		probe = probe[:4096]
+	}
+	textProbe := strings.ToLower(string(probe))
+	for _, marker := range []string{"<!doctype html", "<html", "<head", "<body", "附件下载", "请输入验证码", "验证码下载附件", "请先登录", "请登录后", "登录页面", "页面不存在", "404 not found", "access denied", "cloudflare", "just a moment", "安全验证", "请求已被阻断", "captcha", "waf"} {
+		if strings.Contains(textProbe, marker) {
+			return false
+		}
+	}
+
+	magic := oalmResourceMagic(body)
+	if image {
+		return strings.HasPrefix(mediaType, "image/") && oalmImageMagicMatches(mediaType, magic)
+	}
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf"):
+		return magic == "pdf"
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml"):
+		return magic == "zip"
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt") || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint":
+		return magic == "ole"
+	case strings.Contains(lowerName, ".zip") || strings.Contains(lowerName, ".rar") || strings.Contains(lowerName, ".7z") || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed":
+		return magic == "zip" || magic == "rar" || magic == "7z"
+	case strings.Contains(lowerName, ".txt") || strings.Contains(lowerName, ".csv") || strings.Contains(lowerName, ".tsv"):
+		return mediaType == "text/plain" || mediaType == "text/csv" || mediaType == "text/tab-separated-values"
+	case strings.HasPrefix(mediaType, "text/"):
+		return true
+	default:
+		return magic != ""
+	}
+}
+
+func oalmImageMagicMatches(mediaType, magic string) bool {
+	switch mediaType {
+	case "image/jpeg", "image/jpg":
+		return magic == "jpeg"
+	case "image/png":
+		return magic == "png"
+	case "image/gif":
+		return magic == "gif"
+	case "image/webp":
+		return magic == "webp"
+	case "image/bmp":
+		return magic == "bmp"
+	case "image/tiff":
+		return magic == "tiff"
+	case "image/svg+xml":
+		return magic == "svg"
+	default:
+		return strings.HasPrefix(mediaType, "image/") && oalmIsImageMagic(magic)
+	}
+}
+
+func oalmIsImageMagic(magic string) bool {
+	switch magic {
+	case "jpeg", "png", "gif", "webp", "bmp", "tiff", "svg":
+		return true
+	default:
+		return false
+	}
+}
+
+func oalmResourceMagic(body []byte) string {
+	switch {
+	case bytes.HasPrefix(body, []byte("%PDF-")):
+		return "pdf"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x03, 0x04}) || bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x05, 0x06}) || bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x07, 0x08})):
+		return "zip"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}):
+		return "ole"
+	case len(body) >= 3 && bytes.Equal(body[:3], []byte{0xff, 0xd8, 0xff}):
+		return "jpeg"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
+		return "png"
+	case len(body) >= 6 && (bytes.Equal(body[:6], []byte("GIF87a")) || bytes.Equal(body[:6], []byte("GIF89a"))):
+		return "gif"
+	case len(body) >= 12 && bytes.Equal(body[:4], []byte("RIFF")) && bytes.Equal(body[8:12], []byte("WEBP")):
+		return "webp"
+	case len(body) >= 2 && bytes.Equal(body[:2], []byte("BM")):
+		return "bmp"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{'I', 'I', '*', 0}) || bytes.Equal(body[:4], []byte{'M', 'M', 0, '*'})):
+		return "tiff"
+	case len(body) >= 7 && bytes.Equal(body[:7], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x00}):
+		return "rar"
+	case len(body) >= 6 && bytes.Equal(body[:6], []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}):
+		return "7z"
+	}
+	trimmed := bytes.TrimSpace(body)
+	if len(trimmed) > 0 {
+		probe := trimmed
+		if len(probe) > 4096 {
+			probe = probe[:4096]
+		}
+		lower := strings.ToLower(string(probe))
+		if strings.HasPrefix(lower, "<svg") || (strings.HasPrefix(lower, "<?xml") && strings.Contains(lower, "<svg")) {
+			return "svg"
+		}
+	}
+	return ""
+}
+
+func oalmSanitizeContentHTML(article *model.Article, baseURL string) {
+	if article == nil || strings.TrimSpace(article.ContentHTML) == "" {
+		return
+	}
+	validImages := make(map[string]bool, len(article.Images))
+	for _, image := range article.Images {
+		if resolved := oalmResourceURL(baseURL, image); resolved != "" {
+			validImages[resolved] = true
+		}
+	}
+	validAttachments := make(map[string]bool, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		if resolved := oalmResourceURL(baseURL, attachment.URL); resolved != "" {
+			validAttachments[resolved] = true
+		}
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(`<div id="oalm-content-root">` + article.ContentHTML + `</div>`))
+	if err != nil {
+		article.ContentHTML = ""
+		return
+	}
+	root := doc.Find("#oalm-content-root").First()
+	root.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := oalmImageURL(image, baseURL)
+		if resolved == "" || !validImages[resolved] {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vurl"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	root.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
+		href := html.UnescapeString(strings.TrimSpace(anchor.AttrOr("href", "")))
+		if bodaIsPseudoResourceHref(href) {
+			anchor.RemoveAttr("href")
+			anchor.RemoveAttr("download")
+			return
+		}
+		if !bodaLooksLikeAttachmentLink(anchor, href) {
+			return
+		}
+		resolved := oalmResourceURL(baseURL, href)
+		if resolved == "" || !validAttachments[resolved] {
+			anchor.RemoveAttr("href")
+			anchor.RemoveAttr("download")
+			return
+		}
+		anchor.SetAttr("href", resolved)
+	})
+	if contentHTML, err := root.Html(); err == nil {
+		article.ContentHTML = contentHTML
+	}
+}
+
+func oalmRejectPage(doc *goquery.Document, kind string) error {
+	if doc == nil {
+		return fmt.Errorf("oalm: nil %s document", kind)
+	}
+	title := strings.ToLower(strings.Join(strings.Fields(doc.Find("title").First().Text()), " "))
+	visible := doc.Find("body").First().Clone()
+	visible.Find("script, style, noscript, template").Remove()
+	if kind == "article" {
+		// A legitimate article may discuss verification; only inspect its shell.
+		visible.Find(".v_news_content").Remove()
+	}
+	text := strings.ToLower(strings.Join(strings.Fields(visible.Text()), " "))
+	for _, marker := range []string{"验证码", "安全验证", "访问过于频繁", "请完成验证", "请先登录", "请登录后", "登录页面", "页面不存在", "404 not found", "access denied", "cloudflare", "just a moment", "请求已被阻断", "安全威胁", "503错误提示", "服务不可用"} {
+		if strings.Contains(title, marker) || strings.Contains(text, marker) {
+			return fmt.Errorf("oalm: received %s verification/error page", kind)
+		}
+	}
+	if doc.Find(`#captcha, .captcha, [id*="captcha"], [class*="captcha"], input[name="codeValue"]`).Length() > 0 {
+		return fmt.Errorf("oalm: received %s verification page", kind)
+	}
+	return nil
 }

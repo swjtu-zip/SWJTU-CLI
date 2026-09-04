@@ -25,25 +25,31 @@ func init() {
 		ParseList:    parseScaiAdapterList,
 		ParseArticle: parseScaiArticle,
 		PageURL:      scaiPageURL,
+		ListPage:     scaiListPage,
 		TotalPages:   scaiTotalPages,
 	})
 }
 
 var (
-	scaiJavaDateRe      = regexp.MustCompile("(?i)\\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2}\\s+[A-Z]{2,5}\\s+\\d{4}\\b")
-	scaiNumericDateRe   = regexp.MustCompile("(20\\d{2})[\\s\\x{a0}]*[-/.年][\\s\\x{a0}]*(\\d{1,2})[\\s\\x{a0}]*[-/.月][\\s\\x{a0}]*(\\d{1,2})")
-	scaiYearMonthRe     = regexp.MustCompile("(20\\d{2})[\\s\\x{a0}]*[-/.年][\\s\\x{a0}]*([01]?\\d)")
-	scaiDayRe           = regexp.MustCompile(`^\s*([0-3]?\d)\s*$`)
-	scaiPublishLabelRe  = regexp.MustCompile("(?:发布日期|发布时间|发表日期|发表时间)\\s*[:：]?")
-	scaiBlockedPageRe   = regexp.MustCompile("(?:您的访问请求可能对网站造成安全威胁|您的请求可能存在威胁，已被拦截)")
-	scaiAttachmentNumRe = regexp.MustCompile(`^\s*\d+\.\s*`)
-	scaiTotalPageRe     = regexp.MustCompile(`(?s)共\s*[【\[]?\s*(\d+)\s*[】\]]?\s*页`)
-	scaiGotoPageRe      = regexp.MustCompile(`(?i)gotoPage\s*\(\s*(\d+)\s*\)`)
+	scaiJavaDateRe        = regexp.MustCompile("(?i)\\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2}\\s+[A-Z]{2,5}\\s+\\d{4}\\b")
+	scaiNumericDateRe     = regexp.MustCompile("(20\\d{2})[\\s\\x{a0}]*[-/.年][\\s\\x{a0}]*(\\d{1,2})[\\s\\x{a0}]*[-/.月][\\s\\x{a0}]*(\\d{1,2})")
+	scaiYearMonthRe       = regexp.MustCompile("(20\\d{2})[\\s\\x{a0}]*[-/.年][\\s\\x{a0}]*([01]?\\d)")
+	scaiDayRe             = regexp.MustCompile(`^\s*([0-3]?\d)\s*$`)
+	scaiPublishLabelRe    = regexp.MustCompile("(?:发布日期|发布时间|发表日期|发表时间)\\s*[:：]?")
+	scaiBlockedPageRe     = regexp.MustCompile("(?i)(?:您的访问请求可能对网站造成安全威胁|您的请求可能存在威胁，已被拦截|网站防火墙|访问被拒绝|请求已被阻断)")
+	scaiUnavailablePageRe = regexp.MustCompile("(?i)(?:统一身份认证|用户登录|请登录|cas登录|enable javascript|javascript required|\\blogin\\b|\\bsign\\s+in\\b|loading\\.\\.\\.)")
+	scaiSPAShellRe        = regexp.MustCompile(`(?is)<(?:div|main)[^>]*\bid\s*=\s*["'](?:app|root)["'][^>]*>\s*</(?:div|main)>`)
+	scaiAttachmentNumRe   = regexp.MustCompile(`^\s*\d+\.\s*`)
+	scaiTotalPageRe       = regexp.MustCompile(`(?s)共\s*[【\[]?\s*(\d+)\s*[】\]]?\s*页`)
+	scaiCurrentPageRe     = regexp.MustCompile(`(?s)当前第\s*[【\[]?\s*(\d+)\s*[】\]]?\s*页`)
+	scaiGotoPageRe        = regexp.MustCompile(`(?i)gotoPage\s*\(\s*(\d+)\s*\)`)
 )
 
 var (
-	errScaiBlockedPage = errors.New("scai: received the site's WAF block page")
-	errScaiNoArticles  = errors.New("scai: no article list or homepage content surface found")
+	errScaiBlockedPage     = errors.New("scai: received the site's WAF block page")
+	errScaiUnavailablePage = errors.New("scai: received a login, SPA, or unavailable page")
+	errScaiNoArticles      = errors.New("scai: no article list or homepage content surface found")
+	errScaiNoArticleDetail = errors.New("scai: article detail has no headline and content surface")
 )
 
 // scaiFeedRoute describes a public article-list route. The site uses opaque
@@ -182,6 +188,79 @@ func scaiPageURL(baseURL, slug string, page, _ int, extension string) string {
 	return baseURL + "/web/page-module.html?" + query.Encode()
 }
 
+func scaiPageURLWithRetry(baseURL, slug string, page, attempt int) string {
+	pageURL := scaiPageURL(baseURL, slug, page, 0, ".html")
+	if attempt <= 0 {
+		return pageURL
+	}
+	parsed, err := url.Parse(pageURL)
+	if err != nil {
+		return pageURL
+	}
+	query := parsed.Query()
+	query.Set("scai_adapter_retry", strconv.Itoa(attempt))
+	parsed.RawQuery = query.Encode()
+	return parsed.String()
+}
+
+// scaiListPage verifies the page number echoed by the live HTML. The site's
+// edge cache has been observed to serve page 1/2 for another requested page;
+// accepting that response would silently deduplicate away most of a feed.
+// Bounded query-parameter retries give the cache a fresh key, and a
+// persistent mismatch becomes a diagnostic error instead of bad data.
+func scaiListPage(slug string, page int) ([]model.NewsItem, int, error) {
+	if page < 1 {
+		return nil, 0, fmt.Errorf("scai: list page must be positive: %d", page)
+	}
+	route, ok := scaiRouteForSlug(slug)
+	if !ok {
+		return nil, 0, fmt.Errorf("scai: unknown feed %q", slug)
+	}
+	site := AllSites["scai"]
+	if site == nil {
+		return nil, 0, errors.New("scai: site registration is missing")
+	}
+
+	const maxAttempts = 5
+	var body []byte
+	lastReportedPage := 0
+	for attempt := 0; attempt <= maxAttempts; attempt++ {
+		var err error
+		body, err = fetch(scaiPageURLWithRetry(site.BaseURL, slug, page, attempt))
+		if err != nil {
+			return nil, 0, err
+		}
+		if scaiIsBlockedPage(body) {
+			return nil, 0, errScaiBlockedPage
+		}
+		reportedPage := scaiCurrentPageFromHTML(body)
+		if reportedPage == 0 || reportedPage == page {
+			break
+		}
+		lastReportedPage = reportedPage
+		if attempt == maxAttempts {
+			return nil, 0, fmt.Errorf("scai: requested page %d but page-module reported page %d after %d attempts", page, lastReportedPage, maxAttempts+1)
+		}
+	}
+
+	items, err := parseScaiAdapterList(body, site.BaseURL)
+	if err != nil {
+		return nil, 0, err
+	}
+	if route.slug == "index" {
+		return items, 1, nil
+	}
+	totalPages := scaiTotalPagesFromHTML(body)
+	if totalPages == 0 && scaiHasPaginationMarker(body) {
+		// Keep the valid zero-item page usable by the shared range walker.
+		totalPages = 1
+	}
+	if totalPages == 0 {
+		return nil, 0, errors.New("scai: page-module HTML has no total-page marker")
+	}
+	return items, totalPages, nil
+}
+
 // scaiTotalPages reads the page count from the same page-module HTML that the
 // browser displays. The shared parser only knows older .p_pages markup, while
 // SCAI emits the count in an HTML comment and repeats the last page in
@@ -209,9 +288,10 @@ func scaiTotalPages(slug string) (int, error) {
 		return total, nil
 	}
 	if scaiHasPaginationMarker(body) {
-		// A valid empty feed advertises zero pages. Returning zero is correct;
-		// ListNewsRange has no items from which it could enter a pagination loop.
-		return 0, nil
+		// The shared range walker treats zero as an unknown count for custom
+		// adapters and returns an error before it can preserve a valid empty
+		// result. Page 1 is still a real, fetchable page for these feeds.
+		return 1, nil
 	}
 	return 0, errors.New("scai: page-module HTML has no total-page marker")
 }
@@ -229,6 +309,15 @@ func scaiTotalPagesFromHTML(raw []byte) int {
 		}
 	}
 	return maxPage
+}
+
+func scaiCurrentPageFromHTML(raw []byte) int {
+	match := scaiCurrentPageRe.FindSubmatch(raw)
+	if match == nil {
+		return 0
+	}
+	page, _ := strconv.Atoi(string(match[1]))
+	return page
 }
 
 func scaiHasPaginationMarker(raw []byte) bool {
@@ -267,23 +356,33 @@ func parseScaiAdapterList(html []byte, baseURL string) ([]model.NewsItem, error)
 		}
 
 		seen[fullURL] = true
+		date, publishedAt := scaiListDateInfo(sel)
 		items = append(items, model.NewsItem{
-			Title:    title,
-			URL:      fullURL,
-			Date:     scaiListDate(sel),
-			Type:     scaiListTypeForAnchor(sel, doc),
-			ParsedAt: time.Now(),
+			Title:       title,
+			URL:         fullURL,
+			Date:        date,
+			PublishedAt: publishedAt,
+			Type:        scaiListTypeForAnchor(sel, doc),
+			ParsedAt:    time.Now(),
 		})
 	})
-	if len(items) == 0 && !scaiHasContentSurface(doc) {
-		return nil, errScaiNoArticles
+	if len(items) == 0 {
+		if scaiIsUnavailablePage(html) {
+			return nil, errScaiUnavailablePage
+		}
+		if !scaiHasContentSurface(doc) {
+			return nil, errScaiNoArticles
+		}
 	}
 
 	return items, nil
 }
 
 func scaiHasContentSurface(doc *goquery.Document) bool {
-	return doc.Find(".list-big-title, .list-top, .list-bottom-item, .news, .notice, .learn, .swiper-container").Length() > 0
+	if doc == nil {
+		return false
+	}
+	return doc.Find(".list-big-title, .list-top, .list-bottom-item, .big-title, .s-title, .top-news, .news-center, .bottom-list-1, .bottom-list-2, .bottom-list-3, .banner.swiper-container").Length() > 0
 }
 
 func scaiIsBannerLink(sel *goquery.Selection) bool {
@@ -355,29 +454,42 @@ func scaiIsArticleTitle(title string) bool {
 }
 
 func scaiListDate(anchor *goquery.Selection) string {
+	date, _ := scaiListDateInfo(anchor)
+	return date
+}
+
+func scaiListDateInfo(anchor *goquery.Selection) (string, string) {
+	if anchor == nil || anchor.Length() == 0 {
+		return "", ""
+	}
 	// Featured cards keep their date inside the article link.
-	if date := scaiDateInSelection(anchor); date != "" {
-		return date
+	if date, publishedAt := scaiDateInfoInSelection(anchor); date != "" {
+		return date, publishedAt
 	}
 
 	// Ordinary section rows put the date next to the link in .list-item.
 	for _, selector := range []string{".list-item", ".list-top-item", ".item-wrapper", ".news-top-wrapper", ".top-news-item"} {
 		if item := anchor.Closest(selector); item.Length() > 0 {
-			if date := scaiDateInSelection(item); date != "" {
-				return date
+			if date, publishedAt := scaiDateInfoInSelection(item); date != "" {
+				return date, publishedAt
 			}
 		}
 	}
-	return ""
+	return "", ""
 }
 
 func scaiListTypeForAnchor(anchor *goquery.Selection, doc *goquery.Document) string {
 	if anchor != nil && anchor.Length() > 0 {
-		if container := anchor.Closest(".container"); container.Length() > 0 {
-			for _, selector := range []string{".list-big-title", ".big-title span", ".title-wrapper h1", ".title-wrapper h2"} {
-				if value := strings.TrimSpace(container.Find(selector).First().Text()); value != "" {
-					return value
-				}
+		// Home-page sections share a parent .container, so selecting the
+		// first heading there labels every item as the first section. Find
+		// the nearest section heading before falling back to that container.
+		for _, ancestorSelector := range []string{".notice", ".learn", ".bottom-list-1", ".bottom-list-2", ".bottom-list-3", ".top-news", ".container"} {
+			container := anchor.Closest(ancestorSelector)
+			if container.Length() == 0 {
+				continue
+			}
+			if value := scaiHeadingType(container); value != "" {
+				return value
 			}
 		}
 	}
@@ -392,6 +504,9 @@ func scaiListType(doc *goquery.Document) string {
 		values := doc.Find(selector)
 		for i := values.Length() - 1; i >= 0; i-- {
 			value := strings.Join(strings.Fields(values.Eq(i).Text()), " ")
+			if selector == ".list-big-title" {
+				value = scaiListHeadingText(values.Eq(i))
+			}
 			if value != "" && value != "首页" && value != "更多" {
 				return value
 			}
@@ -400,18 +515,64 @@ func scaiListType(doc *goquery.Document) string {
 	return ""
 }
 
-func scaiDateInSelection(sel *goquery.Selection) string {
-	if sel == nil || sel.Length() == 0 {
+func scaiHeadingType(container *goquery.Selection) string {
+	if container == nil || container.Length() == 0 {
 		return ""
+	}
+	if heading := container.Find(".list-big-title").First(); heading.Length() > 0 {
+		if active := heading.Find("a.active").First(); active.Length() > 0 {
+			if value := strings.Join(strings.Fields(active.Text()), " "); value != "" {
+				return value
+			}
+		}
+		if value := scaiListHeadingText(heading); value != "" {
+			return value
+		}
+	}
+	for _, selector := range []string{".s-title span", ".big-title span", ".title-wrapper h1", ".title-wrapper h2"} {
+		if value := strings.Join(strings.Fields(container.Find(selector).First().Text()), " "); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func scaiListHeadingText(heading *goquery.Selection) string {
+	if heading == nil || heading.Length() == 0 {
+		return ""
+	}
+	if active := heading.Find("a.active").First(); active.Length() > 0 {
+		if value := strings.Join(strings.Fields(active.Text()), " "); value != "" {
+			return value
+		}
+	}
+	clone := heading.Clone()
+	clone.Find("a, span").Remove()
+	return strings.Join(strings.Fields(clone.Text()), " ")
+}
+
+func scaiDateInSelection(sel *goquery.Selection) string {
+	date, _ := scaiDateInfoInSelection(sel)
+	return date
+}
+
+func scaiPublishedAtInSelection(sel *goquery.Selection) string {
+	_, publishedAt := scaiDateInfoInSelection(sel)
+	return publishedAt
+}
+
+func scaiDateInfoInSelection(sel *goquery.Selection) (string, string) {
+	if sel == nil || sel.Length() == 0 {
+		return "", ""
 	}
 	// The same live template has two renderings: some responses contain a
 	// complete Java Date in .day, while others split it into .date=2026/08
 	// and .day=03. Check the calendar as a unit before checking individual
 	// date nodes so the latter is not discarded as an incomplete date.
-	var calendarDate string
+	var calendarDate, calendarPublishedAt string
 	sel.Find(".calendar").EachWithBreak(func(_ int, calendar *goquery.Selection) bool {
-		if date := scaiDateFromText(calendar.Text()); date != "" {
-			calendarDate = date
+		if date, publishedAt := scaiDateInfoFromText(calendar.Text()); date != "" {
+			calendarDate, calendarPublishedAt = date, publishedAt
 			return false
 		}
 		month := strings.TrimSpace(calendar.Find(".date").First().Text())
@@ -425,7 +586,7 @@ func scaiDateInSelection(sel *goquery.Selection) string {
 		return true
 	})
 	if calendarDate != "" {
-		return calendarDate
+		return calendarDate, calendarPublishedAt
 	}
 	for _, selector := range []string{
 		".calendar .day",
@@ -436,39 +597,48 @@ func scaiDateInSelection(sel *goquery.Selection) string {
 		"[data-date]",
 	} {
 		if dateSel := sel.Find(selector).First(); dateSel.Length() > 0 {
-			if value := dateSel.AttrOr("datetime", ""); value != "" {
-				if date := scaiDateFromText(value); date != "" {
-					return date
+			for _, attr := range []string{"datetime", "data-date"} {
+				if value := dateSel.AttrOr(attr, ""); value != "" {
+					if date, publishedAt := scaiDateInfoFromText(value); date != "" {
+						return date, publishedAt
+					}
 				}
 			}
-			if value := dateSel.AttrOr("data-date", ""); value != "" {
-				if date := scaiDateFromText(value); date != "" {
-					return date
-				}
-			}
-			if date := scaiDateFromText(dateSel.Text()); date != "" {
-				return date
+			if date, publishedAt := scaiDateInfoFromText(dateSel.Text()); date != "" {
+				return date, publishedAt
 			}
 		}
 	}
-	return ""
+	return "", ""
 }
 
 func scaiDateFromText(text string) string {
+	date, _ := scaiDateInfoFromText(text)
+	return date
+}
+
+func scaiDateInfoFromText(text string) (string, string) {
 	text = strings.Join(strings.Fields(text), " ")
 	if match := scaiJavaDateRe.FindString(text); match != "" {
 		if parsed, err := time.Parse("Mon Jan 02 15:04:05 MST 2006", match); err == nil {
-			return parsed.Format("2006-01-02")
+			return parsed.Format("2006-01-02"), parsed.Format("2006-01-02 15:04:05")
 		}
 	}
-	if match := scaiNumericDateRe.FindStringSubmatch(text); match != nil {
-		return normalizeDateParts(match[1], match[2], match[3])
+	if publishedAt := normalizePublishedAt(text); len(publishedAt) >= len("2006-01-02") {
+		return publishedAt[:len("2006-01-02")], publishedAt
 	}
-	return ""
+	if match := scaiNumericDateRe.FindStringSubmatch(text); match != nil {
+		return normalizeDateParts(match[1], match[2], match[3]), ""
+	}
+	return "", ""
 }
 
 func scaiIsBlockedPage(raw []byte) bool {
 	return scaiBlockedPageRe.Match(raw)
+}
+
+func scaiIsUnavailablePage(raw []byte) bool {
+	return scaiUnavailablePageRe.Match(raw) || scaiSPAShellRe.Match(raw)
 }
 
 // parseScaiArticle keeps the shared content/image/attachment extraction but
@@ -478,15 +648,21 @@ func parseScaiArticle(html []byte, baseURL string) (*model.Article, error) {
 	if scaiIsBlockedPage(html) {
 		return nil, errScaiBlockedPage
 	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
+	if err != nil {
+		return nil, err
+	}
+	if !scaiHasArticleDetailSurface(doc) {
+		if scaiIsUnavailablePage(html) {
+			return nil, errScaiUnavailablePage
+		}
+		return nil, errScaiNoArticleDetail
+	}
 	article, err := parseBodaArticle(html, baseURL)
 	if err != nil {
 		return nil, err
 	}
 
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
-	if err != nil {
-		return article, nil
-	}
 	if title := scaiArticleTitle(doc); title != "" {
 		article.Title = title
 	}
@@ -496,13 +672,37 @@ func parseScaiArticle(html []byte, baseURL string) (*model.Article, error) {
 	if typ := scaiArticleType(doc); typ != "" {
 		article.Type = typ
 	}
-	if date := scaiArticleDate(doc); date != "" {
+	if date, publishedAt := scaiArticleDateInfo(doc); date != "" {
 		article.Date = date
+		if publishedAt != "" {
+			article.PublishedAt = publishedAt
+		}
 	} else if date := scaiDateFromText(article.Date); date != "" {
 		article.Date = date
 	}
 	article.Content, article.ContentHTML, article.Images, article.Attachments = scaiArticleContent(doc, baseURL)
 	return article, nil
+}
+
+func scaiHasArticleDetailSurface(doc *goquery.Document) bool {
+	if doc == nil {
+		return false
+	}
+	content := scaiArticleContentSelection(doc)
+	if content == nil || content.Length() == 0 {
+		return false
+	}
+	if scaiArticleTitle(doc) != "" {
+		return true
+	}
+	// Keep the synthetic/legacy detail variant supported when its headline is
+	// outside .news-content-wrapper, while still requiring a detail class.
+	for _, selector := range []string{"h1.news-title", ".article-title", ".detail-title"} {
+		if found := doc.Find(selector).First(); found.Length() > 0 && scaiIsArticleTitle(strings.Join(strings.Fields(found.Text()), " ")) {
+			return true
+		}
+	}
+	return false
 }
 
 func scaiArticleSource(doc *goquery.Document) string {
@@ -528,29 +728,22 @@ func scaiArticleSource(doc *goquery.Document) string {
 }
 
 func scaiArticleContent(doc *goquery.Document, baseURL string) (string, string, []string, []model.Attachment) {
-	content := doc.Find(".news-content-wrapper .content-main").First()
-	if content.Length() == 0 {
-		content = doc.Find(".content-main").First()
-	}
-	if content.Length() == 0 {
+	content := scaiArticleContentSelection(doc)
+	if content == nil || content.Length() == 0 {
 		return "", "", nil, nil
 	}
 
 	attachments := scaiArticleAttachments(content, baseURL)
-	attachmentURLs := make(map[string]bool, len(attachments))
-	for _, attachment := range attachments {
-		attachmentURLs[attachment.URL] = true
-	}
 
 	htmlContent := content.Clone()
 	seenImages := make(map[string]bool)
 	var images []string
-	htmlContent.Find("img[src]").Each(func(_ int, sel *goquery.Selection) {
-		src := strings.TrimSpace(sel.AttrOr("src", ""))
+	htmlContent.Find("img").Each(func(_ int, sel *goquery.Selection) {
+		src := scaiImageSource(sel)
 		if src == "" {
 			return
 		}
-		resolved := resolveURL(baseURL, src)
+		resolved := scaiResolveContentURL(baseURL, src)
 		if !seenImages[resolved] {
 			seenImages[resolved] = true
 			images = append(images, resolved)
@@ -562,14 +755,14 @@ func scaiArticleContent(doc *goquery.Document, baseURL string) (string, string, 
 		if href == "" {
 			return
 		}
-		resolved := resolveURL(baseURL, href)
-		if attachmentURLs[resolved] {
+		resolved := scaiResolveContentURL(baseURL, href)
+		if resolved != "" && !strings.HasPrefix(resolved, "#") && !strings.HasPrefix(strings.ToLower(resolved), "javascript:") {
 			sel.SetAttr("href", resolved)
 		}
 	})
 
 	textContent := content.Clone()
-	textContent.Find(".news-file, script, style, noscript").Remove()
+	textContent.Find(".news-file, .relative-list, script, style, noscript").Remove()
 	var parts []string
 	textContent.Find("p, h1, h2, h3, h4, h5").Each(func(_ int, sel *goquery.Selection) {
 		text := strings.Join(strings.Fields(sel.Text()), " ")
@@ -585,6 +778,37 @@ func scaiArticleContent(doc *goquery.Document, baseURL string) (string, string, 
 	plainText := strings.Join(parts, "\n\n")
 	contentHTML, _ := htmlContent.Html()
 	return plainText, contentHTML, images, attachments
+}
+
+func scaiArticleContentSelection(doc *goquery.Document) *goquery.Selection {
+	if doc == nil {
+		return nil
+	}
+	content := doc.Find(".news-content-wrapper .content-main").First()
+	if content.Length() == 0 {
+		content = doc.Find(".content-main").First()
+	}
+	return content
+}
+
+func scaiImageSource(sel *goquery.Selection) string {
+	for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc"} {
+		if value := strings.TrimSpace(sel.AttrOr(attr, "")); value != "" {
+			return value
+		}
+	}
+	return strings.TrimSpace(sel.AttrOr("src", ""))
+}
+
+func scaiResolveContentURL(baseURL, raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	if strings.HasPrefix(raw, "#") || strings.HasPrefix(strings.ToLower(raw), "javascript:") {
+		return raw
+	}
+	return cleanURL(resolveURL(baseURL, raw))
 }
 
 func scaiArticleAttachments(content *goquery.Selection, baseURL string) []model.Attachment {
@@ -662,6 +886,19 @@ func scaiArticleTitle(doc *goquery.Document) string {
 }
 
 func scaiArticleDate(doc *goquery.Document) string {
+	date, _ := scaiArticleDateInfo(doc)
+	return date
+}
+
+func scaiArticlePublishedAt(doc *goquery.Document) string {
+	_, publishedAt := scaiArticleDateInfo(doc)
+	return publishedAt
+}
+
+func scaiArticleDateInfo(doc *goquery.Document) (string, string) {
+	if doc == nil {
+		return "", ""
+	}
 	for _, selector := range []string{
 		"meta[property=\"article:published_time\"]",
 		"meta[name=\"publishdate\"]",
@@ -678,12 +915,12 @@ func scaiArticleDate(doc *goquery.Document) string {
 	} {
 		if found := doc.Find(selector).First(); found.Length() > 0 {
 			if value := found.AttrOr("content", ""); value != "" {
-				if date := scaiDateFromText(value); date != "" {
-					return date
+				if date, publishedAt := scaiDateInfoFromText(value); date != "" {
+					return date, publishedAt
 				}
 			}
-			if date := scaiDateFromText(found.Text()); date != "" {
-				return date
+			if date, publishedAt := scaiDateInfoFromText(found.Text()); date != "" {
+				return date, publishedAt
 			}
 		}
 	}
@@ -691,16 +928,16 @@ func scaiArticleDate(doc *goquery.Document) string {
 	// If a copy of the template has no stable metadata class, only inspect
 	// small elements with an explicit publish-date label. This prevents an
 	// event date in the article body from becoming the publish date.
-	var date string
+	var date, publishedAt string
 	doc.Find("body *").EachWithBreak(func(_ int, sel *goquery.Selection) bool {
 		text := strings.Join(strings.Fields(sel.Text()), " ")
 		if utf8.RuneCountInString(text) > 256 || !scaiPublishLabelRe.MatchString(text) {
 			return true
 		}
-		date = scaiDateFromText(text)
+		date, publishedAt = scaiDateInfoFromText(text)
 		return date == ""
 	})
-	return date
+	return date, publishedAt
 }
 
 func scaiArticleType(doc *goquery.Document) string {

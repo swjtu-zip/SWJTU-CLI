@@ -1,9 +1,14 @@
 package scraper
 
 import (
+	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
+
+	"swjtu-cli/internal/model"
 )
 
 func TestBksyAdapterRegistrationCoversRealEntryPoints(t *testing.T) {
@@ -11,15 +16,14 @@ func TestBksyAdapterRegistrationCoversRealEntryPoints(t *testing.T) {
 	if !ok {
 		t.Fatal("bksy site is not registered")
 	}
-	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil {
+	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.ArticleFetchFunc == nil {
 		t.Fatalf("bksy adapter hooks are incomplete: %+v", site)
 	}
 
 	required := []string{
-		"tzgg/qb", "tzgg/tsjy", "tzgg/glgd",
-		"jgsz/glgzzd", "jgsz/xgwjbg",
+		"tzgg/qb", "tzgg/jxyx", "tzgg/jxjs", "tzgg/sjjx", "tzgg/syjx", "tzgg/cxcy", "tzgg/zljs",
 		"jxyx/xjxg", "jxjs/jxgg", "jsfz/jsjxzz",
-		"syjx/xfzx", "sjjx/xkjs", "cxcy/cxcyhd", "zljj/zlbz",
+		"syjx/sfzx", "sjjx/xkjs", "cxcy/cxcyhd", "zljj/zlbz",
 	}
 	seen := make(map[string]bool, len(site.SubPages))
 	for _, slug := range site.SubPages {
@@ -33,8 +37,17 @@ func TestBksyAdapterRegistrationCoversRealEntryPoints(t *testing.T) {
 			t.Errorf("missing bksy sub-page %q", slug)
 		}
 	}
-	if len(site.SubPages) != len(bksySubPages) || len(site.SubPages) < 40 {
+	if len(site.SubPages) != len(bksySubPages) || len(site.SubPages) != 32 {
 		t.Fatalf("unexpected bksy sub-page coverage: %d (%#v)", len(site.SubPages), site.SubPages)
+	}
+	for _, excluded := range []string{
+		"tzgg/tsjy", "tzgg/glgd", "jgsz/glgzzd", "jgsz/xgwjbg",
+		"jsfz/jcjxzz", "jsfz/jsjxjs", "jsfz/jxnlts", "syjx/xfzx",
+		"sjjx/cjrh", "cxcy/cxcykc", "cxcy/cxcyxm", "cxcy/cxcypt", "zljj/ztsj",
+	} {
+		if seen[excluded] {
+			t.Errorf("empty/static bksy page was registered as an article feed: %q", excluded)
+		}
 	}
 }
 
@@ -177,5 +190,200 @@ func TestBksyAdapterRejectsNonArticleResponse(t *testing.T) {
 	}
 	if _, err := parseAdapter_bksyArticle([]byte(`<div class="news-title">首页壳</div><div id="app"></div>`), "https://bksy.swjtu.edu.cn"); err == nil {
 		t.Fatal("homepage shell was accepted as an article")
+	}
+}
+
+func readBksyFixture(t *testing.T, name string) []byte {
+	t.Helper()
+	body, err := os.ReadFile("testdata/" + name)
+	if err != nil {
+		t.Fatalf("read bksy fixture %s: %v", name, err)
+	}
+	return body
+}
+
+func TestBksyCapturedLiveHomepageAndReversePages(t *testing.T) {
+	items, err := parseAdapter_bksyList(readBksyFixture(t, "bksy_live_home.html"), bksyCanonicalBaseURL)
+	if err != nil {
+		t.Fatalf("parse captured homepage: %v", err)
+	}
+	if len(items) != 5 {
+		t.Fatalf("captured homepage returned %d local articles, want 5: %#v", len(items), items)
+	}
+	for _, item := range items {
+		if !bksyArticlePathRE.MatchString(strings.TrimPrefix(item.URL, bksyCanonicalBaseURL)) {
+			t.Fatalf("homepage leaked non-article URL: %#v", item)
+		}
+		if item.Type != "全部" || item.Date == "" || item.PublishedAt == "" {
+			t.Fatalf("homepage metadata = %#v", item)
+		}
+	}
+
+	pages := []struct {
+		fixture string
+		want    string
+	}{
+		{"bksy_live_tzgg_qb_first.html", "西南交通大学2025-2026学年第2学期补考交通车时刻表"},
+		{"bksy_live_tzgg_qb_middle.html", ""},
+		{"bksy_live_tzgg_qb_last.html", ""},
+	}
+	for _, page := range pages {
+		html := readBksyFixture(t, page.fixture)
+		items, err := parseAdapter_bksyList(html, bksyCanonicalBaseURL)
+		if err != nil {
+			t.Fatalf("parse %s: %v", page.fixture, err)
+		}
+		if len(items) == 0 {
+			t.Fatalf("%s produced no local article rows", page.fixture)
+		}
+		if page.want != "" && items[0].Title != page.want {
+			t.Fatalf("%s first title = %q, want %q", page.fixture, items[0].Title, page.want)
+		}
+	}
+	if got := parseTotalPages(readBksyFixture(t, "bksy_live_tzgg_qb_first.html")); got != 243 {
+		t.Fatalf("captured tzgg/qb total pages = %d, want 243", got)
+	}
+	if got := bksyAdapterPageURL(bksyCanonicalBaseURL, "tzgg/qb", 243, 243, ".htm"); got != bksyCanonicalBaseURL+"/tzgg/qb/1.htm" {
+		t.Fatalf("last logical page URL = %q", got)
+	}
+}
+
+func TestBksyCapturedEmptyAndDownloadPagesAreNotArticleFeeds(t *testing.T) {
+	for _, fixture := range []string{"bksy_live_empty_tsjy.html", "bksy_live_file_glgzzd.html"} {
+		items, err := parseAdapter_bksyList(readBksyFixture(t, fixture), bksyCanonicalBaseURL)
+		if err != nil {
+			t.Fatalf("parse reachable non-feed %s: %v", fixture, err)
+		}
+		if len(items) != 0 {
+			t.Fatalf("%s leaked non-article rows: %#v", fixture, items)
+		}
+	}
+}
+
+func TestBksyCapturedLiveArticleUsesFixedMetadataAndBodyBoundary(t *testing.T) {
+	article, err := parseAdapter_bksyArticle(readBksyFixture(t, "bksy_live_article_94301.html"), bksyCanonicalBaseURL)
+	if err != nil {
+		t.Fatalf("parse captured detail: %v", err)
+	}
+	if article.Title != "关于开展2026年本科生转专业相关工作的通知" || article.Type != "学籍与注册事务" || article.Source != "本科生院" {
+		t.Fatalf("fixed detail metadata = %#v", article)
+	}
+	if article.Date != "2026-07-08" || article.PublishedAt != "2026-07-08 09:24" {
+		t.Fatalf("fixed publication timestamp = (%q, %q)", article.Date, article.PublishedAt)
+	}
+	if !strings.Contains(article.Content, "2026年7月20至9月3日") || strings.Contains(article.Content, "阅读量") || strings.Contains(article.Content, "本科生院详情测试通知") {
+		t.Fatalf("captured body scope is wrong: %q", article.Content)
+	}
+	if strings.Contains(article.ContentHTML, "right-news-details") || !strings.Contains(article.ContentHTML, "本科生转专业申请") {
+		t.Fatalf("captured ContentHTML is not the article fragment: %q", article.ContentHTML)
+	}
+	if len(article.Attachments) != 1 || !strings.Contains(article.Attachments[0].Name, "本科生转专业管理办法") {
+		t.Fatalf("captured attachment = %#v", article.Attachments)
+	}
+}
+
+func TestBksyDateOnlyDoesNotInventClockFromBody(t *testing.T) {
+	article, err := parseAdapter_bksyArticle(readBksyFixture(t, "bksy_adapter_article_date_only.html"), bksyCanonicalBaseURL)
+	if err != nil {
+		t.Fatalf("parse date-only detail: %v", err)
+	}
+	if article.Date != "2026-08-07" || article.PublishedAt != "2026-08-07" {
+		t.Fatalf("date-only publication = (%q, %q)", article.Date, article.PublishedAt)
+	}
+	if !strings.Contains(article.Content, "2026年8月8日 10:00") {
+		t.Fatalf("body activity time was lost: %q", article.Content)
+	}
+}
+
+func TestBksyCaptured404AndSPAShellsAreRejected(t *testing.T) {
+	if _, err := parseAdapter_bksyList(readBksyFixture(t, "bksy_live_oob_404.html"), bksyCanonicalBaseURL); err == nil {
+		t.Fatal("captured bksy 404 page was accepted as a list")
+	}
+	if _, err := parseAdapter_bksyArticle(readBksyFixture(t, "bksy_adapter_spa.html"), bksyCanonicalBaseURL); err == nil {
+		t.Fatal("bksy SPA shell was accepted as an article")
+	}
+}
+
+type bksyTestRoundTripper func(*http.Request) (*http.Response, error)
+
+func (f bksyTestRoundTripper) RoundTrip(request *http.Request) (*http.Response, error) {
+	return f(request)
+}
+
+func bksyTestHTTPResponse(request *http.Request, status int, contentType string, body []byte) *http.Response {
+	return &http.Response{
+		StatusCode: status,
+		Status:     fmt.Sprintf("%d %s", status, http.StatusText(status)),
+		Header:     http.Header{"Content-Type": []string{contentType}},
+		Body:       io.NopCloser(strings.NewReader(string(body))),
+		Request:    request,
+	}
+}
+
+func TestBksyFetchArticleVerifiesResourcesAndPreservesExternalLinks(t *testing.T) {
+	baseURL := "https://bksy.swjtu.edu.cn"
+	articleHTML := strings.ReplaceAll(string(readBksyFixture(t, "bksy_adapter_resources_live.html")), "__BK_BASE__", baseURL)
+	oldClient, oldNoCache := defaultClient, NoCache
+	oldBaseURL := AllSites["bksy"].BaseURL
+	defaultClient = &http.Client{Transport: bksyTestRoundTripper(func(request *http.Request) (*http.Response, error) {
+		status, contentType := http.StatusOK, "application/octet-stream"
+		var body []byte
+		switch request.URL.Path {
+		case "/info/1000/1.htm":
+			contentType, body = "text/html; charset=utf-8", []byte(articleHTML)
+		case "/good.png":
+			contentType, body = "image/png", []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n', 0x00}
+		case "/bad.png":
+			contentType, body = "image/png", []byte("not an image")
+		case "/captcha.png":
+			contentType, body = "image/png", []byte("<!doctype html><html><body>请输入验证码</body></html>")
+		case "/good.pdf":
+			contentType, body = "application/pdf", []byte("%PDF-1.7\n")
+		case "/bad.pdf":
+			contentType, body = "application/pdf", []byte("not a PDF")
+		case "/bad-status.pdf":
+			status, contentType, body = http.StatusNotFound, "application/pdf", []byte("%PDF-1.7\n")
+		case "/captcha.xlsx":
+			contentType, body = "text/html; charset=utf-8", []byte("<html><body>验证码下载附件</body></html>")
+		case "/external.gif":
+			contentType, body = "image/gif", []byte("GIF89a\x00\x00")
+		default:
+			status, body = http.StatusNotFound, []byte("not found")
+		}
+		return bksyTestHTTPResponse(request, status, contentType, body), nil
+	})}
+	NoCache = true
+	AllSites["bksy"].BaseURL = baseURL
+	t.Cleanup(func() {
+		defaultClient, NoCache = oldClient, oldNoCache
+		AllSites["bksy"].BaseURL = oldBaseURL
+		ClearCache()
+	})
+	ClearCache()
+
+	article, raw, err := AllSites["bksy"].GetArticleSnapshot(baseURL + "/info/1000/1.htm")
+	if err != nil {
+		t.Fatalf("fetch bksy article: %v", err)
+	}
+	if len(raw) == 0 || article.Title != "资源验证通知" || article.Date != "2026-08-31" || article.PublishedAt != "2026-08-31 09:27:00" {
+		t.Fatalf("unexpected live article result: article=%+v body=%d", article, len(raw))
+	}
+	if len(article.Images) != 2 || article.Images[0] != baseURL+"/good.png" || article.Images[1] != "https://cdn.example.test/external.gif" {
+		t.Fatalf("verified images = %#v", article.Images)
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].URL != baseURL+"/good.pdf" || article.Attachments[0].Size != "9" {
+		t.Fatalf("verified attachments = %#v", article.Attachments)
+	}
+	if !strings.Contains(article.ContentHTML, baseURL+"/good.png") || !strings.Contains(article.ContentHTML, baseURL+"/good.pdf") || !strings.Contains(article.ContentHTML, "https://outside.example/guide") || !strings.Contains(article.ContentHTML, "https://cdn.example.test/external.gif") {
+		t.Fatalf("valid resources/external link missing from ContentHTML: %q", article.ContentHTML)
+	}
+	for _, rejected := range []string{"bad.png", "captcha.png", "bad.pdf", "bad-status.pdf", "captcha.xlsx", "javascript:download"} {
+		if strings.Contains(article.ContentHTML, rejected) {
+			t.Fatalf("rejected resource remained in ContentHTML: %q", rejected)
+		}
+	}
+
+	if got := bksyVerifyAttachments([]model.Attachment{{Name: "有效.pdf", URL: baseURL + "/good.pdf"}, {Name: "错误.pdf", URL: baseURL + "/bad.pdf"}}, baseURL); len(got) != 1 || got[0].URL != baseURL+"/good.pdf" {
+		t.Fatalf("direct attachment verification = %#v", got)
 	}
 }

@@ -1,6 +1,8 @@
 package scraper
 
 import (
+	"io"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -13,7 +15,7 @@ func TestDesignAdapterRegistrationAndPageURL(t *testing.T) {
 	if !ok {
 		t.Fatal("design site is not registered")
 	}
-	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil {
+	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil || site.ArticleFetchFunc == nil {
 		t.Fatalf("design adapter hooks are incomplete: %+v", site)
 	}
 
@@ -44,11 +46,76 @@ func TestDesignAdapterRegistrationAndPageURL(t *testing.T) {
 		{"xydt", 25, 25, designFixtureBase + "/xydt/1.htm"},
 		{"xshd/jz", 2, 8, designFixtureBase + "/xshd/jz/7.htm"},
 		{"xshd/jz", 8, 8, designFixtureBase + "/xshd/jz/1.htm"},
+		{"xshd/jz", 9, 8, ""},
 	}
 	for _, tc := range cases {
 		if got := designPageURL(designFixtureBase+"/", tc.slug, tc.page, tc.total, ".htm"); got != tc.want {
 			t.Errorf("designPageURL(%q, %d/%d) = %q, want %q", tc.slug, tc.page, tc.total, got, tc.want)
 		}
+	}
+}
+
+func TestDesignTotalPagesRequiresSourcePagination(t *testing.T) {
+	oldClient, oldNoCache := defaultClient, NoCache
+	defaultClient = &http.Client{Transport: designTestRoundTripper(func(r *http.Request) (*http.Response, error) {
+		body := `<html><body><div class="file"><div class="list"><ul><li><a href="/info/1016/1.htm"><span>源站文章</span><i>2026-09-01</i></a></li></ul></div><div class="paging"><span class="p_no_d">25</span></div></div></body></html>`
+		if r.URL.Path == "/xshd.htm" {
+			body = `<html><body><div class="file"><div class="list"><ul><li><a href="/info/1116/1.htm"><span>源站文章</span><i>2026-09-01</i></a></li></ul></div></div></body></html>`
+		}
+		return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Header: http.Header{"Content-Type": []string{"text/html"}}, Body: io.NopCloser(strings.NewReader(body)), Request: r}, nil
+	})}
+	NoCache = true
+	t.Cleanup(func() { defaultClient, NoCache = oldClient, oldNoCache; ClearCache() })
+
+	if total, err := designTotalPages("xydt"); err != nil || total != 25 {
+		t.Fatalf("source-reported total = %d, err=%v; want 25", total, err)
+	}
+	if total, err := designTotalPages("xshd"); err == nil || total != 0 {
+		t.Fatalf("missing source pagination was accepted: total=%d err=%v", total, err)
+	}
+}
+
+func TestDesignOfficialHomepageFixtureCoversHiddenTabs(t *testing.T) {
+	items, err := parseAdapter_designList(readDesignFixture(t, "design.html"), designFixtureBase)
+	if err != nil {
+		t.Fatalf("parse official design homepage: %v", err)
+	}
+	wantTypes := map[string]int{
+		"学院动态":  5,
+		"讲座":    5,
+		"展览":    5,
+		"论坛":    5,
+		"活动":    5,
+		"通知公告":  7,
+		"本科生通知": 7,
+		"研究生通知": 7,
+	}
+	gotTypes := make(map[string]int)
+	for _, item := range items {
+		gotTypes[item.Type]++
+	}
+	if len(items) != 46 {
+		t.Fatalf("official homepage returned %d items, want 46: %#v", len(items), gotTypes)
+	}
+	for typ, want := range wantTypes {
+		if gotTypes[typ] != want {
+			t.Errorf("official homepage type %q count = %d, want %d", typ, gotTypes[typ], want)
+		}
+	}
+	var foundNotice, foundEvent bool
+	for _, item := range items {
+		if item.Title == "设计艺术学院关于公开选聘校外生涯导师的邀请函" {
+			foundNotice = item.Type == "通知公告" && item.Date == "2025-05-30"
+		}
+		if item.Title == "品物浅深：山水画诗意展现与笔墨精神" {
+			foundEvent = item.Type == "讲座" && item.Date == "2026-06-14"
+		}
+		if strings.Contains(item.Title, "2025.05.30") {
+			t.Fatalf("notice date leaked into title: %#v", item)
+		}
+	}
+	if !foundNotice || !foundEvent {
+		t.Fatalf("official homepage fixed title/date evidence missing (notice=%v event=%v)", foundNotice, foundEvent)
 	}
 }
 
@@ -165,6 +232,85 @@ func TestDesignArticleRejectsNonArticleResponse(t *testing.T) {
 	if _, err := parseAdapter_designArticle([]byte(`<div class="news-title">首页壳</div><div id="app"></div>`), designFixtureBase); err == nil {
 		t.Fatal("homepage shell was accepted as an article")
 	}
+}
+
+func TestDesignArticleUsesFixedHeaderDateOnly(t *testing.T) {
+	html := []byte(`<html><body><div class="newList"><div class="title">政策文件</div><div class="content"><div><h1>政策正文标题</h1><div>2022-09-01 点击量：[1]</div><hr><div id="vsb_content"><div class="v_news_content"><p>活动时间：2099年12月31日 23:59</p></div></div></div></div></div></body></html>`)
+	article, err := parseAdapter_designArticle(html, designFixtureBase)
+	if err != nil {
+		t.Fatalf("parse static-content design article: %v", err)
+	}
+	if article.Date != "2022-09-01" || article.PublishedAt != "2022-09-01" {
+		t.Fatalf("body date replaced fixed header date: %+v", article)
+	}
+	if article.Type != "政策文件" {
+		t.Fatalf("static-content type = %q, want 政策文件", article.Type)
+	}
+}
+
+func TestDesignListRejectsUnparseableArticleRows(t *testing.T) {
+	html := []byte(`<html><body><div class="file"><div class="title">学院动态</div><div class="list"><ul><li><a href="/info/1016/77.htm"></a></li></ul></div></div></body></html>`)
+	if _, err := parseAdapter_designList(html, designFixtureBase); err == nil {
+		t.Fatal("article link without a parseable row was accepted")
+	}
+}
+
+func TestDesignFetchArticleVerifiesResources(t *testing.T) {
+	html := readDesignFixture(t, "design_adapter_resource_article.html")
+	oldClient, oldNoCache := defaultClient, NoCache
+	defaultClient = &http.Client{Transport: designTestRoundTripper(func(r *http.Request) (*http.Response, error) {
+		var contentType, body string
+		switch r.URL.Path {
+		case "/info/1016/77.htm":
+			contentType = "text/html"
+			body = strings.ReplaceAll(string(html), "__DESIGN_TEST_BASE__", designFixtureBase)
+		case "/valid.png":
+			contentType = "image/png"
+			body = string([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n', 0x00})
+		case "/bad.png":
+			contentType = "image/png"
+			body = "<html><body>验证码</body></html>"
+		case "/valid.pdf":
+			contentType = "application/pdf"
+			body = "%PDF-1.7\n"
+		case "/bad.pdf":
+			contentType = "application/pdf"
+			body = "not a PDF"
+		case "/captcha.pdf":
+			contentType = "application/octet-stream"
+			body = "<html><h1>请输入验证码下载附件</h1></html>"
+		default:
+			return &http.Response{StatusCode: http.StatusNotFound, Status: "404 Not Found", Header: make(http.Header), Body: io.NopCloser(strings.NewReader("not found")), Request: r}, nil
+		}
+		return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Header: http.Header{"Content-Type": []string{contentType}}, Body: io.NopCloser(strings.NewReader(body)), Request: r}, nil
+	})}
+	NoCache = true
+	t.Cleanup(func() { defaultClient, NoCache = oldClient, oldNoCache; ClearCache() })
+
+	article, raw, err := designFetchArticle(designFixtureBase + "/info/1016/77.htm")
+	if err != nil {
+		t.Fatalf("fetch design article: %v", err)
+	}
+	if len(raw) == 0 || len(article.Images) != 1 || article.Images[0] != designFixtureBase+"/valid.png" {
+		t.Fatalf("resource image verification failed: raw=%d images=%#v", len(raw), article.Images)
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].URL != designFixtureBase+"/valid.pdf" {
+		t.Fatalf("resource attachment verification failed: %#v", article.Attachments)
+	}
+	if !strings.Contains(article.ContentHTML, designFixtureBase+"/valid.png") || !strings.Contains(article.ContentHTML, designFixtureBase+"/valid.pdf") {
+		t.Fatalf("verified resources missing from ContentHTML: %q", article.ContentHTML)
+	}
+	for _, rejected := range []string{"bad.png", "bad.pdf", "captcha.pdf", "javascript:download"} {
+		if strings.Contains(article.ContentHTML, rejected) {
+			t.Fatalf("rejected resource/link remained in ContentHTML: %q", rejected)
+		}
+	}
+}
+
+type designTestRoundTripper func(*http.Request) (*http.Response, error)
+
+func (roundTripper designTestRoundTripper) RoundTrip(request *http.Request) (*http.Response, error) {
+	return roundTripper(request)
 }
 
 func readDesignFixture(t *testing.T, name string) []byte {

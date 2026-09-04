@@ -1,7 +1,10 @@
 package scraper
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -12,6 +15,8 @@ import (
 
 	"swjtu-cli/internal/model"
 )
+
+const cmCanonicalBaseURL = "https://cm.swjtu.edu.cn"
 
 // cmSubPages contains the article feeds exposed by CM's visible navigation
 // and by the additional lists embedded in the home page.  The profile pages
@@ -53,17 +58,22 @@ var (
 	cmShortDateRe   = regexp.MustCompile(`^[0-9]{1,2}\s*[-/.]\s*[0-9]{1,2}$`)
 	cmClockRe       = regexp.MustCompile(`[0-9]{1,2}\s*(?::|时)[0-9]{1,2}`)
 	cmYearRe        = regexp.MustCompile(`^20[0-9]{2}$`)
+	cmDateTimeRe    = regexp.MustCompile(`(20[0-9]{2})\s*[-/.年]\s*([0-9]{1,2})\s*[-/.月]\s*([0-9]{1,2})\s*日?\s*(?:[Tt]|\s+)?\s*([0-9]{1,2})\s*(?::|时)\s*([0-9]{2})(?:\s*(?::|分)\s*([0-9]{2})\s*秒?)?`)
 	cmPageCountRe   = regexp.MustCompile(`(?:/|共|第)\s*([0-9]+)\s*页`)
-	cmTotalItemsRe  = regexp.MustCompile(`共\s*([0-9]+)\s*条`)
 )
 
 func init() {
+	if site := AllSites["cm"]; site != nil {
+		site.BaseURL = cmCanonicalBaseURL
+	}
 	registerAdapter("cm", SiteAdapter{
 		SubPages:     cmSubPages,
 		ParseList:    parseAdapter_cmList,
 		ParseArticle: parseAdapter_cmArticle,
 		PageURL:      cmPageURL,
+		ListPage:     cmListPage,
 		TotalPages:   cmTotalPages,
+		FetchArticle: cmFetchArticle,
 	})
 }
 
@@ -120,6 +130,392 @@ func cmTotalPages(slug string) (int, error) {
 	return 0, lastErr
 }
 
+// cmListPage owns CM's reverse-numbered page fetch and repairs list metadata
+// which is known to be incomplete on the legacy 师生风采 template.  Keeping
+// this in the CM adapter means the shared range walker receives authoritative
+// calendar dates before it decides whether to stop at the one-year boundary.
+func cmListPage(slug string, page int) ([]model.NewsItem, int, error) {
+	site, ok := AllSites["cm"]
+	if !ok || site == nil {
+		return nil, 0, fmt.Errorf("cm site is not registered")
+	}
+	if page < 1 {
+		return nil, 0, fmt.Errorf("cm: page must be positive: %d", page)
+	}
+
+	baseURL := strings.TrimRight(strings.TrimSpace(site.BaseURL), "/")
+	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	firstBody, err := cmFetchListPage(baseURL, slug, 1, 0)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	totalPages := 1
+	if slug != "" && !strings.EqualFold(slug, "index") {
+		totalPages = cmPageCountFromHTML(firstBody)
+		if totalPages == 0 {
+			return nil, 0, fmt.Errorf("cm: %s has no recognized pagination", slug)
+		}
+	}
+	if page > totalPages {
+		return nil, totalPages, fmt.Errorf("cm: page %d exceeds %d pages for %s", page, totalPages, slug)
+	}
+
+	body := firstBody
+	if page > 1 {
+		body, err = cmFetchListPage(baseURL, slug, page, totalPages)
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+	items, err := parseAdapter_cmList(body, baseURL)
+	if err != nil {
+		return nil, totalPages, err
+	}
+	if unsupported := cmExternalListRowCount(body, baseURL); unsupported > 0 {
+		return items, totalPages, fmt.Errorf("cm: %s page %d has %d external-only article row(s); refusing to silently omit them", slug, page, unsupported)
+	}
+	if err := cmRepairListMetadata(items, baseURL); err != nil {
+		return nil, totalPages, err
+	}
+	return items, totalPages, nil
+}
+
+func cmFetchListPage(baseURL, slug string, page, totalPages int) ([]byte, error) {
+	var lastErr error
+	for _, extension := range []string{".htm", ".html"} {
+		pageURL := cmPageURL(baseURL, slug, page, totalPages, extension)
+		body, err := fetch(pageURL)
+		if err == nil {
+			return body, nil
+		}
+		lastErr = err
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("unable to fetch %s page %d", slug, page)
+	}
+	return nil, fmt.Errorf("cm: fetch list %s page %d: %w", slug, page, lastErr)
+}
+
+// cmFetchArticle is the live detail path.  Parsing remains deterministic, but
+// CM's CMS download URLs and a few image URLs can return HTTP 200 HTML shells;
+// verify resources here before exposing them to callers.
+func cmFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	baseURL := cmCanonicalBaseURL
+	if site := AllSites["cm"]; site != nil && strings.TrimSpace(site.BaseURL) != "" {
+		baseURL = strings.TrimRight(strings.TrimSpace(site.BaseURL), "/")
+	}
+	fullURL, ok := cmArticleURL(baseURL, articleURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("cm: refusing non-local or non-detail URL %q", articleURL)
+	}
+	body, err := fetch(fullURL)
+	if err != nil {
+		return nil, nil, err
+	}
+	article, err := parseAdapter_cmArticle(body, baseURL)
+	if err != nil {
+		return nil, body, err
+	}
+	article.Images = cmVerifyImages(article.Images, baseURL)
+	article.Attachments = cmVerifyAttachments(article.Attachments, baseURL)
+	cmSanitizeContentHTML(article, baseURL)
+	return article, body, nil
+}
+
+const cmMaxResourceBytes = 32 << 20
+
+var cmResourceShellMarkerRe = regexp.MustCompile(`(?is)<!doctype\s+html|<html(?:\s|>)|<head(?:\s|>)|<body(?:\s|>)|附件下载|请输入验证码|验证码下载附件|请先登录|请登录后|登录页面|页面不存在|404\s+not\s+found|access\s+denied|cloudflare|just\s+a\s+moment|安全验证|请求已被阻断`)
+
+func cmVerifyImages(images []string, baseURL string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool, len(images))
+	for _, raw := range images {
+		resolved := cmResourceURL(baseURL, raw)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, contentType, err := cmFetchResource(resolved, baseURL, true)
+		if err != nil || !cmResourceBodyIsUsable(contentType, body, resolved, true) {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func cmVerifyAttachments(attachments []model.Attachment, baseURL string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		resolved := cmResourceURL(baseURL, attachment.URL)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, contentType, err := cmFetchResource(resolved, baseURL, false)
+		if err != nil || !cmResourceBodyIsUsable(contentType, body, attachment.Name+" "+resolved, false) {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func cmFetchResource(rawURL, baseURL string, image bool) ([]byte, string, error) {
+	resolved := cmResourceURL(baseURL, rawURL)
+	if resolved == "" {
+		return nil, "", fmt.Errorf("cm: refusing invalid resource %q", rawURL)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("cm: create resource request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	if image {
+		req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+	} else {
+		req.Header.Set("Accept", "application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	}
+	client := *defaultClient
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if len(via) == 0 || strings.EqualFold(next.URL.Hostname(), via[len(via)-1].URL.Hostname()) {
+			return nil
+		}
+		return http.ErrUseLastResponse
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("cm: fetch resource %s: %w", resolved, err)
+	}
+	defer response.Body.Close()
+	contentType := response.Header.Get("Content-Type")
+	if response.StatusCode != http.StatusOK {
+		return nil, contentType, fmt.Errorf("cm: resource %s: HTTP %d", resolved, response.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, cmMaxResourceBytes+1))
+	if err != nil {
+		return nil, contentType, fmt.Errorf("cm: read resource %s: %w", resolved, err)
+	}
+	if len(body) > cmMaxResourceBytes {
+		return nil, contentType, fmt.Errorf("cm: resource %s exceeds %d bytes", resolved, cmMaxResourceBytes)
+	}
+	return body, contentType, nil
+}
+
+func cmResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	if mediaType == "" {
+		return false
+	}
+	probe := body
+	if len(probe) > 4096 {
+		probe = probe[:4096]
+	}
+	if cmResourceShellMarkerRe.Match(probe) {
+		return false
+	}
+	if image {
+		return strings.HasPrefix(mediaType, "image/") && cmIsImageMagic(cmResourceMagic(body))
+	}
+
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf"):
+		return cmResourceMagic(body) == "pdf"
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml"):
+		return cmResourceMagic(body) == "zip"
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt") || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint":
+		return cmResourceMagic(body) == "ole"
+	case strings.Contains(lowerName, ".zip") || strings.Contains(lowerName, ".rar") || strings.Contains(lowerName, ".7z") || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed":
+		magic := cmResourceMagic(body)
+		return magic == "zip" || magic == "rar" || magic == "7z"
+	case strings.Contains(lowerName, ".txt") || strings.Contains(lowerName, ".csv") || strings.HasPrefix(mediaType, "text/"):
+		return true
+	default:
+		return cmResourceMagic(body) != ""
+	}
+}
+
+func cmResourceMagic(body []byte) string {
+	switch {
+	case bytes.HasPrefix(body, []byte("%PDF-")):
+		return "pdf"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x03, 0x04}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x05, 0x06}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x07, 0x08}):
+		return "zip"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}):
+		return "ole"
+	case len(body) >= 3 && bytes.Equal(body[:3], []byte{0xff, 0xd8, 0xff}):
+		return "jpeg"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
+		return "png"
+	case len(body) >= 6 && (bytes.Equal(body[:6], []byte("GIF87a")) || bytes.Equal(body[:6], []byte("GIF89a"))):
+		return "gif"
+	case len(body) >= 12 && bytes.Equal(body[:4], []byte("RIFF")) && bytes.Equal(body[8:12], []byte("WEBP")):
+		return "webp"
+	case len(body) >= 2 && bytes.Equal(body[:2], []byte("BM")):
+		return "bmp"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{'I', 'I', '*', 0}) || bytes.Equal(body[:4], []byte{'M', 'M', 0, '*'})):
+		return "tiff"
+	case len(body) >= 7 && bytes.Equal(body[:7], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x00}):
+		return "rar"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x01, 0x00}):
+		return "rar"
+	case len(body) >= 6 && bytes.Equal(body[:6], []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}):
+		return "7z"
+	default:
+		return ""
+	}
+}
+
+func cmIsImageMagic(magic string) bool {
+	switch magic {
+	case "jpeg", "png", "gif", "webp", "bmp", "tiff":
+		return true
+	default:
+		return false
+	}
+}
+
+func cmSanitizeContentHTML(article *model.Article, baseURL string) {
+	if article == nil || strings.TrimSpace(article.ContentHTML) == "" {
+		return
+	}
+	validImages := make(map[string]bool, len(article.Images))
+	for _, image := range article.Images {
+		if resolved := cmResourceURL(baseURL, image); resolved != "" {
+			validImages[resolved] = true
+		}
+	}
+	validAttachments := make(map[string]bool, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		if resolved := cmResourceURL(baseURL, attachment.URL); resolved != "" {
+			validAttachments[resolved] = true
+		}
+	}
+
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(`<div id="cm-content-root">` + article.ContentHTML + `</div>`))
+	if err != nil {
+		return
+	}
+	content := doc.Find("#cm-content-root").First()
+	content.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := ""
+		for _, attr := range []string{"src", "orisrc", "data-src", "data-original", "data-lazy-src"} {
+			if candidate := cmResourceURL(baseURL, image.AttrOr(attr, "")); candidate != "" {
+				resolved = candidate
+				break
+			}
+		}
+		if resolved == "" || !validImages[resolved] {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"orisrc", "data-src", "data-original", "data-lazy-src"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	content.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		href := strings.TrimSpace(link.AttrOr("href", ""))
+		attachmentLike := cmIsAttachmentLink(href, link) || (bodaIsPseudoResourceHref(href) && strings.Contains(strings.ToLower(href), "download"))
+		if !attachmentLike {
+			return
+		}
+		resolved := cmResourceURL(baseURL, href)
+		if !validAttachments[resolved] {
+			link.Remove()
+			return
+		}
+		link.SetAttr("href", resolved)
+	})
+	if html, err := content.Html(); err == nil {
+		article.ContentHTML = html
+	}
+}
+
+func cmRepairListMetadata(items []model.NewsItem, baseURL string) error {
+	for i := range items {
+		if !cmListItemNeedsDetail(items[i]) {
+			continue
+		}
+		body, err := fetch(items[i].URL)
+		if err != nil {
+			return fmt.Errorf("cm: fetch detail for list item %q: %w", items[i].URL, err)
+		}
+		article, err := parseAdapter_cmArticle(body, baseURL)
+		if err != nil {
+			return fmt.Errorf("cm: parse detail for list item %q: %w", items[i].URL, err)
+		}
+		if cmTitleIsTruncated(items[i].Title) && article.Title != "" && !cmTitleIsTruncated(article.Title) {
+			items[i].Title = article.Title
+		}
+		if parseDate(items[i].Date).IsZero() {
+			items[i].Date = article.Date
+		}
+		if items[i].PublishedAt == "" {
+			items[i].PublishedAt = article.PublishedAt
+		}
+		if items[i].Type == "" {
+			items[i].Type = article.Type
+		}
+		if parseDate(items[i].Date).IsZero() {
+			return fmt.Errorf("cm: detail for list item %q has no complete publication date", items[i].URL)
+		}
+	}
+	return nil
+}
+
+func cmListItemNeedsDetail(item model.NewsItem) bool {
+	return cmTitleIsTruncated(item.Title) || parseDate(item.Date).IsZero() || strings.TrimSpace(item.Type) == ""
+}
+
+func cmTitleIsTruncated(title string) bool {
+	title = strings.TrimSpace(title)
+	return strings.HasSuffix(title, "...") || strings.HasSuffix(title, "…")
+}
+
+// cpyc/rczp and cpyc/jszp currently expose WeChat links rather than CM detail
+// pages. They cannot be handed to the CM article parser; surface that fact as
+// a feed error instead of reporting a successful empty page.
+func cmExternalListRowCount(html []byte, baseURL string) int {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
+	if err != nil {
+		return 0
+	}
+	count := 0
+	doc.Find(".n_list > ul > li, .n_listTxt > ul > li").Each(func(_ int, row *goquery.Selection) {
+		if cmArticleAnchor(row, baseURL) != nil {
+			return
+		}
+		row.Find("a[href]").EachWithBreak(func(_ int, anchor *goquery.Selection) bool {
+			if isInNavArea(anchor) || strings.TrimSpace(anchor.Text()) == "" && strings.TrimSpace(anchor.AttrOr("title", "")) == "" {
+				return true
+			}
+			resolved := cleanURL(resolveURL(baseURL, strings.TrimSpace(anchor.AttrOr("href", ""))))
+			parsed, parseErr := url.Parse(resolved)
+			if parseErr == nil && (strings.EqualFold(parsed.Scheme, "http") || strings.EqualFold(parsed.Scheme, "https")) && parsed.Hostname() != "" {
+				base, baseErr := url.Parse(baseURL)
+				if baseErr == nil && !strings.EqualFold(parsed.Hostname(), base.Hostname()) {
+					count++
+				}
+			}
+			return false
+		})
+	})
+	return count
+}
+
 func cmPageCountFromHTML(html []byte) int {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
 	if err != nil {
@@ -149,16 +545,9 @@ func cmPageCountFromHTML(html []byte) int {
 		return maxPage
 	}
 
-	// Keep a fallback for a template that only exposes total rows and current
-	// page size; this still avoids the reverse-filename interpretation.
-	match := cmTotalItemsRe.FindStringSubmatch(strings.Join(strings.Fields(doc.Find(".p_t").Text()), ""))
-	if match != nil {
-		totalItems, _ := strconv.Atoi(match[1])
-		rows := doc.Find(".n_list > ul > li, .n_listTxt > ul > li").Length()
-		if totalItems > 0 && rows > 0 {
-			return (totalItems + rows - 1) / rows
-		}
-	}
+	// Do not guess from total rows and the current response's row count. A
+	// WAF/login/static response can contain a few list-looking rows without
+	// being a complete paginated feed; source pagination markup is authoritative.
 	return 0
 }
 
@@ -172,13 +561,21 @@ func parseAdapter_cmList(html []byte, baseURL string) ([]model.NewsItem, error) 
 	// older n_listTxt name. Scoping to these containers is what keeps the
 	// navigation links (including the mobile 首页 h1) out of the feed.
 	if list := doc.Find(".n_list > ul").First(); list.Length() > 0 {
-		return parseCmListRows(list.ChildrenFiltered("li"), cmPageType(doc), baseURL, true), nil
+		items := parseCmListRows(list.ChildrenFiltered("li"), cmPageType(doc), baseURL, true)
+		if len(items) == 0 {
+			return nil, fmt.Errorf("cm list contains no article entries")
+		}
+		return items, nil
 	}
 	if list := doc.Find(".n_listTxt > ul").First(); list.Length() > 0 {
 		// CM's legacy 师生风采 template currently emits the same stale
 		// 2023-04-12 value for every row. The detail page has the real
 		// publication date, so do not expose this list-only placeholder.
-		return parseCmListRows(list.ChildrenFiltered("li"), cmPageType(doc), baseURL, false), nil
+		items := parseCmListRows(list.ChildrenFiltered("li"), cmPageType(doc), baseURL, false)
+		if len(items) == 0 {
+			return nil, fmt.Errorf("cm list contains no article entries")
+		}
+		return items, nil
 	}
 
 	// index.htm is an aggregation page. Each home section has its own heading;
@@ -216,9 +613,6 @@ func parseCmListRows(rows *goquery.Selection, pageType, baseURL string, includeD
 		date, publishedAt := "", ""
 		if includeDates {
 			date, publishedAt = cmDateFromScope(row.Find("time, .time, .date").First())
-			if date == "" {
-				date, publishedAt = cmDateFromScope(row)
-			}
 		}
 
 		seen[fullURL] = true
@@ -385,6 +779,17 @@ func cmDateValues(raw string) (string, string) {
 	if raw == "" {
 		return "", ""
 	}
+	if match := cmDateTimeRe.FindStringSubmatch(raw); match != nil {
+		date := normalizeDateParts(match[1], match[2], match[3])
+		if date == "" {
+			return "", ""
+		}
+		second := match[6]
+		if second == "" {
+			second = "00"
+		}
+		return date, fmt.Sprintf("%s %02s:%s:%s", date, match[4], match[5], second)
+	}
 	if normalized := normalizePublishedAt(raw); normalized != "" {
 		if cmHasClock(raw) || strings.Contains(raw, "分") || strings.Contains(raw, "秒") {
 			return normalized[:10], normalized
@@ -421,6 +826,29 @@ func cmArticleURL(baseURL, href string) (string, bool) {
 	return parsed.String(), true
 }
 
+func cmResourceURL(baseURL, raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || bodaIsPseudoResourceHref(raw) {
+		return ""
+	}
+	resolved := bodaResourceURL(baseURL, raw)
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Hostname() == "" {
+		return ""
+	}
+	base, err := url.Parse(baseURL)
+	if err != nil || base.Hostname() == "" || !strings.EqualFold(parsed.Hostname(), base.Hostname()) {
+		return ""
+	}
+	resourceText := strings.ToLower(parsed.Path + "?" + parsed.RawQuery)
+	for _, marker := range []string{"/captcha", "/verify", "/login", "/signin", "/placeholder", "/transparent", "/spacer", "/blank", "/loading", "/pixel.gif"} {
+		if strings.Contains(resourceText, marker) {
+			return ""
+		}
+	}
+	return cleanURL(parsed.String())
+}
+
 func parseAdapter_cmArticle(html []byte, baseURL string) (*model.Article, error) {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
 	if err != nil {
@@ -443,7 +871,7 @@ func parseAdapter_cmArticle(html []byte, baseURL string) (*model.Article, error)
 		Title: strings.TrimSpace(titleSel.Text()),
 		Type:  cmArticleType(doc),
 	}
-	cmFillArticleMeta(article, doc, titleSel, contentSel)
+	cmFillArticleMeta(article, doc)
 
 	article.Content = cmContentText(contentSel)
 	cmAppendImages(article, contentSel, baseURL)
@@ -481,9 +909,9 @@ func cmArticleType(doc *goquery.Document) string {
 	return value
 }
 
-func cmFillArticleMeta(article *model.Article, doc *goquery.Document, titleSel, contentSel *goquery.Selection) {
+func cmFillArticleMeta(article *model.Article, doc *goquery.Document) {
 	var date, publishedAt string
-	doc.Find(".dtl-tit .dtl-ar span").Each(func(_ int, field *goquery.Selection) {
+	doc.Find(".dtl-tit .dtl-ar span, .dtl-tit .dtl-ar time, .dtl-tit .dtl-ar dd").Each(func(_ int, field *goquery.Selection) {
 		text := strings.TrimSpace(field.Text())
 		switch {
 		case strings.HasPrefix(text, "发布者：") || strings.HasPrefix(text, "发布者:"):
@@ -504,11 +932,19 @@ func cmFillArticleMeta(article *model.Article, doc *goquery.Document, titleSel, 
 	})
 
 	if date == "" {
-		date = findDateInMetaZone(titleSel, contentSel)
-	}
-	if publishedAt == "" {
-		if value := findDateTimeInMetaZone(titleSel, contentSel); value != "" {
-			publishedAt = normalizePublishedAt(value)
+		for _, selector := range []string{
+			`meta[name="publishdate"]`,
+			`meta[name="publish_date"]`,
+			`meta[property="article:published_time"]`,
+		} {
+			value := strings.TrimSpace(doc.Find(selector).First().AttrOr("content", ""))
+			if value == "" {
+				continue
+			}
+			date, publishedAt = cmDateValues(value)
+			if date != "" {
+				break
+			}
 		}
 	}
 	article.Date = date
@@ -521,46 +957,24 @@ func cmMetaValue(text, label string) string {
 }
 
 func cmContentText(content *goquery.Selection) string {
-	clone := content.Clone()
-	clone.Find("script, style, noscript").Remove()
-	parts := make([]string, 0)
-	clone.Find("p, h1, h2, h3, h4, h5, h6, li, blockquote, pre").Each(func(_ int, block *goquery.Selection) {
-		if block.Find("p, h1, h2, h3, h4, h5, h6, li, blockquote, pre").Length() > 0 {
-			return
-		}
-		if text := strings.Join(strings.Fields(block.Text()), " "); text != "" {
-			parts = append(parts, text)
-		}
-	})
-	if len(parts) > 0 {
-		return strings.Join(parts, "\n\n")
-	}
-
-	clone.Children().Each(func(_ int, child *goquery.Selection) {
-		if text := strings.Join(strings.Fields(child.Text()), " "); text != "" {
-			parts = append(parts, text)
-		}
-	})
-	if len(parts) > 0 {
-		return strings.Join(parts, "\n\n")
-	}
-	return strings.Join(strings.Fields(clone.Text()), " ")
+	return extractBodaContentText(content)
 }
 
 func cmAppendImages(article *model.Article, content *goquery.Selection, baseURL string) {
 	seen := make(map[string]bool)
 	content.Find("img").Each(func(_ int, image *goquery.Selection) {
-		src := ""
+		resolved := ""
 		for _, attr := range []string{"src", "orisrc", "data-src", "data-original", "data-lazy-src"} {
 			if value := strings.TrimSpace(image.AttrOr(attr, "")); value != "" {
-				src = value
-				break
+				if strings.Contains(strings.ToLower(value), "cm.swjtu.edu.cnnull") {
+					continue
+				}
+				if candidate := cmResourceURL(baseURL, value); candidate != "" {
+					resolved = candidate
+					break
+				}
 			}
 		}
-		if src == "" || strings.HasPrefix(strings.ToLower(src), "data:") || strings.Contains(src, "cm.swjtu.edu.cnnull") {
-			return
-		}
-		resolved := cleanURL(resolveURL(baseURL, src))
 		if resolved == "" || seen[resolved] {
 			return
 		}
@@ -580,10 +994,10 @@ func cmAppendAttachments(article *model.Article, detail *goquery.Selection, base
 	}
 	detail.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
 		href := strings.TrimSpace(link.AttrOr("href", ""))
-		if !cmIsAttachmentLink(href, link) {
+		if bodaIsPseudoResourceHref(href) || !cmIsAttachmentLink(href, link) {
 			return
 		}
-		resolved := cleanURL(resolveURL(baseURL, href))
+		resolved := cmResourceURL(baseURL, href)
 		if resolved == "" || seen[resolved] {
 			return
 		}

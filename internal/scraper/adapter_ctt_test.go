@@ -18,12 +18,22 @@ func TestCttAdapterRegistration(t *testing.T) {
 	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil {
 		t.Fatalf("CTT adapter hooks are incomplete: %+v", site)
 	}
-	if !reflect.DeepEqual(site.SubPages, cttSubPages) {
-		t.Fatalf("CTT sub-pages = %#v, want %#v", site.SubPages, cttSubPages)
+	wantSubPages := []string{
+		"xyywlist/jyyw", "xyywlist/dcjy", "xyywlist/xzfc", "xyywlist/kycx", "xyywlist/tsdj", "xyywlist/jwgz", "xyywlist/mtgz", "xyywlist/wjxz", "xyywlist/gzzd",
+		"tzgg/xytz", "tzgg/rsxg", "tzgg/tzzf", "tzgg/wjxz",
+		"bkjxnew/jxgg", "yjsjxnew/tzgg", "yjsjxnew/wjxz", "kxyjNew/kytz", "sysglnew/tzgg", "shpxnew/jxjyxx",
+		"xsgzNew1/txhd", "xsgzNew1/bksgl", "xsgzNew1/yjsgl", "xsgzNew1/xszz", "xsgzNew1/bjjs",
+		"dqgzNew/djtz", "dqgzNew/djxw", "dqgzNew/gszq", "dqgzNew/ghhd", "ltgz_ggw_",
 	}
-	for _, slug := range []string{"tzgg/rsxg", "tzgg/tzzf", "tzgg/wjxz", "yjsjxnew/wjxz"} {
+	if !reflect.DeepEqual(site.SubPages, wantSubPages) {
+		t.Fatalf("CTT sub-pages = %#v, want %#v", site.SubPages, wantSubPages)
+	}
+	if !reflect.DeepEqual(cttSubPages, wantSubPages) {
+		t.Fatalf("adapter sub-pages = %#v, want %#v", cttSubPages, wantSubPages)
+	}
+	for _, slug := range wantSubPages {
 		if !hasCttSubPage(site.SubPages, slug) {
-			t.Errorf("CTT confirmed non-empty feed %q is not registered", slug)
+			t.Errorf("CTT audited feed %q is not registered", slug)
 		}
 	}
 }
@@ -162,17 +172,30 @@ func TestCttListParserReadsClassificationAndTotalPages(t *testing.T) {
 	}
 }
 
-func TestCttEmptyListIsAValidEmptyResult(t *testing.T) {
+func TestCttEmptyListIsAnExplicitError(t *testing.T) {
 	body := readCttFixture(t, "ctt_empty.html")
-	items, err := parseCttNews(body, cttBaseURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(items) != 0 {
-		t.Fatalf("empty CTT list returned %#v", items)
+	if _, err := parseCttNews(body, cttBaseURL); err == nil || !strings.Contains(err.Error(), "recognized list is empty") {
+		t.Fatalf("empty CTT list error = %v, want explicit empty-list error", err)
 	}
 	if got := cttTotalPagesFromHTML(body); got != 1 {
 		t.Fatalf("empty CTT list total pages = %d, want 1", got)
+	}
+}
+
+func TestCttUnavailableResponsesAreExplicitErrors(t *testing.T) {
+	for _, tc := range []struct {
+		fixture string
+		want    string
+	}{
+		{fixture: "ctt_waf.html", want: "WAF/captcha"},
+		{fixture: "ctt_login.html", want: "login"},
+		{fixture: "ctt_spa.html", want: "SPA shell"},
+	} {
+		t.Run(tc.fixture, func(t *testing.T) {
+			if _, err := parseCttNews(readCttFixture(t, tc.fixture), cttBaseURL); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("response error = %v, want %q", err, tc.want)
+			}
+		})
 	}
 }
 
@@ -244,14 +267,41 @@ func TestCttArticleParserExtractsResourcesAndPreciseMetadata(t *testing.T) {
 	if len(article.Images) != 1 || article.Images[0] != cttBaseURL+"/images/body.jpg" {
 		t.Fatalf("article images = %#v", article.Images)
 	}
-	if len(article.Attachments) != 1 {
-		t.Fatalf("article attachments = %#v, want one deduplicated attachment", article.Attachments)
+	if len(article.Attachments) != 3 {
+		t.Fatalf("article attachments = %#v, want body, external and HTML-response attachments", article.Attachments)
 	}
 	if article.Attachments[0].Name != "通知附件.pdf" || !strings.HasPrefix(article.Attachments[0].URL, cttBaseURL+"/system/_content/download.jsp?") {
 		t.Fatalf("article attachment = %#v", article.Attachments[0])
 	}
+	if article.Attachments[1].Name != "外站附件.pdf" || article.Attachments[1].URL != "https://files.example.org/外站附件.pdf" {
+		t.Fatalf("external attachment = %#v", article.Attachments[1])
+	}
+	if article.Attachments[2].Name != "验证码附件.html" || !strings.Contains(article.Attachments[2].URL, "wbfileid=CAPTCHA") {
+		t.Fatalf("HTML-response attachment = %#v", article.Attachments[2])
+	}
+	for _, attachment := range article.Attachments {
+		if strings.Contains(attachment.URL, "outside.example/guide") {
+			t.Fatalf("ordinary external link was misclassified as attachment: %#v", article.Attachments)
+		}
+	}
 	if !strings.Contains(article.ContentHTML, cttBaseURL+"/images/body.jpg") || !strings.Contains(article.ContentHTML, cttBaseURL+"/system/_content/download.jsp?") {
 		t.Errorf("resolved resources missing from ContentHTML: %s", article.ContentHTML)
+	}
+	if !strings.Contains(article.ContentHTML, "https://outside.example/guide") || strings.Contains(article.ContentHTML, "data:image") {
+		t.Errorf("external/unsafe content resources were not handled truthfully: %s", article.ContentHTML)
+	}
+}
+
+func TestCttHomeRowsPreferTheirDirectDateField(t *testing.T) {
+	html := []byte(`<html><body><div class="rowb"><ul class="tabNav"><li>本科教学</li></ul><div class="tabcons"><div class="list"><ul>
+<li><a class="texto" href="info/4411/228582.htm">2026-08-29 活动安排通知</a><span>2026-08-30</span></li>
+</ul></div></div></div></body></html>`)
+	items, err := parseCttNews(html, cttBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].Date != "2026-08-30" {
+		t.Fatalf("home row date = %#v, want source direct span date", items)
 	}
 }
 

@@ -24,6 +24,7 @@ func init() {
 		ParseList:    parseDqxyNews,
 		ParseArticle: parseDqxyArticle,
 		PageURL:      dqxyPageURL,
+		ListPage:     dqxyListPage,
 		TotalPages:   dqxyTotalPages,
 	})
 }
@@ -52,33 +53,43 @@ var dqxySubPages = []string{
 	"xsgz_more/xsfc",
 	"xsgz1/xsdj",
 	"xsgz1/xsfc1",
+	"xsgz1/xgdw/xgdt",
+	"dqgz1/djgz/djdt",
+	"dqgz1/jwgz/gzdt",
 	"dqgz1/ghgz",
 	"dqgz1/ltgz",
 	"dqgz1/tzgz",
+	"zsjy/jygz",
+	"xyyd/xyhd",
 	"cyxz/zlwj/djgz",
 }
 
 var (
-	dqxyFullDateRe    = regexp.MustCompile(`(20\d{2})\s*(?:年|[-/.])\s*(\d{1,2})\s*(?:月|[-/.])\s*(\d{1,2})\s*日?`)
-	dqxyShortDateRe   = regexp.MustCompile(`^(\d{1,2})\s*[-/.]\s*(\d{1,2})$`)
-	dqxyArticlePathRe = regexp.MustCompile(`^/info/[^/]+/\d+\.html?$`)
-	dqxyArticleIDRe   = regexp.MustCompile(`^\d+$`)
-	dqxyCategoryRe    = regexp.MustCompile(`^(?:【[^】]+】|\[[^]]+\])\s*`)
+	dqxyFullDateRe        = regexp.MustCompile(`(20\d{2})\s*(?:年|[-/.])\s*(\d{1,2})\s*(?:月|[-/.])\s*(\d{1,2})\s*日?`)
+	dqxyYearSuffixDateRe  = regexp.MustCompile(`^(\d{1,2})\s*[-/.]\s*(\d{1,2})\s*(?:年\s*)?(20\d{2})$`)
+	dqxyShortDateRe       = regexp.MustCompile(`^(\d{1,2})\s*[-/.]\s*(\d{1,2})$`)
+	dqxyClockSuffixRe     = regexp.MustCompile(`^\d{1,2}(?::|时)\d{2}(?::\d{2}|分(?:\d{1,2}秒)?)?$`)
+	dqxyArticlePathRe     = regexp.MustCompile(`^/info/[^/]+/\d+\.html?$`)
+	dqxyArticleIDRe       = regexp.MustCompile(`^\d+$`)
+	dqxyCategoryRe        = regexp.MustCompile(`^(?:【[^】]+】|〖[^〗]+〗|\[[^]]+\])\s*`)
+	dqxyLeadingCategoryRe = regexp.MustCompile(`^(?:【([^】]+)】|〖([^〗]+)〗|\[([^]]+)\])\s*`)
 )
 
 type dqxyNewsRow struct {
-	URL       string
-	Title     string
-	Type      string
-	Date      string
-	MonthDay  int
-	Year      int
-	ExactDate bool
+	URL         string
+	Title       string
+	Type        string
+	Date        string
+	PublishedAt string
+	MonthDay    int
+	Year        int
+	ExactDate   bool
 }
 
 type dqxyLatestMeta struct {
-	Title string
-	Date  string
+	Title       string
+	Date        string
+	PublishedAt string
 }
 
 // dqxyPageURL maps logical page numbers to the generated filenames used by
@@ -104,6 +115,9 @@ func dqxyPageURL(baseURL, slug string, page, totalPages int, extension string) s
 
 func dqxyTotalPages(slug string) (int, error) {
 	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if slug == "index" {
+		return 1, nil
+	}
 	if !dqxyKnownSubPage(slug) {
 		return 0, fmt.Errorf("dqxy: %q is not an audited article-list route", slug)
 	}
@@ -141,47 +155,294 @@ func dqxyKnownSubPage(slug string) bool {
 
 func dqxyTotalPagesFromHTML(raw []byte) int {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(raw)))
-	if err != nil || doc.Find(".tzgg_page_base").Length() == 0 {
+	if err != nil {
+		return 0
+	}
+	hasStandardList := doc.Find(".tzgg_page_base").Length() > 0
+	hasContactList := doc.Find("main.contact_us_page .campusally_area").Length() > 0
+	if !hasStandardList && !hasContactList {
 		return 0
 	}
 	if total := parseTotalPages(raw); total > 0 {
 		return total
 	}
-	if doc.Find(".p_pages").Length() > 0 {
+	if hasStandardList || hasContactList {
 		// The page controls may contain only the disabled logical page 1 on a
-		// legal empty/single-page list. It is still exactly one page.
+		// legal empty/single-page list. The contact-list template may omit the
+		// controls altogether when it has only one page. The list container is
+		// stronger evidence than an item count: an empty archive is valid, while
+		// a WAF/login/template shell normally has neither container.
 		return 1
 	}
 	return 0
 }
 
+// dqxyListPage owns the GET-and-parse path for this site because several live
+// list templates expose only MM-DD. The article detail has the authoritative
+// year (and, when requested, minute precision), so resolve one detail-page
+// anchor before the shared range paginator decides whether to visit older
+// reverse-numbered pages.
+func dqxyListPage(slug string, page int) ([]model.NewsItem, int, error) {
+	site := AllSites["dqxy"]
+	if site == nil {
+		return nil, 0, fmt.Errorf("dqxy: site is not registered")
+	}
+	baseURL := strings.TrimRight(site.BaseURL, "/")
+	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if slug == "" {
+		slug = "index"
+	}
+	if page < 1 {
+		return nil, 0, fmt.Errorf("dqxy: requested page must be positive: %d", page)
+	}
+
+	if slug == "index" {
+		if page != 1 {
+			return nil, 1, fmt.Errorf("dqxy: homepage has only one page")
+		}
+		body, err := dqxyFetchHomepage(baseURL)
+		if err != nil {
+			return nil, 0, err
+		}
+		rows, err := parseDqxyNewsRows(body, baseURL)
+		if err != nil {
+			return nil, 0, err
+		}
+		if err := dqxyRepairListRows(rows, baseURL, slug); err != nil {
+			return nil, 0, err
+		}
+		return dqxyNewsItems(rows), 1, nil
+	}
+	if !dqxyKnownSubPage(slug) {
+		return nil, 0, fmt.Errorf("dqxy: %q is not an audited article-list route", slug)
+	}
+
+	firstBody, err := dqxyFetchListPage(baseURL, slug, 1, 0)
+	if err != nil {
+		return nil, 0, err
+	}
+	totalPages := dqxyTotalPagesFromHTML(firstBody)
+	if totalPages < 1 {
+		return nil, 0, fmt.Errorf("dqxy: %s has no recognized pagination", slug)
+	}
+	if page > totalPages {
+		return nil, totalPages, fmt.Errorf("dqxy: requested page %d beyond %d for %s", page, totalPages, slug)
+	}
+
+	body := firstBody
+	if page > 1 {
+		body, err = dqxyFetchListPage(baseURL, slug, page, totalPages)
+		if err != nil {
+			return nil, totalPages, err
+		}
+	}
+	rows, err := parseDqxyNewsRows(body, baseURL)
+	if err != nil {
+		return nil, totalPages, err
+	}
+	if err := dqxyRepairListRows(rows, baseURL, slug); err != nil {
+		return nil, totalPages, err
+	}
+	return dqxyNewsItems(rows), totalPages, nil
+}
+
+func dqxyFetchHomepage(baseURL string) ([]byte, error) {
+	var lastErr error
+	for _, pageURL := range []string{baseURL + "/", baseURL + "/index.htm"} {
+		body, err := fetch(pageURL)
+		if err == nil {
+			return body, nil
+		}
+		lastErr = err
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("dqxy: unable to fetch homepage")
+	}
+	return nil, lastErr
+}
+
+func dqxyFetchListPage(baseURL, slug string, page, totalPages int) ([]byte, error) {
+	var lastErr error
+	for _, extension := range []string{".htm", ".html"} {
+		pageURL := dqxyPageURL(baseURL, slug, page, totalPages, extension)
+		if pageURL == "" {
+			continue
+		}
+		body, err := fetch(pageURL)
+		if err == nil {
+			return body, nil
+		}
+		lastErr = err
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("dqxy: unable to fetch %s page %d", slug, page)
+	}
+	return nil, lastErr
+}
+
+func dqxyRepairListRows(rows []dqxyNewsRow, baseURL, slug string) error {
+	if len(rows) == 0 {
+		return nil
+	}
+	if typ := dqxyFeedType(slug); typ != "" {
+		for i := range rows {
+			if rows[i].Type == "" {
+				rows[i].Type = typ
+			}
+		}
+	}
+
+	needDate := false
+	for _, row := range rows {
+		if row.Date == "" && row.MonthDay != 0 {
+			needDate = true
+			break
+		}
+	}
+	if needDate {
+		resolved := false
+		for i := range rows {
+			if rows[i].Date != "" || rows[i].MonthDay == 0 {
+				continue
+			}
+			body, err := fetch(rows[i].URL)
+			if err != nil {
+				continue
+			}
+			article, err := parseDqxyArticle(body, baseURL)
+			if err != nil || article == nil || article.Date == "" {
+				continue
+			}
+			if monthDay := dqxyMonthDay(article.Date); monthDay != 0 && monthDay != rows[i].MonthDay {
+				continue
+			}
+			setDqxyDate(&rows[i], article.Date)
+			if publishedAtHasClock(article.PublishedAt) {
+				rows[i].PublishedAt = article.PublishedAt
+			}
+			for j := range rows {
+				if rows[j].Type == "" && article.Type != "" {
+					rows[j].Type = article.Type
+				}
+			}
+			completeDqxyDates(rows)
+			resolved = true
+			break
+		}
+		if !resolved {
+			return fmt.Errorf("dqxy: unable to resolve publication year for %s", rows[0].URL)
+		}
+		for _, row := range rows {
+			if row.Date == "" && row.MonthDay != 0 {
+				return fmt.Errorf("dqxy: unable to resolve publication year for %s", row.URL)
+			}
+		}
+	}
+	return dqxyRepairTruncatedTitles(rows, baseURL)
+}
+
+func dqxyRepairTruncatedTitles(rows []dqxyNewsRow, baseURL string) error {
+	for i := range rows {
+		if !dqxyTitleIsTruncated(rows[i].Title) {
+			continue
+		}
+		body, err := fetch(rows[i].URL)
+		if err != nil {
+			return fmt.Errorf("dqxy: fetch detail for truncated title %q: %w", rows[i].URL, err)
+		}
+		article, err := parseDqxyArticle(body, baseURL)
+		if err != nil {
+			return fmt.Errorf("dqxy: parse detail for truncated title %q: %w", rows[i].URL, err)
+		}
+		if article == nil || article.Title == "" || dqxyTitleIsTruncated(article.Title) {
+			return fmt.Errorf("dqxy: detail still has truncated title for %q", rows[i].URL)
+		}
+		rows[i].Title = article.Title
+		if rows[i].Date == "" && article.Date != "" {
+			setDqxyDate(&rows[i], article.Date)
+		}
+		if publishedAtHasClock(article.PublishedAt) {
+			rows[i].PublishedAt = article.PublishedAt
+		}
+		if rows[i].Type == "" && article.Type != "" {
+			rows[i].Type = article.Type
+		}
+	}
+	return nil
+}
+
+func dqxyTitleIsTruncated(title string) bool {
+	title = strings.TrimSpace(title)
+	return strings.HasSuffix(title, "...") || strings.HasSuffix(title, "…")
+}
+
+func dqxyFeedType(slug string) string {
+	switch strings.Trim(strings.TrimSpace(slug), "/") {
+	case "zsjy/jygz":
+		return "就业工作"
+	case "xyyd/xyhd":
+		return "校友活动"
+	default:
+		return ""
+	}
+}
+
+func dqxyMonthDay(date string) int {
+	date = parseDqxyFullDate(date)
+	if len(date) < 10 {
+		return 0
+	}
+	month, _ := strconv.Atoi(date[5:7])
+	day, _ := strconv.Atoi(date[8:10])
+	return month*100 + day
+}
+
 func parseDqxyNews(html []byte, baseURL string) ([]model.NewsItem, error) {
+	rows, err := parseDqxyNewsRows(html, baseURL)
+	if err != nil {
+		return nil, err
+	}
+	return dqxyNewsItems(rows), nil
+}
+
+func parseDqxyNewsRows(html []byte, baseURL string) ([]dqxyNewsRow, error) {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
 	if err != nil {
 		return nil, fmt.Errorf("parse dqxy html: %w", err)
 	}
+	hasStandardList := doc.Find(".tzgg_page_base").Length() > 0
+	hasContactList := doc.Find("main.contact_us_page .campusally_area").Length() > 0
+	hasHomeList := doc.Find(".home-school-news .mid-section").Length() > 0
 
 	// The latest-update block repeats a few list entries. It is not used as a
 	// second source of items, but its full dates and un-truncated titles repair
 	// the corresponding rows in the main list.
 	latest := collectDqxyLatestMeta(doc)
-	rows := collectDqxyListRows(doc, baseURL)
-	if len(rows) == 0 {
+	var rows []dqxyNewsRow
+	switch {
+	case hasStandardList || hasContactList:
+		// An explicitly present list container is authoritative even when it
+		// currently has zero valid items. Do not fall through to the repeated
+		// latest-update/navigation blocks and turn a true empty list into data.
+		rows = collectDqxyListRows(doc, baseURL)
+	case hasHomeList:
 		// The homepage uses a separate eight-item "学院新闻" card block;
 		// it is outside the list-page .item container and must be handled by
 		// the homepage adapter explicitly.
 		rows = collectDqxyHomeRows(doc, baseURL)
-	}
-	if len(rows) == 0 {
+	default:
 		// The home page has no .tzgg_page_base list. Its latest-update block is
 		// still a safe, bounded source of article links when those links resolve
 		// to /info/<channel>/<id>.htm.
 		rows = collectDqxyLatestRows(doc, baseURL)
-	}
-	if len(rows) == 0 {
-		// Keep a narrow future-template fallback: only article links inside the
-		// main element qualify, never arbitrary navigation/banner anchors.
-		rows = collectDqxyMainArticleRows(doc, baseURL)
+		if len(rows) == 0 {
+			// Keep a narrow future-template fallback: only article links inside
+			// the main element qualify, never arbitrary navigation/banner anchors.
+			rows = collectDqxyMainArticleRows(doc, baseURL)
+		}
+		if len(rows) == 0 {
+			return nil, fmt.Errorf("dqxy: response contains no recognized list (possible WAF/login/SPA/template shell)")
+		}
 	}
 
 	for i := range rows {
@@ -193,10 +454,16 @@ func parseDqxyNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 			if meta.Date != "" {
 				setDqxyDate(&rows[i], meta.Date)
 			}
+			if publishedAtHasClock(meta.PublishedAt) {
+				rows[i].PublishedAt = meta.PublishedAt
+			}
 		}
 	}
 	completeDqxyDates(rows)
+	return rows, nil
+}
 
+func dqxyNewsItems(rows []dqxyNewsRow) []model.NewsItem {
 	items := make([]model.NewsItem, 0, len(rows))
 	seen := make(map[string]bool, len(rows))
 	for _, row := range rows {
@@ -212,14 +479,15 @@ func parseDqxyNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 		}
 		seen[key] = true
 		items = append(items, model.NewsItem{
-			Title:    row.Title,
-			URL:      row.URL,
-			Date:     row.Date,
-			Type:     row.Type,
-			ParsedAt: time.Now(),
+			Title:       row.Title,
+			URL:         row.URL,
+			Date:        row.Date,
+			PublishedAt: row.PublishedAt,
+			Type:        row.Type,
+			ParsedAt:    time.Now(),
 		})
 	}
-	return items, nil
+	return items
 }
 
 func collectDqxyHomeRows(doc *goquery.Document, baseURL string) []dqxyNewsRow {
@@ -246,6 +514,8 @@ func collectDqxyListRows(doc *goquery.Document, baseURL string) []dqxyNewsRow {
 	for _, selector := range []string{
 		"main.tzgg_page .tzgg_page_base > div.item",
 		".tzgg_page_base > div.item",
+		"main.contact_us_page .campusally_area > div.item",
+		"main.contact_us_page .campusally_area .item",
 	} {
 		if found := doc.Find(selector); found.Length() > 0 {
 			blocks = found
@@ -253,7 +523,7 @@ func collectDqxyListRows(doc *goquery.Document, baseURL string) []dqxyNewsRow {
 		}
 	}
 	if blocks == nil {
-		blocks = doc.Find("main .item")
+		return nil
 	}
 
 	rows := make([]dqxyNewsRow, 0, blocks.Length())
@@ -295,14 +565,27 @@ func collectDqxyMainArticleRows(doc *goquery.Document, baseURL string) []dqxyNew
 		return nil
 	}
 	rows := make([]dqxyNewsRow, 0)
+	seen := make(map[string]bool)
 	main.Find("a[href]").Each(func(_ int, a *goquery.Selection) {
 		if isInNavArea(a) {
+			return
+		}
+		if a.Closest(".latest-update").Length() > 0 {
 			return
 		}
 		if !isDqxyArticleLink(a, baseURL) {
 			return
 		}
-		if row, ok := newDqxyRow(a, a, baseURL); ok {
+		fullURL := canonicalDqxyURL(resolveURL(baseURL, a.AttrOr("href", "")))
+		if seen[fullURL] {
+			return
+		}
+		container := a.Closest("li, div.item, .list-item, .news-item")
+		if container.Length() == 0 {
+			container = a.Parent()
+		}
+		if row, ok := newDqxyRow(container, a, baseURL); ok {
+			seen[fullURL] = true
 			rows = append(rows, row)
 		}
 	})
@@ -342,8 +625,8 @@ func dqxyRowType(container *goquery.Selection) string {
 		return ""
 	}
 	typeText = strings.Join(strings.Fields(typeText), " ")
-	typeText = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(typeText, "【"), "["))
-	typeText = strings.TrimSuffix(strings.TrimSuffix(typeText, "】"), "]")
+	typeText = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(typeText, "【"), "〖"), "["))
+	typeText = strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(typeText, "】"), "〗"), "]")
 	return strings.TrimSpace(typeText)
 }
 
@@ -387,22 +670,66 @@ func dqxyTitle(container, a *goquery.Selection) string {
 }
 
 func dqxyDateText(container *goquery.Selection) string {
-	for _, selector := range []string{".date", "time", ".time"} {
-		if value := strings.TrimSpace(container.Find(selector).First().Text()); value != "" {
-			return strings.Join(strings.Fields(value), " ")
-		}
+	if value := dqxyDateFromSelection(container); value != "" {
+		return value
 	}
 	for current := container.Parent(); current.Length() > 0; current = current.Parent() {
-		for _, selector := range []string{".date", "time", ".time"} {
-			if value := strings.TrimSpace(current.Find(selector).First().Text()); value != "" {
-				return strings.Join(strings.Fields(value), " ")
-			}
+		if value := dqxyDateFromSelection(current); value != "" {
+			return value
 		}
 		if current.Is("li, .item, main, body") {
 			break
 		}
 	}
 	return ""
+}
+
+func dqxyDateFromSelection(container *goquery.Selection) string {
+	if container == nil || container.Length() == 0 {
+		return ""
+	}
+	for _, selector := range []string{".date", "time", ".time"} {
+		found := container.Find(selector).First()
+		if found.Length() == 0 {
+			continue
+		}
+		if selector == ".date" {
+			monthDay := strings.TrimSpace(found.Find(".month").First().Text())
+			year := strings.TrimSpace(found.Find(".year").First().Text())
+			if monthDay != "" && year != "" {
+				return strings.Join(strings.Fields(monthDay+" "+year), " ")
+			}
+		}
+		if value := strings.TrimSpace(found.Text()); value != "" {
+			return strings.Join(strings.Fields(value), " ")
+		}
+	}
+	var dateText string
+	container.Find("span, em").EachWithBreak(func(_ int, found *goquery.Selection) bool {
+		value := strings.Join(strings.Fields(found.Text()), " ")
+		if dqxyDateCandidate(value) {
+			dateText = value
+			return false
+		}
+		return true
+	})
+	return dateText
+}
+
+func dqxyDateCandidate(value string) bool {
+	value = strings.Join(strings.Fields(strings.TrimSpace(value)), " ")
+	if value == "" {
+		return false
+	}
+	if dqxyShortDateRe.MatchString(value) || dqxyYearSuffixDateRe.MatchString(value) {
+		return true
+	}
+	match := dqxyFullDateRe.FindString(value)
+	if match == "" {
+		return false
+	}
+	remainder := strings.TrimSpace(strings.TrimPrefix(value, match))
+	return remainder == "" || dqxyClockSuffixRe.MatchString(remainder)
 }
 
 func collectDqxyLatestMeta(doc *goquery.Document) map[string]dqxyLatestMeta {
@@ -416,9 +743,13 @@ func collectDqxyLatestMeta(doc *goquery.Document) map[string]dqxyLatestMeta {
 		if id == "" {
 			return
 		}
+		timeText := li.Find("time").First().Text()
 		meta := dqxyLatestMeta{Title: dqxyTitle(a, a)}
-		if date := parseDqxyFullDate(li.Find("time").First().Text()); date != "" {
+		if date := parseDqxyFullDate(timeText); date != "" {
 			meta.Date = date
+		}
+		if publishedAt := normalizePublishedAt(timeText); publishedAtHasClock(publishedAt) {
+			meta.PublishedAt = publishedAt
 		}
 		if meta.Title != "" || meta.Date != "" {
 			result[id] = meta
@@ -438,6 +769,19 @@ func setDqxyDate(row *dqxyNewsRow, text string) {
 		if date := normalizeDateParts(match[1], match[2], match[3]); date != "" {
 			row.Date = date
 			row.Year, row.MonthDay = yearAndMonthDay(match[1], month, day)
+			row.ExactDate = true
+			if publishedAt := normalizePublishedAt(text); publishedAtHasClock(publishedAt) {
+				row.PublishedAt = publishedAt
+			}
+			return
+		}
+	}
+	if match := dqxyYearSuffixDateRe.FindStringSubmatch(text); match != nil {
+		month, _ := strconv.Atoi(match[1])
+		day, _ := strconv.Atoi(match[2])
+		if date := normalizeDateParts(match[3], match[1], match[2]); date != "" {
+			row.Date = date
+			row.Year, row.MonthDay = yearAndMonthDay(match[3], month, day)
 			row.ExactDate = true
 			return
 		}
@@ -571,10 +915,16 @@ func parseDqxyArticle(html []byte, baseURL string) (*model.Article, error) {
 	// .little-tips is the dqxy detail-page metadata line. Prefer it even if a
 	// wider generic fallback happened to find a different event date in the
 	// page's surrounding markup.
-	if date := parseDqxyFullDate(doc.Find(".little-tips").First().Text()); date != "" {
+	littleTipsText := doc.Find(".little-tips").First().Text()
+	if date := parseDqxyFullDate(littleTipsText); date != "" {
 		art.Date = date
 	} else if date := parseDqxyFullDate(art.Date); date != "" {
 		art.Date = date
+	}
+	if publishedAt := normalizePublishedAt(littleTipsText); publishedAtHasClock(publishedAt) {
+		// The detail metadata is authoritative. In particular, never let a
+		// body date/deadline replace this publication timestamp.
+		art.PublishedAt = publishedAt
 	}
 	if typ := dqxyArticleType(doc); typ != "" {
 		art.Type = typ
@@ -618,14 +968,38 @@ func dqxyIsNullPlaceholderImage(raw string) bool {
 
 func dqxyArticleType(doc *goquery.Document) string {
 	var typ string
+	var candidates []string
 	doc.Find("main.news_detail_page .top-nav a").Each(func(_ int, sel *goquery.Selection) {
 		candidate := strings.Join(strings.Fields(sel.Text()), " ")
 		if candidate == "" || candidate == "首页" || candidate == "学院首页" {
 			return
 		}
+		candidates = append(candidates, candidate)
 		typ = candidate
 	})
+	if len(candidates) == 1 {
+		if category := dqxyArticleTitleCategory(doc); category != "" {
+			return category
+		}
+	}
 	return typ
+}
+
+func dqxyArticleTitleCategory(doc *goquery.Document) string {
+	if doc == nil {
+		return ""
+	}
+	title := strings.Join(strings.Fields(doc.Find("h4.else-title").First().Text()), " ")
+	if title == "" {
+		title = strings.Join(strings.Fields(doc.Find("h1.news_tit, .news-title, h1").First().Text()), " ")
+	}
+	match := dqxyLeadingCategoryRe.FindStringSubmatch(title)
+	for _, value := range match[1:] {
+		if value != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }
 
 // dqxy places its CMS download links in a UL after the #vsb_content section,

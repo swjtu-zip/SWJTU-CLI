@@ -2,8 +2,11 @@ package scraper
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,10 +19,10 @@ const ggBaseURL = "https://gg.swjtu.edu.cn"
 
 // ggSubPages contains every same-host article-list entry point found in the
 // site's navigation, homepage cards, and the secondary menus rendered by
-// those pages. Empty one-page lists are intentionally retained: they are
-// reachable, real list shells, and are different from static/profile pages.
-// Some resource, program-information, and alumni pages are list-shaped too;
-// they remain feeds because their rows resolve to /info/<column>/<id>.htm.
+// those pages. Empty one-page lists are intentionally retained when the
+// source exposes a real list shell; they are different from static/profile
+// pages. Resource, program-information, and alumni pages remain feeds when
+// their rows resolve to /info/<column>/<id>.htm.
 var ggSubPages = []string{
 	"xwgg/xyxw",
 	"xwgg/xxgg",
@@ -29,8 +32,6 @@ var ggSubPages = []string{
 	"dqgz/jwgongz",
 	"dqgz/wjxz",
 	"dqgz/wxrd",
-
-	"szdw",
 
 	"rcpy",
 	"rcpy/bkjw",
@@ -102,8 +103,6 @@ var ggSubPages = []string{
 	"xyzj",
 	"xyzj/yydt",
 	"xyzj/yyfc",
-	"xyzj/gywm",
-	"xyzj/yqlj",
 }
 
 var (
@@ -129,6 +128,7 @@ func init() {
 		ParseList:    parseAdapter_ggList,
 		ParseArticle: parseAdapter_ggArticle,
 		PageURL:      ggPageURL,
+		FetchArticle: ggFetchArticle,
 	})
 }
 
@@ -164,6 +164,9 @@ func parseAdapter_ggList(html []byte, baseURL string) ([]model.NewsItem, error) 
 	if err != nil {
 		return nil, fmt.Errorf("parse gg list: %w", err)
 	}
+	if err := ggResponseError(doc); err != nil {
+		return nil, err
+	}
 
 	// Every actual GG list page, including an empty list, has this container.
 	// Restricting extraction to it prevents side menus, profile directories,
@@ -171,6 +174,9 @@ func parseAdapter_ggList(html []byte, baseURL string) ([]model.NewsItem, error) 
 	if list := doc.Find(".list-col .list-list").First(); list.Length() > 0 {
 		if pageType := ggPageType(doc); pageType != "" && pageType != "2" {
 			return nil, fmt.Errorf("gg: unexpected list page type %q", pageType)
+		}
+		if ggIsStaticListPage(doc) {
+			return nil, fmt.Errorf("gg: response is a static/profile page, not an article list")
 		}
 		return ggParseListRows(list, ggListType(doc), baseURL), nil
 	}
@@ -214,10 +220,9 @@ func ggParseListRows(list *goquery.Selection, itemType, baseURL string) []model.
 			return
 		}
 
+		// GG's list date is emitted in a dedicated i/time/date node. Do not
+		// scan the entire row: titles often contain event/deadline dates.
 		dateSource := row.Find("i, time, .date, .time").First().Text()
-		if dateSource == "" {
-			dateSource = row.Text()
-		}
 		date, publishedAt := ggDateValues(dateSource)
 		seen[fullURL] = true
 		items = append(items, model.NewsItem{
@@ -342,24 +347,33 @@ func parseAdapter_ggArticle(html []byte, baseURL string) (*model.Article, error)
 	if err != nil {
 		return nil, fmt.Errorf("parse gg article: %w", err)
 	}
+	if err := ggResponseError(doc); err != nil {
+		return nil, err
+	}
 	if !ggHasArticleLayout(doc) {
 		return nil, fmt.Errorf("gg: response is not a detail article")
 	}
+	headline := doc.Find(".article h1").First()
+	content := doc.Find(".article .v_news_content").First()
 
 	article, err := parseBodaArticle(html, baseURL)
 	if err != nil {
 		return nil, fmt.Errorf("parse gg article: %w", err)
 	}
-	if strings.TrimSpace(article.Title) == "" {
+	article.Title = strings.TrimSpace(headline.Text())
+	if article.Title == "" {
 		return nil, fmt.Errorf("gg: article has no title")
 	}
 
 	article.Type = ggListType(doc)
+	// The source line is GG's only publication metadata node. Clear the
+	// generic parser's broad date result before reading it so dates mentioned
+	// in the prose (deadlines, event dates, or a copied notice date) cannot
+	// become the publication date.
+	article.Date = ""
+	article.PublishedAt = ""
 	dateSource := doc.Find(".article .source").First().Text()
 	date, publishedAt := ggDateValues(dateSource)
-	if date == "" {
-		date, publishedAt = ggDateValues(article.Date)
-	}
 	if date != "" {
 		article.Date = date
 	}
@@ -367,6 +381,7 @@ func parseAdapter_ggArticle(html []byte, baseURL string) (*model.Article, error)
 	// date-only input. GG only exposes PublishedAt when the source has a clock.
 	article.PublishedAt = publishedAt
 	ggCollectAttachments(doc, baseURL, article)
+	ggSanitizeArticleContent(content, baseURL, article)
 	return article, nil
 }
 
@@ -375,15 +390,19 @@ func ggHasArticleLayout(doc *goquery.Document) bool {
 		return false
 	}
 	article := doc.Find(".article").First()
-	return article.Length() > 0 && article.Find("h1").Length() > 0 && article.Find(".v_news_content").Length() > 0
+	content := article.Find(".v_news_content").First()
+	return article.Length() > 0 && article.Find("h1").Length() > 0 && content.Length() > 0 &&
+		(strings.TrimSpace(content.Text()) != "" || content.Find("img, table, a, object, iframe").Length() > 0)
 }
 
 func ggCollectAttachments(doc *goquery.Document, baseURL string, article *model.Article) {
 	attachments := make([]model.Attachment, 0, len(article.Attachments))
 	seen := make(map[string]bool, len(article.Attachments))
 	for _, attachment := range article.Attachments {
-		if !ggSameHostURL(attachment.URL, baseURL) {
+		if resolved := ggAttachmentURL(baseURL, attachment.URL); resolved == "" {
 			continue
+		} else {
+			attachment.URL = resolved
 		}
 		attachments = append(attachments, attachment)
 		seen[attachment.URL] = true
@@ -402,8 +421,8 @@ func ggCollectAttachments(doc *goquery.Document, baseURL string, article *model.
 		if name == "" {
 			return
 		}
-		resolved := resolveURL(baseURL, href)
-		if !ggSameHostURL(resolved, baseURL) {
+		resolved := ggAttachmentURL(baseURL, href)
+		if resolved == "" {
 			return
 		}
 		if seen[resolved] {
@@ -416,6 +435,9 @@ func ggCollectAttachments(doc *goquery.Document, baseURL string, article *model.
 
 func ggLooksLikeAttachment(anchor *goquery.Selection, href string) bool {
 	lowerHref := strings.ToLower(href)
+	if ggIsPseudoHref(href) {
+		return false
+	}
 	if strings.Contains(lowerHref, "download.jsp") || anchor.AttrOr("download", "") != "" {
 		return true
 	}
@@ -425,6 +447,380 @@ func ggLooksLikeAttachment(anchor *goquery.Selection, href string) bool {
 		}
 	}
 	return false
+}
+
+func ggAttachmentURL(baseURL, raw string) string {
+	if ggIsPseudoHref(raw) {
+		return ""
+	}
+	resolved := cleanURL(resolveURL(baseURL, strings.TrimSpace(raw)))
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") || !ggSameHostURL(resolved, baseURL) {
+		return ""
+	}
+	// GG's bare CMS download endpoint is a CAPTCHA form (HTTP 200
+	// text/html), not a file. Only a URL that already carries a submitted code
+	// can be considered a candidate; the live article links do not, so they
+	// are deliberately omitted from normalized attachments.
+	if ggIsCaptchaDownloadURL(resolved) {
+		return ""
+	}
+	return resolved
+}
+
+func ggIsCaptchaDownloadURL(raw string) bool {
+	parsed, err := url.Parse(raw)
+	if err != nil || !strings.EqualFold(parsed.Path, "/system/_content/download.jsp") {
+		return false
+	}
+	return strings.TrimSpace(parsed.Query().Get("codeValue")) == ""
+}
+
+func ggIsPseudoHref(raw string) bool {
+	lower := strings.ToLower(strings.TrimSpace(raw))
+	for _, prefix := range []string{"", "#", "data:", "file:", "javascript:", "mailto:", "tel:", "blob:"} {
+		if prefix == "" {
+			if lower == "" {
+				return true
+			}
+			continue
+		}
+		if strings.HasPrefix(lower, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func ggSanitizeArticleContent(content *goquery.Selection, baseURL string, article *model.Article) {
+	if content == nil || content.Length() == 0 || article == nil {
+		return
+	}
+
+	article.Images = nil
+	content.Find("img").Each(func(_ int, image *goquery.Selection) {
+		raw := ""
+		for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			if value := strings.TrimSpace(image.AttrOr(attr, "")); value != "" {
+				raw = value
+				break
+			}
+		}
+		resolved := ggImageURL(baseURL, raw)
+		if resolved == "" {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vsbhref", "vurl"} {
+			image.RemoveAttr(attr)
+		}
+		if !ggContainsURL(article.Images, resolved) {
+			article.Images = append(article.Images, resolved)
+		}
+	})
+
+	content.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
+		href := strings.TrimSpace(anchor.AttrOr("href", ""))
+		if !ggLooksLikeAttachment(anchor, href) {
+			return
+		}
+		if resolved := ggAttachmentURL(baseURL, href); resolved != "" {
+			anchor.SetAttr("href", resolved)
+		} else {
+			// Keep the visible attachment label in the complete body, but stop
+			// clients from following a known CAPTCHA/pseudo link.
+			anchor.RemoveAttr("href")
+		}
+	})
+	if html, err := content.Html(); err == nil {
+		article.ContentHTML = html
+	}
+}
+
+func ggImageURL(baseURL, raw string) string {
+	if ggIsPseudoHref(raw) {
+		return ""
+	}
+	resolved := cleanURL(resolveURL(baseURL, strings.TrimSpace(raw)))
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") || !ggSameHostURL(resolved, baseURL) {
+		return ""
+	}
+	path := strings.ToLower(parsed.Path)
+	for _, marker := range []string{"/spacer.gif", "/blank.gif", "/transparent.gif", "/captcha", "/createimage", "/verify", "/waf", "/blocked"} {
+		if strings.Contains(path, marker) {
+			return ""
+		}
+	}
+	for _, suffix := range []string{".htm", ".html", ".jsp"} {
+		if strings.HasSuffix(path, suffix) {
+			return ""
+		}
+	}
+	return resolved
+}
+
+func ggContainsURL(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
+}
+
+func ggResponseError(doc *goquery.Document) error {
+	if doc == nil {
+		return fmt.Errorf("gg: empty response")
+	}
+	title := strings.ToLower(strings.Join(strings.Fields(doc.Find("title").First().Text()), " "))
+	for _, marker := range []string{
+		"安全威胁", "请求已被阻断", "access denied", "forbidden", "404错误", "404 not found",
+		"页面不存在", "验证码", "附件下载", "请先登录", "登录页面", "captcha",
+	} {
+		if strings.Contains(title, marker) {
+			return fmt.Errorf("gg: source returned an error, login, or verification page")
+		}
+	}
+	visible := doc.Find("body").Clone()
+	visible.Find("script, style, noscript").Remove()
+	body := strings.ToLower(strings.Join(strings.Fields(visible.Text()), " "))
+	for _, marker := range []string{
+		"请输入验证码下载附件", "请求已被阻断", "安全威胁", "没有访问当前栏目的权限",
+		"您没有访问", "请先登录", "请登录后", "access denied", "waf challenge",
+		"页面不存在", "404错误提示",
+	} {
+		if strings.Contains(body, marker) {
+			return fmt.Errorf("gg: source returned an error, login, or verification page")
+		}
+	}
+	return nil
+}
+
+func ggIsStaticListPage(doc *goquery.Document) bool {
+	pageTitle := strings.TrimSpace(doc.Find(`meta[name="pageTitle"], meta[name="pagetitle"]`).First().AttrOr("content", ""))
+	listTitle := ggListType(doc)
+	for _, title := range []string{"师资队伍", "关于我们", "友情链接"} {
+		if pageTitle == title || listTitle == title {
+			return true
+		}
+	}
+	return false
+}
+
+func ggFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	canonicalURL, ok := ggArticleURL(ggBaseURL, articleURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("gg: refusing non-local or non-detail URL %q", articleURL)
+	}
+	body, err := fetch(canonicalURL)
+	if err != nil {
+		return nil, nil, err
+	}
+	article, err := parseAdapter_ggArticle(body, ggBaseURL)
+	if err != nil {
+		return nil, body, err
+	}
+	article.Images = ggVerifyImages(article.Images, ggBaseURL)
+	article.Attachments = ggVerifyAttachments(article.Attachments, ggBaseURL)
+	allowedImages := make(map[string]bool, len(article.Images))
+	for _, image := range article.Images {
+		allowedImages[image] = true
+	}
+	allowedAttachments := make(map[string]bool, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		allowedAttachments[attachment.URL] = true
+	}
+	article.ContentHTML = ggSanitizeContentHTML(article.ContentHTML, ggBaseURL, allowedImages, allowedAttachments)
+	return article, body, nil
+}
+
+func ggVerifyImages(images []string, baseURL string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool, len(images))
+	for _, raw := range images {
+		resolved := ggImageURL(baseURL, raw)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, contentType, err := ggFetchResource(resolved, baseURL)
+		if err != nil || !ggResourceBodyIsUsable(contentType, body, resolved, true) {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func ggVerifyAttachments(attachments []model.Attachment, baseURL string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		resolved := ggAttachmentURL(baseURL, attachment.URL)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, contentType, err := ggFetchResource(resolved, baseURL)
+		if err != nil || !ggResourceBodyIsUsable(contentType, body, attachment.Name+" "+resolved, false) {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func ggFetchResource(rawURL, baseURL string) ([]byte, string, error) {
+	resolved := ggAttachmentURL(baseURL, rawURL)
+	if resolved == "" {
+		resolved = ggImageURL(baseURL, rawURL)
+	}
+	if resolved == "" {
+		return nil, "", fmt.Errorf("gg: refusing non-http resource %q", rawURL)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("gg: create resource request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "image/*,application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	client := *defaultClient
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if len(via) == 0 || ggSameHostURL(next.URL.String(), baseURL) {
+			return nil
+		}
+		return http.ErrUseLastResponse
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("gg: fetch resource %s: %w", resolved, err)
+	}
+	defer response.Body.Close()
+	contentType := response.Header.Get("Content-Type")
+	if response.StatusCode != http.StatusOK {
+		return nil, contentType, fmt.Errorf("gg: resource %s: HTTP %d", resolved, response.StatusCode)
+	}
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, contentType, fmt.Errorf("gg: read resource %s: %w", resolved, err)
+	}
+	return body, contentType, nil
+}
+
+func ggResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	probe := strings.TrimPrefix(strings.TrimSpace(strings.ToLower(string(body[:ggMinInt(len(body), 4096)]))), "\ufeff")
+	for _, marker := range []string{
+		"<!doctype html", "<html", "<head", "<body", "请输入验证码", "验证码下载附件",
+		"captcha", "请先登录", "请登录后", "页面不存在", "access denied", "just a moment",
+		"cloudflare", "请求已被阻断", "安全威胁",
+	} {
+		if strings.Contains(probe, marker) {
+			return false
+		}
+	}
+	if image {
+		return ggImageBodyIsUsable(mediaType, body)
+	}
+	return ggAttachmentBodyIsUsable(mediaType, body, nameOrURL)
+}
+
+func ggImageBodyIsUsable(mediaType string, body []byte) bool {
+	switch mediaType {
+	case "image/png":
+		return len(body) >= 8 && string(body[:8]) == "\x89PNG\r\n\x1a\n"
+	case "image/jpeg", "image/jpg":
+		return len(body) >= 3 && string(body[:3]) == "\xff\xd8\xff"
+	case "image/gif":
+		return len(body) >= 6 && (string(body[:6]) == "GIF87a" || string(body[:6]) == "GIF89a")
+	case "image/webp":
+		return len(body) >= 12 && string(body[:4]) == "RIFF" && string(body[8:12]) == "WEBP"
+	case "image/bmp":
+		return len(body) >= 2 && string(body[:2]) == "BM"
+	case "image/svg+xml":
+		text := strings.TrimSpace(strings.ToLower(string(body[:ggMinInt(len(body), 4096)])))
+		return strings.HasPrefix(text, "<svg") || strings.Contains(text, "<svg ")
+	default:
+		return false
+	}
+}
+
+func ggAttachmentBodyIsUsable(mediaType string, body []byte, nameOrURL string) bool {
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf":
+		return len(body) >= 5 && string(body[:5]) == "%PDF-"
+	case strings.Contains(lowerName, ".rar") || mediaType == "application/x-rar-compressed" || mediaType == "application/vnd.rar":
+		return len(body) >= 7 && string(body[:6]) == "Rar!\x1a\x07" && (body[6] == 0x00 || body[6] == 0x01)
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(lowerName, ".zip") || mediaType == "application/zip":
+		return len(body) >= 4 && string(body[:4]) == "PK\x03\x04"
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt"):
+		return len(body) >= 8 && string(body[:8]) == "\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
+	case strings.Contains(lowerName, ".txt") || strings.Contains(lowerName, ".csv"):
+		return mediaType == "text/plain" || mediaType == "text/csv" || mediaType == "application/octet-stream"
+	default:
+		return mediaType != "" && mediaType != "text/html" && mediaType != "application/xhtml+xml" && mediaType != "application/json" && mediaType != "text/xml" && mediaType != "application/xml"
+	}
+}
+
+func ggMinInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func ggSanitizeContentHTML(rawHTML, baseURL string, allowedImages, allowedAttachments map[string]bool) string {
+	if strings.TrimSpace(rawHTML) == "" {
+		return rawHTML
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(`<div id="gg-content-root">` + rawHTML + `</div>`))
+	if err != nil {
+		return rawHTML
+	}
+	root := doc.Find("#gg-content-root").First()
+	root.Find("img").Each(func(_ int, image *goquery.Selection) {
+		raw := ""
+		for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			if value := strings.TrimSpace(image.AttrOr(attr, "")); value != "" {
+				raw = value
+				break
+			}
+		}
+		resolved := ggImageURL(baseURL, raw)
+		if resolved == "" || (allowedImages != nil && !allowedImages[resolved]) {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vsbhref", "vurl"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	root.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
+		href := strings.TrimSpace(anchor.AttrOr("href", ""))
+		if !ggLooksLikeAttachment(anchor, href) {
+			return
+		}
+		resolved := ggAttachmentURL(baseURL, href)
+		if resolved == "" || (allowedAttachments != nil && !allowedAttachments[resolved]) {
+			anchor.RemoveAttr("href")
+			return
+		}
+		anchor.SetAttr("href", resolved)
+	})
+	result, err := root.Html()
+	if err != nil {
+		return rawHTML
+	}
+	return result
 }
 
 func ggArticleURL(baseURL, href string) (string, bool) {

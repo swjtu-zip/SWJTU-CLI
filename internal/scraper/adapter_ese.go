@@ -1,11 +1,15 @@
 package scraper
 
 import (
+	"bytes"
 	"fmt"
 	htmlstd "html"
+	"io"
+	"net/http"
 	"net/url"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -25,6 +29,7 @@ func init() {
 		ParseArticle: parseAdapter_eseArticle,
 		PageURL:      esePageURL,
 		TotalPages:   eseTotalPages,
+		FetchArticle: eseFetchArticle,
 	})
 }
 
@@ -33,6 +38,7 @@ func init() {
 // pages are deliberately not presented as news feeds. Platform/download
 // pages remain here when they expose a real CMS article list.
 var eseSubPages = []string{
+	"index/xwgg/zyxw",
 	"index/xwgg/hjyw",
 	"index/xwgg/tzgg1/qb",
 	"index/xwgg/tzgg1/dzbg",
@@ -52,8 +58,13 @@ var eseSubPages = []string{
 	"xyyd/xyqy",
 	"index/cyxz",
 	"jyjx/jxcg/jxcgj",
+	"jyjx/rcpy/yjspy",
 	"jyjx/jypt/syjx/bksyjxxm",
+	"jyjx/jypt/syjx/yjssjjd",
+	"jyjx/jypt/syjx/syjxcyxz",
+	"jyjx/jypt/syjx/cxsyxm",
 	"jyjx/jypt/sysaq/sysaqgd",
+	"jyjx/jypt/sysaq/aqjsal",
 	"jyjx/rcpy/bkspy",
 	"kxyj/kypt",
 	"kxyj/kytd",
@@ -73,9 +84,15 @@ var eseAttachmentExtensions = []string{
 }
 
 var (
-	eseAdapterPDFImagePathRe = regexp.MustCompile(`(?i)["']((?:https?://|/|\.\.?/)[^"']+\.(?:jpg|jpeg|png|gif|webp)(?:\?[^"']*)?)["']`)
-	eseAdapterPDFFileRe      = regexp.MustCompile(`(?i)showVsbpdfIframe\s*\(\s*["']([^"']+\.pdf(?:\?[^"']*)?)["']`)
+	eseAdapterPDFImagePathRe        = regexp.MustCompile(`(?i)["']((?:https?://|/|\.\.?/)[^"']+\.(?:jpg|jpeg|png|gif|webp)(?:\?[^"']*)?)["']`)
+	eseAdapterPDFFileRe             = regexp.MustCompile(`(?i)showVsbpdfIframe\s*\(\s*["']([^"']+\.pdf(?:\?[^"']*)?)["']`)
+	eseAdapterPublicationLabelRe    = regexp.MustCompile(`(?i)(?:^|[\s\x{a0}：:，。；;、|])(?:发布时间|发布日期|发表时间|发表日期|日期|时间)\s*[:：]\s*`)
+	eseAdapterPublicationDateRe     = regexp.MustCompile(`20\d{2}\s*[-/.年]\s*\d{1,2}\s*[-/.月]\s*\d{1,2}(?:\s*(?:日|号))?(?:[ Tt]+\s*\d{1,2}\s*[:：]\s*\d{2}(?:\s*[:：]\s*\d{2})?)?`)
+	eseAdapterResourceMarkerRe      = regexp.MustCompile(`(?i)/(?:spacer|blank|transparent|placeholder|noimage|no-image|loading|captcha|verify|waf|login|access[-_]denied)(?:[./?]|$)|/pixel\.gif(?:[?]|$)|createimage\.jsp`)
+	eseAdapterResourceShellMarkerRe = regexp.MustCompile(`(?is)<!doctype\s+html|<html(?:\s|>)|<head(?:\s|>)|<body(?:\s|>)|请输入验证码|验证码下载附件|请先登录|请登录后|登录页面|页面不存在|您访问的页面不存在|无权限访问|access\s+denied|request\s+blocked|just\s+a\s+moment|cloudflare|安全验证|安全威胁|请求已被阻断`)
 )
+
+const eseAdapterMaxResourceBytes = 32 << 20
 
 // esePageURL maps logical pages (1 = newest) to ESE's reverse-numbered files.
 // The first page is always the unsuffixed list page, as on the live site. A
@@ -448,6 +465,12 @@ func eseAdapterDateFields(sel *goquery.Selection) (string, string) {
 	if sel == nil || sel.Length() == 0 {
 		return "", ""
 	}
+	if !eseAdapterDateSelectionAllowed(sel) {
+		return "", ""
+	}
+	if publishedAt := eseAdapterLabeledPublishedAt(flattenedText(sel)); publishedAt != "" {
+		return publishedAt[:10], publishedAt
+	}
 	if value := strings.TrimSpace(sel.AttrOr("datetime", "")); value != "" {
 		if normalized := normalizePublishedAt(value); normalized != "" {
 			return eseAdapterDateValues(normalized)
@@ -468,6 +491,48 @@ func eseAdapterDateFields(sel *goquery.Selection) (string, string) {
 	return "", ""
 }
 
+func eseAdapterDateSelectionAllowed(sel *goquery.Selection) bool {
+	if sel == nil || sel.Length() == 0 {
+		return false
+	}
+	text := strings.ToLower(eseAdapterCleanText(flattenedText(sel)))
+	class := strings.ToLower(strings.TrimSpace(sel.AttrOr("class", "")))
+	for _, marker := range []string{
+		"活动时间", "截止时间", "报名时间", "会议时间", "举办时间", "开展时间",
+		"提交时间", "有效期", "更新时间", "修改时间", "转载时间", "系统时间", "生成时间",
+	} {
+		if strings.Contains(text, marker) || strings.Contains(class, strings.TrimSuffix(marker, "时间")) {
+			return false
+		}
+	}
+	for _, marker := range []string{"deadline", "activity", "event", "meeting", "update", "modified", "system", "share", "转载"} {
+		if strings.Contains(class, marker) {
+			return false
+		}
+	}
+	return true
+}
+
+func eseAdapterLabeledPublishedAt(text string) string {
+	text = eseAdapterCleanText(text)
+	if text == "" {
+		return ""
+	}
+	for _, match := range eseAdapterPublicationLabelRe.FindAllStringIndex(text, -1) {
+		if len(match) < 2 || match[1] >= len(text) {
+			continue
+		}
+		dateText := eseAdapterPublicationDateRe.FindString(text[match[1]:])
+		if dateText == "" {
+			continue
+		}
+		if normalized := normalizePublishedAt(dateText); normalized != "" {
+			return normalized
+		}
+	}
+	return ""
+}
+
 func eseAdapterDateValues(normalized string) (string, string) {
 	if len(normalized) < 10 {
 		return "", ""
@@ -485,6 +550,12 @@ func eseAdapterPageType(doc *goquery.Document) string {
 	typ := eseAdapterCleanText(doc.Find(".ny-right .position h3").First().Text())
 	if typ == "" {
 		typ = eseAdapterCleanText(doc.Find(".position h3").First().Text())
+	}
+	if typ == "首页" || typ == "正文" {
+		return ""
+	}
+	if typ == "" {
+		typ = bodaArticleSectionType(doc, "")
 	}
 	if typ == "首页" || typ == "正文" {
 		return ""
@@ -516,9 +587,17 @@ func parseAdapter_eseArticle(raw []byte, baseURL string) (*model.Article, error)
 		return nil, err
 	}
 	article.Title = eseAdapterCleanText(titleSel.Text())
+	if article.Title == "" {
+		return nil, fmt.Errorf("ese: article title is empty")
+	}
 	if typ := eseAdapterPageType(doc); typ != "" {
 		article.Type = typ
 	}
+	// parseBodaArticle has compatibility fallbacks for many Boda templates.
+	// ESE's fixed art-tit metadata is authoritative, so discard any date that
+	// the shared fallback may have inferred from a body or unrelated wrapper.
+	article.Date = ""
+	article.PublishedAt = ""
 
 	meta := doc.Find(".art-main .art-tit p").First()
 	if meta.Length() == 0 {
@@ -532,7 +611,7 @@ func parseAdapter_eseArticle(raw []byte, baseURL string) (*model.Article, error)
 		if author := eseAdapterMetaValue(metaText, "作者"); author != "" {
 			article.Author = author
 		}
-		if publishedAt := normalizePublishedAt(metaText); publishedAt != "" {
+		if publishedAt := eseAdapterLabeledPublishedAt(metaText); publishedAt != "" {
 			article.PublishedAt = publishedAt
 			article.Date = publishedAt[:10]
 		}
@@ -587,7 +666,7 @@ func eseAdapterFinalizeArticleResources(article *model.Article, doc *goquery.Doc
 		if rawURL == "" {
 			return
 		}
-		resolved := cleanURL(resolveURL(baseURL, rawURL))
+		resolved := eseAdapterResourceURL(baseURL, rawURL)
 		if resolved == "" || seenImages[resolved] {
 			return
 		}
@@ -602,9 +681,13 @@ func eseAdapterFinalizeArticleResources(article *model.Article, doc *goquery.Doc
 		if src == "" {
 			src = strings.TrimSpace(image.AttrOr("orisrc", ""))
 		}
+		if eseAdapterResourceURL(baseURL, src) == "" {
+			image.Remove()
+			return
+		}
 		addImage(src)
 		if src != "" {
-			image.SetAttr("src", cleanURL(resolveURL(baseURL, src)))
+			image.SetAttr("src", eseAdapterResourceURL(baseURL, src))
 		}
 	})
 	content.Find("script").Each(func(_ int, script *goquery.Selection) {
@@ -618,13 +701,20 @@ func eseAdapterFinalizeArticleResources(article *model.Article, doc *goquery.Doc
 	article.Images = images
 
 	seenAttachments := make(map[string]bool, len(article.Attachments))
-	for index := range article.Attachments {
-		article.Attachments[index].URL = cleanURL(article.Attachments[index].URL)
-		seenAttachments[article.Attachments[index].URL] = true
+	filteredAttachments := make([]model.Attachment, 0, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		resolved := eseAdapterResourceURL(baseURL, attachment.URL)
+		if resolved == "" || seenAttachments[resolved] {
+			continue
+		}
+		attachment.URL = resolved
+		seenAttachments[resolved] = true
+		filteredAttachments = append(filteredAttachments, attachment)
 	}
+	article.Attachments = filteredAttachments
 	addAttachment := func(rawURL, name string) {
 		rawURL = strings.TrimSpace(htmlstd.UnescapeString(rawURL))
-		resolved := cleanURL(resolveURL(baseURL, rawURL))
+		resolved := eseAdapterResourceURL(baseURL, rawURL)
 		if rawURL == "" || resolved == "" || seenAttachments[resolved] {
 			return
 		}
@@ -642,7 +732,9 @@ func eseAdapterFinalizeArticleResources(article *model.Article, doc *goquery.Doc
 			return
 		}
 		addAttachment(href, anchor.Text())
-		anchor.SetAttr("href", cleanURL(resolveURL(baseURL, href)))
+		if resolved := eseAdapterResourceURL(baseURL, href); resolved != "" {
+			anchor.SetAttr("href", resolved)
+		}
 	})
 	content.Find("script").Each(func(_ int, script *goquery.Selection) {
 		match := eseAdapterPDFFileRe.FindStringSubmatch(script.Text())
@@ -653,6 +745,209 @@ func eseAdapterFinalizeArticleResources(article *model.Article, doc *goquery.Doc
 	if htmlText, htmlErr := content.Html(); htmlErr == nil {
 		article.ContentHTML = htmlText
 	}
+}
+
+const eseCanonicalBaseURL = "https://ese.swjtu.edu.cn"
+
+// eseAdapterResourceURL only admits same-origin HTTP(S) resources. The
+// article body may still contain ordinary external hyperlinks, but an image
+// or attachment field must not turn a javascript/data/placeholder URL into a
+// downloadable asset.
+func eseAdapterResourceURL(baseURL, raw string) string {
+	raw = strings.TrimSpace(htmlstd.UnescapeString(raw))
+	if raw == "" || bodaIsPseudoResourceHref(raw) {
+		return ""
+	}
+	resolved := cleanURL(resolveURL(baseURL, raw))
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Hostname() == "" {
+		return ""
+	}
+	if scheme := strings.ToLower(parsed.Scheme); scheme != "http" && scheme != "https" {
+		return ""
+	}
+	base, err := url.Parse(baseURL)
+	if err != nil || base.Hostname() == "" || !strings.EqualFold(parsed.Hostname(), base.Hostname()) {
+		return ""
+	}
+	resourceText := strings.ToLower(parsed.Path + "?" + parsed.RawQuery)
+	if eseAdapterResourceMarkerRe.MatchString(resourceText) || strings.Contains(resourceText, "/pixel.gif") {
+		return ""
+	}
+	return cleanURL(parsed.String())
+}
+
+// eseFetchArticle is the live path used by BodaSite.GetArticleSnapshot. HTML
+// parsing remains deterministic; only this network path verifies that every
+// advertised image/file returned a successful, correctly typed response.
+func eseFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	fullURL, ok := eseAdapterArticleURL(eseCanonicalBaseURL, articleURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("ese: refusing article URL outside the site: %s", articleURL)
+	}
+	body, err := fetch(fullURL)
+	if err != nil {
+		return nil, nil, err
+	}
+	article, err := parseAdapter_eseArticle(body, eseCanonicalBaseURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("ese article %s: %w", fullURL, err)
+	}
+	article.Images = eseVerifyImages(article.Images, eseCanonicalBaseURL)
+	article.Attachments = eseVerifyAttachments(article.Attachments, eseCanonicalBaseURL)
+	return article, body, nil
+}
+
+func eseVerifyImages(images []string, baseURL string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool, len(images))
+	for _, raw := range images {
+		resolved := eseAdapterResourceURL(baseURL, raw)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		if _, _, err := eseFetchResource(resolved, baseURL, true); err != nil {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func eseVerifyAttachments(attachments []model.Attachment, baseURL string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		resolved := eseAdapterResourceURL(baseURL, attachment.URL)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, _, err := eseFetchResource(resolved, baseURL, false)
+		if err != nil {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func eseFetchResource(rawURL, baseURL string, image bool) ([]byte, string, error) {
+	resolved := eseAdapterResourceURL(baseURL, rawURL)
+	if resolved == "" {
+		return nil, "", fmt.Errorf("ese: refusing invalid resource %q", rawURL)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("ese: create resource request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	if image {
+		req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+	} else {
+		req.Header.Set("Accept", "application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	}
+	client := *defaultClient
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if len(via) == 0 || strings.EqualFold(next.URL.Hostname(), via[len(via)-1].URL.Hostname()) {
+			return nil
+		}
+		return http.ErrUseLastResponse
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("ese: fetch resource %s: %w", resolved, err)
+	}
+	defer response.Body.Close()
+	contentType := response.Header.Get("Content-Type")
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return nil, contentType, fmt.Errorf("ese: resource %s: HTTP %d", resolved, response.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, eseAdapterMaxResourceBytes+1))
+	if err != nil {
+		return nil, contentType, fmt.Errorf("ese: read resource %s: %w", resolved, err)
+	}
+	if len(body) > eseAdapterMaxResourceBytes || !eseAdapterResourceBodyIsUsable(contentType, body, resolved, image) {
+		return nil, contentType, fmt.Errorf("ese: resource %s returned an invalid shell or file", resolved)
+	}
+	return body, contentType, nil
+}
+
+func eseAdapterResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	if mediaType == "" {
+		return false
+	}
+	probe := body
+	if len(probe) > 4096 {
+		probe = probe[:4096]
+	}
+	if eseAdapterResourceShellMarkerRe.Match(probe) {
+		return false
+	}
+	magic := eseAdapterResourceMagic(body)
+	if image {
+		if !strings.HasPrefix(mediaType, "image/") {
+			return false
+		}
+		return strings.HasPrefix(magic, "image-")
+	}
+
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf"):
+		return magic == "pdf"
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml"):
+		return magic == "zip"
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt") || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint":
+		return magic == "ole"
+	case strings.Contains(lowerName, ".zip") || strings.Contains(lowerName, ".rar") || strings.Contains(lowerName, ".7z") || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed":
+		return magic == "zip" || magic == "rar" || magic == "7z"
+	case strings.Contains(lowerName, ".txt") || strings.Contains(lowerName, ".csv"):
+		return mediaType == "text/plain" || mediaType == "text/csv" || mediaType == "text/tab-separated-values"
+	case strings.HasPrefix(mediaType, "text/"):
+		return true
+	default:
+		return magic != ""
+	}
+}
+
+func eseAdapterResourceMagic(body []byte) string {
+	switch {
+	case bytes.HasPrefix(body, []byte("%PDF-")):
+		return "pdf"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x03, 0x04}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x05, 0x06}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x07, 0x08}):
+		return "zip"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}):
+		return "ole"
+	case len(body) >= 3 && bytes.Equal(body[:3], []byte{0xff, 0xd8, 0xff}):
+		return "image-jpeg"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
+		return "image-png"
+	case len(body) >= 6 && (bytes.Equal(body[:6], []byte("GIF87a")) || bytes.Equal(body[:6], []byte("GIF89a"))):
+		return "image-gif"
+	case len(body) >= 12 && bytes.Equal(body[:4], []byte("RIFF")) && bytes.Equal(body[8:12], []byte("WEBP")):
+		return "image-webp"
+	case len(body) >= 2 && bytes.Equal(body[:2], []byte("BM")):
+		return "image-bmp"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{'I', 'I', '*', 0}) || bytes.Equal(body[:4], []byte{'M', 'M', 0, '*'})):
+		return "image-tiff"
+	case len(body) >= 7 && bytes.Equal(body[:7], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x00}):
+		return "rar"
+	case len(body) >= 6 && bytes.Equal(body[:6], []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}):
+		return "7z"
+	}
+	return ""
 }
 
 func eseAdapterIsAttachmentLink(anchor *goquery.Selection, href string) bool {
@@ -703,15 +998,30 @@ func eseAdapterBodyText(content *goquery.Selection) string {
 	clone := content.Clone()
 	clone.Find("script, style, noscript").Remove()
 	parts := make([]string, 0)
-	clone.Find("p, h1, h2, h3, h4, h5, h6").Each(func(_ int, sel *goquery.Selection) {
+	appendText := func(sel *goquery.Selection) {
 		if text := eseAdapterCleanText(sel.Text()); text != "" {
 			parts = append(parts, text)
 		}
+	}
+	clone.Find("p, h1, h2, h3, h4, h5, h6").Each(func(_ int, sel *goquery.Selection) {
+		appendText(sel)
+	})
+	// ESE uses paragraphs for most prose, but notices and platform pages also
+	// put required text in lists, tables, and leaf divs. Add only leaf blocks
+	// so nested paragraphs are not duplicated.
+	clone.Find("li, td, th, div").Each(func(_ int, sel *goquery.Selection) {
+		if sel.Find("p, h1, h2, h3, h4, h5, h6, li, td, th, div").Length() > 0 {
+			return
+		}
+		if sel.Find("img").Length() > 0 && eseAdapterCleanText(sel.Text()) == "" {
+			return
+		}
+		appendText(sel)
 	})
 	if len(parts) > 0 {
 		return strings.Join(parts, "\n\n")
 	}
-	return eseAdapterCleanText(clone.Text())
+	return eseAdapterCleanText(flattenedText(clone))
 }
 
 func eseAdapterMetaValue(text string, labels ...string) string {
@@ -753,13 +1063,13 @@ func eseAdapterLooksLikeErrorPage(doc *goquery.Document) bool {
 		return true
 	}
 	title := strings.ToLower(eseAdapterCleanText(doc.Find("title").First().Text()))
-	for _, marker := range []string{"404", "403", "500", "error", "错误", "不存在", "验证码", "安全验证", "附件下载", "登录", "login", "forbidden", "not found"} {
+	for _, marker := range []string{"404", "403", "500", "error", "错误", "不存在", "验证码", "安全验证", "附件下载", "登录", "login", "forbidden", "not found", "access denied", "request blocked", "just a moment", "cloudflare"} {
 		if strings.Contains(title, marker) {
 			return true
 		}
 	}
 	body := strings.ToLower(eseAdapterCleanText(doc.Find("body").First().Text()))
-	for _, marker := range []string{"请输入验证码", "请先登录", "页面不存在", "您访问的页面不存在", "无权限访问", "系统错误", "安全验证"} {
+	for _, marker := range []string{"请输入验证码", "请先登录", "页面不存在", "您访问的页面不存在", "无权限访问", "系统错误", "安全验证", "请求已被阻断", "安全威胁", "access denied", "request blocked", "just a moment", "cloudflare"} {
 		if strings.Contains(body, marker) {
 			return true
 		}

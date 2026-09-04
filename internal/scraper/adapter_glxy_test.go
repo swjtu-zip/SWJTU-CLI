@@ -23,7 +23,7 @@ func TestGlxyAdapterRegistrationAndPageURL(t *testing.T) {
 	if site.BaseURL != glxyBaseURL {
 		t.Fatalf("base URL = %q, want %q", site.BaseURL, glxyBaseURL)
 	}
-	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil {
+	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil || site.ArticleFetchFunc == nil {
 		t.Fatalf("glxy adapter hooks are incomplete: %+v", site)
 	}
 	if len(site.SubPages) != len(glxySubPages) {
@@ -43,7 +43,6 @@ func TestGlxyAdapterRegistrationAndPageURL(t *testing.T) {
 		"yyzj/yyhd",
 		"yyzj/yyjz",
 		"sztd2/tdjs",
-		"sztd2/jzjs",
 	} {
 		found := false
 		for _, slug := range site.SubPages {
@@ -71,10 +70,20 @@ func TestGlxyAdapterRegistrationAndPageURL(t *testing.T) {
 		{"xwtz/xyxw", ".htm", "", 2, 0},
 		{"xwtz/xyxw", ".htm", "", 119, 118},
 		{"xwtz/xyxw", ".htm", "", 0, 118},
+		{"xwtz/xyxw", ".htm", "", 1, -1},
+		{"xwtz/xyxw", ".htm", base + "xwtz/xyxw.htm", 1, 0},
 	}
 	for _, tc := range cases {
 		if got := glxyPageURL(base, tc.slug, tc.page, tc.total, tc.extension); got != tc.want {
 			t.Errorf("page URL %s page %d/%d = %q, want %q", tc.slug, tc.page, tc.total, got, tc.want)
+		}
+	}
+	if got := glxyPageURL("", "xwtz/xyxw", 1, 118, ".htm"); got != "" {
+		t.Fatalf("empty base URL = %q, want empty", got)
+	}
+	for _, slug := range glxySubPages {
+		if slug == "sztd2/jzjs" {
+			t.Fatal("static兼职教授 page must not be registered as an article list")
 		}
 	}
 }
@@ -173,6 +182,10 @@ func TestGlxyDistinguishesLegalEmptyListsAndShells(t *testing.T) {
 	if _, err := parseGlxyNews([]byte(`<html><body><div id="app"></div></body></html>`), glxyBaseURL); err == nil {
 		t.Fatal("homepage shell was accepted as a list")
 	}
+	externalOnly := []byte(`<html><head><meta name="pageTitle" content="合作项目"></head><body><ul class="dj_lb1"><li><a href="https://fad.swjtu.edu.cn/info/1024/6675.htm">外站转发文章</a><span class="sj">2021年12月01日</span></li></ul></body></html>`)
+	if _, err := parseGlxyNews(externalOnly, glxyBaseURL); err == nil {
+		t.Fatal("external-only list was silently accepted as an empty local list")
+	}
 }
 
 func TestGlxyArticleExtractsTypeDateBodyImageAndAttachments(t *testing.T) {
@@ -217,5 +230,47 @@ func TestGlxyArticleRejectsStaticCaptchaAndErrorPages(t *testing.T) {
 	}
 	if _, err := parseGlxyArticle([]byte(`<html><head><title>404 页面不存在</title></head><body>404</body></html>`), glxyBaseURL); err == nil {
 		t.Fatal("error page was accepted as an article")
+	}
+}
+
+func TestGlxyArticleUsesFixedDateAndSafeContentResources(t *testing.T) {
+	articleHTML := []byte(`<!doctype html>
+<html><head><meta name="pageType" content="3"></head><body>
+<div class="nav-b"><a href="/index.htm">首页</a><a href="/xwtz.htm">新闻通知</a><a href="/zthd.htm">专题活动</a><a href="#">正文</a></div>
+<form name="_newscontent_fromname">
+  <div class="newxq-boxy"><h1>旧模板的固定标题</h1><p><span>2026年01月20日 14:40</span><a href="/zthd.htm">返回列表</a></p></div>
+  <div class="v_news_content">
+    <p>正文中的活动日期：2099年12月31日，不能当发布日期。</p>
+    <p><img src="data:image/png;base64,placeholder"><img src="/spacer.gif"><img src="javascript:void(0)"><img data-src="/__local/real.png" src="data:image/gif;base64,lazy-placeholder"></p>
+    <p><a href="javascript:download()">恶意附件.pdf</a><a href="data:application/pdf;base64,placeholder" download="恶意.pdf">恶意下载</a><a href="/files/real.pdf">正式附件.pdf</a></p>
+  </div>
+</form></body></html>`)
+
+	article, err := parseGlxyArticle(articleHTML, glxyBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title != "旧模板的固定标题" || article.Type != "专题活动" {
+		t.Fatalf("unexpected title/type: title=%q type=%q", article.Title, article.Type)
+	}
+	if article.Date != "2026-01-20" || article.PublishedAt != "2026-01-20 14:40:00" {
+		t.Fatalf("fixed publication date was not retained: date=%q published_at=%q", article.Date, article.PublishedAt)
+	}
+	if !strings.Contains(article.Content, "2099年12月31日") {
+		t.Fatalf("正文内容 was unexpectedly discarded: %q", article.Content)
+	}
+	if len(article.Images) != 1 || article.Images[0] != glxyBaseURL+"/__local/real.png" {
+		t.Fatalf("unsafe or placeholder images leaked: %#v", article.Images)
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].Name != "正式附件.pdf" || article.Attachments[0].URL != glxyBaseURL+"/files/real.pdf" {
+		t.Fatalf("unsafe attachments leaked: %#v", article.Attachments)
+	}
+	for _, forbidden := range []string{"data:", "javascript:", "spacer.gif", "lazy-placeholder"} {
+		if strings.Contains(strings.ToLower(article.ContentHTML), strings.ToLower(forbidden)) {
+			t.Fatalf("forbidden content resource %q leaked into HTML: %s", forbidden, article.ContentHTML)
+		}
+	}
+	if !strings.Contains(article.ContentHTML, `src="`+glxyBaseURL+`/__local/real.png"`) || !strings.Contains(article.ContentHTML, `href="`+glxyBaseURL+`/files/real.pdf"`) {
+		t.Fatalf("safe content resources were not resolved: %s", article.ContentHTML)
 	}
 }

@@ -1,0 +1,29 @@
+{
+  "statusCode": 200,
+  "data": {
+    "pageIndex": 1,
+    "pageSize": 20,
+    "totalCount": 96,
+    "totalPages": 5,
+    "items": [
+      {
+        "contentID": "09922304-25f3-4114-acb5-9c7df478860d",
+        "mainColumnID": "Ds8XD6N32k1BF9$F",
+        "title": "图书馆召开树立和践行正确政绩观学习教育总结会",
+        "publishDate": "2026-09-04T00:00:00",
+        "lables": "最新动态",
+        "lablesName": ["最新动态"],
+        "externalLink": ""
+      },
+      {
+        "contentID": "79d5f909-c29b-42ed-8d23-ed000be88e58",
+        "mainColumnID": "Ds8XD6N32k1BF9$F",
+        "title": "关于图书馆门户主页安全架构升级的通知",
+        "publishDate": "2026-08-25T00:00:00",
+        "lables": "通知公告",
+        "lablesName": ["通知公告"],
+        "externalLink": ""
+      }
+    ]
+  }
+}

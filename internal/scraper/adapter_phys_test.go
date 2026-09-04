@@ -1,9 +1,21 @@
 package scraper
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
+
+const physFixtureBaseURL = "https://phys.swjtu.edu.cn"
+
+func readPhysFixture(t *testing.T, name string) []byte {
+	t.Helper()
+	body, err := os.ReadFile("testdata/" + name)
+	if err != nil {
+		t.Fatalf("read phys fixture %q: %v", name, err)
+	}
+	return body
+}
 
 func TestPhysAdapterRegistersAuditedArticleFeeds(t *testing.T) {
 	site := AllSites["phys"]
@@ -12,9 +24,11 @@ func TestPhysAdapterRegistersAuditedArticleFeeds(t *testing.T) {
 	}
 	want := map[string]bool{
 		"xwgg/xydt": true, "kxyj/xsdt": true,
-		"rcpy/bkspy": true, "rcpy/yjspy": true,
+		"rcpy/bkspy": true, "rcpy/bkspy/bkstz": true, "rcpy/bkspy/bkspyfa": true, "rcpy/bkspy/bksxz": true,
+		"rcpy/yjspy": true, "rcpy/yjspy/yjstz": true, "rcpy/yjspy/yjspyfa": true,
 		"xsfz/gqtgz": true, "xsfz/xgdt": true, "xsfz/xgtz": true,
 		"xygz/xyjy": true, "dqgz/jjgz": true, "dqgz/pyfz": true, "dqgz/xxjy": true,
+		"dqgz/ghzjlink/ghhd": true,
 	}
 	got := make(map[string]bool, len(site.SubPages))
 	for _, slug := range site.SubPages {
@@ -27,6 +41,64 @@ func TestPhysAdapterRegistersAuditedArticleFeeds(t *testing.T) {
 		if !got[slug] {
 			t.Errorf("phys audited feed %q is missing", slug)
 		}
+	}
+}
+
+func TestPhysPageURLUsesReverseStaticNumberingAndRejectsOutOfRange(t *testing.T) {
+	cases := []struct {
+		slug       string
+		page       int
+		totalPages int
+		want       string
+	}{
+		{"xwgg/xydt", 1, 174, physFixtureBaseURL + "/xwgg/xydt.htm"},
+		{"xwgg/xydt", 2, 174, physFixtureBaseURL + "/xwgg/xydt/173.htm"},
+		{"xwgg/xydt", 87, 174, physFixtureBaseURL + "/xwgg/xydt/88.htm"},
+		{"xwgg/xydt", 174, 174, physFixtureBaseURL + "/xwgg/xydt/1.htm"},
+		{"rcpy/bkspy/bkstz", 2, 52, physFixtureBaseURL + "/rcpy/bkspy/bkstz/51.htm"},
+		{"rcpy/bkspy/bkspyfa", 2, 1, ""},
+		{"xwgg/xydt", 175, 174, ""},
+		{"xwgg/xydt", 2, 0, ""},
+		{"xwgg/xydt", 0, 174, ""},
+	}
+	for _, tc := range cases {
+		if got := reverseBodaPageURL(physFixtureBaseURL, tc.slug, tc.page, tc.totalPages, ".htm"); got != tc.want {
+			t.Errorf("phys page URL %s page %d/%d = %q, want %q", tc.slug, tc.page, tc.totalPages, got, tc.want)
+		}
+	}
+}
+
+func TestPhysLiveListFixtureKeepsSourceTypeAndTotalPages(t *testing.T) {
+	body := readPhysFixture(t, "phys_list_live.html")
+	items, err := parseAdapter_physList(body, physFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 3 {
+		t.Fatalf("phys live list returned %d items, want 3: %#v", len(items), items)
+	}
+	if items[0].Title != "喜报！物理科学与技术学院本科生在全国大学生物理实验竞赛中获奖" || items[0].Date != "2026-07-01" || items[0].Type != "学院动态" {
+		t.Fatalf("unexpected phys list metadata: %#v", items[0])
+	}
+	if got, err := physTotalPagesFromHTML(body, "xwgg/xydt"); err != nil || got != 174 {
+		t.Fatalf("phys live list pages = %d/%v, want 174", got, err)
+	}
+}
+
+func TestPhysRealEmptyListIsSuccessfulAndStaticShellIsNot(t *testing.T) {
+	body := readPhysFixture(t, "phys_empty_list.html")
+	items, err := parseAdapter_physList(body, physFixtureBaseURL)
+	if err != nil || len(items) != 0 {
+		t.Fatalf("phys empty list = %#v, %v; want empty success", items, err)
+	}
+	if got, err := physTotalPagesFromHTML(body, "rcpy/bkspy/bkspyfa"); err != nil || got != 1 {
+		t.Fatalf("phys empty list pages = %d/%v, want 1", got, err)
+	}
+	if _, err := parseAdapter_physList(readPhysFixture(t, "phys_error.html"), physFixtureBaseURL); err == nil {
+		t.Fatal("phys error page was accepted as a list")
+	}
+	if _, err := parseAdapter_physList([]byte(`<html><body><h2>科研概况</h2><div>静态介绍页</div></body></html>`), physFixtureBaseURL); err == nil {
+		t.Fatal("phys static page was accepted as an article list")
 	}
 }
 
@@ -83,6 +155,13 @@ func TestPhysLegacyMigrationDateIsNotPublishedDate(t *testing.T) {
 	if article.Date != "" || article.PublishedAt != "" {
 		t.Fatalf("legacy migration date leaked from article: %q/%q", article.Date, article.PublishedAt)
 	}
+	legacy, err := parseAdapter_physArticle(readPhysFixture(t, "phys_article_legacy.html"), physFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if legacy.Date != "" || legacy.PublishedAt != "" {
+		t.Fatalf("fixture migration date leaked from article: %q/%q", legacy.Date, legacy.PublishedAt)
+	}
 }
 
 func TestPhysArticleKeepsBodyImageAndAttachment(t *testing.T) {
@@ -93,5 +172,38 @@ func TestPhysArticleKeepsBodyImageAndAttachment(t *testing.T) {
 	}
 	if article.Type != "学院动态" || !strings.Contains(article.Content, "正文内容") || len(article.Images) != 1 || len(article.Attachments) != 1 {
 		t.Fatalf("phys article = %#v", article)
+	}
+}
+
+func TestPhysLiveArticleUsesFixedPublishNodeAndFiltersUnverifiedResources(t *testing.T) {
+	article, err := parseAdapter_physArticle(readPhysFixture(t, "phys_article_live.html"), physFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title != "创源大讲堂——太阳爆发的起源与早期演化的数值模拟研究（格物致理讲坛第117期）" {
+		t.Fatalf("phys detail title = %q", article.Title)
+	}
+	if article.Type != "学术动态" || article.Date != "2026-07-02" || article.PublishedAt != "" {
+		t.Fatalf("phys detail metadata = %#v", article)
+	}
+	if !strings.Contains(article.Content, "时间：2026年7月10日") || !strings.Contains(article.Content, "太阳爆发是太阳系内最剧烈的天文现象") {
+		t.Fatalf("phys detail body lost or used as metadata: %q", article.Content)
+	}
+	if len(article.Images) != 1 || !strings.HasSuffix(article.Images[0], "C757C.png") {
+		t.Fatalf("phys detail images = %#v", article.Images)
+	}
+	if len(article.Attachments) != 0 {
+		t.Fatalf("CAPTCHA HTML attachment was exposed as a file: %#v", article.Attachments)
+	}
+}
+
+func TestPhysArticlePreservesClockOnlyFromFixedPublishNode(t *testing.T) {
+	html := []byte(`<html><body><div class="inner_right"><div class="local"><h2>学院动态</h2></div><div class="article"><h2 class="tit">带精确时间的物理学院通知</h2><p class="conttime"><span>发布时间：2026-07-01 09:05:07</span></p><div class="v_news_content"><p>活动时间：2026年7月10日 14:00。</p></div></div></div></body></html>`)
+	article, err := parseAdapter_physArticle(html, physFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Date != "2026-07-01" || article.PublishedAt != "2026-07-01 09:05:07" {
+		t.Fatalf("phys precise detail date = %q/%q", article.Date, article.PublishedAt)
 	}
 }

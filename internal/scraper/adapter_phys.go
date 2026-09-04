@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -15,7 +16,12 @@ var physSubPages = []string{
 	"xwgg/xydt",
 	"kxyj/xsdt",
 	"rcpy/bkspy",
+	"rcpy/bkspy/bkstz",
+	"rcpy/bkspy/bkspyfa",
+	"rcpy/bkspy/bksxz",
 	"rcpy/yjspy",
+	"rcpy/yjspy/yjstz",
+	"rcpy/yjspy/yjspyfa",
 	"xsfz/gqtgz",
 	"xsfz/xgdt",
 	"xsfz/xgtz",
@@ -23,10 +29,19 @@ var physSubPages = []string{
 	"dqgz/jjgz",
 	"dqgz/pyfz",
 	"dqgz/xxjy",
+	"dqgz/ghzjlink/ghhd",
 }
+
+const physCanonicalBaseURL = "https://phys.swjtu.edu.cn"
 
 // physAdapter gives this website its own extension point even when its current HTML is compatible with 博达's common parser.
 func init() {
+	// The registry retains the historical HTTP address. The live site is
+	// served canonically over HTTPS; keep this correction local to the phys
+	// adapter rather than changing the shared registry.
+	if site := AllSites["phys"]; site != nil {
+		site.BaseURL = physCanonicalBaseURL
+	}
 	registerAdapter("phys", SiteAdapter{
 		SubPages:     physSubPages,
 		ParseList:    parseAdapter_physList,
@@ -41,6 +56,9 @@ func parseAdapter_physList(html []byte, baseURL string) ([]model.NewsItem, error
 	if err != nil {
 		return nil, fmt.Errorf("phys: parse list HTML: %w", err)
 	}
+	if physLooksUnavailable(doc) {
+		return nil, fmt.Errorf("phys: list response is an error, login, or verification page")
+	}
 	if physIsHomepage(doc) {
 		items := physHomepageItems(doc, baseURL)
 		if len(items) == 0 {
@@ -49,25 +67,22 @@ func parseAdapter_physList(html []byte, baseURL string) ([]model.NewsItem, error
 		return items, nil
 	}
 
-	// The live archive uses .newlist1.  Once that container is present, an
-	// empty result is a valid empty tab; falling through to the generic parser
-	// would make a broken/partial response look successful or leak navigation.
+	// The live archive uses .newlist1. Once that container is present, an empty
+	// result is a valid empty tab; no generic fallback is allowed because it can
+	// turn another tab, a static page, or a partial response into this feed.
 	if doc.Find(".newlist1").Length() > 0 {
 		items := parsePhysInfoRows(doc, baseURL)
 		physAnnotateItems(doc, items, baseURL, physPageType(doc))
 		return items, nil
 	}
-	if items := parsePhysInfoRows(doc, baseURL); len(items) > 0 {
+	// Keep the older list shell used by the unit test and by a few archived
+	// copies, but still scope extraction to that shell.
+	if doc.Find(".list_zx").Length() > 0 {
+		items := parsePhysInfoRows(doc, baseURL)
 		physAnnotateItems(doc, items, baseURL, physPageType(doc))
 		return items, nil
 	}
-
-	items, err := parseBodaNewsList(html, baseURL)
-	if err != nil {
-		return nil, err
-	}
-	physAnnotateItems(doc, items, baseURL, physPageType(doc))
-	return items, nil
+	return nil, fmt.Errorf("phys: response is not a supported article list")
 }
 
 func physTotalPages(slug string) (int, error) {
@@ -75,9 +90,14 @@ func physTotalPages(slug string) (int, error) {
 	if !physKnownFeed(slug) {
 		return 0, fmt.Errorf("phys: %q is not an article-list route", slug)
 	}
-	body, err := fetch(fmt.Sprintf("http://phys.swjtu.edu.cn/%s.htm", slug))
+	listURL := fmt.Sprintf("%s/%s.htm", physCanonicalBaseURL, slug)
+	body, err := fetch(listURL)
 	if err != nil {
-		return 0, fmt.Errorf("phys: fetch first page for %s: %w", slug, err)
+		listURL = fmt.Sprintf("%s/%s.html", physCanonicalBaseURL, slug)
+		body, err = fetch(listURL)
+		if err != nil {
+			return 0, fmt.Errorf("phys: fetch first page for %s: %w", slug, err)
+		}
 	}
 	return physTotalPagesFromHTML(body, slug)
 }
@@ -99,6 +119,9 @@ func physTotalPagesFromHTML(raw []byte, slug string) (int, error) {
 	if physIsHomepage(doc) || doc.Find(".newlist1").Length() == 0 {
 		return 0, fmt.Errorf("phys: %s response is not a list page", slug)
 	}
+	if physLooksUnavailable(doc) {
+		return 0, fmt.Errorf("phys: %s response is an error, login, or verification page", slug)
+	}
 	if total := parseTotalPages(raw); total > 0 {
 		return total, nil
 	}
@@ -108,19 +131,28 @@ func physTotalPagesFromHTML(raw []byte, slug string) (int, error) {
 }
 
 func parseAdapter_physArticle(html []byte, baseURL string) (*model.Article, error) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
+	if err != nil {
+		return nil, fmt.Errorf("phys: parse article HTML: %w", err)
+	}
+	if physLooksUnavailable(doc) || !physHasArticleShell(doc) {
+		return nil, fmt.Errorf("phys: response is not a supported article page")
+	}
 	article, err := parseBodaArticleWithSectionType(html, baseURL)
 	if err != nil {
 		return nil, err
 	}
-	if physHasLegacyPlaceholder(article.Date) || physHasLegacyPlaceholder(article.PublishedAt) {
-		article.Date = ""
-		article.PublishedAt = ""
+	if title := physArticleTitle(doc); title != "" {
+		article.Title = title
 	}
-	if article.Type == "" {
-		if doc, parseErr := goquery.NewDocumentFromReader(strings.NewReader(string(html))); parseErr == nil {
-			article.Type = physPageType(doc)
-		}
+	// The shared parser has broad compatibility fallbacks. For phys, the
+	// source's fixed publication node is authoritative; body dates and the
+	// migrated template date are never promoted to article metadata.
+	article.Date, article.PublishedAt = physArticleDate(doc)
+	if typ := physArticleType(doc); typ != "" {
+		article.Type = typ
 	}
+	physFilterArticleResources(article, doc, baseURL)
 	return article, nil
 }
 
@@ -132,9 +164,15 @@ func parsePhysInfoRows(doc *goquery.Document, baseURL string) []model.NewsItem {
 	if doc == nil {
 		return nil
 	}
+	root := doc.Selection
+	if list := doc.Find(".newlist1").First(); list.Length() > 0 {
+		root = list
+	} else if list := doc.Find(".list_zx").First(); list.Length() > 0 {
+		root = list
+	}
 	items := make([]model.NewsItem, 0)
 	seen := make(map[string]bool)
-	doc.Find("a[href*='info/']").Each(func(_ int, anchor *goquery.Selection) {
+	root.Find("a[href*='info/']").Each(func(_ int, anchor *goquery.Selection) {
 		if isInNavArea(anchor) {
 			return
 		}
@@ -252,7 +290,7 @@ func physModuleType(row *goquery.Selection) string {
 
 func physTitleIsTruncated(value string) bool {
 	value = strings.TrimSpace(value)
-	return strings.HasSuffix(value, "...") || strings.HasSuffix(value, "…") || strings.HasSuffix(value, "...")
+	return strings.HasSuffix(value, "...") || strings.HasSuffix(value, "…")
 }
 
 func physAnnotateItems(doc *goquery.Document, items []model.NewsItem, baseURL, pageType string) {
@@ -299,8 +337,11 @@ func physPageType(doc *goquery.Document) string {
 	if doc == nil {
 		return ""
 	}
-	if title := strings.TrimSpace(doc.Find(`meta[name="pageTitle"], meta[name="pagetitle"]`).Last().AttrOr("content", "")); title != "" && title != "首页" {
-		return physCleanType(title)
+	pageKind := strings.TrimSpace(doc.Find(`meta[name="pageType"], meta[name="pagetype"]`).Last().AttrOr("content", ""))
+	if pageKind != "3" {
+		if title := strings.TrimSpace(doc.Find(`meta[name="pageTitle"], meta[name="pagetitle"]`).Last().AttrOr("content", "")); title != "" && title != "首页" {
+			return physCleanType(title)
+		}
 	}
 	if typ := bodaArticleSectionType(doc, ""); typ != "" {
 		return typ
@@ -356,15 +397,14 @@ func physDateValues(row *goquery.Selection) (string, string) {
 			return true
 		})
 	}
-	if raw == "" {
-		raw = strings.TrimSpace(row.Text())
-	}
+	// Do not search the whole row: a title can contain an event date or a
+	// deadline, neither of which is the list's fixed publication field.
 	return physNormalizeDate(raw)
 }
 
 func physNormalizeDate(raw string) (string, string) {
 	raw = strings.Join(strings.Fields(strings.TrimSpace(raw)), " ")
-	if raw == "" {
+	if raw == "" || physHasLegacyPlaceholder(raw) {
 		return "", ""
 	}
 	if publishedAt := normalizePublishedAt(raw); publishedAt != "" {
@@ -379,9 +419,178 @@ func physNormalizeDate(raw string) (string, string) {
 	if match := physShortDateRE.FindStringSubmatch(raw); len(match) == 3 {
 		return fmt.Sprintf("%02s-%02s", match[1], match[2]), ""
 	}
-	return raw, ""
+	return "", ""
 }
 
 func physHasLegacyPlaceholder(value string) bool {
 	return strings.HasPrefix(strings.TrimSpace(value), physLegacyPlaceholderDate)
+}
+
+// physLooksUnavailable distinguishes a real source page from the small error,
+// login, and verification pages that the CMS also returns as HTML/200.
+func physLooksUnavailable(doc *goquery.Document) bool {
+	if doc == nil {
+		return true
+	}
+	title := strings.ToLower(strings.Join(strings.Fields(doc.Find("title").First().Text()), " "))
+	for _, marker := range []string{"404", "403", "access denied", "request rejected", "安全验证", "登录", "验证码下载附件"} {
+		if strings.Contains(title, marker) {
+			return true
+		}
+	}
+	clone := doc.Clone()
+	clone.Find("script, style, noscript").Remove()
+	text := strings.ToLower(strings.Join(strings.Fields(clone.Text()), " "))
+	for _, marker := range []string{"access denied", "request rejected", "页面不存在", "请输入验证码下载附件", "请先登录"} {
+		if strings.Contains(text, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func physArticleTitle(doc *goquery.Document) string {
+	if doc == nil {
+		return ""
+	}
+	for _, selector := range []string{".article h2.tit", ".article h1.tit", "h2.tit", "h1.news_tit", ".news-title", ".article-title", "h1"} {
+		if title := strings.Join(strings.Fields(doc.Find(selector).First().Text()), " "); title != "" {
+			return title
+		}
+	}
+	return ""
+}
+
+func physHasArticleShell(doc *goquery.Document) bool {
+	return physArticleTitle(doc) != "" && doc.Find(".v_news_content").Length() > 0
+}
+
+func physArticleDate(doc *goquery.Document) (string, string) {
+	if doc == nil {
+		return "", ""
+	}
+	for _, selector := range []string{".conttime span", ".conttime", ".news_source span", ".news_source", ".top-info span", ".top-info"} {
+		var date, publishedAt string
+		doc.Find(selector).EachWithBreak(func(_ int, sel *goquery.Selection) bool {
+			raw := strings.TrimSpace(sel.Text())
+			if raw == "" {
+				return true
+			}
+			if !strings.Contains(raw, "发布时间") && !strings.Contains(raw, "发布日期") && !strings.Contains(raw, "发表") && !strings.Contains(raw, "日期") && !sel.HasClass("date") {
+				return true
+			}
+			date, publishedAt = physNormalizeDate(raw)
+			return date == ""
+		})
+		if date != "" {
+			return date, publishedAt
+		}
+	}
+	return "", ""
+}
+
+func physArticleType(doc *goquery.Document) string {
+	if doc == nil {
+		return ""
+	}
+	return physCleanType(bodaArticleSectionType(doc, physArticleTitle(doc)))
+}
+
+func physFilterArticleResources(article *model.Article, doc *goquery.Document, baseURL string) {
+	if article == nil {
+		return
+	}
+	validImages := make(map[string]bool)
+	if doc != nil {
+		doc.Find(".v_news_content img").Each(func(_ int, sel *goquery.Selection) {
+			width := strings.TrimSpace(sel.AttrOr("width", ""))
+			height := strings.TrimSpace(sel.AttrOr("height", ""))
+			if width == "1" && height == "1" {
+				return
+			}
+			for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+				if raw := strings.TrimSpace(sel.AttrOr(attr, "")); raw != "" {
+					if resolved := bodaResourceURL(baseURL, raw); resolved != "" && !physIsPlaceholderResource(resolved) {
+						validImages[resolved] = true
+					}
+					break
+				}
+			}
+		})
+	}
+	filteredImages := article.Images[:0]
+	for _, image := range article.Images {
+		if validImages[image] || len(validImages) == 0 && physUsableResourceURL(image) && !physIsPlaceholderResource(image) {
+			if !physContainsString(filteredImages, image) {
+				filteredImages = append(filteredImages, image)
+			}
+		}
+	}
+	article.Images = filteredImages
+
+	filteredAttachments := article.Attachments[:0]
+	for _, attachment := range article.Attachments {
+		if !physUsableResourceURL(attachment.URL) || physBlockedAttachmentURL(attachment.URL) || physIsPlaceholderResource(attachment.URL) {
+			continue
+		}
+		if !physContainsAttachmentURL(filteredAttachments, attachment.URL) {
+			filteredAttachments = append(filteredAttachments, attachment)
+		}
+	}
+	article.Attachments = filteredAttachments
+}
+
+func physUsableResourceURL(raw string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || parsed.Host == "" {
+		return false
+	}
+	scheme := strings.ToLower(parsed.Scheme)
+	return scheme == "http" || scheme == "https"
+}
+
+func physIsPlaceholderResource(raw string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		return true
+	}
+	lower := strings.ToLower(parsed.Path)
+	for _, marker := range []string{"/spacer", "/blank", "/transparent", "/placeholder", "/noimage", "/no-image", "/loading"} {
+		if strings.Contains(lower, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func physBlockedAttachmentURL(raw string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		return true
+	}
+	if strings.EqualFold(parsed.Path, "/system/_content/download.jsp") && parsed.Query().Get("urltype") == "news.DownloadAttachUrl" {
+		// The live phys endpoint returns an HTML CAPTCHA gate (200 text/html),
+		// not the advertised file. It must not be exposed as a verified asset.
+		return true
+	}
+	lower := strings.ToLower(parsed.Path + "?" + parsed.RawQuery)
+	return strings.Contains(lower, "login") || strings.Contains(lower, "captcha") || strings.Contains(lower, "verify")
+}
+
+func physContainsString(values []string, wanted string) bool {
+	for _, value := range values {
+		if value == wanted {
+			return true
+		}
+	}
+	return false
+}
+
+func physContainsAttachmentURL(values []model.Attachment, wanted string) bool {
+	for _, value := range values {
+		if value.URL == wanted {
+			return true
+		}
+	}
+	return false
 }

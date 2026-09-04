@@ -398,7 +398,16 @@ func (s *BodaSite) GetArticleSnapshot(articleURL string) (*model.Article, []byte
 	if err != nil {
 		return nil, nil, err
 	}
-	enrichPublishedAtFromHTML(body, art)
+	// A registered site adapter owns its detail-page metadata.  In particular,
+	// do not run the broad legacy precision fallback after an adapter has
+	// parsed the page: a title ancestor may also contain the article body, and
+	// body phrases such as "活动时间" or "截止时间" are not publication
+	// metadata.  The generic parser still gets the fallback for unregistered
+	// Boda pages; registered adapters can use their fixed source selector or
+	// the listing timestamp as the authoritative value.
+	if s.ParseArticleFunc == nil {
+		enrichPublishedAtFromHTML(body, art)
+	}
 	normalizeArticlePublishedAt(art)
 	art.RawHTML = string(body)
 	return art, body, nil
@@ -1718,8 +1727,10 @@ func findDateInMetaZone(titleSel, contentSel *goquery.Selection) string {
 	if contentSel != nil && contentSel.Length() > 0 {
 		contentText = flattenedText(contentSel)
 		collect(contentSel, contentText)
-	}
-	if titleSel != nil && titleSel.Length() > 0 {
+	} else if titleSel != nil && titleSel.Length() > 0 {
+		// Without a recognized content container the headline is the only
+		// available anchor. Once a content container is known, title ancestors
+		// are deliberately skipped because they commonly wrap the whole body.
 		collect(titleSel, "")
 	}
 	// Labeled dates first: they are the strongest signal even in wider zones.
@@ -1767,8 +1778,7 @@ func findDateTimeInMetaZone(titleSel, contentSel *goquery.Selection) string {
 	if contentSel != nil && contentSel.Length() > 0 {
 		contentText = flattenedText(contentSel)
 		collect(contentSel, contentText)
-	}
-	if titleSel != nil && titleSel.Length() > 0 {
+	} else if titleSel != nil && titleSel.Length() > 0 {
 		collect(titleSel, "")
 	}
 	for _, zone := range zones {

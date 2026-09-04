@@ -1,9 +1,15 @@
 package scraper
 
 import (
+	"bytes"
 	"fmt"
+	htmlstd "html"
+	"io"
+	"net/http"
 	"net/url"
+	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,115 +18,122 @@ import (
 	"swjtu-cli/internal/model"
 )
 
-// sie.swjtu.edu.cn has two different homepage news blocks. They both use
-// /info/<column>/<id>.htm links, but only the surrounding block carries the
-// date; a document-wide fallback loses dates and may mix in utility links.
+const (
+	sieCanonicalBaseURL       = "https://sie.swjtu.edu.cn"
+	sieMaxResourceBytes int64 = 32 << 20
+)
+
+// These are the non-empty article-list pages found in the site's navigation,
+// home-page quick links, and secondary navigation. Profile/calendar shells and
+// the external English site are deliberately not feeds.
+var sieSubPages = []string{
+	"xyxw",
+	"tzgg",
+	"zsxx/xlxwxm",
+	"zsxx/fxlxm",
+	"zsxx/jxj",
+	"zsxx/dsxx",
+	"jyjx/bks",
+	"jyjx/yjs",
+	"jyjx/yywhxm",
+	"xysh/xshd",
+	"xysh/gzzd",
+	"xqzb/dxqzn",
+	"xqzb/flfg",
+	"cglx/pxxw",
+	"xzzx/xqzb",
+	"xzzx/jxxg",
+	"xzzx/by_jyxg",
+	"xzzx/qzxg",
+	"xzzx/zsxg",
+	"index/xsst",
+	"index/gzzd",
+}
+
+// The source currently exposes 14 reverse-numbered pages for 学院新闻 and 7
+// for 通知公告. The remaining audited feeds are single-page lists. The map is
+// only a safe fallback when a one-page response omits the pager; live pages
+// still win whenever they expose a source total.
+var siePageTotals = map[string]int{
+	"xyxw":         14,
+	"tzgg":         7,
+	"zsxx/xlxwxm":  1,
+	"zsxx/fxlxm":   1,
+	"zsxx/jxj":     1,
+	"zsxx/dsxx":    1,
+	"jyjx/bks":     1,
+	"jyjx/yjs":     1,
+	"jyjx/yywhxm":  1,
+	"xysh/xshd":    1,
+	"xysh/gzzd":    1,
+	"xqzb/dxqzn":   1,
+	"xqzb/flfg":    1,
+	"cglx/pxxw":    1,
+	"xzzx/xqzb":    1,
+	"xzzx/jxxg":    1,
+	"xzzx/by_jyxg": 1,
+	"xzzx/qzxg":    1,
+	"xzzx/zsxg":    1,
+	"index/xsst":   1,
+	"index/gzzd":   1,
+}
+
+var (
+	sieArticlePathRE = regexp.MustCompile(`(?i)^/info/\d+/\d+\.html?$`)
+	sieDateRE        = regexp.MustCompile(`(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})\s*日?`)
+	sieYearMonthRE   = regexp.MustCompile(`(20\d{2})\s*[-/.年]\s*(\d{1,2})`)
+	sieAttachmentRE  = regexp.MustCompile(`(?i)\.(?:docx?|xlsx?|pptx?|pdf|zip|rar|7z|txt|csv|wps|rtf)(?:$|[?#])`)
+	sieShellRE       = regexp.MustCompile(`(?is)<!doctype\s+html|<html(?:\s|>)|<head(?:\s|>)|<body(?:\s|>)|请输入验证码|验证码下载附件|请先登录|请登录后|登录页面|页面不存在|您访问的页面不存在|无权限访问|系统错误|安全验证|人机验证|请求已被阻断|access\s+denied|request\s+blocked|just\s+a\s+moment|cloudflare`)
+)
+
 func init() {
 	registerAdapter("sie", SiteAdapter{
 		SubPages:     sieSubPages,
 		ParseList:    parseAdapter_sieList,
 		ParseArticle: parseAdapter_sieArticle,
-		PageURL:      reverseBodaPageURL,
+		PageURL:      siePageURL,
 		TotalPages:   sieTotalPages,
+		FetchArticle: sieFetchArticle,
 	})
 }
 
-var sieSubPages = []string{
-	"xyxw",
-	"tzgg",
-	"xysh/xshd",
-	"cglx/pxxw",
-	"xzzx/xqzb",
-	"index/xsst",
+func sieBaseURL() string {
+	if site := AllSites["sie"]; site != nil && strings.TrimSpace(site.BaseURL) != "" {
+		return strings.TrimRight(strings.TrimSpace(site.BaseURL), "/")
+	}
+	return sieCanonicalBaseURL
 }
 
-var sieArticlePathRE = regexp.MustCompile(`(?i)^/info/\d+/\d+\.html?$`)
-var sieDateRE = regexp.MustCompile(`(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})\s*日?`)
-
-func parseAdapter_sieList(html []byte, baseURL string) ([]model.NewsItem, error) {
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
-	if err != nil {
-		return nil, fmt.Errorf("parse sie list: %w", err)
+func sieIsKnownSubPage(slug string) bool {
+	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	for _, route := range sieSubPages {
+		if route == slug {
+			return true
+		}
 	}
-	items := make([]model.NewsItem, 0)
-	seen := make(map[string]int)
-	add := func(anchor, scope *goquery.Selection, typ string) {
-		if anchor == nil || anchor.Length() == 0 {
-			return
-		}
-		fullURL := cleanURL(resolveURL(baseURL, anchor.AttrOr("href", "")))
-		parsed, parseErr := url.Parse(fullURL)
-		if parseErr != nil || !sieArticlePathRE.MatchString(parsed.Path) || isExternalURL(fullURL, baseURL) || !isValidNewsURL(fullURL) {
-			return
-		}
-		title := strings.TrimSpace(anchor.AttrOr("title", ""))
-		if title == "" {
-			title = strings.TrimSpace(scope.Find(".desc").First().Text())
-		}
-		if title == "" {
-			title = strings.TrimSpace(anchor.Text())
-		}
-		title = cleanTitle(title)
-		if title == "" || !isValidNewsTitle(title) || len([]rune(title)) > 240 {
-			return
-		}
-		date := sieListDate(scope)
-		if index, ok := seen[fullURL]; ok {
-			if items[index].Date == "" && date != "" {
-				items[index].Date = date
-				items[index].PublishedAt = normalizePublishedAt(date)
-			}
-			if items[index].Type == "" && typ != "" {
-				items[index].Type = typ
-			}
-			return
-		}
-		seen[fullURL] = len(items)
-		items = append(items, model.NewsItem{Title: title, URL: fullURL, Date: date, PublishedAt: normalizePublishedAt(date), Type: typ, ParsedAt: time.Now()})
-	}
-
-	doc.Find(".index-row1 .c1 .list li").Each(func(_ int, row *goquery.Selection) {
-		add(row.Find("a[href]").First(), row, sieSectionType(doc, row))
-	})
-	doc.Find(".index-row1 .c2 .list dl").Each(func(_ int, row *goquery.Selection) {
-		add(row.Find("dd a[href]").First(), row, sieSectionType(doc, row))
-	})
-
-	// Archive pages use a separate inner-text-list template. Keep the scan
-	// scoped to that content region; the same /info/ URLs also occur in the
-	// global navigation and footer.
-	doc.Find(".inner-text-list > ul > li, .inner-text-list ul > li").Each(func(_ int, row *goquery.Selection) {
-		anchor := row.Find(".text h6 a[href], .text a[href], a[href]").First()
-		add(anchor, row, sieSectionType(doc, row))
-	})
-	if len(items) == 0 {
-		return nil, fmt.Errorf("sie: no article rows found")
-	}
-	return items, nil
+	return false
 }
 
-func sieSectionType(doc *goquery.Document, row *goquery.Selection) string {
-	if row != nil && row.Length() > 0 {
-		for _, selector := range []string{".section-title", ".list-title", ".inner-tit h6", ".righttop span:first-child", ".righttop > span:first-child"} {
-			value := strings.Join(strings.Fields(row.Closest(".inner-page, .info, .content, .right-con").Find(selector).First().Text()), " ")
-			if value != "" && value != "首页" {
-				return value
-			}
-		}
+// siePageURL maps the logical newest-first page number to the reverse-numbered
+// files generated by the Visual SiteBuilder template.
+func siePageURL(baseURL, slug string, page, totalPages int, extension string) string {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if baseURL == "" || !sieIsKnownSubPage(slug) || page < 1 {
+		return ""
 	}
-	if doc != nil {
-		for _, selector := range []string{`meta[name="pageTitle"]`, ".inner-tit h6", ".righttop > span:first-child"} {
-			found := doc.Find(selector).First()
-			value := strings.TrimSpace(found.AttrOr("content", ""))
-			if value == "" {
-				value = strings.Join(strings.Fields(found.Text()), " ")
-			}
-			if value != "" && value != "首页" {
-				return value
-			}
-		}
+	if extension == "" {
+		extension = ".htm"
+	} else if !strings.HasPrefix(extension, ".") {
+		extension = "." + extension
 	}
-	return ""
+	if page == 1 {
+		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
+	}
+	if totalPages < 1 || page > totalPages {
+		return ""
+	}
+	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, totalPages-page+1, extension)
 }
 
 func sieTotalPages(slug string) (int, error) {
@@ -128,86 +141,842 @@ func sieTotalPages(slug string) (int, error) {
 	if slug == "" || slug == "index" {
 		return 1, nil
 	}
-	known := false
-	for _, route := range sieSubPages {
-		if route == slug {
-			known = true
-			break
-		}
-	}
-	if !known {
+	if !sieIsKnownSubPage(slug) {
 		return 0, fmt.Errorf("sie: %q is not an audited article-list route", slug)
 	}
-	site := AllSites["sie"]
-	if site == nil {
-		return 0, fmt.Errorf("sie: site registration is missing")
-	}
+
+	baseURL := sieBaseURL()
 	var body []byte
 	var err error
-	for _, ext := range []string{".htm", ".html"} {
-		body, err = fetch(reverseBodaPageURL(site.BaseURL, slug, 1, 0, ext))
+	for _, extension := range []string{".htm", ".html"} {
+		pageURL := siePageURL(baseURL, slug, 1, 0, extension)
+		body, err = fetch(pageURL)
 		if err == nil {
 			break
 		}
 	}
 	if err != nil {
-		return 0, fmt.Errorf("sie: fetch %s: %w", slug, err)
+		return 0, fmt.Errorf("sie: fetch first page for %s: %w", slug, err)
 	}
-	if _, err := parseAdapter_sieList(body, site.BaseURL); err != nil {
-		return 0, fmt.Errorf("sie: %s is not a valid list page: %w", slug, err)
+	if _, err := parseAdapter_sieList(body, baseURL); err != nil {
+		return 0, fmt.Errorf("sie: first page for %s is not a valid article list: %w", slug, err)
 	}
 	if total := parseTotalPages(body); total > 0 {
 		return total, nil
 	}
-	return 1, nil
+	return siePageTotals[slug], nil
+}
+
+func parseAdapter_sieList(raw []byte, baseURL string) ([]model.NewsItem, error) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(raw)))
+	if err != nil {
+		return nil, fmt.Errorf("sie: parse list HTML: %w", err)
+	}
+	if reason := sieBlockedReason(doc); reason != "" {
+		return nil, fmt.Errorf("sie: list response is an error/WAF shell: %s", reason)
+	}
+	if pageType := siePageType(doc); pageType != "" && pageType != "1" && pageType != "2" {
+		return nil, fmt.Errorf("sie: unsupported list pageType %q", pageType)
+	}
+
+	items := make([]model.NewsItem, 0)
+	seen := make(map[string]int)
+	add := func(row, anchor *goquery.Selection, typ string, title string) {
+		if row == nil || row.Length() == 0 || anchor == nil || anchor.Length() == 0 {
+			return
+		}
+		fullURL, ok := sieArticleURL(baseURL, anchor.AttrOr("href", ""))
+		if !ok {
+			return
+		}
+		if strings.TrimSpace(title) == "" {
+			title = anchor.AttrOr("title", "")
+		}
+		if strings.TrimSpace(title) == "" {
+			title = anchor.Text()
+		}
+		title = cleanTitle(htmlstd.UnescapeString(title))
+		if !sieValidTitle(title) {
+			return
+		}
+		date := sieListDate(row)
+		if index, exists := seen[fullURL]; exists {
+			if items[index].Date == "" && date != "" {
+				items[index].Date = date
+				items[index].PublishedAt = normalizePublishedAt(date)
+			}
+			if items[index].Type == "" {
+				items[index].Type = typ
+			}
+			return
+		}
+		seen[fullURL] = len(items)
+		items = append(items, model.NewsItem{
+			Title:       title,
+			URL:         fullURL,
+			Date:        date,
+			PublishedAt: normalizePublishedAt(date),
+			Type:        typ,
+			ParsedAt:    time.Now(),
+		})
+	}
+
+	// The home page has two different blocks. Keep their selectors separate so
+	// navigation cards, carousel links, and footer links cannot become news.
+	doc.Find(".index-row1 .c1 .list > ul > li").Each(func(_ int, row *goquery.Selection) {
+		anchor := row.Find(".inner > a[href]").First()
+		if anchor.Length() == 0 {
+			anchor = row.Find("a[href]").First()
+		}
+		add(row, anchor, "学院新闻", row.Find(".desc").First().Text())
+	})
+	doc.Find(".index-row1 .c2 .list > dl").Each(func(_ int, row *goquery.Selection) {
+		add(row, row.Find("dd > a[href]").First(), "通知公告", "")
+	})
+	if len(items) > 0 {
+		return items, nil
+	}
+
+	// Archive pages use the fixed inner-text-list template. Do not fall back to
+	// a document-wide info-link scan: the same URLs occur in global navigation.
+	list := doc.Find(".inner-text-list").First()
+	if list.Length() == 0 {
+		return nil, fmt.Errorf("sie: response is not the home page or an article list")
+	}
+	typ := sieArchiveType(doc)
+	list.ChildrenFiltered("ul").First().ChildrenFiltered("li").Each(func(_ int, row *goquery.Selection) {
+		anchor := row.Find(".text > h6 > a[href]").First()
+		if anchor.Length() == 0 {
+			return
+		}
+		add(row, anchor, typ, anchor.AttrOr("title", ""))
+	})
+	if len(items) == 0 {
+		return nil, fmt.Errorf("sie: article list contains no valid article rows")
+	}
+	return items, nil
+}
+
+func siePageType(doc *goquery.Document) string {
+	if doc == nil {
+		return ""
+	}
+	for _, selector := range []string{`meta[name="pageType"]`, `meta[name="pagetype"]`} {
+		if value := strings.TrimSpace(doc.Find(selector).Last().AttrOr("content", "")); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func sieArchiveType(doc *goquery.Document) string {
+	if doc == nil {
+		return ""
+	}
+	for _, selector := range []string{".right-con > .inner-tit > h6", ".inner-page .inner-tit > h6"} {
+		if value := sieText(doc.Find(selector).First()); value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func sieListDate(scope *goquery.Selection) string {
 	if scope == nil || scope.Length() == 0 {
 		return ""
 	}
-	if match := sieDateRE.FindStringSubmatch(strings.Join(strings.Fields(scope.Find(".date").First().Text()), " ")); match != nil {
-		return normalizeDateParts(match[1], match[2], match[3])
+	if date := sieDateOnly(scope.Find(".date").First().Text()); date != "" {
+		return date
 	}
 	yearMonth := strings.Join(strings.Fields(scope.Find("dt .d").First().Text()), " ")
 	day := strings.Join(strings.Fields(scope.Find("dt .y").First().Text()), " ")
-	ym := regexp.MustCompile(`(20\d{2})\s*[-/.年]\s*(\d{1,2})`).FindStringSubmatch(yearMonth)
-	if ym == nil || day == "" {
+	match := sieYearMonthRE.FindStringSubmatch(yearMonth)
+	dayMatch := regexp.MustCompile(`\d{1,2}`).FindString(day)
+	if match == nil || dayMatch == "" {
 		return ""
 	}
-	dayMatch := regexp.MustCompile(`\d{1,2}`).FindString(day)
-	return normalizeDateParts(ym[1], ym[2], dayMatch)
+	return normalizeDateParts(match[1], match[2], dayMatch)
 }
 
-func parseAdapter_sieArticle(html []byte, baseURL string) (*model.Article, error) {
-	article, err := parseBodaArticle(html, baseURL)
+func sieDateOnly(raw string) string {
+	raw = strings.Join(strings.Fields(strings.TrimSpace(raw)), " ")
+	if match := sieDateRE.FindStringSubmatch(raw); match != nil {
+		return normalizeDateParts(match[1], match[2], match[3])
+	}
+	return ""
+}
+
+func sieValidTitle(title string) bool {
+	title = strings.TrimSpace(title)
+	if title == "" || len([]rune(title)) > 240 {
+		return false
+	}
+	for _, rejected := range []string{"首页", "更多", "查看更多", "学院新闻", "通知公告", "正文", "联系我们"} {
+		if title == rejected {
+			return false
+		}
+	}
+	return isValidNewsTitle(title)
+}
+
+func sieArticleURL(baseURL, raw string) (string, bool) {
+	raw = htmlstd.UnescapeString(strings.TrimSpace(raw))
+	if raw == "" || bodaIsPseudoResourceHref(raw) {
+		return "", false
+	}
+	fullURL := cleanURL(resolveURL(baseURL, raw))
+	parsed, err := url.Parse(fullURL)
+	if err != nil || !sieArticlePathRE.MatchString(parsed.Path) || !sieSameAuthority(baseURL, fullURL) || !isValidNewsURL(fullURL) {
+		return "", false
+	}
+	parsed.Fragment = ""
+	return cleanURL(parsed.String()), true
+}
+
+func parseAdapter_sieArticle(raw []byte, baseURL string) (*model.Article, error) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(raw)))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("sie: parse article HTML: %w", err)
 	}
-	doc, docErr := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
-	if docErr != nil {
-		return article, nil
+	if reason := sieBlockedReason(doc); reason != "" {
+		return nil, fmt.Errorf("sie: article response is an error/WAF shell: %s", reason)
 	}
-	if title := strings.TrimSpace(doc.Find(".detail-tit").First().Text()); title != "" {
-		article.Title = title
+	if pageType := siePageType(doc); pageType != "" && pageType != "3" {
+		return nil, fmt.Errorf("sie: unsupported article pageType %q", pageType)
 	}
-	for _, selector := range []string{".detail-meta", ".detail-main .date", ".news_source", ".top-info", "time[datetime]"} {
-		scope := doc.Find(selector).First()
-		if scope.Length() == 0 {
-			continue
-		}
-		text := strings.Join(strings.Fields(scope.Text()), " ")
-		if value := scope.AttrOr("datetime", ""); value != "" {
-			text += " " + value
-		}
-		if match := sieDateRE.FindStringSubmatch(text); match != nil {
-			article.Date = normalizeDateParts(match[1], match[2], match[3])
-			article.PublishedAt = normalizePublishedAt(text)
-			break
-		}
+	detail := doc.Find(".right-con > .detail-page").First()
+	if detail.Length() == 0 {
+		detail = doc.Find(".detail-page").First()
 	}
-	if article.Type == "" {
-		article.Type = sieSectionType(doc, nil)
+	if detail.Length() == 0 {
+		return nil, fmt.Errorf("sie: response has no detail-page container")
+	}
+	title := cleanTitle(htmlstd.UnescapeString(sieText(detail.Find(".detail-tit").First())))
+	typ := sieArchiveType(doc)
+	content := sieArticleContent(detail)
+	if !sieValidTitle(title) || typ == "" || content.Length() == 0 || (strings.TrimSpace(content.Text()) == "" && content.Find("img, table, a").Length() == 0) {
+		return nil, fmt.Errorf("sie: response is not a rendered article detail")
+	}
+
+	source, date, publishedAt := sieArticleMeta(detail)
+	article := &model.Article{
+		Title:       title,
+		Source:      source,
+		Date:        date,
+		PublishedAt: publishedAt,
+		Type:        typ,
+	}
+	sieFinalizeArticleContent(article, content, baseURL)
+	sieAppendDetailAttachments(article, detail, baseURL)
+	if strings.TrimSpace(article.Content) == "" && len(article.Images) == 0 && len(article.Attachments) == 0 {
+		return nil, fmt.Errorf("sie: article has no body or file resource")
 	}
 	return article, nil
+}
+
+func sieArticleContent(detail *goquery.Selection) *goquery.Selection {
+	main := detail.ChildrenFiltered(".detail-main").First()
+	if main.Length() == 0 {
+		main = detail.Find(".detail-main").First()
+	}
+	for _, selector := range []string{"[id^='vsb_content'] > .v_news_content", ".v_news_content"} {
+		if content := main.Find(selector).First(); content.Length() > 0 {
+			return content
+		}
+	}
+	return main.Find("__sie_missing_content__")
+}
+
+// Metadata is read only from the fixed detail-page metadata container. The
+// live SIE pages currently omit publication metadata; dates in the正文 (event,
+// deadline, and application periods) must therefore never become publish dates.
+func sieArticleMeta(detail *goquery.Selection) (source, date, publishedAt string) {
+	meta := detail.Find(".detail-meta, .news_source").First()
+	if meta.Length() == 0 {
+		return "", "", ""
+	}
+	var dateRaw string
+	meta.Find("span, time, p, div").Each(func(_ int, field *goquery.Selection) {
+		value := strings.Join(strings.Fields(field.Text()), " ")
+		if value == "" {
+			return
+		}
+		if source == "" {
+			for _, label := range []string{"来源：", "来源:"} {
+				if index := strings.Index(value, label); index >= 0 {
+					source = strings.TrimSpace(value[index+len(label):])
+					break
+				}
+			}
+		}
+		if dateRaw == "" {
+			for _, label := range []string{"发布日期：", "发布日期:", "发布时间：", "发布时间:", "日期：", "日期:"} {
+				if index := strings.Index(value, label); index >= 0 {
+					dateRaw = strings.TrimSpace(value[index+len(label):])
+					break
+				}
+			}
+		}
+		if dateRaw == "" && (field.HasClass("date") || field.HasClass("publish-date") || field.Is("time")) {
+			dateRaw = value
+			if datetime := strings.TrimSpace(field.AttrOr("datetime", "")); datetime != "" {
+				dateRaw = datetime
+			}
+		}
+	})
+	if dateRaw == "" {
+		if datetime := strings.TrimSpace(meta.Find("time[datetime]").First().AttrOr("datetime", "")); datetime != "" {
+			dateRaw = datetime
+		} else {
+			dateRaw = meta.Text()
+		}
+	}
+	date, publishedAt = sieDateValues(dateRaw)
+	return strings.TrimSpace(source), date, publishedAt
+}
+
+func sieDateValues(raw string) (date, publishedAt string) {
+	raw = strings.Join(strings.Fields(htmlstd.UnescapeString(strings.TrimSpace(raw))), " ")
+	if raw == "" {
+		return "", ""
+	}
+	if normalized := normalizePublishedAt(raw); normalized != "" {
+		if publishedAtHasClock(normalized) {
+			return normalized[:10], normalized
+		}
+		return normalized[:10], ""
+	}
+	if match := sieDateRE.FindStringSubmatch(raw); match != nil {
+		return normalizeDateParts(match[1], match[2], match[3]), ""
+	}
+	return "", ""
+}
+
+func sieFinalizeArticleContent(article *model.Article, content *goquery.Selection, baseURL string) {
+	clone := content.Clone()
+	clone.Find("script, style, noscript").Remove()
+
+	seenImages := make(map[string]bool)
+	clone.Find("img").Each(func(_ int, image *goquery.Selection) {
+		raw := sieImageSource(image)
+		resolved := sieResourceURL(baseURL, raw)
+		if resolved == "" {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vsbhref", "vurl", "vheight", "vwidth"} {
+			image.RemoveAttr(attr)
+		}
+		if !seenImages[resolved] {
+			seenImages[resolved] = true
+			article.Images = append(article.Images, resolved)
+		}
+	})
+
+	seenAttachments := make(map[string]bool)
+	clone.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		href := htmlstd.UnescapeString(strings.TrimSpace(link.AttrOr("href", "")))
+		if href == "" {
+			return
+		}
+		if sieAttachmentCandidate(link, href, baseURL) {
+			resolved := sieResourceURL(baseURL, href)
+			if resolved == "" {
+				sieRemoveAttachment(link)
+				return
+			}
+			if !seenAttachments[resolved] {
+				seenAttachments[resolved] = true
+				article.Attachments = append(article.Attachments, model.Attachment{
+					Name: sieAttachmentName(link, resolved),
+					URL:  resolved,
+				})
+			}
+			link.SetAttr("href", resolved)
+			return
+		}
+		if bodaIsPseudoResourceHref(href) {
+			if !strings.HasPrefix(href, "#") {
+				link.Remove()
+			}
+			return
+		}
+		if resolved := sieResourceURL(baseURL, href); resolved != "" {
+			link.SetAttr("href", resolved)
+		} else if !strings.HasPrefix(href, "#") {
+			link.Remove()
+		}
+	})
+
+	if rendered, err := clone.Html(); err == nil {
+		article.ContentHTML = rendered
+	}
+	article.Content = sieContentText(clone)
+}
+
+func sieAppendDetailAttachments(article *model.Article, detail *goquery.Selection, baseURL string) {
+	if article == nil || detail == nil || detail.Length() == 0 {
+		return
+	}
+	seen := make(map[string]bool, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		seen[attachment.URL] = true
+	}
+	detail.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		href := htmlstd.UnescapeString(strings.TrimSpace(link.AttrOr("href", "")))
+		if !sieAttachmentCandidate(link, href, baseURL) {
+			return
+		}
+		resolved := sieResourceURL(baseURL, href)
+		if resolved == "" || seen[resolved] {
+			return
+		}
+		seen[resolved] = true
+		article.Attachments = append(article.Attachments, model.Attachment{
+			Name: sieAttachmentName(link, resolved),
+			URL:  resolved,
+		})
+	})
+}
+
+func sieContentText(content *goquery.Selection) string {
+	if content == nil || content.Length() == 0 {
+		return ""
+	}
+	return extractBodaContentText(content)
+}
+
+func sieImageSource(image *goquery.Selection) string {
+	for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+		if value := strings.TrimSpace(image.AttrOr(attr, "")); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func sieAttachmentCandidate(link *goquery.Selection, href, baseURL string) bool {
+	if link == nil || link.Length() == 0 || href == "" || bodaIsPseudoResourceHref(href) {
+		return false
+	}
+	lower := strings.ToLower(href)
+	if strings.Contains(lower, "download.jsp") || strings.Contains(lower, "downloadattachurl") {
+		return true
+	}
+	for _, attr := range []string{"download", "data-download", "data-file", "data-attachment", "data-filename", "data-name"} {
+		if strings.TrimSpace(link.AttrOr(attr, "")) != "" {
+			return true
+		}
+	}
+	resolved := sieResourceURL(baseURL, href)
+	if resolved == "" {
+		return false
+	}
+	local := sieSameAuthority(baseURL, resolved)
+	if local && sieAttachmentRE.MatchString(strings.ToLower(resolved)) {
+		return true
+	}
+	for _, selector := range []string{".attachment", ".attachments", ".news-attachment", ".download", ".annex", ".accessory"} {
+		if ancestor := link.Closest(selector); ancestor.Length() > 0 && strings.Contains(ancestor.Text(), "附件") {
+			return true
+		}
+	}
+	if row := link.Closest("li"); row.Length() > 0 && strings.Contains(row.Text(), "附件") && local {
+		return true
+	}
+	return false
+}
+
+func sieAttachmentName(link *goquery.Selection, resolved string) string {
+	for _, attr := range []string{"download", "data-filename", "data-name", "name", "title"} {
+		if value := sieCleanAttachmentName(link.AttrOr(attr, "")); value != "" {
+			return value
+		}
+	}
+	if value := sieCleanAttachmentName(link.Text()); value != "" {
+		return value
+	}
+	if parsed, err := url.Parse(resolved); err == nil {
+		if value, err := url.PathUnescape(path.Base(parsed.Path)); err == nil && value != "." && value != "/" && value != "" {
+			return value
+		}
+	}
+	return "附件"
+}
+
+func sieCleanAttachmentName(value string) string {
+	value = strings.Join(strings.Fields(htmlstd.UnescapeString(strings.TrimSpace(value))), " ")
+	value = strings.Trim(value, "【】[]")
+	for _, generic := range []string{"下载", "点击下载", "下载附件", "download", "click to download", "附件"} {
+		if strings.EqualFold(value, generic) {
+			return ""
+		}
+	}
+	return value
+}
+
+func sieRemoveAttachment(link *goquery.Selection) {
+	if row := link.Closest("li"); row.Length() > 0 && strings.Contains(row.Text(), "附件") {
+		row.Remove()
+		return
+	}
+	link.Remove()
+}
+
+func sieResourceURL(baseURL, raw string) string {
+	raw = htmlstd.UnescapeString(strings.TrimSpace(raw))
+	if raw == "" || bodaIsPseudoResourceHref(raw) {
+		return ""
+	}
+	resolved := cleanURL(resolveURL(baseURL, raw))
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Host == "" || (strings.ToLower(parsed.Scheme) != "http" && strings.ToLower(parsed.Scheme) != "https") {
+		return ""
+	}
+	resourceText := strings.ToLower(parsed.Path + "?" + parsed.RawQuery)
+	for _, marker := range []string{"captcha", "verifycode", "verification", "createimage", "getcode", "codevalue", "placeholder", "transparent", "spacer", "blank.gif", "loading.gif", "pixel.gif", "access-denied", "access_denied", "waf"} {
+		if strings.Contains(resourceText, marker) {
+			return ""
+		}
+	}
+	parsed.Fragment = ""
+	return cleanURL(parsed.String())
+}
+
+func sieSameAuthority(baseURL, candidate string) bool {
+	base, baseErr := url.Parse(strings.TrimSpace(baseURL))
+	target, targetErr := url.Parse(strings.TrimSpace(candidate))
+	if baseErr != nil || targetErr != nil || base.Host == "" || target.Host == "" {
+		return false
+	}
+	return strings.EqualFold(base.Scheme, target.Scheme) && strings.EqualFold(base.Host, target.Host)
+}
+
+func sieFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	baseURL := sieBaseURL()
+	fullURL, ok := sieArticleURL(baseURL, articleURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("sie: refusing non-local or non-detail URL %q", articleURL)
+	}
+	body, err := fetch(fullURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("sie: fetch article %s: %w", fullURL, err)
+	}
+	article, err := parseAdapter_sieArticle(body, baseURL)
+	if err != nil {
+		return nil, body, fmt.Errorf("sie: parse article %s: %w", fullURL, err)
+	}
+	article.Images = sieVerifyImages(article.Images, baseURL, fullURL)
+	article.Attachments = sieVerifyAttachments(article.Attachments, baseURL, fullURL)
+	article.ContentHTML = sieSanitizeContentHTML(article.ContentHTML, baseURL, article.Images, article.Attachments)
+	article.Content = sieContentTextFromHTML(article.ContentHTML)
+	return article, body, nil
+}
+
+func sieVerifyImages(images []string, baseURL, referer string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool, len(images))
+	for _, image := range images {
+		resolved := sieResourceURL(baseURL, image)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		if _, _, err := sieFetchResource(resolved, baseURL, referer, "", true); err != nil {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func sieVerifyAttachments(attachments []model.Attachment, baseURL, referer string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		resolved := sieResourceURL(baseURL, attachment.URL)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, _, err := sieFetchResource(resolved, baseURL, referer, attachment.Name, false)
+		if err != nil {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func sieFetchResource(rawURL, baseURL, referer, nameOrURL string, image bool) ([]byte, string, error) {
+	resolved := sieResourceURL(baseURL, rawURL)
+	if resolved == "" {
+		return nil, "", fmt.Errorf("sie: refusing invalid resource %q", rawURL)
+	}
+	parsed, err := url.Parse(resolved)
+	if err != nil {
+		return nil, "", fmt.Errorf("sie: parse resource URL %q: %w", resolved, err)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("sie: create resource request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	if strings.TrimSpace(referer) != "" {
+		req.Header.Set("Referer", referer)
+	}
+	if image {
+		req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+	} else {
+		req.Header.Set("Accept", "application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	}
+	client := *defaultClient
+	client.CheckRedirect = func(next *http.Request, _ []*http.Request) error {
+		if !sieURLAuthorityEqual(parsed, next.URL) {
+			return fmt.Errorf("sie: refusing cross-origin resource redirect")
+		}
+		return nil
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("sie: fetch resource %s: %w", resolved, err)
+	}
+	defer response.Body.Close()
+	contentType := response.Header.Get("Content-Type")
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return nil, contentType, fmt.Errorf("sie: resource %s: HTTP %d", resolved, response.StatusCode)
+	}
+	if response.ContentLength > sieMaxResourceBytes {
+		return nil, contentType, fmt.Errorf("sie: resource %s exceeds size limit", resolved)
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, sieMaxResourceBytes+1))
+	if err != nil {
+		return nil, contentType, fmt.Errorf("sie: read resource %s: %w", resolved, err)
+	}
+	if int64(len(body)) > sieMaxResourceBytes || !sieResourceBodyIsUsable(contentType, body, strings.Join([]string{nameOrURL, resolved}, " "), image) {
+		return nil, contentType, fmt.Errorf("sie: resource %s returned an invalid Content-Type, shell, or magic signature", resolved)
+	}
+	return body, contentType, nil
+}
+
+func sieResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	if mediaType == "" {
+		return false
+	}
+	for _, invalid := range []string{"text/html", "application/xhtml+xml", "application/json", "text/xml", "application/xml"} {
+		if mediaType == invalid {
+			return false
+		}
+	}
+	probe := body
+	if len(probe) > 4096 {
+		probe = probe[:4096]
+	}
+	if sieShellRE.Match(probe) {
+		return false
+	}
+	magic := sieResourceMagic(body)
+	if image {
+		if !strings.HasPrefix(mediaType, "image/") {
+			return false
+		}
+		switch mediaType {
+		case "image/jpeg", "image/jpg":
+			return magic == "jpeg"
+		case "image/png":
+			return magic == "png"
+		case "image/gif":
+			return magic == "gif"
+		case "image/webp":
+			return magic == "webp"
+		case "image/bmp":
+			return magic == "bmp"
+		case "image/tiff":
+			return magic == "tiff"
+		case "image/svg+xml":
+			return magic == "svg"
+		default:
+			return magic == "jpeg" || magic == "png" || magic == "gif" || magic == "webp" || magic == "bmp" || magic == "tiff" || magic == "svg"
+		}
+	}
+
+	lowerName := strings.ToLower(nameOrURL)
+	if strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf") {
+		return magic == "pdf" && (mediaType == "application/pdf" || mediaType == "application/octet-stream" || mediaType == "application/force-download" || strings.HasSuffix(mediaType, "+pdf"))
+	}
+	if strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(mediaType, "officedocument") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml") {
+		return magic == "zip" && (mediaType == "application/octet-stream" || mediaType == "application/zip" || strings.Contains(mediaType, "officedocument") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml"))
+	}
+	if strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt") || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint" {
+		return magic == "ole" && (mediaType == "application/octet-stream" || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint")
+	}
+	if strings.Contains(lowerName, ".zip") || strings.Contains(lowerName, ".rar") || strings.Contains(lowerName, ".7z") || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed" {
+		return (magic == "zip" || magic == "rar" || magic == "7z") && (mediaType == "application/octet-stream" || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed")
+	}
+	if strings.Contains(lowerName, ".rtf") || mediaType == "application/rtf" || mediaType == "text/rtf" {
+		return magic == "rtf" && (mediaType == "application/rtf" || mediaType == "text/rtf" || mediaType == "application/octet-stream")
+	}
+	if strings.Contains(lowerName, ".txt") || strings.Contains(lowerName, ".csv") || strings.HasPrefix(mediaType, "text/") {
+		return !strings.Contains(strings.ToLower(string(probe)), "<html")
+	}
+	return magic != "" && (mediaType == "application/octet-stream" || mediaType == "application/force-download" || mediaType == "application/download")
+}
+
+func sieResourceMagic(body []byte) string {
+	switch {
+	case bytes.HasPrefix(body, []byte("%PDF-")):
+		return "pdf"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x03, 0x04}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x05, 0x06}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x07, 0x08}):
+		return "zip"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}):
+		return "ole"
+	case len(body) >= 3 && bytes.Equal(body[:3], []byte{0xff, 0xd8, 0xff}):
+		return "jpeg"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
+		return "png"
+	case len(body) >= 6 && (bytes.Equal(body[:6], []byte("GIF87a")) || bytes.Equal(body[:6], []byte("GIF89a"))):
+		return "gif"
+	case len(body) >= 12 && bytes.Equal(body[:4], []byte("RIFF")) && bytes.Equal(body[8:12], []byte("WEBP")):
+		return "webp"
+	case len(body) >= 2 && bytes.Equal(body[:2], []byte("BM")):
+		return "bmp"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{'I', 'I', '*', 0}) || bytes.Equal(body[:4], []byte{'M', 'M', 0, '*'})):
+		return "tiff"
+	case len(body) >= 7 && bytes.Equal(body[:7], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x00}):
+		return "rar"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x01, 0x00}):
+		return "rar"
+	case len(body) >= 6 && bytes.Equal(body[:6], []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}):
+		return "7z"
+	}
+	trimmed := bytes.TrimSpace(bytes.TrimPrefix(body, []byte{0xef, 0xbb, 0xbf}))
+	lower := strings.ToLower(string(trimmed))
+	if strings.HasPrefix(lower, "{\\rtf") {
+		return "rtf"
+	}
+	if strings.HasPrefix(lower, "<?xml") && strings.Contains(lower, "<svg") || strings.HasPrefix(lower, "<svg") {
+		return "svg"
+	}
+	return ""
+}
+
+func sieSanitizeContentHTML(raw, baseURL string, images []string, attachments []model.Attachment) string {
+	if strings.TrimSpace(raw) == "" {
+		return ""
+	}
+	validImages := make(map[string]bool, len(images))
+	for _, image := range images {
+		if resolved := sieResourceURL(baseURL, image); resolved != "" {
+			validImages[resolved] = true
+		}
+	}
+	validAttachments := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		if resolved := sieResourceURL(baseURL, attachment.URL); resolved != "" {
+			validAttachments[resolved] = true
+		}
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(`<div id="sie-content-root">` + raw + `</div>`))
+	if err != nil {
+		return ""
+	}
+	root := doc.Find("#sie-content-root").First()
+	root.Find("script, style, noscript").Remove()
+	root.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := sieResourceURL(baseURL, sieImageSource(image))
+		if resolved == "" || !validImages[resolved] {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vsbhref", "vurl", "vheight", "vwidth"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	root.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		href := htmlstd.UnescapeString(strings.TrimSpace(link.AttrOr("href", "")))
+		if href == "" {
+			return
+		}
+		if sieAttachmentCandidate(link, href, baseURL) {
+			resolved := sieResourceURL(baseURL, href)
+			if resolved == "" || !validAttachments[resolved] {
+				sieRemoveAttachment(link)
+				return
+			}
+			link.SetAttr("href", resolved)
+			return
+		}
+		if bodaIsPseudoResourceHref(href) {
+			if !strings.HasPrefix(href, "#") {
+				link.Remove()
+			}
+			return
+		}
+		if resolved := sieResourceURL(baseURL, href); resolved != "" {
+			link.SetAttr("href", resolved)
+		} else if !strings.HasPrefix(href, "#") {
+			link.Remove()
+		}
+	})
+	rendered, err := root.Html()
+	if err != nil {
+		return ""
+	}
+	return rendered
+}
+
+func sieContentTextFromHTML(raw string) string {
+	if strings.TrimSpace(raw) == "" {
+		return ""
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(`<div id="sie-text-root">` + raw + `</div>`))
+	if err != nil {
+		return ""
+	}
+	return sieContentText(doc.Find("#sie-text-root").First())
+}
+
+func sieURLAuthorityEqual(left, right *url.URL) bool {
+	if left == nil || right == nil {
+		return false
+	}
+	return strings.EqualFold(left.Scheme, right.Scheme) && strings.EqualFold(left.Host, right.Host)
+}
+
+func sieText(sel *goquery.Selection) string {
+	if sel == nil || sel.Length() == 0 {
+		return ""
+	}
+	return strings.Join(strings.Fields(sel.Text()), " ")
+}
+
+func sieBlockedReason(doc *goquery.Document) string {
+	if doc == nil {
+		return "invalid HTML"
+	}
+	title := strings.ToLower(sieText(doc.Find("title").First()))
+	for _, marker := range []string{"404", "403", "500", "error", "错误", "不存在", "验证码", "安全验证", "forbidden", "not found", "access denied", "request blocked", "just a moment", "cloudflare"} {
+		if strings.Contains(title, marker) {
+			return marker
+		}
+	}
+	body := strings.ToLower(sieText(doc.Find("body").First()))
+	for _, marker := range []string{"请输入验证码", "验证码下载附件", "请先登录", "登录页面", "页面不存在", "您访问的页面不存在", "无权限访问", "系统错误", "安全验证", "人机验证", "请求已被阻断", "access denied", "request blocked", "just a moment", "cloudflare"} {
+		if strings.Contains(body, marker) {
+			return marker
+		}
+	}
+	return ""
 }

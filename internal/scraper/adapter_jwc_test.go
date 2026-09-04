@@ -1,11 +1,18 @@
 package scraper
 
 import (
+	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/PuerkitoBio/goquery"
+
+	"swjtu-cli/internal/model"
 )
 
 func jwcFixture(t *testing.T, name string) []byte {
@@ -188,8 +195,8 @@ func TestJWCArticleExtractsMetadataBodyImagesAndOnlyFileLinks(t *testing.T) {
 	if !strings.Contains(article.ContentHTML, "fileId=PDF-FIXTURE") {
 		t.Errorf("fileType=file download link was removed from content HTML: %s", article.ContentHTML)
 	}
-	if strings.Contains(article.ContentHTML, "yhxt.swjtu.edu.cn") || strings.Contains(article.ContentHTML, "error.html") {
-		t.Errorf("unsafe external/HTML body link was retained in content HTML: %s", article.ContentHTML)
+	if !strings.Contains(article.ContentHTML, "yhxt.swjtu.edu.cn") || strings.Contains(article.ContentHTML, "href=\"https://jwc.swjtu.edu.cn/vatuu/old/error.html\"") {
+		t.Errorf("external link was not preserved or local HTML shell was retained: %s", article.ContentHTML)
 	}
 	if !strings.Contains(article.ContentHTML, `src="https://jwc.swjtu.edu.cn/images/1782952979192063301.jpg"`) {
 		t.Errorf("image URL was not resolved in content HTML: %s", article.ContentHTML)
@@ -218,6 +225,10 @@ func TestJWCAttachmentResponseRejectsHTMLAndVerificationShells(t *testing.T) {
 		{contentType: "application/octet-stream", body: []byte("<!doctype html><h1>请输入验证码下载附件</h1>")},
 		{contentType: "application/json", body: []byte(`{"error":"not authorized"}`)},
 		{contentType: "application/pdf", body: []byte("<html><title>Cloudflare</title></html>")},
+		{contentType: "application/pdf", body: []byte("not a PDF")},
+		{contentType: "application/octet-stream", body: []byte("arbitrary response")},
+		{contentType: "image/png", body: []byte("not a PNG")},
+		{contentType: "", body: []byte("unknown content")},
 		{contentType: "application/pdf", body: nil},
 	}
 	for _, tc := range invalid {
@@ -225,4 +236,208 @@ func TestJWCAttachmentResponseRejectsHTMLAndVerificationShells(t *testing.T) {
 			t.Errorf("error shell accepted: content_type=%q body=%q", tc.contentType, tc.body)
 		}
 	}
+}
+
+func TestJWCLiveListFixturesParseRowsAndRealJumpPage(t *testing.T) {
+	tests := []struct {
+		fixture       string
+		current       int
+		wantItems     int
+		wantTitle     string
+		wantDate      string
+		wantPublished string
+	}{
+		{fixture: "jwc_live_news_first.html", current: 1, wantItems: 50, wantTitle: "校领导巡视期末考试工作", wantDate: "2026-06-30", wantPublished: "2026-06-30 08:45:47"},
+		{fixture: "jwc_live_news_middle.html", current: 14, wantItems: 50, wantTitle: "【科研训练营第一讲公告】再现港珠澳大桥建设幕后的故事", wantDate: "2018-11-22", wantPublished: "2018-11-22 18:12:06"},
+		{fixture: "jwc_live_news_last.html", current: 28, wantItems: 43, wantTitle: "陈春阳校长等校领导巡视期末考试", wantDate: "2009-01-13", wantPublished: "2009-01-13 12:06:40"},
+	}
+	for _, tc := range tests {
+		raw := jwcFixture(t, tc.fixture)
+		info, err := jwcPaginationFromHTML(raw)
+		if err != nil {
+			t.Fatalf("%s pagination: %v", tc.fixture, err)
+		}
+		if info.current != tc.current || info.totalItems != 1393 || info.totalPages != 28 || info.perPage != 50 {
+			t.Fatalf("%s pagination = %#v", tc.fixture, info)
+		}
+		items, err := parseAdapter_jwcList(raw, jwcCanonicalBaseURL)
+		if err != nil {
+			t.Fatalf("%s parse: %v", tc.fixture, err)
+		}
+		if len(items) != tc.wantItems {
+			t.Fatalf("%s parsed %d items, want %d", tc.fixture, len(items), tc.wantItems)
+		}
+		if items[0].Title != tc.wantTitle || items[0].Date != tc.wantDate || items[0].PublishedAt != tc.wantPublished || items[0].Type == "" {
+			t.Fatalf("%s first item = %#v", tc.fixture, items[0])
+		}
+	}
+	if got := jwcPageParamFromHTML(jwcFixture(t, "jwc_live_news_first.html"), 2); got != "jumpPage" {
+		t.Fatalf("live page parameter = %q, want jumpPage", got)
+	}
+}
+
+func TestJWCLiveHomeAndEmptyFeedAreClassifiedCorrectly(t *testing.T) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(jwcFixture(t, "jwc_live_home.html"))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	homeText := jwcCleanText(doc.Text())
+	for _, label := range []string{"网站首页", "机构设置", "教学动态", "教务管理", "教学运行", "教改研究", "实践教学", "质量保障", "管理规定", "表格文档", "网上办事", "新闻通知", "教学相关"} {
+		if !strings.Contains(homeText, label) {
+			t.Errorf("live homepage is missing audited navigation/module %q", label)
+		}
+	}
+	for _, hrefPart := range []string{"CourseAction", "TestInfoAction", "PublicInfoQueryAction", "ruleList", "fileList"} {
+		if doc.Find("a[href*='"+hrefPart+"']").Length() == 0 {
+			t.Errorf("live homepage is missing expected non-article link %q", hrefPart)
+		}
+	}
+	if _, err := jwcPaginationFromHTML(jwcFixture(t, "jwc_live_home.html")); err == nil {
+		t.Fatal("homepage shell was accepted as an article list")
+	}
+
+	empty, err := parseAdapter_jwcList(jwcFixture(t, "jwc_live_empty_virtual.html"), jwcCanonicalBaseURL)
+	if err != nil || empty == nil || len(empty) != 0 {
+		t.Fatalf("live empty feed = items=%#v err=%v", empty, err)
+	}
+	info, err := jwcPaginationFromHTML(jwcFixture(t, "jwc_live_empty_virtual.html"))
+	if err != nil || info.totalItems != 0 || info.totalPages != 1 {
+		t.Fatalf("live empty feed pagination = %#v err=%v", info, err)
+	}
+}
+
+func TestJWCListPageChecksFirstMiddleLastAndOutOfRange(t *testing.T) {
+	pages := map[int][]byte{
+		1:  jwcFixture(t, "jwc_live_news_first.html"),
+		14: jwcFixture(t, "jwc_live_news_middle.html"),
+		28: jwcFixture(t, "jwc_live_news_last.html"),
+	}
+	fetcher := func(rawURL string) ([]byte, error) {
+		parsed, err := url.Parse(rawURL)
+		if err != nil {
+			return nil, err
+		}
+		page := 1
+		if value := parsed.Query().Get("jumpPage"); value != "" {
+			if _, scanErr := fmt.Sscanf(value, "%d", &page); scanErr != nil {
+				return nil, scanErr
+			}
+		}
+		if body := pages[page]; body != nil {
+			return body, nil
+		}
+		return nil, fmt.Errorf("fixture page %d not found", page)
+	}
+	for _, page := range []int{1, 14, 28} {
+		items, totalPages, err := jwcListPageWithFetcher("https://jwc.swjtu.edu.cn", "news", page, fetcher)
+		if err != nil {
+			t.Fatalf("page %d: %v", page, err)
+		}
+		if totalPages != 28 || len(items) == 0 {
+			t.Fatalf("page %d: items=%d totalPages=%d", page, len(items), totalPages)
+		}
+	}
+	for _, page := range []int{0, 29} {
+		items, totalPages, err := jwcListPageWithFetcher("https://jwc.swjtu.edu.cn", "news", page, fetcher)
+		if err == nil || items != nil || totalPages != 28 {
+			t.Fatalf("out-of-range page %d: items=%#v totalPages=%d err=%v", page, items, totalPages, err)
+		}
+	}
+}
+
+func TestJWCLiveDetailUsesFixedMetadataAndBodyContainer(t *testing.T) {
+	article, err := parseAdapter_jwcArticle(jwcFixture(t, "jwc_live_article_maintenance.html"), jwcCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title != "关于系统维护期间访问受限的通知" || article.Source != "本科生院" || article.Type != "最新信息发布" || article.Date != "2026-08-10" || article.PublishedAt != "2026-08-10 16:16:26" {
+		t.Fatalf("live article metadata = %#v", article)
+	}
+	if !strings.Contains(article.Content, "系统将于2026年8月10日16点至14日18点进行维护") || strings.Contains(article.Content, "最新更新") {
+		t.Fatalf("live article body was not limited to .content-main: %q", article.Content)
+	}
+	if !strings.Contains(article.ContentHTML, "数据只能查询") {
+		t.Fatalf("live article HTML lost body: %q", article.ContentHTML)
+	}
+
+	minor, err := parseAdapter_jwcArticle(jwcFixture(t, "jwc_live_article_minor.html"), jwcCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if minor.Date != "2026-04-08" || minor.PublishedAt != "2026-04-08 09:03:09" || minor.Type != "最新信息发布" || len(minor.Attachments) != 3 {
+		t.Fatalf("minor article metadata/resources = %#v", minor)
+	}
+	if !strings.Contains(minor.ContentHTML, "jiaowu.swjtu.edu.cn") {
+		t.Fatalf("ordinary external teaching-service link was removed: %s", minor.ContentHTML)
+	}
+}
+
+func TestJWCDateOnlyAndPermissionFixtures(t *testing.T) {
+	article, err := parseAdapter_jwcArticle(jwcFixture(t, "jwc_date_only.html"), jwcCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Date != "2026-06-29" || article.PublishedAt != "" {
+		t.Fatalf("date-only metadata invented a time: %#v", article)
+	}
+	if _, err := parseAdapter_jwcArticle(jwcFixture(t, "jwc_live_permission.html"), jwcCanonicalBaseURL); err == nil {
+		t.Fatal("permission shell accepted as article")
+	}
+}
+
+func TestJWCResourceVerificationChecksStatusContentTypeAndMagic(t *testing.T) {
+	oldClient := defaultClient
+	defaultClient = &http.Client{Transport: jwcResourceRoundTripper(func(r *http.Request) (*http.Response, error) {
+		response := &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader("")), Request: r}
+		switch r.URL.Path {
+		case "/good.pdf":
+			response.Header.Set("Content-Type", "application/pdf")
+			response.Body = io.NopCloser(strings.NewReader("%PDF-1.7 fixture"))
+		case "/good.png":
+			response.Header.Set("Content-Type", "image/png")
+			response.Body = io.NopCloser(strings.NewReader(string([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n', 0x00})))
+		case "/html.pdf":
+			response.Header.Set("Content-Type", "application/pdf")
+			response.Body = io.NopCloser(strings.NewReader("<html>captcha</html>"))
+		case "/bad.png":
+			response.Header.Set("Content-Type", "image/png")
+			response.Body = io.NopCloser(strings.NewReader("not an image"))
+		case "/wrong-type.pdf":
+			response.Header.Set("Content-Type", "text/html")
+			response.Body = io.NopCloser(strings.NewReader("%PDF-1.7"))
+		case "/missing.pdf":
+			response.StatusCode = http.StatusNotFound
+		default:
+			response.StatusCode = http.StatusNotFound
+		}
+		return response, nil
+	})}
+	defer func() { defaultClient = oldClient }()
+	baseURL := jwcCanonicalBaseURL
+
+	if body, contentType, err := jwcFetchResource(baseURL+"/good.png", baseURL, true); err != nil || contentType != "image/png" || len(body) == 0 {
+		t.Fatalf("valid image fetch = len=%d type=%q err=%v", len(body), contentType, err)
+	}
+	for _, path := range []string{"/html.pdf", "/bad.png", "/wrong-type.pdf", "/missing.pdf"} {
+		if body, _, err := jwcFetchResource(baseURL+path, baseURL, strings.HasSuffix(path, ".png")); err == nil || body != nil {
+			t.Errorf("invalid resource %s accepted: len=%d err=%v", path, len(body), err)
+		}
+	}
+	images := jwcVerifyImages([]string{baseURL + "/good.png", baseURL + "/bad.png"}, baseURL)
+	if len(images) != 1 || images[0] != baseURL+"/good.png" {
+		t.Fatalf("verified images = %#v", images)
+	}
+	attachments := jwcVerifyAttachmentsAt([]model.Attachment{
+		{Name: "good.pdf", URL: baseURL + "/good.pdf"},
+		{Name: "html.pdf", URL: baseURL + "/html.pdf"},
+	}, baseURL)
+	if len(attachments) != 1 || attachments[0].Name != "good.pdf" || attachments[0].Size != "16" {
+		t.Fatalf("verified attachments = %#v", attachments)
+	}
+}
+
+type jwcResourceRoundTripper func(*http.Request) (*http.Response, error)
+
+func (f jwcResourceRoundTripper) RoundTrip(request *http.Request) (*http.Response, error) {
+	return f(request)
 }

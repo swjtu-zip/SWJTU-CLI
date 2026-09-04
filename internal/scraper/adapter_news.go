@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -131,10 +132,17 @@ func parseAdapter_newsList(raw []byte, baseURL string) ([]model.NewsItem, error)
 	if ul.Length() == 0 {
 		return nil, fmt.Errorf("news list: recognized container has no article list")
 	}
+	rowCount := ul.ChildrenFiltered("li").Length()
 	ul.ChildrenFiltered("li").Each(func(_ int, row *goquery.Selection) {
 		appendNewsListItem(&items, seen, row, baseURL, kind == "academic", listType)
 	})
 	if len(items) == 0 {
+		if rowCount == 0 {
+			// The CMS keeps the normal list shell for a genuinely empty column.
+			// Return an empty success only when that shell contains no rows;
+			// malformed rows still fail loudly below.
+			return []model.NewsItem{}, nil
+		}
 		return nil, fmt.Errorf("news list: recognized container has no valid article rows")
 	}
 	return items, nil
@@ -162,7 +170,7 @@ func appendNewsListItem(items *[]model.NewsItem, seen map[string]bool, row *goqu
 		title = strings.TrimSpace(a.Text())
 	}
 	title = cleanTitle(title)
-	if title == "" || !isValidNewsTitle(title) || len(title) > 200 {
+	if title == "" || !isNewsArticleTitle(title) || len(title) > 200 {
 		return
 	}
 
@@ -184,6 +192,21 @@ func appendNewsListItem(items *[]model.NewsItem, seen map[string]bool, row *goqu
 		Type:        listType,
 		ParsedAt:    time.Now(),
 	})
+}
+
+func isNewsArticleTitle(title string) bool {
+	if isValidNewsTitle(title) {
+		return true
+	}
+	// The shared filter treats every title ending in “》” as a section
+	// heading. Academic news legitimately uses a complete book/report title
+	// in that form, so retry only after removing the closing quote. Navigation
+	// headings such as “通知公告》” remain rejected by the shared filter.
+	if !strings.HasSuffix(title, "》") {
+		return false
+	}
+	trimmed := strings.TrimSpace(strings.TrimSuffix(title, "》"))
+	return trimmed != "" && isValidNewsTitle(trimmed)
 }
 
 func isNewsArticleURL(href string) bool {
@@ -295,9 +318,13 @@ func parseAdapter_newsArticle(raw []byte, baseURL string) (*model.Article, error
 		}
 	})
 
+	if article.Type == "" {
+		article.Type = newsArticleType(doc)
+	}
 	// Generic labels are a fallback for old variants of the same CMS. They run
-	// after the exact current-template selectors, so a source containing full-
-	// width punctuation or parentheses is kept verbatim.
+	// after the exact current-template selectors and breadcrumb type, so a
+	// source containing full-width punctuation or parentheses is kept verbatim
+	// and a body field such as “类型：比赛” cannot replace the real column.
 	fillGenericMeta(doc, article, titleSel, contentSel)
 	parseNewsCredits(root, article)
 
@@ -319,14 +346,22 @@ func parseAdapter_newsArticle(raw []byte, baseURL string) (*model.Article, error
 
 	seenImages := make(map[string]bool)
 	contentSel.Find("img").Each(func(_ int, sel *goquery.Selection) {
-		src := strings.TrimSpace(sel.AttrOr("src", ""))
-		if src == "" {
-			src = strings.TrimSpace(sel.AttrOr("data-src", ""))
+		var resolved string
+		for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			src := strings.TrimSpace(sel.AttrOr(attr, ""))
+			if src == "" {
+				continue
+			}
+			if resolved = bodaResourceURL(baseURL, src); resolved != "" {
+				break
+			}
 		}
-		if src == "" {
+		if resolved == "" {
+			for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+				sel.RemoveAttr(attr)
+			}
 			return
 		}
-		resolved := cleanURL(resolveURL(baseURL, src))
 		if !seenImages[resolved] {
 			seenImages[resolved] = true
 			article.Images = append(article.Images, resolved)
@@ -418,7 +453,10 @@ func collectNewsAttachments(root, contentSel *goquery.Selection, baseURL string,
 		if href == "" || !isNewsAttachmentLink(sel, href) {
 			return
 		}
-		resolved := cleanURL(resolveURL(baseURL, href))
+		resolved := bodaResourceURL(baseURL, href)
+		if resolved == "" || newsIsCaptchaDownloadURL(resolved) {
+			return
+		}
 		if seen[resolved] {
 			return
 		}
@@ -439,6 +477,23 @@ func collectNewsAttachments(root, contentSel *goquery.Selection, baseURL string,
 			sel.SetAttr("href", resolved)
 		}
 	})
+}
+
+func newsArticleType(doc *goquery.Document) string {
+	var articleType string
+	doc.Find(".position .weizhi a").Each(func(_ int, sel *goquery.Selection) {
+		value := strings.TrimSpace(sel.Text())
+		if value == "" || value == "首页" {
+			return
+		}
+		articleType = value
+	})
+	return articleType
+}
+
+func newsIsCaptchaDownloadURL(raw string) bool {
+	parsed, err := url.Parse(raw)
+	return err == nil && strings.EqualFold(parsed.Path, "/system/_content/download.jsp")
 }
 
 func isNewsAttachmentLink(sel *goquery.Selection, href string) bool {

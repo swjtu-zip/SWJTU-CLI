@@ -1,8 +1,11 @@
 package scraper
 
 import (
+	"bytes"
 	"fmt"
 	htmlstd "html"
+	"io"
+	"net/http"
 	"net/url"
 	"path"
 	"regexp"
@@ -16,6 +19,8 @@ import (
 )
 
 const hospitalCanonicalBaseURL = "https://hospital.swjtu.edu.cn"
+
+const hospitalMaxResourceBytes = 32 << 20
 
 // hospitalSubPages contains every article-bearing list surface found in the
 // hospital's navigation. Several old side-bar entries are generated copies of
@@ -46,10 +51,11 @@ var hospitalSubPages = []string{
 }
 
 var (
-	hospitalArticlePathRE = regexp.MustCompile(`(?i)^/info/\d+/\d+\.html?$`)
-	hospitalDateRE        = regexp.MustCompile(`(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})\s*(?:日|号)?`)
-	hospitalMonthDayRE    = regexp.MustCompile(`(?:^|\s|[^\d])(\d{1,2})\s*[-/.月]\s*(\d{1,2})(?:日)?(?:$|\s|[^\d])`)
-	hospitalPageNumberRE  = regexp.MustCompile(`^\s*(\d+)\s*$`)
+	hospitalArticlePathRE   = regexp.MustCompile(`(?i)^/info/\d+/\d+\.html?$`)
+	hospitalDateRE          = regexp.MustCompile(`(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})\s*(?:日|号)?`)
+	hospitalMonthDayRE      = regexp.MustCompile(`(?:^|\s|[^\d])(\d{1,2})\s*[-/.月]\s*(\d{1,2})(?:日)?(?:$|\s|[^\d])`)
+	hospitalPageNumberRE    = regexp.MustCompile(`^\s*(\d+)\s*$`)
+	hospitalResourceShellRE = regexp.MustCompile(`(?is)<!doctype\s+html|<html(?:\s|>)|<head(?:\s|>)|<body(?:\s|>)|请输入验证码|验证码下载|安全验证|人机验证|请先登录|登录页面|页面不存在|access\s+denied|forbidden|cloudflare|just\s+a\s+moment|waf|请求已被阻断`)
 )
 
 var hospitalAttachmentExtensions = []string{
@@ -68,6 +74,7 @@ func init() {
 		PageURL:      hospitalPageURL,
 		ListPage:     hospitalListPage,
 		TotalPages:   hospitalTotalPages,
+		FetchArticle: hospitalFetchArticle,
 	})
 }
 
@@ -451,14 +458,21 @@ func hospitalDateValues(raw string) (string, string) {
 	if raw == "" {
 		return "", ""
 	}
-	if precise := normalizePublishedAt(raw); precise != "" {
+	if precise := normalizePublishedAt(raw); precise != "" && len(precise) >= 10 {
 		if publishedAtHasClock(precise) {
 			return precise[:10], precise
 		}
 		return precise[:10], ""
 	}
-	if match := hospitalDateRE.FindStringSubmatch(raw); match != nil {
-		date := normalizeDateParts(match[1], match[2], match[3])
+	// The live hospital template prefixes the authoritative value with
+	// “日期：”. Parse the date token first, then let the shared normalizer read
+	// the optional clock from the remainder. This keeps body dates out while
+	// preserving minute/second precision from .source.
+	if indexes := hospitalDateRE.FindStringSubmatchIndex(raw); len(indexes) >= 8 {
+		date := normalizeDateParts(raw[indexes[2]:indexes[3]], raw[indexes[4]:indexes[5]], raw[indexes[6]:indexes[7]])
+		if precise := normalizePublishedAt(raw[indexes[0]:]); publishedAtHasClock(precise) {
+			return date, precise
+		}
 		return date, ""
 	}
 	if match := hospitalMonthDayRE.FindStringSubmatch(raw); match != nil {
@@ -486,6 +500,13 @@ func hospitalArticleURL(baseURL, href string) (string, bool) {
 	return parsed.String(), true
 }
 
+func hospitalBaseURL() string {
+	if site := AllSites["hospital"]; site != nil && strings.TrimSpace(site.BaseURL) != "" {
+		return strings.TrimRight(strings.TrimSpace(site.BaseURL), "/")
+	}
+	return hospitalCanonicalBaseURL
+}
+
 func hospitalResponseError(raw []byte) error {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(raw)))
 	if err != nil {
@@ -498,6 +519,7 @@ func hospitalResponseError(raw []byte) error {
 	for _, marker := range []string{
 		"请输入验证码", "验证码下载", "安全验证", "access denied", "forbidden",
 		"just a moment", "cloudflare", "security verification", "waf",
+		"页面不存在", "您访问的页面不存在", "请求已被阻断",
 	} {
 		if strings.Contains(visible, marker) || strings.Contains(title, marker) {
 			return fmt.Errorf("hospital: captcha/WAF/error response (%s)", marker)
@@ -539,17 +561,69 @@ func parseAdapter_hospitalArticle(raw []byte, baseURL string) (*model.Article, e
 	if article.Type == "正文" {
 		article.Type = ""
 	}
-	if date, publishedAt := hospitalDateValues(root.Find(".source").First().Text()); date != "" {
-		if article.Date == "" {
-			article.Date = date
+	// The source block is the only publication-metadata authority for this
+	// site. Never retain a date inferred by parseBodaArticle from the body.
+	article.Date, article.PublishedAt = hospitalDateValues(root.Find(".source").First().Text())
+	article.Content, article.ContentHTML, article.Images = hospitalRenderContent(content, baseURL)
+	article.Attachments = nil
+	hospitalAppendOutsideAttachments(article, doc, baseURL)
+	return article, nil
+}
+
+func hospitalRenderContent(content *goquery.Selection, baseURL string) (string, string, []string) {
+	if content == nil || content.Length() == 0 {
+		return "", "", nil
+	}
+	clone := content.Clone()
+	clone.Find("script, style, noscript").Remove()
+	images := make([]string, 0)
+	seenImages := make(map[string]bool)
+	clone.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := hospitalResourceURL(baseURL, hospitalImageSource(image))
+		if resolved == "" || seenImages[resolved] {
+			image.Remove()
+			return
 		}
-		if article.PublishedAt == "" && publishedAt != "" {
-			article.PublishedAt = publishedAt
+		seenImages[resolved] = true
+		images = append(images, resolved)
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vurl"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	clone.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		raw := htmlstd.UnescapeString(strings.TrimSpace(link.AttrOr("href", "")))
+		if raw == "" || bodaIsPseudoResourceHref(raw) {
+			link.RemoveAttr("href")
+			return
+		}
+		resolved := cleanURL(resolveURL(baseURL, raw))
+		if resolved == "" {
+			link.RemoveAttr("href")
+			return
+		}
+		if hospitalIsAttachmentLink(link, raw) && hospitalResourceURL(baseURL, raw) == "" && hospitalSameHost(resolved, baseURL) {
+			// Same-site download/CAPTCHA/placeholder links are not ordinary
+			// links. Keep their label, but do not expose the bad URL.
+			link.RemoveAttr("href")
+			return
+		}
+		link.SetAttr("href", resolved)
+	})
+	htmlValue, _ := clone.Html()
+	return extractBodaContentText(clone), htmlValue, images
+}
+
+func hospitalImageSource(image *goquery.Selection) string {
+	if image == nil || image.Length() == 0 {
+		return ""
+	}
+	for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+		if value := strings.TrimSpace(image.AttrOr(attr, "")); value != "" {
+			return value
 		}
 	}
-	hospitalAppendOutsideAttachments(article, doc, baseURL)
-	normalizeArticlePublishedAt(article)
-	return article, nil
+	return ""
 }
 
 func hospitalAppendOutsideAttachments(article *model.Article, doc *goquery.Document, baseURL string) {
@@ -565,8 +639,8 @@ func hospitalAppendOutsideAttachments(article *model.Article, doc *goquery.Docum
 		if !hospitalIsAttachmentLink(anchor, href) {
 			return
 		}
-		resolved := cleanURL(resolveURL(baseURL, href))
-		if !hospitalSameHost(resolved, baseURL) || seen[resolved] {
+		resolved := hospitalResourceURL(baseURL, href)
+		if resolved == "" || seen[resolved] {
 			return
 		}
 		name := strings.TrimSpace(anchor.AttrOr("download", ""))
@@ -587,6 +661,303 @@ func hospitalAppendOutsideAttachments(article *model.Article, doc *goquery.Docum
 		seen[resolved] = true
 		article.Attachments = append(article.Attachments, model.Attachment{Name: name, URL: resolved})
 	})
+}
+
+func hospitalResourceURL(baseURL, raw string) string {
+	raw = htmlstd.UnescapeString(strings.TrimSpace(raw))
+	if raw == "" || bodaIsPseudoResourceHref(raw) {
+		return ""
+	}
+	resolved := cleanURL(resolveURL(baseURL, raw))
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Hostname() == "" {
+		return ""
+	}
+	if scheme := strings.ToLower(parsed.Scheme); scheme != "http" && scheme != "https" {
+		return ""
+	}
+	if !hospitalSameHost(resolved, baseURL) {
+		return ""
+	}
+	resourceText := strings.ToLower(parsed.Path + "?" + parsed.RawQuery)
+	for _, marker := range []string{
+		"/captcha", "captcha", "verifycode", "verification", "createimage", "getcode",
+		"placeholder", "transparent", "spacer", "blank", "loading", "pixel.gif",
+		"access-denied", "access_denied", "waf", "login",
+	} {
+		if strings.Contains(resourceText, marker) {
+			return ""
+		}
+	}
+	parsed.Fragment = ""
+	return parsed.String()
+}
+
+func hospitalFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	baseURL := hospitalBaseURL()
+	fullURL, ok := hospitalArticleURL(baseURL, articleURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("hospital: refusing non-local or non-detail URL %q", articleURL)
+	}
+	body, err := fetch(fullURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("hospital: fetch article %s: %w", fullURL, err)
+	}
+	article, err := parseAdapter_hospitalArticle(body, baseURL)
+	if err != nil {
+		return nil, body, fmt.Errorf("hospital: parse article %s: %w", fullURL, err)
+	}
+	article.Images = hospitalVerifyImages(article.Images, baseURL, fullURL)
+	article.Attachments = hospitalVerifyAttachments(article.Attachments, baseURL, fullURL)
+	article.ContentHTML = hospitalSanitizeContentHTML(article.ContentHTML, baseURL, article.Images, article.Attachments)
+	article.Content = hospitalContentTextFromHTML(article.ContentHTML)
+	return article, body, nil
+}
+
+func hospitalVerifyImages(images []string, baseURL, referer string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool)
+	for _, raw := range images {
+		resolved := hospitalResourceURL(baseURL, raw)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		if _, _, err := hospitalFetchResource(resolved, baseURL, referer, true); err != nil {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func hospitalVerifyAttachments(attachments []model.Attachment, baseURL, referer string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool)
+	for _, attachment := range attachments {
+		resolved := hospitalResourceURL(baseURL, attachment.URL)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, _, err := hospitalFetchResource(resolved, baseURL, referer, false)
+		if err != nil {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func hospitalFetchResource(rawURL, baseURL, referer string, image bool) ([]byte, string, error) {
+	resolved := hospitalResourceURL(baseURL, rawURL)
+	if resolved == "" {
+		return nil, "", fmt.Errorf("hospital: refusing invalid resource %q", rawURL)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("hospital: create resource request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	if referer != "" {
+		req.Header.Set("Referer", referer)
+	}
+	if image {
+		req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+	} else {
+		req.Header.Set("Accept", "application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	}
+	client := http.Client{}
+	if defaultClient != nil {
+		client = *defaultClient
+	}
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if len(via) == 0 || hospitalSameHost(next.URL.String(), baseURL) {
+			return nil
+		}
+		return http.ErrUseLastResponse
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("hospital: fetch resource %s: %w", resolved, err)
+	}
+	defer response.Body.Close()
+	contentType := response.Header.Get("Content-Type")
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return nil, contentType, fmt.Errorf("hospital: resource %s: HTTP %d", resolved, response.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, hospitalMaxResourceBytes+1))
+	if err != nil {
+		return nil, contentType, fmt.Errorf("hospital: read resource %s: %w", resolved, err)
+	}
+	if len(body) > hospitalMaxResourceBytes || !hospitalResourceBodyIsUsable(contentType, body, resolved, image) {
+		return nil, contentType, fmt.Errorf("hospital: resource %s returned invalid Content-Type, shell, magic, or size", resolved)
+	}
+	return body, contentType, nil
+}
+
+func hospitalResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	if mediaType == "" {
+		return false
+	}
+	probe := body
+	if len(probe) > 8192 {
+		probe = probe[:8192]
+	}
+	if hospitalResourceShellRE.Match(probe) {
+		return false
+	}
+	for _, invalid := range []string{"text/html", "application/xhtml+xml", "application/json", "text/xml", "application/xml"} {
+		if mediaType == invalid {
+			return false
+		}
+	}
+	magic := hospitalResourceMagic(body)
+	if image {
+		expected := map[string]string{
+			"image/jpeg": "jpeg", "image/jpg": "jpeg", "image/png": "png",
+			"image/gif": "gif", "image/webp": "webp", "image/bmp": "bmp",
+			"image/tiff": "tiff", "image/svg+xml": "svg",
+		}[mediaType]
+		return strings.HasPrefix(mediaType, "image/") && magic != "" && (expected == "" || magic == expected)
+	}
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf"):
+		return hospitalBinaryContentTypeOK(mediaType, "pdf") && magic == "pdf"
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml"):
+		return hospitalBinaryContentTypeOK(mediaType, "office-zip") && magic == "zip"
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt") || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint":
+		return hospitalBinaryContentTypeOK(mediaType, "office-ole") && magic == "ole"
+	case strings.Contains(lowerName, ".zip") || strings.Contains(lowerName, ".rar") || strings.Contains(lowerName, ".7z") || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed":
+		return hospitalBinaryContentTypeOK(mediaType, "archive") && (magic == "zip" || magic == "rar" || magic == "7z")
+	case strings.Contains(lowerName, ".txt") || strings.Contains(lowerName, ".csv") || strings.HasPrefix(mediaType, "text/"):
+		return true
+	default:
+		return magic != ""
+	}
+}
+
+func hospitalBinaryContentTypeOK(mediaType, kind string) bool {
+	if mediaType == "application/octet-stream" || mediaType == "application/force-download" || mediaType == "application/download" {
+		return true
+	}
+	switch kind {
+	case "pdf":
+		return mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf")
+	case "office-zip":
+		return mediaType == "application/zip" || strings.Contains(mediaType, "officedocument") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml")
+	case "office-ole":
+		return mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint"
+	case "archive":
+		return mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed"
+	default:
+		return false
+	}
+}
+
+func hospitalResourceMagic(body []byte) string {
+	switch {
+	case bytes.HasPrefix(body, []byte("%PDF-")):
+		return "pdf"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x03, 0x04}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x05, 0x06}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x07, 0x08}):
+		return "zip"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}):
+		return "ole"
+	case len(body) >= 3 && bytes.Equal(body[:3], []byte{0xff, 0xd8, 0xff}):
+		return "jpeg"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
+		return "png"
+	case len(body) >= 6 && (bytes.Equal(body[:6], []byte("GIF87a")) || bytes.Equal(body[:6], []byte("GIF89a"))):
+		return "gif"
+	case len(body) >= 12 && bytes.Equal(body[:4], []byte("RIFF")) && bytes.Equal(body[8:12], []byte("WEBP")):
+		return "webp"
+	case len(body) >= 2 && bytes.Equal(body[:2], []byte("BM")):
+		return "bmp"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{'I', 'I', '*', 0}) || bytes.Equal(body[:4], []byte{'M', 'M', 0, '*'})):
+		return "tiff"
+	case len(body) >= 7 && bytes.Equal(body[:7], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x00}):
+		return "rar"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x01, 0x00}):
+		return "rar"
+	case len(body) >= 6 && bytes.Equal(body[:6], []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}):
+		return "7z"
+	}
+	trimmed := bytes.TrimSpace(bytes.ToLower(body))
+	if bytes.HasPrefix(trimmed, []byte("<svg")) || bytes.HasPrefix(trimmed, []byte("<?xml")) && bytes.Contains(trimmed, []byte("<svg")) {
+		return "svg"
+	}
+	return ""
+}
+
+func hospitalSanitizeContentHTML(raw, baseURL string, images []string, attachments []model.Attachment) string {
+	if strings.TrimSpace(raw) == "" {
+		return ""
+	}
+	validImages := make(map[string]bool, len(images))
+	for _, image := range images {
+		if resolved := hospitalResourceURL(baseURL, image); resolved != "" {
+			validImages[resolved] = true
+		}
+	}
+	validAttachments := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		if resolved := hospitalResourceURL(baseURL, attachment.URL); resolved != "" {
+			validAttachments[resolved] = true
+		}
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader("<div id=\"hospital-content\">" + raw + "</div>"))
+	if err != nil {
+		return ""
+	}
+	root := doc.Find("#hospital-content").First()
+	root.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := hospitalResourceURL(baseURL, hospitalImageSource(image))
+		if resolved == "" || !validImages[resolved] {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vurl"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	root.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		rawHref := strings.TrimSpace(link.AttrOr("href", ""))
+		if rawHref == "" || bodaIsPseudoResourceHref(rawHref) {
+			link.RemoveAttr("href")
+			return
+		}
+		resolved := cleanURL(resolveURL(baseURL, rawHref))
+		if hospitalIsAttachmentLink(link, rawHref) && hospitalSameHost(resolved, baseURL) && !validAttachments[resolved] {
+			link.RemoveAttr("href")
+			return
+		}
+		link.SetAttr("href", resolved)
+	})
+	htmlValue, _ := root.Html()
+	return htmlValue
+}
+
+func hospitalContentTextFromHTML(raw string) string {
+	if strings.TrimSpace(raw) == "" {
+		return ""
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader("<div id=\"hospital-content\">" + raw + "</div>"))
+	if err != nil {
+		return ""
+	}
+	return extractBodaContentText(doc.Find("#hospital-content").First())
 }
 
 func hospitalIsAttachmentLink(anchor *goquery.Selection, href string) bool {

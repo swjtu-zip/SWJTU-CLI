@@ -33,6 +33,9 @@ var incSubPages = []string{
 	"jsfw",
 	"gdwfw",
 	"wxwl",
+	"english/About_Inc",
+	"english/Campus_Network",
+	"english/Service_Guide",
 	"english/News_Event",
 }
 
@@ -54,6 +57,7 @@ func init() {
 		ParseArticle: parseAdapter_incArticle,
 		PageURL:      incPageURL,
 		ListPage:     incListPage,
+		TotalPages:   incTotalPages,
 		FetchArticle: incFetchArticle,
 	})
 }

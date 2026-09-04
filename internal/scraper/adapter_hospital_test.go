@@ -1,12 +1,21 @@
 package scraper
 
 import (
+	"bytes"
+	"io"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
 
 	"swjtu-cli/internal/model"
 )
+
+type hospitalTestRoundTripper func(*http.Request) (*http.Response, error)
+
+func (f hospitalTestRoundTripper) RoundTrip(request *http.Request) (*http.Response, error) {
+	return f(request)
+}
 
 func TestHospitalAdapterRegisteredWithAllArticleSurfaces(t *testing.T) {
 	site := AllSites["hospital"]
@@ -16,7 +25,7 @@ func TestHospitalAdapterRegisteredWithAllArticleSurfaces(t *testing.T) {
 	if site.BaseURL != hospitalCanonicalBaseURL {
 		t.Fatalf("base URL = %q, want %q", site.BaseURL, hospitalCanonicalBaseURL)
 	}
-	if site.PageURL == nil || site.ListPageFunc == nil || site.TotalPagesFunc == nil {
+	if site.PageURL == nil || site.ListPageFunc == nil || site.TotalPagesFunc == nil || site.ArticleFetchFunc == nil {
 		t.Fatal("hospital reverse pagination hooks are not registered")
 	}
 	if len(site.SubPages) != len(hospitalSubPages) {
@@ -120,6 +129,11 @@ func TestHospitalReversePaginationMatchesDisplayedLogicalPages(t *testing.T) {
 			t.Errorf("logical page %d URL = %q, want %q", page, got, want)
 		}
 	}
+	for _, page := range []int{0, 18} {
+		if got := hospitalPageURL(hospitalCanonicalBaseURL, "tzgg", page, 17, ".htm"); got != "" {
+			t.Errorf("out-of-range logical page %d URL = %q, want empty", page, got)
+		}
+	}
 	if got := hospitalPageURL(hospitalCanonicalBaseURL, "jkjy/azbjkjyzl", 4, 4, ".htm"); got != hospitalCanonicalBaseURL+"/jkjy/azbjkjyzl/1.htm" {
 		t.Fatalf("nested last-page URL = %q", got)
 	}
@@ -160,6 +174,105 @@ func TestHospitalArticleExtractsTypePreciseDateBodyImagesAndOutsideAttachment(t 
 	}
 	if strings.Contains(article.ContentHTML, "正文中的相关文章") == false {
 		t.Fatalf("body links were lost from ContentHTML: %q", article.ContentHTML)
+	}
+}
+
+func TestHospitalArticleUsesOnlySourceDateAndKeepsDateOnlyPrecision(t *testing.T) {
+	raw, err := os.ReadFile("testdata/hospital_article_date_only.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	article, err := parseAdapter_hospitalArticle(raw, hospitalCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Date != "2026-08-31" || article.PublishedAt != "" {
+		t.Fatalf("date-only source was normalized incorrectly: date=%q published_at=%q", article.Date, article.PublishedAt)
+	}
+	if strings.Contains(article.Date, "2026-09-16") || strings.Contains(article.PublishedAt, "2026-09-16") {
+		t.Fatalf("body event time leaked into publication metadata: date=%q published_at=%q", article.Date, article.PublishedAt)
+	}
+}
+
+func TestHospitalFetchArticleVerifiesAndSanitizesResources(t *testing.T) {
+	raw, err := os.ReadFile("testdata/hospital_article_resources.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	validPNG := []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n', 0}
+	validPDF := []byte("%PDF-1.7 hospital fixture")
+	serverBase := "https://hospital.test"
+	testClient := &http.Client{Transport: hospitalTestRoundTripper(func(r *http.Request) (*http.Response, error) {
+		response := func(status int, contentType string, body []byte) *http.Response {
+			return &http.Response{
+				StatusCode:    status,
+				Status:        http.StatusText(status),
+				Header:        http.Header{"Content-Type": []string{contentType}},
+				Body:          io.NopCloser(bytes.NewReader(body)),
+				ContentLength: int64(len(body)),
+				Request:       r,
+			}
+		}
+		switch r.URL.Path {
+		case "/info/1009/9001.htm":
+			return response(http.StatusOK, "text/html; charset=utf-8", raw), nil
+		case "/good.png":
+			return response(http.StatusOK, "image/png", validPNG), nil
+		case "/bad.png", "/captcha.png":
+			return response(http.StatusOK, "image/png", []byte("<!doctype html><html><body>请输入验证码</body></html>")), nil
+		case "/missing.png", "/missing.pdf":
+			return response(http.StatusNotFound, "text/html; charset=utf-8", []byte("not found")), nil
+		case "/good.pdf":
+			return response(http.StatusOK, "application/pdf", validPDF), nil
+		case "/bad.pdf":
+			return response(http.StatusOK, "application/pdf", []byte("not a PDF")), nil
+		case "/wrong.pdf":
+			return response(http.StatusOK, "text/plain", validPDF), nil
+		case "/system/_content/download.jsp":
+			return response(http.StatusOK, "text/html; charset=utf-8", []byte("<html><body>验证码下载</body></html>")), nil
+		default:
+			return response(http.StatusNotFound, "text/html; charset=utf-8", []byte("not found")), nil
+		}
+	})}
+
+	site := AllSites["hospital"]
+	oldBase, oldClient, oldNoCache := site.BaseURL, defaultClient, NoCache
+	site.BaseURL, defaultClient, NoCache = serverBase, testClient, true
+	ClearCache()
+	t.Cleanup(func() {
+		site.BaseURL, defaultClient, NoCache = oldBase, oldClient, oldNoCache
+		ClearCache()
+	})
+
+	article, body, err := hospitalFetchArticle(serverBase + "/info/1009/9001.htm")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(body) == 0 {
+		t.Fatal("article raw response is empty")
+	}
+	if article.Date != "2026-09-04" || article.PublishedAt != "" {
+		t.Fatalf("article date fields = (%q, %q), want date-only source", article.Date, article.PublishedAt)
+	}
+	if len(article.Images) != 1 || article.Images[0] != serverBase+"/good.png" {
+		t.Fatalf("verified images = %#v", article.Images)
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].Name != "有效附件.pdf" || article.Attachments[0].URL != serverBase+"/good.pdf" || article.Attachments[0].Size == "" {
+		t.Fatalf("verified attachments = %#v", article.Attachments)
+	}
+	if !strings.Contains(article.ContentHTML, "src=\""+serverBase+"/good.png\"") || !strings.Contains(article.ContentHTML, "href=\""+serverBase+"/good.pdf\"") {
+		t.Fatalf("valid resources were not retained: %q", article.ContentHTML)
+	}
+	if !strings.Contains(article.ContentHTML, "https://external.example/reference") {
+		t.Fatalf("ordinary external link was not retained: %q", article.ContentHTML)
+	}
+	for _, forbidden := range []string{
+		"bad.png", "missing.png", "captcha.png", "bad.pdf", "wrong.pdf", "missing.pdf",
+		"CAPTCHA", "javascript:download",
+	} {
+		if strings.Contains(article.ContentHTML, forbidden) {
+			t.Errorf("invalid resource leaked into ContentHTML (%q): %s", forbidden, article.ContentHTML)
+		}
 	}
 }
 

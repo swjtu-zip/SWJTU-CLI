@@ -1,6 +1,41 @@
 package scraper
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func rwxyFixture(t *testing.T, name string) []byte {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("testdata", name))
+	if err != nil {
+		t.Fatalf("read rwxy fixture %q: %v", name, err)
+	}
+	return data
+}
+
+func TestRwxyAdapterRegistrationAndTabInventory(t *testing.T) {
+	site := AllSites["rwxy"]
+	if site == nil {
+		t.Fatal("rwxy site is not registered")
+	}
+	if site.BaseURL != rwxyCanonicalBaseURL {
+		t.Fatalf("base URL = %q, want %q", site.BaseURL, rwxyCanonicalBaseURL)
+	}
+	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil || site.ArticleFetchFunc == nil {
+		t.Fatal("rwxy adapter is missing a required hook")
+	}
+	want := []string{
+		"xyxw", "dzbg", "xshd", "jxdt", "jxdt/bkjx", "jxdt/yjsjx",
+		"xsgz/tzgg", "xsgz/xgdt", "xsgz/xzfc", "xsgz/jyxx", "jwgz/jwdt",
+		"djgz/djdt", "djgz/xygh", "rcpy/yjsjy", "rcpy/bshldz",
+	}
+	if strings.Join(site.SubPages, "\n") != strings.Join(want, "\n") {
+		t.Fatalf("subpages = %#v, want %#v", site.SubPages, want)
+	}
+}
 
 func TestRwxyListUsesHeadlineAndCommentDate(t *testing.T) {
 	html := []byte(`<div class="sidebar"><div class="title"><span>学院新闻</span></div></div>
@@ -93,5 +128,101 @@ func TestRwxyAdapterOwnsDisplayedReversePagination(t *testing.T) {
 	}
 	if got := rwxyPageURL(base, "xyxw", 217, 216, ".htm"); got != "" {
 		t.Fatalf("out-of-range URL = %q", got)
+	}
+}
+
+func TestRwxyNoticeListFixtureUsesFixedDateAndTabType(t *testing.T) {
+	items, err := parseAdapter_rwxyList(rwxyFixture(t, "rwxy_list_notice.html"), rwxyCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("got %d items, want 2", len(items))
+	}
+	if items[0].Title != "关于2026年秋季学期学生注册报到的通知" || items[0].Type != "通知公告" {
+		t.Fatalf("first item metadata = %#v", items[0])
+	}
+	if items[0].Date != "2026-09-03" || items[0].PublishedAt != "2026-09-03" {
+		t.Fatalf("first item date = %q/%q", items[0].Date, items[0].PublishedAt)
+	}
+	if items[1].Date != "" || items[1].PublishedAt != "" {
+		t.Fatalf("legacy list date leaked = %q/%q", items[1].Date, items[1].PublishedAt)
+	}
+	if got := rwxyTotalPagesFromHTML(rwxyFixture(t, "rwxy_list_notice.html")); got != 6 {
+		t.Fatalf("fixture total pages = %d, want 6", got)
+	}
+	if got := rwxyPageURL(rwxyCanonicalBaseURL, "xsgz/tzgg", 1, 6, ".htm"); got != rwxyCanonicalBaseURL+"/xsgz/tzgg.htm" {
+		t.Fatalf("first page URL = %q", got)
+	}
+	if got := rwxyPageURL(rwxyCanonicalBaseURL, "xsgz/tzgg", 3, 6, ".htm"); got != rwxyCanonicalBaseURL+"/xsgz/tzgg/4.htm" {
+		t.Fatalf("middle page URL = %q", got)
+	}
+	if got := rwxyPageURL(rwxyCanonicalBaseURL, "xsgz/tzgg", 6, 6, ".htm"); got != rwxyCanonicalBaseURL+"/xsgz/tzgg/1.htm" {
+		t.Fatalf("last page URL = %q", got)
+	}
+	if got := rwxyPageURL(rwxyCanonicalBaseURL, "xsgz/tzgg", 7, 6, ".htm"); got != "" {
+		t.Fatalf("out-of-range page URL = %q", got)
+	}
+}
+
+func TestRwxyExplicitEmptyListIsSuccessful(t *testing.T) {
+	items, err := parseAdapter_rwxyList(rwxyFixture(t, "rwxy_empty_list.html"), rwxyCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if items == nil || len(items) != 0 {
+		t.Fatalf("empty list result = %#v, want non-nil empty slice", items)
+	}
+}
+
+func TestRwxyArticleFixtureUsesDetailMetadataAndFiltersResources(t *testing.T) {
+	article, err := parseAdapter_rwxyArticle(rwxyFixture(t, "rwxy_article_resources.html"), rwxyCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title != "关于2026年秋季学期学生注册报到的通知" {
+		t.Fatalf("title = %q", article.Title)
+	}
+	if article.Type != "通知公告" {
+		t.Fatalf("type = %q", article.Type)
+	}
+	if article.Date != "2026-09-03" || article.PublishedAt != "2026-09-03 16:02:47" {
+		t.Fatalf("date fields = %q/%q", article.Date, article.PublishedAt)
+	}
+	if !strings.Contains(article.Content, "这是完整的通知正文") || !strings.Contains(article.Content, "活动时间：2099年12月31日") {
+		t.Fatalf("content lost body text: %q", article.Content)
+	}
+	if len(article.Images) != 1 || article.Images[0] != rwxyCanonicalBaseURL+"/__local/demo.jpg" {
+		t.Fatalf("images = %#v", article.Images)
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].Name != "材料.pdf" || !strings.Contains(article.Attachments[0].URL, "download.jsp") {
+		t.Fatalf("attachments = %#v", article.Attachments)
+	}
+	if strings.Contains(article.ContentHTML, "spacer.gif") || strings.Contains(article.ContentHTML, "captcha") {
+		t.Fatalf("placeholder resource leaked into content HTML: %q", article.ContentHTML)
+	}
+}
+
+func TestRwxyErrorListResponseIsNotHomepageFallback(t *testing.T) {
+	if _, err := parseAdapter_rwxyList(rwxyFixture(t, "rwxy_error.html"), rwxyCanonicalBaseURL); err == nil {
+		t.Fatal("expected an explicit error-page response to fail")
+	}
+	if _, err := parseAdapter_rwxyArticle(rwxyFixture(t, "rwxy_error.html"), rwxyCanonicalBaseURL); err == nil {
+		t.Fatal("expected an explicit article error-page response to fail")
+	}
+}
+
+func TestRwxyAttachmentValidationChecksShellAndMagic(t *testing.T) {
+	if rwxyAttachmentBodyIsUsable("text/html; charset=utf-8", []byte("<!doctype html><title>附件下载</title>"), "材料.pdf") {
+		t.Fatal("HTML attachment shell was accepted")
+	}
+	if rwxyAttachmentBodyIsUsable("application/pdf", []byte("not a PDF"), "材料.pdf") {
+		t.Fatal("invalid PDF magic was accepted")
+	}
+	if !rwxyAttachmentBodyIsUsable("application/pdf", []byte("%PDF-1.7\nbody"), "材料.pdf") {
+		t.Fatal("valid PDF magic was rejected")
+	}
+	if !rwxyAttachmentBodyIsUsable("application/vnd.openxmlformats-officedocument.wordprocessingml.document", []byte("PK\x03\x04docx"), "材料.docx") {
+		t.Fatal("valid OOXML magic was rejected")
 	}
 }

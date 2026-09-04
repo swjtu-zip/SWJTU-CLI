@@ -1,6 +1,9 @@
 package scraper
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -26,11 +29,11 @@ func TestHzcRegistersAuditedFeedsAndReversePagination(t *testing.T) {
 		t.Fatal("hzc site is not registered")
 	}
 	want := []string{
-		"xwdt/zx", "xwdt/dw", "xwdt/zh", "tzgs", "xzzq/xzzq",
+		"xwdt/zx", "xwdt/zh", "tzgs", "xzzq/xzzq",
 		"dwhz/hzqk", "dwhz/zdwj", "jxjy/xxgs", "jxjy/zdwj",
 		"ddbf/rwfc", "zbjs/djyd",
 	}
-	if !reflect.DeepEqual(site.SubPages, want) {
+	if !reflect.DeepEqual(site.SubPages, want) || site.ArticleFetchFunc == nil {
 		t.Fatalf("hzc feeds = %#v, want %#v", site.SubPages, want)
 	}
 	if site.BaseURL != hzcCanonicalBaseURL || site.PageURL == nil || site.TotalPagesFunc == nil {
@@ -58,6 +61,9 @@ func TestHzcRegistersAuditedFeedsAndReversePagination(t *testing.T) {
 		if got := hzcPageURL(hzcCanonicalBaseURL, "xwdt/zx", tc.page, tc.total, ".htm"); got != "" {
 			t.Errorf("out-of-range page %d/%d returned %q", tc.page, tc.total, got)
 		}
+	}
+	if hzcKnownFeed("xwdt/dw") {
+		t.Fatal("external-only xwdt/dw was registered as a local article feed")
 	}
 }
 
@@ -155,6 +161,136 @@ func TestHzcRejectsCaptchaAndErrorResponsesAsArticles(t *testing.T) {
 	for _, fixture := range []string{"hzc_captcha.html", "hzc_error.html", "hzc_static.html"} {
 		if _, err := parseAdapter_hzcArticle(hzcFixture(t, fixture), hzcCanonicalBaseURL); err == nil {
 			t.Errorf("%s was accepted as an article", fixture)
+		}
+	}
+}
+
+func TestHzcDateOnlyDoesNotBorrowBodyDeadline(t *testing.T) {
+	article, err := parseAdapter_hzcArticle(hzcFixture(t, "hzc_article_date_only.html"), hzcCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Date != "2026-07-15" || article.PublishedAt != "2026-07-15" {
+		t.Fatalf("date-only metadata was changed: %#v", article)
+	}
+	if strings.Contains(article.PublishedAt, "00:00:00") || strings.Contains(article.PublishedAt, "2026-09-16") {
+		t.Fatalf("body date contaminated publication timestamp: %#v", article)
+	}
+}
+
+func TestHzcResourceBodyChecksContentTypeMagicAndShell(t *testing.T) {
+	tests := []struct {
+		name        string
+		contentType string
+		body        []byte
+		resource    string
+		image       bool
+		want        bool
+	}{
+		{"valid png", "image/png", []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}, "good.png", true, true},
+		{"wrong image magic", "image/png", []byte{0xff, 0xd8, 0xff}, "bad.png", true, false},
+		{"valid pdf", "application/pdf", []byte("%PDF-1.7"), "good.pdf", false, true},
+		{"wrong pdf magic", "application/pdf", []byte("plain text"), "bad.pdf", false, false},
+		{"captcha shell", "application/pdf", []byte("<!doctype html><p>请输入验证码下载附件</p>"), "captcha.pdf", false, false},
+		{"missing type", "", []byte("%PDF-1.7"), "good.pdf", false, false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := hzcResourceBodyIsUsable(tc.contentType, tc.body, tc.resource, tc.image); got != tc.want {
+				t.Fatalf("resource usability = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestHzcFetchArticleVerifiesResourcesAndSanitizesHTML(t *testing.T) {
+	page := hzcFixture(t, "hzc_article_resources.html")
+	detailPath := "/info/1039/9001.htm"
+	detailURL := ""
+	var resourceRequests int
+	var badReferer bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == detailPath {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write(page)
+			return
+		}
+		resourceRequests++
+		if r.Referer() == "" || r.Referer() != detailURL {
+			badReferer = true
+		}
+		switch r.URL.Path {
+		case "/images/good.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'})
+		case "/images/bad.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte("<html>captcha</html>"))
+		case "/files/good.pdf":
+			w.Header().Set("Content-Type", "application/pdf")
+			_, _ = w.Write([]byte("%PDF-1.7 valid"))
+		case "/files/wrong.pdf":
+			w.Header().Set("Content-Type", "application/pdf")
+			_, _ = w.Write([]byte("not a pdf"))
+		case "/system/_content/download.jsp":
+			if r.URL.Query().Get("wbfileid") != "GOOD" {
+				http.Error(w, "missing", http.StatusNotFound)
+				return
+			}
+			w.Header().Set("Content-Type", "application/zip")
+			_, _ = w.Write([]byte{'P', 'K', 3, 4, 'o', 'k'})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	detailURL = server.URL + detailPath
+
+	article, raw, err := hzcFetchArticleAt(detailURL, server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(raw) == 0 || resourceRequests != 6 || badReferer {
+		t.Fatalf("resource validation requests = %d, bad referer=%v, raw=%d", resourceRequests, badReferer, len(raw))
+	}
+	if len(article.Images) != 1 || article.Images[0] != server.URL+"/images/good.png" {
+		t.Fatalf("verified images = %#v", article.Images)
+	}
+	if len(article.Attachments) != 2 {
+		t.Fatalf("verified attachments = %#v", article.Attachments)
+	}
+	if !strings.Contains(article.ContentHTML, "/images/good.png") || !strings.Contains(article.ContentHTML, "https://example.com/read-more") {
+		t.Fatalf("valid resources/external link missing: %s", article.ContentHTML)
+	}
+	for _, rejected := range []string{"bad.png", "wrong.pdf", "CAPTCHA", "missing.pdf"} {
+		if strings.Contains(article.ContentHTML, rejected) {
+			t.Fatalf("rejected resource %q survived: %s", rejected, article.ContentHTML)
+		}
+	}
+	if !strings.Contains(article.Content, "正文保留") || strings.Contains(article.Content, "伪附件") {
+		t.Fatalf("sanitized article text = %q", article.Content)
+	}
+	if article.Attachments[0].Size == "" || article.Attachments[1].Size == "" {
+		t.Fatalf("verified attachment sizes missing: %#v", article.Attachments)
+	}
+}
+
+func TestHzcFetchResourceRejectsNon2xxAndCrossOriginRedirect(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/missing.pdf":
+			http.NotFound(w, r)
+		case "/redirect.pdf":
+			http.Redirect(w, r, "https://example.com/file.pdf", http.StatusFound)
+		default:
+			w.Header().Set("Content-Type", "application/pdf")
+			_, _ = w.Write([]byte("%PDF-1.7"))
+		}
+	}))
+	defer server.Close()
+	for _, path := range []string{"/missing.pdf", "/redirect.pdf"} {
+		if _, _, err := hzcFetchResource(server.URL+path, server.URL, server.URL+"/info/1039/9001.htm", fmt.Sprintf("%s", path), false); err == nil {
+			t.Errorf("resource %s was accepted", path)
 		}
 	}
 }

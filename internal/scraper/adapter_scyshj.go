@@ -1,7 +1,12 @@
 package scraper
 
 import (
+	"bytes"
 	"fmt"
+	stdhtml "html"
+	"io"
+	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -12,126 +17,57 @@ import (
 	"swjtu-cli/internal/model"
 )
 
+const (
+	scyshjCanonicalBaseURL = "https://scyshj.swjtu.edu.cn"
+	scyshjMaxResourceBytes = int64(32 << 20)
+)
+
+// These are the article lists exposed by the live navigation and its linked
+// sub-navigation.  yjygk/yjtd and scsjczxwyh/zzgc are profile/static pages;
+// the parent scsjczxwyh page is also only a navigation shell.
 var scyshjSubPages = []string{
-	"tzxw/tzgg", "tzxw/xwdt", "xsjl", "dxal", "yjygk/yjtd",
-	"scsjczxwyh/hdly", "scsjczxwyh/wygd", "scsjczxwyh/zzgc",
+	"tzxw/tzgg",
+	"tzxw/xwdt",
+	"xsjl",
+	"zchj",
+	"dxal",
+	"scsjczxwyh/wygd",
+	"scsjczxwyh/hdly",
 }
 
-// scyshjAdapter gives this website its own extension point even when its current HTML is compatible with 博达's common parser.
+var scyshjFeedTypes = map[string]string{
+	"tzxw/tzgg":       "通知公告",
+	"tzxw/xwdt":       "新闻动态",
+	"xsjl":            "学术交流",
+	"zchj":            "政策汇集",
+	"dxal":            "典型案例",
+	"scsjczxwyh/wygd": "委员观点",
+	"scsjczxwyh/hdly": "活动掠影",
+}
+
+var (
+	scyshjArticlePathRE = regexp.MustCompile(`(?i)^/info/[0-9]+/[0-9]+\.html?$`)
+	scyshjDateRE        = regexp.MustCompile(`20[0-9]{2}\s*(?:[-/.年]\s*[0-9]{1,2}\s*[-/.月]\s*[0-9]{1,2}日?)(?:\s*[Tt]?\s*[0-9]{1,2}\s*[:：]\s*[0-9]{2}(?:\s*[:：]\s*[0-9]{2})?)?`)
+	scyshjPageRE        = regexp.MustCompile(`(?:^|[^0-9])[0-9]+\s*/\s*([0-9]+)(?:[^0-9]|$)`)
+	scyshjShellRE       = regexp.MustCompile(`(?is)(?:captcha|验证码|人机验证|安全验证|cloudflare|just a moment|access denied|forbidden|waf|请求已被阻断|页面不存在|404\s+not\s+found)`)
+)
+
 func init() {
+	if site := AllSites["scyshj"]; site != nil {
+		site.BaseURL = scyshjCanonicalBaseURL
+	}
 	registerAdapter("scyshj", SiteAdapter{
 		SubPages:     scyshjSubPages,
 		ParseList:    parseAdapter_scyshjList,
 		ParseArticle: parseAdapter_scyshjArticle,
 		PageURL:      scyshjPageURL,
 		TotalPages:   scyshjTotalPages,
+		FetchArticle: scyshjFetchArticle,
 	})
 }
 
-func parseAdapter_scyshjList(html []byte, baseURL string) ([]model.NewsItem, error) {
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
-	if err != nil {
-		return nil, fmt.Errorf("scyshj parse list: %w", err)
-	}
-
-	rows := doc.Find(".main_conRCb li")
-	if rows.Length() == 0 {
-		rows = doc.Find(".dynamic_list li, .new_list h3")
-	}
-	items := make([]model.NewsItem, 0, rows.Length())
-	seen := make(map[string]bool, rows.Length())
-	typ := scyshjDocumentType(doc)
-	rows.Each(func(_ int, row *goquery.Selection) {
-		item, ok := scyshjNewsItem(row, baseURL, typ)
-		if !ok || seen[item.URL] {
-			return
-		}
-		seen[item.URL] = true
-		items = append(items, item)
-	})
-	if len(items) == 0 {
-		return nil, fmt.Errorf("scyshj: no article rows found")
-	}
-	return items, nil
-}
-
-func parseAdapter_scyshjArticle(html []byte, baseURL string) (*model.Article, error) {
-	return parseBodaArticleWithSectionType(html, baseURL)
-}
-
-var scyshjDateRe = regexp.MustCompile(`20\d{2}\s*(?:[-/.年]\s*\d{1,2}\s*[-/.月]\s*\d{1,2}日?)(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?`)
-var scyshjPageIndicatorRe = regexp.MustCompile(`\b1\s*/\s*(\d+)\b`)
-
-func scyshjNewsItem(row *goquery.Selection, baseURL, typ string) (model.NewsItem, bool) {
-	if row == nil || row.Length() == 0 {
-		return model.NewsItem{}, false
-	}
-	anchor := row.Find("a[href*='info/']").First()
-	if anchor.Length() == 0 {
-		return model.NewsItem{}, false
-	}
-	href := strings.TrimSpace(anchor.AttrOr("href", ""))
-	fullURL := cleanURL(resolveURL(baseURL, href))
-	if href == "" || !isValidSiteNewsURL(fullURL, baseURL) {
-		return model.NewsItem{}, false
-	}
-	title := strings.TrimSpace(anchor.AttrOr("title", ""))
-	if title == "" {
-		title = strings.TrimSpace(row.Find("em").First().Text())
-	}
-	if title == "" {
-		title = strings.TrimSpace(anchor.Text())
-	}
-	title = cleanTitle(title)
-	if !isValidNewsTitle(title) {
-		return model.NewsItem{}, false
-	}
-	date, publishedAt := scyshjDateValues(row.Text())
-	return model.NewsItem{
-		Title:       title,
-		URL:         fullURL,
-		Date:        date,
-		PublishedAt: publishedAt,
-		Type:        strings.TrimSpace(typ),
-		ParsedAt:    time.Now(),
-	}, true
-}
-
-func scyshjDateValues(text string) (string, string) {
-	match := scyshjDateRe.FindString(strings.Join(strings.Fields(text), " "))
-	if match == "" {
-		return "", ""
-	}
-	precise := normalizePublishedAt(match)
-	if precise == "" {
-		return "", ""
-	}
-	if len(precise) > len("2006-01-02") {
-		return precise[:10], precise
-	}
-	return precise, precise
-}
-
-func scyshjDocumentType(doc *goquery.Document) string {
-	if doc == nil {
-		return ""
-	}
-	for _, selector := range []string{".main_conLT a.cur", ".main_titT a", ".dynamic h2", `meta[name="pageTitle"]`} {
-		values := doc.Find(selector)
-		for i := values.Length() - 1; i >= 0; i-- {
-			value := strings.TrimSpace(values.Eq(i).AttrOr("content", ""))
-			if value == "" {
-				value = strings.TrimSpace(values.Eq(i).Text())
-			}
-			value = strings.Trim(value, "[]【】 ")
-			if value != "" && value != "首页" {
-				return value
-			}
-		}
-	}
-	return ""
-}
-
+// scyshjPageURL maps logical newest-first pages to the reverse-numbered files
+// generated by Visual SiteBuilder: slug.htm, slug/{N-1}.htm, ..., slug/1.htm.
 func scyshjPageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
 	slug = strings.Trim(strings.TrimSpace(slug), "/")
@@ -140,8 +76,7 @@ func scyshjPageURL(baseURL, slug string, page, totalPages int, extension string)
 	}
 	if extension == "" {
 		extension = ".htm"
-	}
-	if !strings.HasPrefix(extension, ".") {
+	} else if !strings.HasPrefix(extension, ".") {
 		extension = "." + extension
 	}
 	if page == 1 {
@@ -153,33 +88,297 @@ func scyshjPageURL(baseURL, slug string, page, totalPages int, extension string)
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, totalPages-page+1, extension)
 }
 
+func parseAdapter_scyshjList(raw []byte, baseURL string) ([]model.NewsItem, error) {
+	doc, err := scyshjDocument(raw)
+	if err != nil {
+		return nil, fmt.Errorf("scyshj parse list: %w", err)
+	}
+	if !scyshjIsListDocument(doc) {
+		return nil, fmt.Errorf("scyshj: response is not a recognized article list")
+	}
+	typ := scyshjDocumentType(doc, baseURL)
+	if typ == "" {
+		return nil, fmt.Errorf("scyshj: list type is missing")
+	}
+	rows := scyshjListRows(doc)
+	items := make([]model.NewsItem, 0, rows.Length())
+	seen := make(map[string]bool, rows.Length())
+	rows.Each(func(_ int, row *goquery.Selection) {
+		item, ok := scyshjNewsItem(row, baseURL, typ)
+		if !ok || seen[item.URL] {
+			return
+		}
+		seen[item.URL] = true
+		items = append(items, item)
+	})
+	if len(items) == 0 {
+		return nil, fmt.Errorf("scyshj: recognized list contains no valid article rows")
+	}
+	return items, nil
+}
+
+func parseAdapter_scyshjArticle(raw []byte, baseURL string) (*model.Article, error) {
+	doc, err := scyshjDocument(raw)
+	if err != nil {
+		return nil, fmt.Errorf("scyshj parse article: %w", err)
+	}
+	if pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"], meta[name="pagetype"]`).Last().AttrOr("content", "")); pageType != "" && pageType != "3" {
+		return nil, fmt.Errorf("scyshj: response is not an article page (pageType=%q)", pageType)
+	}
+	titleSel := scyshjArticleTitle(doc)
+	contentSel := scyshjArticleContent(doc)
+	if titleSel.Length() == 0 || contentSel.Length() == 0 {
+		return nil, fmt.Errorf("scyshj: article is missing fixed title or .v_news_content body")
+	}
+	if strings.TrimSpace(extractBodaContentText(contentSel)) == "" && contentSel.Find("img,table").Length() == 0 {
+		return nil, fmt.Errorf("scyshj: article body is empty")
+	}
+
+	article := &model.Article{
+		Title: strings.Join(strings.Fields(titleSel.Text()), " "),
+		Type:  scyshjDocumentType(doc, baseURL),
+	}
+	meta := scyshjArticleMeta(doc)
+	article.Date, article.PublishedAt = scyshjDateValues(meta)
+	article.Source = scyshjMetaValue(meta, "来源", "信息来源")
+	article.Author = scyshjMetaValue(meta, "作者", "发布者")
+	article.Editor = scyshjMetaValue(meta, "编辑", "责编")
+	if article.Title == "" || article.Type == "" || article.Date == "" {
+		return nil, fmt.Errorf("scyshj: article is missing fixed title, type, or publication date")
+	}
+
+	article.Content = extractBodaContentText(contentSel)
+	article.Images = scyshjCollectImages(contentSel, baseURL)
+	article.Attachments = scyshjCollectAttachments(contentSel, doc, baseURL)
+	scyshjNormalizeContentMarkup(contentSel, baseURL)
+	if contentHTML, htmlErr := contentSel.Html(); htmlErr == nil {
+		article.ContentHTML = contentHTML
+	}
+	return article, nil
+}
+
+func scyshjDocument(raw []byte) (*goquery.Document, error) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(raw)))
+	if err != nil {
+		return nil, err
+	}
+	if scyshjBlockedDocument(doc) {
+		return nil, fmt.Errorf("source returned an error, login, or verification shell")
+	}
+	return doc, nil
+}
+
+func scyshjBlockedDocument(doc *goquery.Document) bool {
+	if doc == nil {
+		return true
+	}
+	title := strings.ToLower(strings.Join(strings.Fields(doc.Find("title").First().Text()), " "))
+	if title != "" && scyshjShellRE.MatchString(title) {
+		return true
+	}
+	// Challenge pages often omit a useful title. Only inspect the body when it
+	// has no article/list container, so a legitimate article mentioning a
+	// verification word is not discarded.
+	if doc.Find(".v_news_content, .main_conRCb, .dynamic_list, .new_list").Length() == 0 {
+		body := strings.ToLower(strings.Join(strings.Fields(doc.Find("body").Text()), " "))
+		return scyshjShellRE.MatchString(body)
+	}
+	return false
+}
+
+func scyshjIsListDocument(doc *goquery.Document) bool {
+	if doc == nil || scyshjBlockedDocument(doc) {
+		return false
+	}
+	pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"], meta[name="pagetype"]`).Last().AttrOr("content", ""))
+	if pageType != "" && pageType != "2" {
+		return false
+	}
+	if doc.Find(".main_conRCb, .dynamic_list, .new_list").Length() == 0 {
+		return false
+	}
+	return doc.Find("a[href*='info/']").Length() > 0
+}
+
+func scyshjListRows(doc *goquery.Document) *goquery.Selection {
+	if rows := doc.Find(".main_conRCb li"); rows.Length() > 0 {
+		return rows
+	}
+	if rows := doc.Find(".dynamic_list li"); rows.Length() > 0 {
+		return rows
+	}
+	return doc.Find(".new_list h3")
+}
+
+func scyshjNewsItem(row *goquery.Selection, baseURL, typ string) (model.NewsItem, bool) {
+	if row == nil || row.Length() == 0 {
+		return model.NewsItem{}, false
+	}
+	anchor := row.Find("a[href*='info/']").First()
+	if anchor.Length() == 0 {
+		return model.NewsItem{}, false
+	}
+	fullURL, ok := scyshjArticleURL(baseURL, anchor.AttrOr("href", ""))
+	if !ok {
+		return model.NewsItem{}, false
+	}
+	title := strings.TrimSpace(anchor.AttrOr("title", ""))
+	if title == "" {
+		for _, selector := range []string{"em", ".title", ".news-title", "h3", "h4"} {
+			if value := strings.Join(strings.Fields(row.Find(selector).First().Text()), " "); value != "" {
+				title = value
+				break
+			}
+		}
+	}
+	if title == "" {
+		clone := anchor.Clone()
+		clone.Find(".date, .time, time, span").Remove()
+		title = strings.Join(strings.Fields(clone.Text()), " ")
+	}
+	title = cleanTitle(title)
+	if !isValidNewsTitle(title) {
+		return model.NewsItem{}, false
+	}
+
+	dateText := ""
+	for _, selector := range []string{".date", ".time", "time", "a > span"} {
+		if value := strings.TrimSpace(row.Find(selector).First().Text()); value != "" {
+			dateText = value
+			break
+		}
+	}
+	if dateText == "" {
+		row.ChildrenFiltered("span").EachWithBreak(func(_ int, sel *goquery.Selection) bool {
+			dateText = strings.TrimSpace(sel.Text())
+			return dateText == ""
+		})
+	}
+	date, publishedAt := scyshjDateValues(dateText)
+	if date == "" {
+		return model.NewsItem{}, false
+	}
+	return model.NewsItem{
+		Title:       title,
+		URL:         fullURL,
+		Date:        date,
+		PublishedAt: publishedAt,
+		Type:        strings.TrimSpace(typ),
+		ParsedAt:    time.Now(),
+	}, true
+}
+
+func scyshjDateValues(raw string) (string, string) {
+	raw = strings.Join(strings.Fields(strings.ReplaceAll(raw, "\u00a0", " ")), " ")
+	match := scyshjDateRE.FindString(raw)
+	if match == "" {
+		return "", ""
+	}
+	value := normalizePublishedAt(match)
+	if len(value) < len("2006-01-02") {
+		return "", ""
+	}
+	// A date-only source value remains date-only. In particular, never turn it
+	// into midnight; PublishedAt may equal Date but must not gain a clock.
+	if !strings.Contains(match, ":") && !strings.Contains(match, "时") {
+		return value[:10], value[:10]
+	}
+	return value[:10], value
+}
+
+func scyshjDocumentType(doc *goquery.Document, baseURL string) string {
+	if doc == nil {
+		return ""
+	}
+	// A breadcrumb link to a known feed is the most reliable source and works
+	// on both list and article pages, including pages without a current class.
+	bestSlug, bestType := "", ""
+	doc.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
+		resolved := cleanURL(resolveURL(baseURL, stdhtml.UnescapeString(strings.TrimSpace(anchor.AttrOr("href", "")))))
+		parsed, err := url.Parse(resolved)
+		if err != nil {
+			return
+		}
+		path := strings.Trim(strings.TrimSpace(parsed.Path), "/")
+		for slug, typ := range scyshjFeedTypes {
+			if (path == slug+".htm" || path == slug+".html") && len(slug) > len(bestSlug) {
+				bestSlug, bestType = slug, typ
+			}
+		}
+	})
+	if bestType != "" {
+		return bestType
+	}
+	for _, selector := range []string{
+		".main_conLT a.cur", ".main_conLT .cur", ".main_titT a.cur",
+		".breadcrumb a:last-child", ".location a:last-child", ".loaction a:last-child",
+		".current h3", ".current", ".list-title", ".main_titT h2",
+	} {
+		selection := doc.Find(selector)
+		for i := selection.Length() - 1; i >= 0; i-- {
+			candidate := strings.TrimSpace(selection.Eq(i).Text())
+			if value := bodaTypeCandidate(candidate, ""); value != "" {
+				return value
+			}
+		}
+	}
+	// pageTitle on a list page is sometimes exactly the feed title, but the
+	// homepage value is the institute name and must not become an article type.
+	meta := strings.TrimSpace(doc.Find(`meta[name="pageTitle"], meta[name="pagetitle"]`).Last().AttrOr("content", ""))
+	for _, separator := range []string{"-西南交通大学", "—西南交通大学", "_西南交通大学"} {
+		if index := strings.Index(meta, separator); index > 0 {
+			meta = meta[:index]
+			break
+		}
+	}
+	if value := bodaTypeCandidate(meta, ""); value != "" && !strings.Contains(value, "营商环境研究院") {
+		return value
+	}
+	return ""
+}
+
 func scyshjTotalPages(slug string) (int, error) {
 	site := AllSites["scyshj"]
 	if site == nil {
 		return 0, fmt.Errorf("scyshj: site registration is missing")
 	}
-	body, err := fetch(scyshjPageURL(site.BaseURL, slug, 1, 0, ".htm"))
-	if err != nil {
-		body, err = fetch(scyshjPageURL(site.BaseURL, slug, 1, 0, ".html"))
+	var lastErr error
+	for _, extension := range []string{".htm", ".html"} {
+		body, err := fetch(scyshjPageURL(site.BaseURL, slug, 1, 0, extension))
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		doc, parseErr := scyshjDocument(body)
+		if parseErr != nil {
+			lastErr = parseErr
+			continue
+		}
+		if !scyshjIsListDocument(doc) {
+			lastErr = fmt.Errorf("scyshj: %s is not an article list", slug)
+			continue
+		}
+		if total := scyshjTotalPagesFromHTML(body); total > 0 {
+			return total, nil
+		}
+		if scyshjListRows(doc).Length() > 0 {
+			return 1, nil
+		}
+		lastErr = fmt.Errorf("scyshj: %s has no page count", slug)
 	}
-	if err != nil {
-		return 0, err
+	if lastErr == nil {
+		lastErr = fmt.Errorf("scyshj: unable to determine page count for %s", slug)
 	}
-	if total := scyshjTotalPagesFromHTML(body); total > 0 {
-		return total, nil
-	}
-	if scyshjHasArticleRows(body) {
-		return 1, nil
-	}
-	return 0, fmt.Errorf("scyshj: list page %q has no total-page marker or article rows", slug)
+	return 0, lastErr
 }
 
 func scyshjTotalPagesFromHTML(raw []byte) int {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(raw)))
 	if err == nil {
-		for _, selector := range []string{"[id^='fanye']", ".p_pages", ".pb_sys_common"} {
-			if pagination := doc.Find(selector).First(); pagination.Length() > 0 {
-				if match := scyshjPageIndicatorRe.FindStringSubmatch(strings.Join(strings.Fields(pagination.Text()), " ")); match != nil {
+		for _, selector := range []string{"[id^='fanye']", ".p_pages", ".pagination", ".page_nav"} {
+			selection := doc.Find(selector)
+			for i := 0; i < selection.Length(); i++ {
+				if match := scyshjPageRE.FindStringSubmatch(strings.Join(strings.Fields(selection.Eq(i).Text()), " ")); match != nil {
 					value, _ := strconv.Atoi(match[1])
 					if value > 0 {
 						return value
@@ -188,17 +387,517 @@ func scyshjTotalPagesFromHTML(raw []byte) int {
 			}
 		}
 	}
-	if match := scyshjPageIndicatorRe.FindStringSubmatch(string(raw)); match != nil {
+	if match := scyshjPageRE.FindStringSubmatch(string(raw)); match != nil {
 		value, _ := strconv.Atoi(match[1])
 		return value
 	}
 	return 0
 }
 
-func scyshjHasArticleRows(raw []byte) bool {
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(raw)))
+func scyshjArticleTitle(doc *goquery.Document) *goquery.Selection {
+	for _, selector := range []string{
+		".article h1", ".article h2", ".article h3", ".art-tit h1", ".art-tit h2",
+		".art-tit h3", "h1.news_tit", ".news_tit", ".article-title", ".arti-title", "h1",
+	} {
+		if selection := doc.Find(selector).First(); selection.Length() > 0 && strings.TrimSpace(selection.Text()) != "" {
+			return selection
+		}
+	}
+	return doc.Find("")
+}
+
+func scyshjArticleContent(doc *goquery.Document) *goquery.Selection {
+	for _, selector := range []string{
+		"#vsb_content .v_news_content", "#vsb_content_501 .v_news_content",
+		".article .v_news_content", ".content .v_news_content", ".v_news_content",
+	} {
+		if selection := doc.Find(selector).First(); selection.Length() > 0 && selection.Closest("header,nav,footer").Length() == 0 {
+			return selection
+		}
+	}
+	return doc.Find("")
+}
+
+func scyshjArticleMeta(doc *goquery.Document) string {
+	var parts []string
+	seen := make(map[string]bool)
+	for _, selector := range []string{
+		".article .news_source", ".article .source", ".article .article-source",
+		".article .article-info", ".news_source", ".articleAuthor", ".article-sm",
+		".art-info", ".source", ".article-info",
+	} {
+		doc.Find(selector).Each(func(_ int, sel *goquery.Selection) {
+			value := strings.Join(strings.Fields(sel.Text()), " ")
+			if value != "" && !seen[value] {
+				seen[value] = true
+				parts = append(parts, value)
+			}
+		})
+	}
+	return strings.Join(parts, " ")
+}
+
+func scyshjMetaValue(meta string, labels ...string) string {
+	if strings.TrimSpace(meta) == "" {
+		return ""
+	}
+	for _, label := range labels {
+		pattern := regexp.MustCompile(regexp.QuoteMeta(label) + `\s*[:：]\s*([^\s，。；;:：<>（）()]+(?:\s+[^\s，。；;:：<>（）()]*)?)`)
+		match := pattern.FindStringSubmatch(meta)
+		if len(match) > 1 {
+			value := strings.TrimSpace(match[1])
+			for _, stop := range []string{"作者", "来源", "日期", "时间", "点击", "浏览", "编辑", "责编"} {
+				if index := strings.Index(value, stop); index > 0 {
+					value = strings.TrimSpace(value[:index])
+				}
+			}
+			if value != "" && value != "：" {
+				return value
+			}
+		}
+	}
+	return ""
+}
+
+func scyshjCollectImages(content *goquery.Selection, baseURL string) []string {
+	images := make([]string, 0)
+	seen := make(map[string]bool)
+	content.Find("img").Each(func(_ int, image *goquery.Selection) {
+		for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			if resolved := scyshjResourceURL(baseURL, image.AttrOr(attr, "")); resolved != "" {
+				if !seen[resolved] {
+					seen[resolved] = true
+					images = append(images, resolved)
+				}
+				return
+			}
+		}
+	})
+	return images
+}
+
+func scyshjCollectAttachments(content *goquery.Selection, doc *goquery.Document, baseURL string) []model.Attachment {
+	attachments := make([]model.Attachment, 0)
+	seen := make(map[string]bool)
+	add := func(link *goquery.Selection) {
+		if link == nil || link.Length() == 0 {
+			return
+		}
+		href := stdhtml.UnescapeString(strings.TrimSpace(link.AttrOr("href", "")))
+		if !bodaLooksLikeAttachmentLink(link, href) {
+			return
+		}
+		resolved := scyshjResourceURL(baseURL, href)
+		if resolved == "" || seen[resolved] {
+			return
+		}
+		name := strings.TrimSpace(link.AttrOr("download", ""))
+		if name == "" {
+			name = strings.TrimSpace(link.Text())
+		}
+		if name == "" {
+			name = resolved
+		}
+		seen[resolved] = true
+		attachments = append(attachments, model.Attachment{Name: name, URL: resolved})
+	}
+	content.Find("a[href]").Each(func(_ int, link *goquery.Selection) { add(link) })
+	if doc != nil {
+		doc.Find("form[name='_newscontent_fromname'] a[href], .attachment a[href], .attachments a[href], .download a[href]").Each(func(_ int, link *goquery.Selection) {
+			if link.Closest(".v_news_content").Length() == 0 {
+				add(link)
+			}
+		})
+	}
+	return attachments
+}
+
+func scyshjNormalizeContentMarkup(content *goquery.Selection, baseURL string) {
+	if content == nil || content.Length() == 0 {
+		return
+	}
+	content.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := ""
+		for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			if candidate := scyshjResourceURL(baseURL, image.AttrOr(attr, "")); candidate != "" {
+				resolved = candidate
+				break
+			}
+		}
+		if resolved == "" {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	content.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		href := stdhtml.UnescapeString(strings.TrimSpace(link.AttrOr("href", "")))
+		if bodaIsPseudoResourceHref(href) {
+			link.RemoveAttr("href")
+			link.RemoveAttr("download")
+			return
+		}
+		if resolved := cleanURL(resolveURL(baseURL, href)); scyshjHTTPURL(resolved) {
+			link.SetAttr("href", resolved)
+			return
+		}
+		link.RemoveAttr("href")
+		link.RemoveAttr("download")
+	})
+}
+
+func scyshjFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	baseURL := scyshjSiteBaseURL()
+	canonical, ok := scyshjArticleURL(baseURL, articleURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("scyshj: refusing non-local or non-detail URL %q", articleURL)
+	}
+	body, err := fetch(canonical)
 	if err != nil {
+		return nil, nil, fmt.Errorf("scyshj: fetch article %s: %w", canonical, err)
+	}
+	article, err := parseAdapter_scyshjArticle(body, baseURL)
+	if err != nil {
+		return nil, body, fmt.Errorf("scyshj: parse article %s: %w", canonical, err)
+	}
+	candidateImages := append([]string(nil), article.Images...)
+	candidateAttachments := append([]model.Attachment(nil), article.Attachments...)
+	article.Images = scyshjVerifyImages(candidateImages, baseURL, canonical)
+	article.Attachments = scyshjVerifyAttachments(candidateAttachments, baseURL, canonical)
+	scyshjSanitizeContentHTML(article, baseURL, candidateImages, candidateAttachments)
+	return article, body, nil
+}
+
+func scyshjSiteBaseURL() string {
+	if site := AllSites["scyshj"]; site != nil && strings.TrimSpace(site.BaseURL) != "" {
+		return strings.TrimRight(strings.TrimSpace(site.BaseURL), "/")
+	}
+	return scyshjCanonicalBaseURL
+}
+
+func scyshjArticleURL(baseURL, raw string) (string, bool) {
+	resolved := cleanURL(resolveURL(baseURL, stdhtml.UnescapeString(strings.TrimSpace(raw))))
+	parsed, err := url.Parse(resolved)
+	base, baseErr := url.Parse(baseURL)
+	if err != nil || baseErr != nil || parsed.Hostname() == "" || base.Hostname() == "" || !strings.EqualFold(parsed.Hostname(), base.Hostname()) || !scyshjArticlePathRE.MatchString(parsed.Path) {
+		return "", false
+	}
+	if parsed.Port() != base.Port() {
+		return "", false
+	}
+	parsed.Fragment = ""
+	return parsed.String(), true
+}
+
+func scyshjHTTPURL(raw string) bool {
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Hostname() == "" {
 		return false
 	}
-	return doc.Find(".main_conRCb li a[href*='info/'], .dynamic_list li a[href*='info/'], .new_list h3 a[href*='info/']").Length() > 0
+	scheme := strings.ToLower(parsed.Scheme)
+	return scheme == "http" || scheme == "https"
+}
+
+func scyshjResourceURL(baseURL, raw string) string {
+	raw = stdhtml.UnescapeString(strings.TrimSpace(raw))
+	if raw == "" || bodaIsPseudoResourceHref(raw) {
+		return ""
+	}
+	resolved := cleanURL(resolveURL(baseURL, raw))
+	parsed, err := url.Parse(resolved)
+	base, baseErr := url.Parse(baseURL)
+	if err != nil || baseErr != nil || parsed.Hostname() == "" || base.Hostname() == "" || !strings.EqualFold(parsed.Hostname(), base.Hostname()) || parsed.Port() != base.Port() {
+		return ""
+	}
+	scheme := strings.ToLower(parsed.Scheme)
+	if scheme != "http" && scheme != "https" {
+		return ""
+	}
+	pathQuery := strings.ToLower(parsed.Path + "?" + parsed.RawQuery)
+	for _, marker := range []string{
+		"captcha", "verifycode", "verification", "createimage", "getcode", "access-denied", "challenge", "login",
+		"/spacer.gif", "/blank.gif", "/transparent.gif", "/loading.gif", "/pixel.gif",
+	} {
+		if strings.Contains(pathQuery, marker) {
+			return ""
+		}
+	}
+	parsed.Fragment = ""
+	return parsed.String()
+}
+
+func scyshjVerifyImages(images []string, baseURL, referer string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool)
+	for _, raw := range images {
+		resolved := scyshjResourceURL(baseURL, raw)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		if _, _, err := scyshjFetchResource(resolved, baseURL, referer, true); err != nil {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func scyshjVerifyAttachments(attachments []model.Attachment, baseURL, referer string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool)
+	for _, attachment := range attachments {
+		resolved := scyshjResourceURL(baseURL, attachment.URL)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, _, err := scyshjFetchResource(resolved, baseURL, referer, false, attachment.Name)
+		if err != nil {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func scyshjSanitizeContentHTML(article *model.Article, baseURL string, candidateImages []string, candidateAttachments []model.Attachment) {
+	if article == nil || strings.TrimSpace(article.ContentHTML) == "" {
+		return
+	}
+	validImages := make(map[string]bool, len(article.Images))
+	for _, image := range article.Images {
+		if resolved := scyshjResourceURL(baseURL, image); resolved != "" {
+			validImages[resolved] = true
+		}
+	}
+	candidateImageSet := make(map[string]bool, len(candidateImages))
+	for _, image := range candidateImages {
+		if resolved := scyshjResourceURL(baseURL, image); resolved != "" {
+			candidateImageSet[resolved] = true
+		}
+	}
+	validAttachments := make(map[string]bool, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		if resolved := scyshjResourceURL(baseURL, attachment.URL); resolved != "" {
+			validAttachments[resolved] = true
+		}
+	}
+	candidateAttachmentSet := make(map[string]bool, len(candidateAttachments))
+	for _, attachment := range candidateAttachments {
+		if resolved := scyshjResourceURL(baseURL, attachment.URL); resolved != "" {
+			candidateAttachmentSet[resolved] = true
+		}
+	}
+
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader("<div id=\"scyshj-content-root\">" + article.ContentHTML + "</div>"))
+	if err != nil {
+		article.ContentHTML = ""
+		return
+	}
+	root := doc.Find("#scyshj-content-root").First()
+	root.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := ""
+		for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			if candidate := scyshjResourceURL(baseURL, image.AttrOr(attr, "")); candidate != "" {
+				resolved = candidate
+				break
+			}
+		}
+		if resolved == "" || !candidateImageSet[resolved] || !validImages[resolved] {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	root.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		href := stdhtml.UnescapeString(strings.TrimSpace(link.AttrOr("href", "")))
+		if bodaIsPseudoResourceHref(href) {
+			link.RemoveAttr("href")
+			link.RemoveAttr("download")
+			return
+		}
+		resolved := scyshjResourceURL(baseURL, href)
+		if resolved != "" && candidateAttachmentSet[resolved] {
+			if validAttachments[resolved] {
+				link.SetAttr("href", resolved)
+			} else {
+				link.RemoveAttr("href")
+				link.RemoveAttr("download")
+			}
+			return
+		}
+		if scyshjHTTPURL(cleanURL(resolveURL(baseURL, href))) {
+			link.SetAttr("href", cleanURL(resolveURL(baseURL, href)))
+			return
+		}
+		link.RemoveAttr("href")
+		link.RemoveAttr("download")
+	})
+	if html, htmlErr := root.Html(); htmlErr == nil {
+		article.ContentHTML = html
+	}
+}
+
+func scyshjFetchResource(rawURL, baseURL, referer string, image bool, names ...string) ([]byte, string, error) {
+	resolved := scyshjResourceURL(baseURL, rawURL)
+	if resolved == "" {
+		return nil, "", fmt.Errorf("scyshj: refusing invalid resource %q", rawURL)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("scyshj: create resource request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	if referer != "" {
+		req.Header.Set("Referer", referer)
+	}
+	if image {
+		req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+	} else {
+		req.Header.Set("Accept", "application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	}
+	client := *defaultClient
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if len(via) == 0 || (strings.EqualFold(next.URL.Hostname(), via[0].URL.Hostname()) && next.URL.Port() == via[0].URL.Port()) {
+			return nil
+		}
+		return http.ErrUseLastResponse
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("scyshj: fetch resource %s: %w", resolved, err)
+	}
+	defer response.Body.Close()
+	contentType := response.Header.Get("Content-Type")
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return nil, contentType, fmt.Errorf("scyshj: resource %s returned HTTP %d", resolved, response.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, scyshjMaxResourceBytes+1))
+	if err != nil {
+		return nil, contentType, fmt.Errorf("scyshj: read resource %s: %w", resolved, err)
+	}
+	name := resolved
+	if len(names) > 0 && strings.TrimSpace(names[0]) != "" {
+		name = names[0] + " " + resolved
+	}
+	if int64(len(body)) > scyshjMaxResourceBytes || !scyshjResourceBodyIsUsable(contentType, body, name, image) {
+		return nil, contentType, fmt.Errorf("scyshj: resource %s returned invalid type, shell, signature, or size", resolved)
+	}
+	return body, contentType, nil
+}
+
+func scyshjResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	if mediaType == "" {
+		return false
+	}
+	probe := body
+	if len(probe) > 8192 {
+		probe = probe[:8192]
+	}
+	if scyshjShellRE.Match(probe) {
+		return false
+	}
+	for _, invalid := range []string{"text/html", "application/xhtml+xml", "application/json", "text/xml", "application/xml"} {
+		if mediaType == invalid {
+			return false
+		}
+	}
+	magic := scyshjResourceMagic(body)
+	if image {
+		return strings.HasPrefix(mediaType, "image/") && scyshjImageMagicMatches(mediaType, magic)
+	}
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf"):
+		return magic == "pdf"
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml"):
+		return magic == "zip"
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt") || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint":
+		return magic == "ole"
+	case strings.Contains(lowerName, ".zip") || strings.Contains(lowerName, ".rar") || strings.Contains(lowerName, ".7z") || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed":
+		return magic == "zip" || magic == "rar" || magic == "7z"
+	case strings.HasPrefix(mediaType, "text/"):
+		return true
+	default:
+		return magic != ""
+	}
+}
+
+func scyshjImageMagicMatches(mediaType, magic string) bool {
+	switch {
+	case mediaType == "image/jpeg" || mediaType == "image/jpg":
+		return magic == "jpeg"
+	case mediaType == "image/png":
+		return magic == "png"
+	case mediaType == "image/gif":
+		return magic == "gif"
+	case mediaType == "image/webp":
+		return magic == "webp"
+	case mediaType == "image/bmp":
+		return magic == "bmp"
+	case mediaType == "image/tiff":
+		return magic == "tiff"
+	case mediaType == "image/svg+xml":
+		return magic == "svg"
+	default:
+		return false
+	}
+}
+
+func scyshjResourceMagic(body []byte) string {
+	switch {
+	case bytes.HasPrefix(body, []byte("%PDF-")):
+		return "pdf"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x03, 0x04}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x05, 0x06}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x07, 0x08}):
+		return "zip"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}):
+		return "ole"
+	case len(body) >= 3 && bytes.Equal(body[:3], []byte{0xff, 0xd8, 0xff}):
+		return "jpeg"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
+		return "png"
+	case len(body) >= 6 && (bytes.Equal(body[:6], []byte("GIF87a")) || bytes.Equal(body[:6], []byte("GIF89a"))):
+		return "gif"
+	case len(body) >= 12 && bytes.Equal(body[:4], []byte("RIFF")) && bytes.Equal(body[8:12], []byte("WEBP")):
+		return "webp"
+	case len(body) >= 2 && bytes.Equal(body[:2], []byte("BM")):
+		return "bmp"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{'I', 'I', '*', 0}) || bytes.Equal(body[:4], []byte{'M', 'M', 0, '*'})):
+		return "tiff"
+	case len(body) >= 7 && bytes.Equal(body[:7], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x00}):
+		return "rar"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x01, 0x00}):
+		return "rar"
+	case len(body) >= 6 && bytes.Equal(body[:6], []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}):
+		return "7z"
+	}
+	trimmed := bytes.TrimSpace(body)
+	if len(trimmed) > 0 {
+		probe := trimmed
+		if len(probe) > 8192 {
+			probe = probe[:8192]
+		}
+		lower := strings.ToLower(string(probe))
+		if strings.HasPrefix(lower, "<svg") || (strings.HasPrefix(lower, "<?xml") && strings.Contains(lower, "<svg")) {
+			return "svg"
+		}
+	}
+	return ""
 }

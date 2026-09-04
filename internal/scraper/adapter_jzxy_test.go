@@ -1,6 +1,8 @@
 package scraper
 
 import (
+	"io"
+	"net/http"
 	"os"
 	"reflect"
 	"strings"
@@ -18,13 +20,14 @@ func readJzxyFixture(t *testing.T, name string) []byte {
 
 func TestJzxyAdapterRegistrationAndCanonicalURL(t *testing.T) {
 	site := AllSites["jzxy"]
-	if site == nil || site.BaseURL != jzxyCanonicalBaseURL || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil {
+	if site == nil || site.BaseURL != jzxyCanonicalBaseURL || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil || site.ArticleFetchFunc == nil {
 		t.Fatalf("jzxy adapter hooks are incomplete: %+v", site)
 	}
 	want := []string{
 		"xxzx/xyxw", "xxzx/xygg", "xxzx/bkstz", "xxzx/yjstz", "xxzx/jyxx", "xxzx/xskj", "xxzx/xshdyg",
-		"djgz/djtz", "djgz/djxw", "djgz/jwgz", "djgz/xxyd", "hzjl/jldt", "xsgz/xsgzzd", "xygz",
-		"xygz/jcxy/tysqxy", "xygz/jcxy/cdbxhxy",
+		"xxzx/xzzx", "djgz/djtz", "djgz/djxw", "djgz/jwgz", "djgz/xxyd", "hzjl/hzxm", "hzjl/jldt",
+		"xsgz/xsgzzd", "xsgz/bgxz", "xygz", "xygz/xyhd", "xygz/byly", "xygz/jcxy/tysqxy",
+		"xygz/jcxy/cdbxhxy", "zskj",
 	}
 	if !reflect.DeepEqual(site.SubPages, want) {
 		t.Fatalf("jzxy sub-pages = %#v, want %#v", site.SubPages, want)
@@ -137,6 +140,62 @@ func TestJzxyHomeParserTraversesHiddenTabsAndActivity(t *testing.T) {
 	}
 }
 
+func TestJzxyHomeParserIncludesInternalHeroSlidesOnly(t *testing.T) {
+	items, err := parseAdapter_jzxyList(readJzxyFixture(t, "jzxy_home_banner.html"), jzxyCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("parsed %d hero items, want 2: %#v", len(items), items)
+	}
+	for _, item := range items {
+		if item.Type != "" || item.Date != "" || item.PublishedAt != "" {
+			t.Errorf("hero item has invented metadata: %#v", item)
+		}
+		if strings.Contains(item.URL, "mp.weixin.qq.com") {
+			t.Errorf("external hero slide leaked: %#v", item)
+		}
+	}
+	if items[0].URL != jzxyCanonicalBaseURL+"/info/1032/20001.htm" || items[0].Title != "桌面焦点文章完整标题" {
+		t.Errorf("desktop hero = %#v", items[0])
+	}
+	if items[1].URL != jzxyCanonicalBaseURL+"/info/1032/20002.htm" || items[1].Title != "移动端焦点文章" {
+		t.Errorf("mobile hero = %#v", items[1])
+	}
+}
+
+func TestJzxyAdditionalArticleFeedsAndGallery(t *testing.T) {
+	items, err := parseAdapter_jzxyList(readJzxyFixture(t, "jzxy_list_extra.html"), jzxyCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].Title != "下载中心真实文章" || items[0].Type != "下载中心" || items[0].Date != "2024-10-11" {
+		t.Fatalf("download-center items = %#v", items)
+	}
+	doc, err := jzxyDocument(readJzxyFixture(t, "jzxy_list_extra.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := jzxyPageCount(doc); got != 2 {
+		t.Fatalf("download-center page count = %d, want 2", got)
+	}
+
+	gallery, err := parseAdapter_jzxyList(readJzxyFixture(t, "jzxy_gallery.html"), jzxyCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(gallery) != 2 || gallery[0].Type != "毕业留影" || gallery[0].Date != "2025-06-27" || gallery[1].Date != "2024-07-01" {
+		t.Fatalf("gallery items = %#v", gallery)
+	}
+	galleryDoc, err := jzxyDocument(readJzxyFixture(t, "jzxy_gallery.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := jzxyPageCount(galleryDoc); got != 1 {
+		t.Fatalf("gallery page count = %d, want 1", got)
+	}
+}
+
 func TestJzxyArticleParserExtractsCompleteMetadataBodyImagesAndOutsideAttachment(t *testing.T) {
 	article, err := parseAdapter_jzxyArticle(readJzxyFixture(t, "jzxy_article.html"), "http://jzxy.swjtu.edu.cn")
 	if err != nil {
@@ -165,6 +224,100 @@ func TestJzxyArticleParserExtractsCompleteMetadataBodyImagesAndOutsideAttachment
 	}
 }
 
+func TestJzxyArticleUsesOnlyFixedPublicationMetadata(t *testing.T) {
+	article, err := parseAdapter_jzxyArticle(readJzxyFixture(t, "jzxy_article_body_date.html"), jzxyCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Date != "" || article.PublishedAt != "" {
+		t.Fatalf("body date polluted publication metadata: (%q, %q)", article.Date, article.PublishedAt)
+	}
+}
+
+func TestJzxyResourceValidationUsesContentTypeAndMagic(t *testing.T) {
+	cases := []struct {
+		name        string
+		contentType string
+		body        []byte
+		nameOrURL   string
+		image       bool
+		want        bool
+	}{
+		{"jpeg", "image/jpeg", []byte{0xff, 0xd8, 0xff, 0xd9}, "photo.jpg", true, true},
+		{"png", "image/png", []byte{0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a}, "photo.png", true, true},
+		{"bad image magic", "image/jpeg", []byte("not-an-image"), "photo.jpg", true, false},
+		{"pdf", "application/octet-stream", []byte("%PDF-1.7\n"), "附件.pdf", false, true},
+		{"ole document", "application/octet-stream", []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}, "附件.doc", false, true},
+		{"captcha html", "text/html; charset=UTF-8", []byte("<!doctype html><h1>请输入验证码下载附件</h1>"), "附件.pdf", false, false},
+	}
+	for _, tc := range cases {
+		if got := jzxyResourceBodyIsUsable(tc.contentType, tc.body, tc.nameOrURL, tc.image); got != tc.want {
+			t.Errorf("%s usable = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
+type jzxyTestRoundTripper func(*http.Request) (*http.Response, error)
+
+func (f jzxyTestRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func jzxyTestResponse(req *http.Request, status int, contentType string, body []byte) *http.Response {
+	return &http.Response{
+		StatusCode: status,
+		Status:     http.StatusText(status),
+		Header:     http.Header{"Content-Type": []string{contentType}},
+		Body:       io.NopCloser(strings.NewReader(string(body))),
+		Request:    req,
+	}
+}
+
+func TestJzxyFetchArticleVerifiesResourcesWithDetailReferer(t *testing.T) {
+	oldClient, oldNoCache := defaultClient, NoCache
+	defer func() {
+		defaultClient = oldClient
+		NoCache = oldNoCache
+		ClearCache()
+	}()
+	ClearCache()
+	NoCache = true
+	articleURL := jzxyCanonicalBaseURL + "/info/1000/10009.htm"
+	fixture := readJzxyFixture(t, "jzxy_article.html")
+	resourceRequests := 0
+	defaultClient = &http.Client{Transport: jzxyTestRoundTripper(func(req *http.Request) (*http.Response, error) {
+		switch req.URL.Path {
+		case "/info/1000/10009.htm":
+			return jzxyTestResponse(req, http.StatusOK, "text/html; charset=utf-8", fixture), nil
+		case "/__local/body.jpg":
+			resourceRequests++
+			if req.Header.Get("Referer") != articleURL {
+				t.Errorf("resource Referer = %q, want %q", req.Header.Get("Referer"), articleURL)
+			}
+			return jzxyTestResponse(req, http.StatusOK, "image/jpeg", []byte{0xff, 0xd8, 0xff, 0xd9}), nil
+		case "/system/_content/download.jsp":
+			resourceRequests++
+			if req.Header.Get("Referer") != articleURL {
+				t.Errorf("attachment Referer = %q, want %q", req.Header.Get("Referer"), articleURL)
+			}
+			return jzxyTestResponse(req, http.StatusOK, "application/octet-stream", []byte("%PDF-1.7\nfixture")), nil
+		default:
+			return jzxyTestResponse(req, http.StatusNotFound, "text/html", []byte("not found")), nil
+		}
+	})}
+
+	article, raw, err := jzxyFetchArticle(articleURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(raw) == 0 || resourceRequests != 2 || len(article.Images) != 1 || len(article.Attachments) != 1 || article.Attachments[0].Size == "" {
+		t.Fatalf("verified article = raw=%d requests=%d images=%#v attachments=%#v", len(raw), resourceRequests, article.Images, article.Attachments)
+	}
+	if !strings.Contains(article.ContentHTML, jzxyCanonicalBaseURL+"/__local/body.jpg") {
+		t.Fatalf("verified image was removed from ContentHTML: %s", article.ContentHTML)
+	}
+}
+
 func TestJzxyStrictShellErrorAndEmptyListRegression(t *testing.T) {
 	if items, err := parseAdapter_jzxyList(readJzxyFixture(t, "jzxy_empty.html"), jzxyCanonicalBaseURL); err != nil || len(items) != 0 {
 		t.Fatalf("valid empty list = (%#v, %v), want empty nil result", items, err)
@@ -179,5 +332,11 @@ func TestJzxyStrictShellErrorAndEmptyListRegression(t *testing.T) {
 	}
 	if _, err := parseAdapter_jzxyArticle(readJzxyFixture(t, "jzxy_empty.html"), jzxyCanonicalBaseURL); err == nil {
 		t.Error("empty list shell was accepted as an article")
+	}
+	if _, err := parseAdapter_jzxyList([]byte(`<html><head><meta name="pageType" content="2"></head><body><div class="news">module-only shell</div></body></html>`), jzxyCanonicalBaseURL); err == nil {
+		t.Error("pageType=2 module-only shell was accepted as a home page")
+	}
+	if _, err := parseAdapter_jzxyList([]byte(`<html><head><title>404错误提示</title></head><body>页面不存在</body></html>`), jzxyCanonicalBaseURL); err == nil {
+		t.Error("404 error shell was accepted as a list")
 	}
 }

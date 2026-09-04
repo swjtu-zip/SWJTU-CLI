@@ -1,7 +1,11 @@
 package scraper
 
 import (
+	"bytes"
 	"fmt"
+	"html"
+	"io"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -23,7 +27,6 @@ var kfjtSubPages = []string{
 	"xwzx/tzgg",
 	"djgz/djdt",
 	"djgz/zbdj",
-	"djgz/lxjc",
 	"jjgz/jjdt",
 	"jjgz/djfg",
 	"jjgz/jsjy",
@@ -34,11 +37,14 @@ var kfjtSubPages = []string{
 }
 
 var (
-	kfjtArticlePathRE = regexp.MustCompile(`(?i)^/info/[0-9]+/[0-9]+\.html?$`)
-	kfjtDateTimeRE    = regexp.MustCompile(`(?i)([0-9]{2,4})\s*(?:年|[-/.])\s*([0-9]{1,2})\s*(?:月|[-/.])\s*([0-9]{1,2})\s*(?:日|号)?\s*(?:[Tt]|\s+)\s*([0-9]{1,2})\s*[:：]\s*([0-9]{2})(?:\s*[:：]\s*([0-9]{2}))?`)
-	kfjtDateRE        = regexp.MustCompile(`(?i)([0-9]{2,4})\s*(?:年|[-/.])\s*([0-9]{1,2})\s*(?:月|[-/.])\s*([0-9]{1,2})\s*(?:日|号)?`)
-	kfjtAttachmentRE  = regexp.MustCompile(`(?i)\.(?:pdf|docx?|xlsx?|pptx?|zip|rar|7z|txt|csv|wps|rtf)(?:$|[?#&])`)
+	kfjtArticlePathRE   = regexp.MustCompile(`(?i)^/info/[0-9]+/[0-9]+\.html?$`)
+	kfjtDateTimeRE      = regexp.MustCompile(`(?i)([0-9]{2,4})\s*(?:年|[-/.])\s*([0-9]{1,2})\s*(?:月|[-/.])\s*([0-9]{1,2})\s*(?:日|号)?\s*(?:[Tt]|\s+)\s*([0-9]{1,2})\s*[:：]\s*([0-9]{2})(?:\s*[:：]\s*([0-9]{2}))?`)
+	kfjtDateRE          = regexp.MustCompile(`(?i)([0-9]{2,4})\s*(?:年|[-/.])\s*([0-9]{1,2})\s*(?:月|[-/.])\s*([0-9]{1,2})\s*(?:日|号)?`)
+	kfjtAttachmentRE    = regexp.MustCompile(`(?i)\.(?:pdf|docx?|xlsx?|pptx?|zip|rar|7z|txt|csv|wps|rtf)(?:$|[?#&])`)
+	kfjtResourceShellRE = regexp.MustCompile(`(?is)(?:<!doctype\s+html|<html(?:\s|>)|<head(?:\s|>)|<body(?:\s|>)|captcha|验证码|人机验证|安全验证|cloudflare|just a moment|access denied|请求已被阻断|页面不存在|404\s+not\s+found)`)
 )
+
+const kfjtMaxResourceBytes int64 = 32 << 20
 
 func init() {
 	if site := AllSites["kfjt"]; site != nil {
@@ -50,6 +56,7 @@ func init() {
 		ParseArticle: parseAdapter_kfjtArticle,
 		PageURL:      kfjtPageURL,
 		TotalPages:   kfjtTotalPages,
+		FetchArticle: kfjtFetchArticle,
 	})
 }
 
@@ -319,20 +326,20 @@ func parseAdapter_kfjtArticle(raw []byte, baseURL string) (*model.Article, error
 	}
 
 	baseURL = kfjtCanonicalBase(baseURL)
-	article, err := parseBodaArticle(raw, baseURL)
-	if err != nil {
-		return nil, fmt.Errorf("kfjt: parse article body: %w", err)
-	}
-	article.Title = title
-	if date, publishedAt := kfjtDateValues(shell.Find(".hd .info").First().Text()); date != "" {
-		article.Date = date
-		article.PublishedAt = publishedAt
-	}
-	article.Type = kfjtArticleType(doc)
+	article := &model.Article{Title: title, Type: kfjtArticleType(doc)}
 	if article.Type == "" {
 		return nil, fmt.Errorf("kfjt: article type is missing")
 	}
+	article.Date, article.PublishedAt = kfjtArticleDate(shell)
 	kfjtAppendArticleMeta(article, shell)
+	content := shell.Find(".bd .v_news_content").First()
+	if content.Length() == 0 {
+		content = shell.Find(".v_news_content").First()
+	}
+	article.Content = extractBodaContentText(content)
+	if htmlValue, err := content.Html(); err == nil {
+		article.ContentHTML = htmlValue
+	}
 	kfjtNormalizeContentHTML(article, baseURL)
 	kfjtAppendAttachments(article, shell, baseURL)
 	article.RawHTML = string(raw)
@@ -340,6 +347,29 @@ func parseAdapter_kfjtArticle(raw []byte, baseURL string) (*model.Article, error
 		return nil, fmt.Errorf("kfjt: article has no body or resources")
 	}
 	return article, nil
+}
+
+func kfjtArticleDate(shell *goquery.Selection) (string, string) {
+	if shell == nil || shell.Length() == 0 {
+		return "", ""
+	}
+	info := shell.Find(".hd .info").First()
+	if info.Length() == 0 {
+		return "", ""
+	}
+	var dateText string
+	info.Find("span").EachWithBreak(func(_ int, span *goquery.Selection) bool {
+		value := strings.Join(strings.Fields(span.Text()), " ")
+		if strings.HasPrefix(value, "日期：") || strings.HasPrefix(value, "日期:") {
+			dateText = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(value, "日期："), "日期:"))
+			return false
+		}
+		return true
+	})
+	if dateText == "" {
+		dateText = info.Text()
+	}
+	return kfjtDateValues(dateText)
 }
 
 func kfjtAppendArticleMeta(article *model.Article, shell *goquery.Selection) {
@@ -374,13 +404,10 @@ func kfjtAppendAttachments(article *model.Article, shell *goquery.Selection, bas
 		if href == "" || strings.HasPrefix(strings.ToLower(href), "mailto:") || strings.HasPrefix(href, "#") {
 			return
 		}
-		lower := strings.ToLower(href)
-		isDownload := strings.Contains(lower, "download.jsp")
-		isFile := kfjtAttachmentRE.MatchString(lower)
-		if !isDownload && !isFile {
+		if !kfjtAttachmentLink(anchor, href, baseURL) {
 			return
 		}
-		resolved := kfjtResourceURL(baseURL, href)
+		resolved := kfjtAttachmentURL(baseURL, href)
 		if resolved == "" || seen[resolved] {
 			return
 		}
@@ -406,29 +433,90 @@ func kfjtNormalizeContentHTML(article *model.Article, baseURL string) {
 		return
 	}
 	root := doc.Find("#kfjt-content-root").First()
+	root.Find("script, style, noscript").Remove()
 	seenImages := make(map[string]bool, len(article.Images))
 	for _, image := range article.Images {
 		seenImages[image] = true
 	}
 	root.Find("img[src]").Each(func(_ int, image *goquery.Selection) {
-		resolved := kfjtResourceURL(baseURL, image.AttrOr("src", ""))
+		resolved := kfjtResourceURL(baseURL, kfjtImageSource(image))
 		if resolved == "" {
+			image.Remove()
 			return
 		}
 		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vurl"} {
+			image.RemoveAttr(attr)
+		}
 		if !seenImages[resolved] {
 			seenImages[resolved] = true
 			article.Images = append(article.Images, resolved)
 		}
 	})
 	root.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
-		if resolved := kfjtResourceURL(baseURL, anchor.AttrOr("href", "")); resolved != "" {
+		href := html.UnescapeString(strings.TrimSpace(anchor.AttrOr("href", "")))
+		if bodaIsPseudoResourceHref(href) {
+			anchor.RemoveAttr("href")
+			anchor.RemoveAttr("download")
+			return
+		}
+		if resolved := kfjtResourceURL(baseURL, href); resolved != "" {
 			anchor.SetAttr("href", resolved)
+		} else {
+			anchor.RemoveAttr("href")
+			anchor.RemoveAttr("download")
 		}
 	})
 	if html, err := root.Html(); err == nil {
 		article.ContentHTML = html
 	}
+}
+
+func kfjtImageSource(image *goquery.Selection) string {
+	if image == nil || image.Length() == 0 {
+		return ""
+	}
+	for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc", "vurl"} {
+		if value := strings.TrimSpace(image.AttrOr(attr, "")); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func kfjtAttachmentLink(link *goquery.Selection, href, baseURL string) bool {
+	if link == nil || link.Length() == 0 || strings.TrimSpace(href) == "" || bodaIsPseudoResourceHref(href) {
+		return false
+	}
+	if kfjtAttachmentURL(baseURL, href) == "" {
+		return false
+	}
+	if strings.TrimSpace(link.AttrOr("download", "")) != "" {
+		return true
+	}
+	lower := strings.ToLower(href)
+	if strings.Contains(lower, "download.jsp") || kfjtAttachmentRE.MatchString(lower) {
+		return true
+	}
+	for _, selector := range []string{".attachment", ".attachments", ".download", ".annex"} {
+		if ancestor := link.Closest(selector); ancestor.Length() > 0 {
+			return true
+		}
+	}
+	return strings.Contains(strings.ToLower(strings.Join(strings.Fields(link.Text()), " ")), "下载")
+}
+
+func kfjtAttachmentURL(baseURL, href string) string {
+	resolved := kfjtResourceURL(baseURL, href)
+	if resolved == "" {
+		return ""
+	}
+	base, baseErr := url.Parse(kfjtCanonicalBase(baseURL))
+	target, targetErr := url.Parse(resolved)
+	if baseErr != nil || targetErr != nil || base.Host == "" || target.Host == "" || !strings.EqualFold(base.Host, target.Host) {
+		return ""
+	}
+	return resolved
 }
 
 func kfjtArticleType(doc *goquery.Document) string {
@@ -546,8 +634,8 @@ func kfjtArticleURL(baseURL, href string) (string, bool) {
 }
 
 func kfjtResourceURL(baseURL, href string) string {
-	href = strings.TrimSpace(href)
-	if href == "" || strings.HasPrefix(strings.ToLower(href), "javascript:") || strings.HasPrefix(href, "#") {
+	href = html.UnescapeString(strings.TrimSpace(href))
+	if href == "" || kfjtResourceMarked(href) {
 		return ""
 	}
 	base, err := url.Parse(kfjtCanonicalBase(baseURL))
@@ -559,7 +647,10 @@ func kfjtResourceURL(baseURL, href string) string {
 		return ""
 	}
 	resolved := base.ResolveReference(ref)
-	if resolved.Host == "" {
+	if resolved.Host == "" || (resolved.Scheme != "http" && resolved.Scheme != "https") {
+		return ""
+	}
+	if kfjtResourceMarked(resolved.Path + "?" + resolved.RawQuery) {
 		return ""
 	}
 	if strings.EqualFold(resolved.Host, "kfjt.swjtu.edu.cn") {
@@ -567,6 +658,330 @@ func kfjtResourceURL(baseURL, href string) string {
 		resolved.Host = "kfjt.swjtu.edu.cn"
 	}
 	return resolved.String()
+}
+
+func kfjtResourceMarked(raw string) bool {
+	raw = strings.ToLower(strings.TrimSpace(html.UnescapeString(raw)))
+	if raw == "" || strings.HasPrefix(raw, "#") || strings.HasPrefix(raw, "javascript:") || strings.HasPrefix(raw, "data:") || strings.HasPrefix(raw, "file:") || strings.HasPrefix(raw, "mailto:") {
+		return true
+	}
+	for _, marker := range []string{
+		"captcha", "verifycode", "verification", "createimage", "getcode", "codevalue",
+		"access-denied", "access_denied", "waf", "login", "验证码", "人机验证", "安全验证",
+		"spacer.gif", "blank.gif", "transparent.gif", "placeholder", "loading.gif", "pixel.gif",
+	} {
+		if strings.Contains(raw, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func kfjtFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	return kfjtFetchArticleAt(articleURL, kfjtCanonicalBaseURL)
+}
+
+func kfjtFetchArticleAt(articleURL, baseURL string) (*model.Article, []byte, error) {
+	fullURL, ok := kfjtArticleURL(baseURL, articleURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("kfjt: refusing non-local or non-detail URL %q", articleURL)
+	}
+	body, err := fetch(fullURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("kfjt: fetch article %s: %w", fullURL, err)
+	}
+	article, err := parseAdapter_kfjtArticle(body, baseURL)
+	if err != nil {
+		return nil, body, fmt.Errorf("kfjt: parse article %s: %w", fullURL, err)
+	}
+	candidateImages := append([]string(nil), article.Images...)
+	candidateAttachments := append([]model.Attachment(nil), article.Attachments...)
+	article.Images = kfjtVerifyImages(candidateImages, fullURL, baseURL)
+	article.Attachments = kfjtVerifyAttachments(candidateAttachments, fullURL, baseURL)
+	article.ContentHTML = kfjtSanitizeContentHTML(article.ContentHTML, baseURL, article.Images, candidateAttachments, article.Attachments)
+	return article, body, nil
+}
+
+func kfjtVerifyImages(images []string, referer, baseURL string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool)
+	for _, raw := range images {
+		resolved := kfjtResourceURL(baseURL, raw)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		if _, _, err := kfjtFetchResource(resolved, baseURL, referer, true); err != nil {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func kfjtVerifyAttachments(attachments []model.Attachment, referer, baseURL string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool)
+	for _, attachment := range attachments {
+		resolved := kfjtAttachmentURL(baseURL, attachment.URL)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, _, err := kfjtFetchResource(resolved, baseURL, referer, false)
+		if err != nil {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func kfjtFetchResource(rawURL, baseURL, referer string, image bool) ([]byte, string, error) {
+	resolved := kfjtResourceURL(baseURL, rawURL)
+	if resolved == "" {
+		return nil, "", fmt.Errorf("kfjt: refusing invalid resource %q", rawURL)
+	}
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return nil, "", fmt.Errorf("kfjt: refusing non-HTTP resource %q", resolved)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("kfjt: create resource request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0 Safari/537.36")
+	if referer != "" {
+		req.Header.Set("Referer", referer)
+	}
+	if image {
+		req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+	} else {
+		req.Header.Set("Accept", "application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	}
+	client := http.DefaultClient
+	if defaultClient != nil {
+		copyClient := *defaultClient
+		copyClient.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+			if len(via) == 0 || (strings.EqualFold(next.URL.Scheme, via[0].URL.Scheme) && strings.EqualFold(next.URL.Host, via[0].URL.Host)) {
+				return nil
+			}
+			return http.ErrUseLastResponse
+		}
+		client = &copyClient
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("kfjt: fetch resource %s: %w", resolved, err)
+	}
+	defer response.Body.Close()
+	contentType := response.Header.Get("Content-Type")
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return nil, contentType, fmt.Errorf("kfjt: resource %s: HTTP %d", resolved, response.StatusCode)
+	}
+	if response.ContentLength > kfjtMaxResourceBytes {
+		return nil, contentType, fmt.Errorf("kfjt: resource %s exceeds size limit", resolved)
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, kfjtMaxResourceBytes+1))
+	if err != nil {
+		return nil, contentType, fmt.Errorf("kfjt: read resource %s: %w", resolved, err)
+	}
+	if int64(len(body)) > kfjtMaxResourceBytes || !kfjtResourceBodyIsUsable(contentType, body, resolved, image) {
+		return nil, contentType, fmt.Errorf("kfjt: resource %s returned invalid Content-Type, shell, or magic signature", resolved)
+	}
+	return body, contentType, nil
+}
+
+func kfjtResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	if mediaType == "" {
+		return false
+	}
+	for _, invalid := range []string{"text/html", "application/xhtml+xml", "application/json", "text/xml", "application/xml"} {
+		if mediaType == invalid {
+			return false
+		}
+	}
+	probe := bytes.TrimSpace(bytes.TrimPrefix(body, []byte{0xef, 0xbb, 0xbf}))
+	if len(probe) > 8192 {
+		probe = probe[:8192]
+	}
+	if kfjtResourceShellRE.Match(probe) {
+		return false
+	}
+	magic := kfjtResourceMagic(body)
+	if image {
+		switch mediaType {
+		case "image/jpeg", "image/jpg", "image/pjpeg":
+			return magic == "jpeg"
+		case "image/png":
+			return magic == "png"
+		case "image/gif":
+			return magic == "gif"
+		case "image/webp":
+			return magic == "webp"
+		case "image/bmp":
+			return magic == "bmp"
+		case "image/tiff":
+			return magic == "tiff"
+		case "image/svg+xml":
+			return magic == "svg"
+		default:
+			return false
+		}
+	}
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf"):
+		return magic == "pdf" && kfjtBinaryContentTypeOK(mediaType, "pdf")
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(mediaType, "officedocument") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml"):
+		return magic == "zip" && kfjtBinaryContentTypeOK(mediaType, "office-zip")
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt") || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint":
+		return magic == "ole" && kfjtBinaryContentTypeOK(mediaType, "office-ole")
+	case strings.Contains(lowerName, ".zip") || strings.Contains(lowerName, ".rar") || strings.Contains(lowerName, ".7z") || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed":
+		return (magic == "zip" || magic == "rar" || magic == "7z") && kfjtBinaryContentTypeOK(mediaType, "archive")
+	case strings.Contains(lowerName, ".rtf") || mediaType == "application/rtf" || mediaType == "text/rtf":
+		return magic == "rtf" && kfjtBinaryContentTypeOK(mediaType, "rtf")
+	case strings.Contains(lowerName, ".txt") || strings.Contains(lowerName, ".csv") || strings.HasPrefix(mediaType, "text/"):
+		return !bytes.Contains(bytes.ToLower(probe), []byte("<html"))
+	default:
+		return magic != "" && kfjtBinaryContentTypeOK(mediaType, "binary")
+	}
+}
+
+func kfjtBinaryContentTypeOK(mediaType, kind string) bool {
+	if mediaType == "application/octet-stream" || mediaType == "application/force-download" || mediaType == "application/download" {
+		return true
+	}
+	switch kind {
+	case "pdf":
+		return mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf")
+	case "office-zip":
+		return mediaType == "application/zip" || strings.Contains(mediaType, "officedocument") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml")
+	case "office-ole":
+		return mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint"
+	case "archive":
+		return mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed"
+	case "rtf":
+		return mediaType == "application/rtf" || mediaType == "text/rtf"
+	case "binary":
+		return true
+	default:
+		return false
+	}
+}
+
+func kfjtResourceMagic(body []byte) string {
+	switch {
+	case bytes.HasPrefix(body, []byte("%PDF-")):
+		return "pdf"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x03, 0x04}) || bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x05, 0x06}) || bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x07, 0x08})):
+		return "zip"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}):
+		return "ole"
+	case len(body) >= 3 && bytes.Equal(body[:3], []byte{0xff, 0xd8, 0xff}):
+		return "jpeg"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
+		return "png"
+	case len(body) >= 6 && (bytes.Equal(body[:6], []byte("GIF87a")) || bytes.Equal(body[:6], []byte("GIF89a"))):
+		return "gif"
+	case len(body) >= 12 && bytes.Equal(body[:4], []byte("RIFF")) && bytes.Equal(body[8:12], []byte("WEBP")):
+		return "webp"
+	case len(body) >= 2 && bytes.Equal(body[:2], []byte("BM")):
+		return "bmp"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{'I', 'I', '*', 0}) || bytes.Equal(body[:4], []byte{'M', 'M', 0, '*'})):
+		return "tiff"
+	case len(body) >= 7 && bytes.Equal(body[:7], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x00}):
+		return "rar"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x01, 0x00}):
+		return "rar"
+	case len(body) >= 6 && bytes.Equal(body[:6], []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}):
+		return "7z"
+	}
+	trimmed := bytes.TrimSpace(bytes.TrimPrefix(body, []byte{0xef, 0xbb, 0xbf}))
+	probe := trimmed
+	if len(probe) > 4096 {
+		probe = probe[:4096]
+	}
+	if bytes.HasPrefix(trimmed, []byte("{\\rtf")) {
+		return "rtf"
+	}
+	if bytes.Contains(bytes.ToLower(probe), []byte("<svg")) {
+		return "svg"
+	}
+	return ""
+}
+
+func kfjtSanitizeContentHTML(raw, baseURL string, validImages []string, candidateAttachments, validAttachments []model.Attachment) string {
+	if strings.TrimSpace(raw) == "" {
+		return ""
+	}
+	imageSet := make(map[string]bool, len(validImages))
+	for _, image := range validImages {
+		if resolved := kfjtResourceURL(baseURL, image); resolved != "" {
+			imageSet[resolved] = true
+		}
+	}
+	attachmentSet := make(map[string]bool, len(validAttachments))
+	for _, attachment := range validAttachments {
+		if resolved := kfjtAttachmentURL(baseURL, attachment.URL); resolved != "" {
+			attachmentSet[resolved] = true
+		}
+	}
+	candidateSet := make(map[string]bool, len(candidateAttachments))
+	for _, attachment := range candidateAttachments {
+		if resolved := kfjtAttachmentURL(baseURL, attachment.URL); resolved != "" {
+			candidateSet[resolved] = true
+		}
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader("<div id=\"kfjt-content-root\">" + raw + "</div>"))
+	if err != nil {
+		return ""
+	}
+	root := doc.Find("#kfjt-content-root").First()
+	root.Find("script, style, noscript").Remove()
+	root.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := kfjtResourceURL(baseURL, kfjtImageSource(image))
+		if resolved == "" || !imageSet[resolved] {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vurl"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	root.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		href := html.UnescapeString(strings.TrimSpace(link.AttrOr("href", "")))
+		if bodaIsPseudoResourceHref(href) {
+			link.RemoveAttr("href")
+			link.RemoveAttr("download")
+			return
+		}
+		resolved := kfjtResourceURL(baseURL, href)
+		if resolved == "" {
+			link.RemoveAttr("href")
+			link.RemoveAttr("download")
+			return
+		}
+		if kfjtAttachmentLink(link, href, baseURL) || candidateSet[resolved] {
+			if !attachmentSet[resolved] {
+				link.RemoveAttr("href")
+				link.RemoveAttr("download")
+				return
+			}
+		}
+		link.SetAttr("href", resolved)
+	})
+	if value, err := root.Html(); err == nil {
+		return value
+	}
+	return ""
 }
 
 func kfjtCanonicalBase(baseURL string) string {

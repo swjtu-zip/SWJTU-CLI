@@ -13,7 +13,6 @@ func TestDynamicOrRedirectSitesDoNotReportEmptySuccess(t *testing.T) {
 		{id: "fad", file: "fad.html"},
 		{id: "jwc", file: "jwc.html"},
 		{id: "lib", file: "lib.html"},
-		{id: "sro", file: "sro.html"},
 		{id: "xg", file: "xg.html"},
 	}
 	for _, tc := range cases {

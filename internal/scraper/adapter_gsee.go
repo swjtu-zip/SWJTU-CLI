@@ -17,9 +17,10 @@ import (
 const gseeCanonicalBaseURL = "https://gsee.swjtu.edu.cn"
 
 // gseeSubPages contains the reachable article-list entry points found in the
-// navigation, news-center sidebar, and homepage cards. The two 文件下载 indexes
-// are kept separate below: they are resource indexes, not ordinary article
-// feeds, and some of their rows are direct file downloads.
+// navigation, news-center sidebar, and homepage cards. Static landing pages
+// such as bksjy.htm, xtgz.htm, and the xkjs introduction pages are not feeds.
+// The two 文件下载 indexes are kept separate below: they are resource indexes,
+// not ordinary article feeds, and some of their rows are direct file downloads.
 var gseeSubPages = []string{
 	"xwzx/xwdt",
 	"xwzx/tzgg/dzbg1",
@@ -27,11 +28,9 @@ var gseeSubPages = []string{
 	"xwzx/xsxx",
 	"xwzx/tzgg/sysgl",
 
-	"bksjy",
 	"bksjy/tzgg",
 	"yjsjy/tzgg",
 	"xsky/xsdt",
-	"xkjs/xsjl",
 
 	"djgz/djdt",
 	"djgz/zxtz",
@@ -40,10 +39,10 @@ var gseeSubPages = []string{
 	"djgz/llyd",
 	"djgz/hszd",
 
-	"xtgz",
 	"xtgz/xtdt",
 	"xtgz/tzgg",
 	"xtgz/jygz/jyxx",
+	"xtgz/jygz/jyzd",
 	"xygz/tzgg",
 }
 
@@ -182,6 +181,7 @@ func parseGseeNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 
 		// The academic homepage cards have an external poster link in the image
 		// cell and a local article link in dd/h4. Select the latter explicitly.
+		// The adjacent date is the event/poster date, not a publication node.
 		doc.Find(".acad > dl").Each(func(_ int, row *goquery.Selection) {
 			anchor := gseeArticleAnchor(row, baseURL)
 			if anchor == nil || anchor.Length() == 0 {
@@ -191,11 +191,12 @@ func parseGseeNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 			if title == "" {
 				title = gseeAnchorTitle(anchor)
 			}
-			addGseeItem(&items, seen, baseURL, anchor.AttrOr("href", ""), title, row.Find("dd p").Last().Text(), "学术信息")
+			addGseeItem(&items, seen, baseURL, anchor.AttrOr("href", ""), title, "", "学术信息")
 		})
 	}
 
-	// Academic entries pair a date-title immediately before each schedule.
+	// Academic entries pair a date-title immediately before each schedule. That
+	// date is the scheduled event date, so it must not become PublishedAt.
 	schedules := doc.Find(".acad .schedule")
 	if schedules.Length() == 0 {
 		// The academic-information page currently renders the same schedule
@@ -208,12 +209,11 @@ func parseGseeNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 		if anchor.Length() == 0 {
 			return
 		}
-		date := ""
-		previous := schedule.Prev()
-		if previous.Length() > 0 && previous.HasClass("date-title") {
-			date = previous.Find("h4").First().Text()
+		itemType := gseeListPageType(doc)
+		if itemType == "" {
+			itemType = "学术信息"
 		}
-		addGseeItem(&items, seen, baseURL, anchor.AttrOr("href", ""), gseeAnchorTitle(anchor), date, gseeListPageType(doc))
+		addGseeItem(&items, seen, baseURL, anchor.AttrOr("href", ""), gseeAnchorTitle(anchor), "", itemType)
 	})
 
 	if schedules.Length() > 0 {
@@ -575,12 +575,9 @@ func parseGseeArticle(html []byte, baseURL string) (*model.Article, error) {
 	}
 	source := doc.Find(".article .source").First()
 	if source.Length() > 0 {
-		if date, publishedAt := gseeDateValues(source.Text()); date != "" {
-			article.Date = date
-			if publishedAt != "" {
-				article.PublishedAt = publishedAt
-			}
-		}
+		// The fixed source line is authoritative. Clear any value the shared
+		// parser may have inferred when this line is absent or date-less.
+		article.Date, article.PublishedAt = gseeDateValues(source.Text())
 	} else {
 		// .date-title is the scheduled event date on the academic poster
 		// template, not the publication date of the detail page. Do not let
@@ -676,8 +673,15 @@ func gseeAppendAttachments(article *model.Article, doc *goquery.Document, baseUR
 }
 
 func gseeIsAttachmentLink(anchor *goquery.Selection, href, name string) bool {
+	if anchor == nil || anchor.Length() == 0 || bodaIsPseudoResourceHref(href) {
+		return false
+	}
 	lowerHref := strings.ToLower(href)
-	if strings.Contains(lowerHref, "download.jsp") || strings.Contains(lowerHref, "downloadattachurl") || strings.TrimSpace(anchor.AttrOr("download", "")) != "" {
+	if strings.Contains(lowerHref, "download.jsp") || strings.Contains(lowerHref, "downloadattachurl") {
+		parsed, err := url.Parse(href)
+		return err == nil && parsed.RawQuery != ""
+	}
+	if strings.TrimSpace(anchor.AttrOr("download", "")) != "" {
 		return true
 	}
 	if gseeAttachmentExt.MatchString(href) || gseeAttachmentExt.MatchString(name) {
@@ -711,15 +715,25 @@ func gseeFinalizeArticleContent(article *model.Article, doc *goquery.Document, b
 		return
 	}
 	content.Find("img[src]").Each(func(_ int, image *goquery.Selection) {
-		image.SetAttr("src", cleanURL(resolveURL(baseURL, image.AttrOr("src", ""))))
+		resolved := bodaResourceURL(baseURL, image.AttrOr("src", ""))
+		if resolved == "" {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
 	})
 	content.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
 		href := strings.TrimSpace(anchor.AttrOr("href", ""))
+		if bodaIsPseudoResourceHref(href) {
+			anchor.Remove()
+			return
+		}
 		name := gseeAttachmentName(anchor, href)
 		if href != "" && name != "" && gseeIsAttachmentLink(anchor, href, name) {
 			anchor.SetAttr("href", cleanURL(resolveURL(baseURL, href)))
 		}
 	})
+	article.Content = extractBodaContentText(content)
 	if html, err := content.Html(); err == nil {
 		article.ContentHTML = html
 	}

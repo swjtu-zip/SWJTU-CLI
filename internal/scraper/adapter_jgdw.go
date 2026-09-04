@@ -1,9 +1,15 @@
 package scraper
 
 import (
+	"bytes"
 	"fmt"
+	"html"
+	"io"
+	"mime"
+	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -43,6 +49,7 @@ func init() {
 		ParseArticle: parseAdapter_jgdwArticle,
 		PageURL:      jgdwPageURL,
 		TotalPages:   jgdwTotalPages,
+		FetchArticle: jgdwFetchArticle,
 	})
 }
 
@@ -52,6 +59,9 @@ func init() {
 func jgdwPageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
 	slug = strings.Trim(slug, "/")
+	if baseURL == "" {
+		return ""
+	}
 	if extension == "" {
 		extension = ".htm"
 	}
@@ -104,6 +114,9 @@ func parseAdapter_jgdwList(html []byte, baseURL string) ([]model.NewsItem, error
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
 	if err != nil {
 		return nil, fmt.Errorf("parse jgdw list: %w", err)
+	}
+	if jgdwErrorDocument(doc) {
+		return nil, fmt.Errorf("jgdw list is an error, login, or verification page")
 	}
 
 	if jgdwIsHomepage(doc) {
@@ -266,12 +279,18 @@ func parseAdapter_jgdwArticle(html []byte, baseURL string) (*model.Article, erro
 	if err != nil {
 		return nil, fmt.Errorf("parse jgdw article: %w", err)
 	}
+	if jgdwErrorDocument(doc) {
+		return nil, fmt.Errorf("jgdw article is an error, login, or verification page")
+	}
 	if doc.Find(`meta[name="pageType"]`).AttrOr("content", "") != "3" {
 		return nil, fmt.Errorf("jgdw page is not an article shell")
 	}
-	if doc.Find(".art-tit h3").First().Length() == 0 ||
-		doc.Find("#vsb_content .v_news_content, .v_news_content").First().Length() == 0 {
+	content := jgdwArticleContent(doc)
+	if doc.Find(".art-tit h3").First().Length() == 0 || content == nil || content.Length() == 0 {
 		return nil, fmt.Errorf("jgdw article shell is missing heading or content")
+	}
+	if strings.TrimSpace(extractBodaContentText(content)) == "" && content.Find("img, table").Length() == 0 {
+		return nil, fmt.Errorf("jgdw article content is empty")
 	}
 
 	article, err := parseBodaArticle(html, baseURL)
@@ -282,14 +301,24 @@ func parseAdapter_jgdwArticle(html []byte, baseURL string) (*model.Article, erro
 	article.Type = jgdwHeading(doc)
 
 	meta := strings.Join(strings.Fields(doc.Find(".art-tit h2").First().Text()), " ")
+	article.Date = ""
+	article.PublishedAt = ""
 	if date, publishedAt := jgdwDateFields(meta); date != "" {
 		article.Date = date
 		article.PublishedAt = publishedAt
 	}
-	if article.Source == "" {
-		article.Source = jgdwMetaValue(meta, "来源")
+	article.Source = jgdwMetaValue(meta, "来源")
+	if article.Title == "" || article.Type == "" || article.Date == "" {
+		return nil, fmt.Errorf("jgdw article is missing fixed title, type, or publication date")
 	}
+	article.Content = extractBodaContentText(content)
+	jgdwNormalizeContentMarkup(content, baseURL)
+	if contentHTML, htmlErr := content.Html(); htmlErr == nil {
+		article.ContentHTML = contentHTML
+	}
+	article.Images = jgdwCollectImages(content, baseURL)
 	jgdwAppendOutsideAttachments(doc, article, baseURL)
+	article.Attachments = jgdwLocalAttachments(article.Attachments, baseURL)
 	return article, nil
 }
 
@@ -316,10 +345,481 @@ func jgdwMetaValue(meta, label string) string {
 	return strings.TrimSpace(value)
 }
 
+// jgdwArticleContent is deliberately narrower than the shared article parser's
+// fallback chain. The live template keeps the article body under #vsb_content;
+// accepting an arbitrary .content-main here could turn a shell or footer into
+// an article body.
+func jgdwArticleContent(doc *goquery.Document) *goquery.Selection {
+	for _, selector := range []string{
+		"#vsb_content .v_news_content",
+		".art-body .v_news_content",
+		".art-main .v_news_content",
+		".v_news_content",
+	} {
+		content := doc.Find(selector).First()
+		if content.Length() > 0 && content.Closest("header, nav, footer, .top, .head, .foot").Length() == 0 {
+			return content
+		}
+	}
+	return nil
+}
+
+func jgdwCollectImages(content *goquery.Selection, baseURL string) []string {
+	images := make([]string, 0)
+	seen := make(map[string]bool)
+	if content == nil || content.Length() == 0 {
+		return images
+	}
+	content.Find("img").Each(func(_ int, image *goquery.Selection) {
+		for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			if resolved := jgdwResourceURL(baseURL, image.AttrOr(attr, "")); resolved != "" {
+				if !seen[resolved] {
+					seen[resolved] = true
+					images = append(images, resolved)
+				}
+				return
+			}
+		}
+	})
+	return images
+}
+
+func jgdwNormalizeContentMarkup(content *goquery.Selection, baseURL string) {
+	if content == nil || content.Length() == 0 {
+		return
+	}
+	content.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := ""
+		for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			if candidate := jgdwResourceURL(baseURL, image.AttrOr(attr, "")); candidate != "" {
+				resolved = candidate
+				break
+			}
+		}
+		if resolved == "" {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+	})
+	content.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
+		href := html.UnescapeString(strings.TrimSpace(anchor.AttrOr("href", "")))
+		if strings.HasPrefix(href, "#") {
+			return
+		}
+		if resolved := jgdwResourceURL(baseURL, href); resolved != "" {
+			anchor.SetAttr("href", resolved)
+		} else {
+			anchor.RemoveAttr("href")
+		}
+	})
+}
+
+func jgdwLocalAttachments(attachments []model.Attachment, baseURL string) []model.Attachment {
+	local := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		resolved, ok := jgdwSameOriginURL(attachment.URL, baseURL)
+		if !ok || strings.TrimSpace(attachment.Name) == "" || seen[resolved] {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Name = strings.Join(strings.Fields(html.UnescapeString(attachment.Name)), " ")
+		if attachment.Name == "" {
+			continue
+		}
+		seen[resolved] = true
+		local = append(local, attachment)
+	}
+	return local
+}
+
+func jgdwAttachmentLink(anchor *goquery.Selection, resolved string) bool {
+	if anchor == nil || anchor.Length() == 0 || resolved == "" {
+		return false
+	}
+	lower := strings.ToLower(resolved)
+	if strings.TrimSpace(anchor.AttrOr("download", "")) != "" ||
+		strings.Contains(lower, "download.jsp") || strings.Contains(lower, "downloadattachurl") {
+		return true
+	}
+	for _, ext := range bodaAttachmentExts {
+		if strings.Contains(strings.ToLower(anchor.AttrOr("name", "")), ext) || strings.Contains(lower, ext) {
+			return true
+		}
+	}
+	return false
+}
+
+func jgdwResourceURL(baseURL, raw string) string {
+	raw = html.UnescapeString(strings.TrimSpace(raw))
+	if raw == "" || bodaIsPseudoResourceHref(raw) {
+		return ""
+	}
+	resolved := cleanURL(resolveURL(baseURL, raw))
+	u, err := url.Parse(resolved)
+	if err != nil || u.Host == "" {
+		return ""
+	}
+	scheme := strings.ToLower(u.Scheme)
+	if scheme != "http" && scheme != "https" {
+		return ""
+	}
+	path := strings.ToLower(u.Path + "?" + u.RawQuery)
+	for _, marker := range []string{
+		"/captcha", "createimage", "verifycode", "verification", "access-denied",
+		"/spacer.gif", "/blank.gif", "/transparent.gif", "/loading.gif", "/pixel.gif",
+	} {
+		if strings.Contains(path, marker) {
+			return ""
+		}
+	}
+	u.Fragment = ""
+	return u.String()
+}
+
+func jgdwErrorDocument(doc *goquery.Document) bool {
+	if doc == nil {
+		return true
+	}
+	title := strings.ToLower(strings.Join(strings.Fields(doc.Find("title").First().Text()), " "))
+	for _, marker := range []string{
+		"404", "403", "500", "access denied", "forbidden", "安全验证", "请输入验证码",
+		"验证码下载附件", "附件下载", "just a moment", "cloudflare",
+	} {
+		if strings.Contains(title, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func jgdwFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	return jgdwFetchArticleAt(articleURL, jgdwBaseURL)
+}
+
+func jgdwFetchArticleAt(articleURL, baseURL string) (*model.Article, []byte, error) {
+	canonical, ok := jgdwArticleURL(baseURL, articleURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("jgdw: refusing non-local or non-detail URL %q", articleURL)
+	}
+	body, err := fetch(canonical)
+	if err != nil {
+		return nil, nil, err
+	}
+	article, err := parseAdapter_jgdwArticle(body, baseURL)
+	if err != nil {
+		return nil, body, err
+	}
+	candidateImages := append([]string(nil), article.Images...)
+	candidateAttachments := append([]model.Attachment(nil), article.Attachments...)
+	article.Images = jgdwVerifyImages(candidateImages, baseURL, canonical)
+	article.Attachments = jgdwVerifyAttachments(candidateAttachments, baseURL, canonical)
+	article.ContentHTML = jgdwSanitizeContentHTML(article.ContentHTML, baseURL, article.Images, candidateAttachments, article.Attachments)
+	return article, body, nil
+}
+
+func jgdwVerifyImages(images []string, baseURL, referer string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool, len(images))
+	for _, raw := range images {
+		resolved := jgdwResourceURL(baseURL, raw)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		if _, _, err := jgdwFetchResource(resolved, baseURL, referer, true); err != nil {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func jgdwVerifyAttachments(attachments []model.Attachment, baseURL, referer string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		resolved, ok := jgdwSameOriginURL(attachment.URL, baseURL)
+		if !ok || seen[resolved] {
+			continue
+		}
+		body, _, err := jgdwFetchResourceNamed(resolved, baseURL, referer, attachment.Name, false)
+		if err != nil {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func jgdwSanitizeContentHTML(raw, baseURL string, images []string, candidateAttachments, attachments []model.Attachment) string {
+	if strings.TrimSpace(raw) == "" {
+		return ""
+	}
+	validImages := make(map[string]bool, len(images))
+	for _, image := range images {
+		if resolved := jgdwResourceURL(baseURL, image); resolved != "" {
+			validImages[resolved] = true
+		}
+	}
+	candidateFiles := make(map[string]bool, len(candidateAttachments))
+	for _, attachment := range candidateAttachments {
+		if resolved, ok := jgdwSameOriginURL(attachment.URL, baseURL); ok {
+			candidateFiles[resolved] = true
+		}
+	}
+	validFiles := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		if resolved, ok := jgdwSameOriginURL(attachment.URL, baseURL); ok {
+			validFiles[resolved] = true
+		}
+	}
+
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(`<div id="jgdw-content-root">` + raw + `</div>`))
+	if err != nil {
+		return ""
+	}
+	root := doc.Find("#jgdw-content-root").First()
+	root.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := ""
+		for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			if candidate := jgdwResourceURL(baseURL, image.AttrOr(attr, "")); candidate != "" && validImages[candidate] {
+				resolved = candidate
+				break
+			}
+		}
+		if resolved == "" {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vsbhref", "vurl", "vheight", "vwidth"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	root.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
+		href := html.UnescapeString(strings.TrimSpace(anchor.AttrOr("href", "")))
+		if strings.HasPrefix(href, "#") {
+			return
+		}
+		resolved := jgdwResourceURL(baseURL, href)
+		if resolved == "" {
+			anchor.RemoveAttr("href")
+			return
+		}
+		if local, ok := jgdwSameOriginURL(resolved, baseURL); ok && jgdwAttachmentLink(anchor, local) {
+			if !candidateFiles[local] || !validFiles[local] {
+				anchor.Remove()
+				return
+			}
+			anchor.SetAttr("href", local)
+			return
+		}
+		anchor.SetAttr("href", resolved)
+	})
+	rendered, err := root.Html()
+	if err != nil {
+		return ""
+	}
+	return rendered
+}
+
+const jgdwMaxResourceBytes int64 = 32 << 20
+
+func jgdwFetchResource(rawURL, baseURL, referer string, image bool) ([]byte, string, error) {
+	return jgdwFetchResourceNamed(rawURL, baseURL, referer, rawURL, image)
+}
+
+func jgdwFetchResourceNamed(rawURL, baseURL, referer, nameOrURL string, image bool) ([]byte, string, error) {
+	resolved := ""
+	var ok bool
+	if image {
+		resolved = jgdwResourceURL(baseURL, rawURL)
+		ok = resolved != ""
+	} else {
+		resolved, ok = jgdwSameOriginURL(rawURL, baseURL)
+	}
+	if !ok {
+		return nil, "", fmt.Errorf("jgdw: refusing invalid resource %q", rawURL)
+	}
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Host == "" || (strings.ToLower(parsed.Scheme) != "http" && strings.ToLower(parsed.Scheme) != "https") {
+		return nil, "", fmt.Errorf("jgdw: refusing non-HTTP resource %q", resolved)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("jgdw: create resource request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	if image {
+		req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+	} else {
+		req.Header.Set("Accept", "application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	}
+	if strings.TrimSpace(referer) != "" {
+		req.Header.Set("Referer", referer)
+	}
+	client := *defaultClient
+	client.CheckRedirect = func(next *http.Request, _ []*http.Request) error {
+		if scheme := strings.ToLower(next.URL.Scheme); scheme != "http" && scheme != "https" {
+			return fmt.Errorf("jgdw: refusing non-HTTP resource redirect")
+		}
+		if !jgdwURLAuthorityEqual(parsed, next.URL) {
+			return fmt.Errorf("jgdw: refusing cross-site resource redirect")
+		}
+		return nil
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("jgdw: fetch resource %s: %w", resolved, err)
+	}
+	defer response.Body.Close()
+	contentType := response.Header.Get("Content-Type")
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return nil, contentType, fmt.Errorf("jgdw: resource %s: HTTP %d", resolved, response.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, jgdwMaxResourceBytes+1))
+	if err != nil {
+		return nil, contentType, fmt.Errorf("jgdw: read resource %s: %w", resolved, err)
+	}
+	if strings.TrimSpace(nameOrURL) == "" {
+		nameOrURL = resolved
+	}
+	if int64(len(body)) > jgdwMaxResourceBytes || !jgdwResourceBodyIsUsable(contentType, body, nameOrURL, image) {
+		return nil, contentType, fmt.Errorf("jgdw: resource %s returned invalid Content-Type, shell, or magic signature", resolved)
+	}
+	return body, contentType, nil
+}
+
+func jgdwResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		mediaType = strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0])
+	}
+	mediaType = strings.ToLower(strings.TrimSpace(mediaType))
+	if mediaType == "" {
+		return false
+	}
+	for _, invalid := range []string{"text/html", "application/xhtml+xml", "application/json", "text/xml", "application/xml"} {
+		if mediaType == invalid {
+			return false
+		}
+	}
+	probe := body
+	if len(probe) > 4096 {
+		probe = probe[:4096]
+	}
+	lowerProbe := strings.ToLower(strings.TrimPrefix(strings.TrimSpace(string(probe)), "\ufeff"))
+	for _, marker := range []string{
+		"<!doctype html", "<html", "<head", "<body", "请输入验证码", "验证码下载附件",
+		"captcha", "createimage", "请先登录", "请登录后", "access denied", "just a moment",
+		"cloudflare", "请求已被阻断", "安全威胁", "系统提示",
+	} {
+		if strings.Contains(lowerProbe, marker) {
+			return false
+		}
+	}
+
+	magic := jgdwResourceMagic(body)
+	if image {
+		return jgdwImageTypeMatchesMagic(mediaType, magic)
+	}
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf"):
+		return (mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf") || mediaType == "application/octet-stream") && magic == "pdf"
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml"):
+		return (mediaType == "application/octet-stream" || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml")) && magic == "zip"
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt") || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint":
+		return (mediaType == "application/octet-stream" || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint") && magic == "ole"
+	case strings.Contains(lowerName, ".zip") || strings.Contains(lowerName, ".rar") || strings.Contains(lowerName, ".7z") || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed":
+		return (mediaType == "application/octet-stream" || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed") && (magic == "zip" || magic == "rar" || magic == "7z")
+	case strings.Contains(lowerName, ".txt") || strings.Contains(lowerName, ".csv"):
+		return mediaType == "text/plain" || mediaType == "text/csv" || mediaType == "application/octet-stream"
+	default:
+		return magic != ""
+	}
+}
+
+func jgdwImageTypeMatchesMagic(mediaType, magic string) bool {
+	switch mediaType {
+	case "image/jpeg", "image/jpg", "image/pjpeg":
+		return magic == "jpeg"
+	case "image/png":
+		return magic == "png"
+	case "image/gif":
+		return magic == "gif"
+	case "image/webp":
+		return magic == "webp"
+	case "image/bmp":
+		return magic == "bmp"
+	case "image/tiff":
+		return magic == "tiff"
+	case "image/svg+xml":
+		return magic == "svg"
+	default:
+		return false
+	}
+}
+
+func jgdwResourceMagic(body []byte) string {
+	switch {
+	case bytes.HasPrefix(body, []byte("%PDF-")):
+		return "pdf"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x03, 0x04}) || bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x05, 0x06}) || bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x07, 0x08})):
+		return "zip"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}):
+		return "ole"
+	case len(body) >= 3 && bytes.Equal(body[:3], []byte{0xff, 0xd8, 0xff}):
+		return "jpeg"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
+		return "png"
+	case len(body) >= 6 && (bytes.Equal(body[:6], []byte("GIF87a")) || bytes.Equal(body[:6], []byte("GIF89a"))):
+		return "gif"
+	case len(body) >= 12 && bytes.Equal(body[:4], []byte("RIFF")) && bytes.Equal(body[8:12], []byte("WEBP")):
+		return "webp"
+	case len(body) >= 2 && bytes.Equal(body[:2], []byte("BM")):
+		return "bmp"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{'I', 'I', '*', 0}) || bytes.Equal(body[:4], []byte{'M', 'M', 0, '*'})):
+		return "tiff"
+	case len(body) >= 7 && bytes.Equal(body[:7], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x00}):
+		return "rar"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x01, 0x00}):
+		return "rar"
+	case len(body) >= 6 && bytes.Equal(body[:6], []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}):
+		return "7z"
+	}
+	trimmed := bytes.TrimSpace(bytes.TrimPrefix(body, []byte{0xef, 0xbb, 0xbf}))
+	probe := trimmed
+	if len(probe) > 4096 {
+		probe = probe[:4096]
+	}
+	if bytes.Contains(bytes.ToLower(probe), []byte("<svg")) {
+		return "svg"
+	}
+	return ""
+}
+
+func jgdwURLAuthorityEqual(left, right *url.URL) bool {
+	if left == nil || right == nil {
+		return false
+	}
+	return strings.EqualFold(left.Scheme, right.Scheme) && strings.EqualFold(left.Host, right.Host)
+}
+
 func jgdwAppendOutsideAttachments(doc *goquery.Document, article *model.Article, baseURL string) {
 	seen := make(map[string]bool, len(article.Attachments))
 	for _, attachment := range article.Attachments {
-		seen[attachment.URL] = true
+		if resolved, ok := jgdwSameOriginURL(attachment.URL, baseURL); ok {
+			seen[resolved] = true
+		}
 	}
 
 	doc.Find("form[name='_newscontent_fromname'] li a[href], .art-main > p li a[href]").Each(func(_ int, anchor *goquery.Selection) {
@@ -327,11 +827,12 @@ func jgdwAppendOutsideAttachments(doc *goquery.Document, article *model.Article,
 		if row.Length() == 0 || !strings.Contains(row.Text(), "附件") {
 			return
 		}
-		resolved := resolveURL(baseURL, anchor.AttrOr("href", ""))
-		if !jgdwSameOriginURL(resolved, baseURL) || seen[resolved] {
+		href := html.UnescapeString(strings.TrimSpace(anchor.AttrOr("href", "")))
+		resolved, ok := jgdwSameOriginURL(href, baseURL)
+		if !ok || !jgdwAttachmentLink(anchor, resolved) || seen[resolved] {
 			return
 		}
-		name := strings.Join(strings.Fields(anchor.Text()), " ")
+		name := strings.Join(strings.Fields(html.UnescapeString(anchor.Text())), " ")
 		if name == "" {
 			name = strings.Join(strings.Fields(anchor.AttrOr("download", "")), " ")
 		}
@@ -343,11 +844,17 @@ func jgdwAppendOutsideAttachments(doc *goquery.Document, article *model.Article,
 	})
 }
 
-func jgdwSameOriginURL(value, baseURL string) bool {
-	u, err := url.Parse(value)
-	if err != nil || u.Host == "" {
-		return false
+func jgdwSameOriginURL(value, baseURL string) (string, bool) {
+	value = html.UnescapeString(strings.TrimSpace(value))
+	resolved := cleanURL(resolveURL(baseURL, value))
+	u, err := url.Parse(resolved)
+	base, baseErr := url.Parse(strings.TrimSpace(baseURL))
+	if err != nil || baseErr != nil || u.Host == "" || base.Host == "" {
+		return "", false
 	}
-	base, err := url.Parse(baseURL)
-	return err == nil && strings.EqualFold(u.Host, base.Host) && strings.EqualFold(u.Scheme, base.Scheme)
+	if !strings.EqualFold(u.Scheme, base.Scheme) || !strings.EqualFold(u.Host, base.Host) {
+		return "", false
+	}
+	u.Fragment = ""
+	return u.String(), true
 }

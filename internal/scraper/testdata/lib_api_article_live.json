@@ -1,0 +1,16 @@
+{
+  "statusCode": 200,
+  "data": {
+    "content": {
+      "id": "09922304-25f3-4114-acb5-9c7df478860d",
+      "columnID": "Ds8XD6N32k1BF9$F",
+      "title": "图书馆召开树立和践行正确政绩观学习教育总结会",
+      "content": "<style>.editor-style { color: red; }</style><p>9月3日上午，图书馆党总支召开学习教育总结会。</p><p>活动时间：2026年12月31日；截止时间：2027年1月1日。</p><p><img src=\"/file/good.png\" alt=\"现场图片\"><img src=\"/file/bad.png\" alt=\"错误图片\"></p><p><a href=\"/files/good.pdf\">会议材料.pdf</a><a href=\"/files/bad.pdf\">错误附件.pdf</a><a href=\"https://example.org/external.pdf\">外部文件.pdf</a></p>",
+      "author": "",
+      "publisher": "图书馆",
+      "publisherName": "图书馆",
+      "publishDate": "2026-09-04T00:00:00",
+      "dataSource": ""
+    }
+  }
+}

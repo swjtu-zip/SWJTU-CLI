@@ -1,7 +1,12 @@
 package scraper
 
 import (
+	"bytes"
 	"fmt"
+	htmlstd "html"
+	"io"
+	"mime"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -30,16 +35,18 @@ var emSubPages = []string{
 	"rcpy/glgd",
 	"rcpy/wdxz",
 	"rcpy/zyjj",
+	"jypx3/pxfw",
 	"jypx3/pxdt",
-	"jypx3/tzgg",
 	"tzgg",
 	"hqbz",
-	"qt",
+	"hqbz/hqfw",
+	"hqbz/hqfw/bmfc",
+	"hqbz/hqfw/tzgg",
+	"hqbz/bwks",
 	"gzdt",
 	"xqfg",
 	"xyyd",
 	"xyyd/xyhd",
-	"xyyd/xyjy",
 }
 
 var (
@@ -48,6 +55,8 @@ var (
 	emClockRe       = regexp.MustCompile(`[0-9]{1,2}\s*(?::|时)[0-9]{1,2}`)
 	emPageCountRe   = regexp.MustCompile(`(?:/|共|第)\s*([0-9]+)\s*页`)
 )
+
+const emMaxResourceBytes = 32 << 20
 
 var emHomeTabTypes = []string{
 	"校区公告",
@@ -65,6 +74,7 @@ func init() {
 		ParseArticle: parseAdapter_emArticle,
 		PageURL:      emPageURL,
 		TotalPages:   emTotalPages,
+		FetchArticle: emFetchArticle,
 	})
 }
 
@@ -159,6 +169,12 @@ func parseAdapter_emList(html []byte, baseURL string) ([]model.NewsItem, error) 
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
 	if err != nil {
 		return nil, fmt.Errorf("parse em list: %w", err)
+	}
+	if emLooksLikeErrorPage(doc) {
+		return nil, fmt.Errorf("em list is an error or verification page")
+	}
+	if pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"], meta[name="pagetype"]`).Last().AttrOr("content", "")); pageType != "" && pageType != "1" && pageType != "2" {
+		return nil, fmt.Errorf("em page is not a list (pageType %q)", pageType)
 	}
 
 	if emHasHomeLayout(doc) {
@@ -353,6 +369,9 @@ func emPageType(doc *goquery.Document) string {
 	if doc == nil {
 		return ""
 	}
+	if title := emBreadcrumbType(doc); title != "" {
+		return title
+	}
 	if title := strings.TrimSpace(doc.Find(`meta[name="pageTitle"]`).AttrOr("content", "")); title != "" {
 		return title
 	}
@@ -362,6 +381,22 @@ func emPageType(doc *goquery.Document) string {
 		}
 	}
 	return ""
+}
+
+func emBreadcrumbType(doc *goquery.Document) string {
+	if doc == nil {
+		return ""
+	}
+	var breadcrumb []string
+	doc.Find(".mianbao a").Each(func(_ int, anchor *goquery.Selection) {
+		if value := strings.Join(strings.Fields(anchor.Text()), " "); value != "" && value != "首页" {
+			breadcrumb = append(breadcrumb, value)
+		}
+	})
+	if len(breadcrumb) == 0 {
+		return ""
+	}
+	return breadcrumb[len(breadcrumb)-1]
 }
 
 func emIsExplicitEmptyList(doc *goquery.Document) bool {
@@ -406,7 +441,12 @@ func parseAdapter_emArticle(html []byte, baseURL string) (*model.Article, error)
 	if emLooksLikeErrorPage(doc) {
 		return nil, fmt.Errorf("em article is an error or verification page")
 	}
-	if doc.Find(".show01 h5").First().Length() == 0 || doc.Find(".v_news_content").First().Length() == 0 {
+	if pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"], meta[name="pagetype"]`).Last().AttrOr("content", "")); pageType != "" && pageType != "3" {
+		return nil, fmt.Errorf("em page is not an article (pageType %q)", pageType)
+	}
+	title := emArticleTitle(doc)
+	content := emArticleContent(doc)
+	if title == "" || content.Length() == 0 {
 		return nil, fmt.Errorf("em page is not a supported article")
 	}
 
@@ -415,32 +455,403 @@ func parseAdapter_emArticle(html []byte, baseURL string) (*model.Article, error)
 		return nil, fmt.Errorf("parse em article: %w", err)
 	}
 
-	if title := cleanTitle(doc.Find(".show01 h5").First().Text()); title != "" {
-		article.Title = title
+	article.Title = title
+	// The show01/source line is authoritative. Never fall back to body text:
+	// notices commonly contain event and deadline dates.
+	meta := emArticleMeta(doc)
+	article.Date, article.PublishedAt = emDateValues(flattenedText(meta))
+	if article.Date == "" {
+		article.Date, article.PublishedAt = emDateValues(meta.Text())
 	}
-	if date, publishedAt := emDateValues(doc.Find(".show01 p").First().Text()); date != "" {
-		article.Date = date
-		article.PublishedAt = publishedAt
+	if article.Date != "" {
+		// Keep the date-only precision exposed by the source. normalize below
+		// may turn it into the same date string, but never invents a clock.
+		article.Date = strings.TrimSpace(article.Date)
 	}
 	if typ := emArticleType(doc); typ != "" {
 		article.Type = typ
 	}
+	emFinalizeArticleContent(article, content, baseURL)
 	emAppendAttachments(article, doc, baseURL)
 	emAppendPrevNext(article, doc, baseURL)
 	normalizeArticlePublishedAt(article)
+	if strings.TrimSpace(article.Content) == "" && len(article.Images) == 0 && len(article.Attachments) == 0 {
+		return nil, fmt.Errorf("em article has no content or resources")
+	}
 	return article, nil
+}
+
+func emArticleTitle(doc *goquery.Document) string {
+	if doc == nil {
+		return ""
+	}
+	for _, selector := range []string{".show01 h5", ".article h1", ".article h2", ".article h3", `meta[name="pageTitle"], meta[name="pagetitle"]`} {
+		if strings.HasPrefix(selector, "meta[") {
+			if title := cleanTitle(doc.Find(selector).Last().AttrOr("content", "")); title != "" {
+				return title
+			}
+			continue
+		}
+		if title := cleanTitle(doc.Find(selector).First().Text()); title != "" {
+			return title
+		}
+	}
+	return ""
+}
+
+func emArticleContent(doc *goquery.Document) *goquery.Selection {
+	if doc == nil {
+		return &goquery.Selection{}
+	}
+	for _, selector := range []string{".show02 .v_news_content", ".article .v_news_content", ".v_news_content", "[id^='vsb_content'] .v_news_content"} {
+		if content := doc.Find(selector).First(); content.Length() > 0 {
+			return content
+		}
+	}
+	return &goquery.Selection{}
+}
+
+func emArticleMeta(doc *goquery.Document) *goquery.Selection {
+	if doc == nil {
+		return &goquery.Selection{}
+	}
+	for _, selector := range []string{".show01 > p", ".show01 p", ".article .source", ".article .news_source", ".news_source", ".source"} {
+		if meta := doc.Find(selector).First(); meta.Length() > 0 {
+			return meta
+		}
+	}
+	return &goquery.Selection{}
+}
+
+func emFinalizeArticleContent(article *model.Article, content *goquery.Selection, baseURL string) {
+	if article == nil || content == nil || content.Length() == 0 {
+		return
+	}
+	article.Content = extractBodaContentText(content)
+	article.Images = nil
+	seen := make(map[string]bool)
+	content.Find("img").Each(func(_ int, image *goquery.Selection) {
+		var raw string
+		for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			if value := strings.TrimSpace(image.AttrOr(attr, "")); value != "" {
+				raw = value
+				break
+			}
+		}
+		resolved := emResourceURL(baseURL, raw)
+		if resolved == "" || seen[resolved] {
+			return
+		}
+		seen[resolved] = true
+		article.Images = append(article.Images, resolved)
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	if html, err := content.Html(); err == nil {
+		article.ContentHTML = html
+	}
+}
+
+func emFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	baseURL := emBaseURL()
+	fullURL, ok := emArticleURL(baseURL, articleURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("em: refusing non-local or non-detail URL %q", articleURL)
+	}
+	body, err := fetch(fullURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("em: fetch article %s: %w", fullURL, err)
+	}
+	article, err := parseAdapter_emArticle(body, baseURL)
+	if err != nil {
+		return nil, body, fmt.Errorf("em: parse article %s: %w", fullURL, err)
+	}
+	article.Images = emVerifyImages(article.Images, baseURL, fullURL)
+	article.Attachments = emVerifyAttachments(article.Attachments, baseURL, fullURL)
+	emSanitizeContentHTML(article, baseURL)
+	return article, body, nil
+}
+
+func emBaseURL() string {
+	if site := AllSites["em"]; site != nil {
+		if base := strings.TrimRight(strings.TrimSpace(site.BaseURL), "/"); base != "" {
+			return base
+		}
+	}
+	return "https://em.swjtu.edu.cn"
+}
+
+func emResourceURL(baseURL, raw string) string {
+	raw = htmlstd.UnescapeString(strings.TrimSpace(raw))
+	if raw == "" || bodaIsPseudoResourceHref(raw) {
+		return ""
+	}
+	resolved := cleanURL(resolveURL(baseURL, raw))
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Hostname() == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return ""
+	}
+	base, err := url.Parse(baseURL)
+	if err != nil || base.Hostname() == "" || !strings.EqualFold(parsed.Hostname(), base.Hostname()) {
+		return ""
+	}
+	lower := strings.ToLower(parsed.Path + "?" + parsed.RawQuery)
+	for _, marker := range []string{"/captcha", "/verify", "/login", "/signin", "/placeholder", "/transparent", "/spacer", "/blank", "/loading", "/pixel.gif"} {
+		if strings.Contains(lower, marker) {
+			return ""
+		}
+	}
+	return parsed.String()
+}
+
+func emFetchResource(rawURL, baseURL, referer string, image bool) ([]byte, string, error) {
+	resolved := emResourceURL(baseURL, rawURL)
+	if resolved == "" {
+		return nil, "", fmt.Errorf("em: refusing invalid resource %q", rawURL)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", err
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	if image {
+		req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+	} else {
+		req.Header.Set("Accept", "application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	}
+	if strings.TrimSpace(referer) != "" {
+		req.Header.Set("Referer", referer)
+	}
+	client := http.Client{}
+	if defaultClient != nil {
+		client = *defaultClient
+	}
+	base, _ := url.Parse(baseURL)
+	client.CheckRedirect = func(next *http.Request, _ []*http.Request) error {
+		if next == nil || base == nil || !strings.EqualFold(next.URL.Hostname(), base.Hostname()) {
+			return http.ErrUseLastResponse
+		}
+		return nil
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, "", err
+	}
+	defer response.Body.Close()
+	contentType := response.Header.Get("Content-Type")
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return nil, contentType, fmt.Errorf("em: resource %s: HTTP %d", resolved, response.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, emMaxResourceBytes+1))
+	if err != nil {
+		return nil, contentType, err
+	}
+	if len(body) > emMaxResourceBytes || !emResourceBodyIsUsable(contentType, body, resolved, image) {
+		return nil, contentType, fmt.Errorf("em: resource %s has invalid type, shell, or magic", resolved)
+	}
+	return body, contentType, nil
+}
+
+func emVerifyImages(images []string, baseURL, referer string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool)
+	for _, raw := range images {
+		resolved := emResourceURL(baseURL, raw)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		if _, _, err := emFetchResource(resolved, baseURL, referer, true); err != nil {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func emVerifyAttachments(attachments []model.Attachment, baseURL, referer string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool)
+	for _, attachment := range attachments {
+		resolved := emResourceURL(baseURL, attachment.URL)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, _, err := emFetchResource(resolved, baseURL, referer, false)
+		if err != nil {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func emResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		mediaType = strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0])
+	}
+	mediaType = strings.ToLower(strings.TrimSpace(mediaType))
+	if mediaType == "" {
+		return false
+	}
+	for _, invalid := range []string{"text/html", "application/xhtml+xml", "application/json", "text/xml", "application/xml"} {
+		if mediaType == invalid {
+			return false
+		}
+	}
+	probe := bytes.ToLower(bytes.TrimSpace(body))
+	if len(probe) > 4096 {
+		probe = probe[:4096]
+	}
+	for _, marker := range [][]byte{[]byte("<!doctype html"), []byte("<html"), []byte("<head"), []byte("<body"), []byte("验证码"), []byte("安全验证"), []byte("captcha"), []byte("waf"), []byte("access denied"), []byte("just a moment"), []byte("cloudflare"), []byte("页面不存在"), []byte("404 not found"), []byte("请先登录"), []byte("请登录后"), []byte("请求已被阻断")} {
+		if bytes.Contains(probe, marker) {
+			return false
+		}
+	}
+
+	magic := emResourceMagic(body)
+	if image {
+		return emImageTypeMatchesMagic(mediaType, magic)
+	}
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf"):
+		return (mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf") || mediaType == "application/octet-stream" || mediaType == "application/force-download" || mediaType == "application/download") && magic == "pdf"
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml"):
+		return (mediaType == "application/zip" || strings.Contains(mediaType, "officedocument") || strings.Contains(mediaType, "ml") || mediaType == "application/octet-stream") && magic == "zip"
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt") || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint":
+		return (mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint" || mediaType == "application/octet-stream") && magic == "ole"
+	case strings.Contains(lowerName, ".zip") || strings.Contains(lowerName, ".rar") || strings.Contains(lowerName, ".7z") || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed":
+		return magic == "zip" || magic == "rar" || magic == "7z"
+	case strings.Contains(lowerName, ".txt") || strings.Contains(lowerName, ".csv"):
+		return strings.HasPrefix(mediaType, "text/") && mediaType != "text/html" && mediaType != "text/xml"
+	default:
+		return magic != ""
+	}
+}
+
+func emImageTypeMatchesMagic(mediaType, magic string) bool {
+	expected := map[string]string{"image/jpeg": "jpeg", "image/jpg": "jpeg", "image/pjpeg": "jpeg", "image/png": "png", "image/gif": "gif", "image/webp": "webp", "image/bmp": "bmp", "image/tiff": "tiff", "image/svg+xml": "svg"}
+	return expected[mediaType] != "" && expected[mediaType] == magic
+}
+
+func emResourceMagic(body []byte) string {
+	switch {
+	case bytes.HasPrefix(body, []byte("%PDF-")):
+		return "pdf"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x03, 0x04}) || bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x05, 0x06}) || bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x07, 0x08})):
+		return "zip"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}):
+		return "ole"
+	case len(body) >= 3 && bytes.Equal(body[:3], []byte{0xff, 0xd8, 0xff}):
+		return "jpeg"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
+		return "png"
+	case len(body) >= 6 && (bytes.Equal(body[:6], []byte("GIF87a")) || bytes.Equal(body[:6], []byte("GIF89a"))):
+		return "gif"
+	case len(body) >= 12 && bytes.Equal(body[:4], []byte("RIFF")) && bytes.Equal(body[8:12], []byte("WEBP")):
+		return "webp"
+	case len(body) >= 2 && bytes.Equal(body[:2], []byte("BM")):
+		return "bmp"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{'I', 'I', '*', 0}) || bytes.Equal(body[:4], []byte{'M', 'M', 0, '*'})):
+		return "tiff"
+	case len(body) >= 7 && bytes.Equal(body[:7], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x00}):
+		return "rar"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x01, 0x00}):
+		return "rar"
+	case len(body) >= 6 && bytes.Equal(body[:6], []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}):
+		return "7z"
+	}
+	trimmed := bytes.TrimSpace(bytes.TrimPrefix(body, []byte{0xef, 0xbb, 0xbf}))
+	lower := bytes.ToLower(trimmed)
+	if bytes.HasPrefix(lower, []byte("{\\rtf")) {
+		return "rtf"
+	}
+	if bytes.HasPrefix(lower, []byte("<svg")) || (bytes.HasPrefix(lower, []byte("<?xml")) && bytes.Contains(lower, []byte("<svg"))) {
+		return "svg"
+	}
+	return ""
+}
+
+func emSanitizeContentHTML(article *model.Article, baseURL string) {
+	if article == nil || strings.TrimSpace(article.ContentHTML) == "" {
+		return
+	}
+	validImages := make(map[string]bool, len(article.Images))
+	for _, image := range article.Images {
+		if resolved := emResourceURL(baseURL, image); resolved != "" {
+			validImages[resolved] = true
+		}
+	}
+	validAttachments := make(map[string]bool, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		if resolved := emResourceURL(baseURL, attachment.URL); resolved != "" {
+			validAttachments[resolved] = true
+		}
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader("<div id=\"em-content-root\">" + article.ContentHTML + "</div>"))
+	if err != nil {
+		return
+	}
+	content := doc.Find("#em-content-root").First()
+	content.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := emResourceURL(baseURL, image.AttrOr("src", ""))
+		if resolved == "" || !validImages[resolved] {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+	})
+	content.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		raw := htmlstd.UnescapeString(strings.TrimSpace(link.AttrOr("href", "")))
+		if bodaIsPseudoResourceHref(raw) {
+			link.RemoveAttr("href")
+			link.RemoveAttr("download")
+			return
+		}
+		resolved := cleanURL(resolveURL(baseURL, raw))
+		if bodaLooksLikeAttachmentLink(link, raw) {
+			if !validAttachments[resolved] {
+				link.RemoveAttr("href")
+				link.RemoveAttr("download")
+				return
+			}
+		}
+		parsed, parseErr := url.Parse(resolved)
+		if parseErr != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+			link.RemoveAttr("href")
+			return
+		}
+		link.SetAttr("href", resolved)
+	})
+	if html, err := content.Html(); err == nil {
+		article.ContentHTML = html
+		article.Content = extractBodaContentText(content)
+	}
 }
 
 func emLooksLikeErrorPage(doc *goquery.Document) bool {
 	if doc == nil {
 		return true
 	}
-	if pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"]`).AttrOr("content", "")); pageType != "" && pageType != "3" {
-		return true
-	}
 	pageTitle := strings.ToLower(strings.Join(strings.Fields(doc.Find("title").First().Text()), " "))
-	for _, marker := range []string{"验证码", "访问验证", "页面不存在", "404 not found", "system error", "系统错误"} {
+	for _, marker := range []string{"验证码", "访问验证", "页面不存在", "404 not found", "system error", "系统错误", "access denied", "cloudflare", "just a moment", "请先登录", "请登录后"} {
 		if strings.Contains(pageTitle, strings.ToLower(marker)) {
+			return true
+		}
+	}
+	bodyText := strings.ToLower(strings.Join(strings.Fields(doc.Find("body").Text()), " "))
+	for _, marker := range []string{"页面不存在", "访问被拒绝", "安全验证", "请输入验证码", "请先登录", "请登录后", "请求已被阻断", "access denied", "cloudflare", "just a moment"} {
+		if strings.Contains(bodyText, strings.ToLower(marker)) {
 			return true
 		}
 	}
@@ -451,16 +862,10 @@ func emArticleType(doc *goquery.Document) string {
 	if doc == nil {
 		return ""
 	}
-	var breadcrumb []string
-	doc.Find(".mianbao a").Each(func(_ int, anchor *goquery.Selection) {
-		if value := strings.Join(strings.Fields(anchor.Text()), " "); value != "" && value != "首页" {
-			breadcrumb = append(breadcrumb, value)
-		}
-	})
-	if len(breadcrumb) > 0 {
-		return breadcrumb[len(breadcrumb)-1]
+	if title := emBreadcrumbType(doc); title != "" {
+		return title
 	}
-	for _, selector := range []string{".n_left .con h1", "#nav_slide .n_title h1", ".n_title h1"} {
+	for _, selector := range []string{".n_left .con h1", "#nav_slide .n_title h1", ".n_title h1", ".article .current h3", ".current h3"} {
 		if value := strings.Join(strings.Fields(doc.Find(selector).First().Text()), " "); value != "" {
 			return value
 		}
@@ -472,12 +877,19 @@ func emAppendAttachments(article *model.Article, doc *goquery.Document, baseURL 
 	if article == nil || doc == nil {
 		return
 	}
+	scope := doc.Find(".show").First()
+	if scope.Length() == 0 {
+		scope = doc.Find(".article").First()
+	}
+	if scope.Length() == 0 {
+		scope = doc.Find("body").First()
+	}
 	seen := make(map[string]bool, len(article.Attachments))
 	for _, attachment := range article.Attachments {
 		seen[attachment.URL] = true
 	}
 
-	doc.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+	scope.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
 		href := strings.TrimSpace(link.AttrOr("href", ""))
 		if !emIsAttachmentLink(href) {
 			return

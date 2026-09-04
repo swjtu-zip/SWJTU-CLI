@@ -1,6 +1,7 @@
 package scraper
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -36,6 +37,9 @@ func TestScaiAdapterList(t *testing.T) {
 	}
 	if items[0].Date != "2026-06-12" {
 		t.Errorf("first date = %q", items[0].Date)
+	}
+	if items[0].PublishedAt != "2026-06-12 00:00:00" {
+		t.Errorf("first published_at = %q", items[0].PublishedAt)
 	}
 
 	seen := make(map[string]bool, len(items))
@@ -79,8 +83,95 @@ func TestScaiAdapterArticleDate(t *testing.T) {
 	if article.Date != "2026-07-07" {
 		t.Errorf("date = %q, want 2026-07-07", article.Date)
 	}
+	if article.PublishedAt != "2026-07-07 00:00:00" {
+		t.Errorf("published_at = %q, want 2026-07-07 00:00:00", article.PublishedAt)
+	}
 	if !strings.Contains(article.Content, "这是正文内容") {
 		t.Errorf("content = %q", article.Content)
+	}
+}
+
+func TestScaiHomepageTypesFollowTheirSections(t *testing.T) {
+	data, err := os.ReadFile("testdata/scai.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	items, err := parseScaiAdapterList(data, "https://scai.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := map[string]string{
+		"2026年度ACM成都分会":            "通知公告",
+		"中国人工智能学会走进":               "科学研究",
+		"2026届本科毕业设计（论文）相关模板":      "本科生教育",
+		"2026年博士研究生招生材料评议":         "研究生教育",
+		"【离校工作】计算机与人工智能学院2026届研究生": "学生工作",
+	}
+	found := make(map[string]bool, len(want))
+	for _, item := range items {
+		for marker, typ := range want {
+			if strings.Contains(item.Title, marker) {
+				found[marker] = true
+				if item.Type != typ {
+					t.Errorf("%q type = %q, want %q", item.Title, item.Type, typ)
+				}
+			}
+		}
+	}
+	for marker := range want {
+		if !found[marker] {
+			t.Errorf("homepage fixture did not contain section marker %q", marker)
+		}
+	}
+}
+
+func TestScaiListPreservesPublicationMinutes(t *testing.T) {
+	const html = `<div class="container"><h1 class="list-big-title">通知公告</h1>
+<div class="list-item"><a href="/web/page-newsDetail.html?nid=precise-time" title="带发布时间的文章标题">带发布时间的文章标题</a>
+<span class="date-label">Tue Sep 02 14:35:00 CST 2026</span></div></div>`
+	items, err := parseScaiAdapterList([]byte(html), "https://scai.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("got %d items, want one", len(items))
+	}
+	if items[0].Date != "2026-09-02" || items[0].PublishedAt != "2026-09-02 14:35:00" {
+		t.Fatalf("date/published_at = %q/%q", items[0].Date, items[0].PublishedAt)
+	}
+	if items[0].Type != "通知公告" {
+		t.Fatalf("type = %q, want 通知公告", items[0].Type)
+	}
+}
+
+func TestScaiListTypeUsesActiveSubTab(t *testing.T) {
+	const html = `<div class="container"><h1 class="list-big-title">本科生教育
+<span><a class="active" href="/web/page-module.html?mid=B730BEB095B31840&amp;tid=350">通知公告</a></span>
+<span><a href="/web/page-module.html?mid=B730BEB095B31840&amp;tid=351">培养方案</a></span></h1>
+<div class="list-item"><a href="/web/page-newsDetail.html?nid=active-tab" title="当前子栏目文章标题">当前子栏目文章标题</a>
+<span class="date-label">2026-09-02</span></div></div>`
+	items, err := parseScaiAdapterList([]byte(html), "https://scai.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].Type != "通知公告" {
+		t.Fatalf("active sub-tab type = %#v, want 通知公告", items)
+	}
+}
+
+func TestScaiArticlePreservesPublicationMinutes(t *testing.T) {
+	const html = `<html><body><div class="news-content-wrapper"><div class="content">
+<h1 class="news-title">带发布时间的详情标题</h1>
+<div class="news-info"><span>来源：计算机与人工智能学院</span><span>发布日期：Tue Sep 02 14:35:00 CST 2026</span></div>
+<div class="content-main"><p>正文内容。</p><p>活动时间：2026年9月16日，不能覆盖发布日期。</p></div>
+</div></div></body></html>`
+	article, err := parseScaiArticle([]byte(html), "https://scai.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Date != "2026-09-02" || article.PublishedAt != "2026-09-02 14:35:00" {
+		t.Fatalf("date/published_at = %q/%q", article.Date, article.PublishedAt)
 	}
 }
 
@@ -222,7 +313,8 @@ func TestScaiListNewsRangeUsesTotalPagesHook(t *testing.T) {
 		}
 		requestedPages = append(requestedPages, page)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write(data)
+		pageHTML := strings.Replace(string(data), "当前第【1】页", "当前第【"+strconv.Itoa(page)+"】页", 1)
+		_, _ = w.Write([]byte(pageHTML))
 	}))
 	defer server.Close()
 
@@ -240,6 +332,126 @@ func TestScaiListNewsRangeUsesTotalPagesHook(t *testing.T) {
 	}
 	if maxPage != 15 {
 		t.Fatalf("ListNewsRange reached page %d (requests=%v), want page 15", maxPage, requestedPages)
+	}
+}
+
+func TestScaiListPageRetriesAStalePageResponse(t *testing.T) {
+	data, err := os.ReadFile("testdata/scai_pagination.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	site := AllSites["scai"]
+	if site == nil {
+		t.Fatal("scai site was not registered")
+	}
+	oldBaseURL, oldNoCache := site.BaseURL, NoCache
+	ClearCache()
+	t.Cleanup(func() {
+		site.BaseURL = oldBaseURL
+		NoCache = oldNoCache
+		ClearCache()
+	})
+
+	var requests int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		page := 1
+		if r.URL.Query().Get("scai_adapter_retry") != "" {
+			page = 2
+		}
+		pageHTML := strings.Replace(string(data), "当前第【1】页", "当前第【"+strconv.Itoa(page)+"】页", 1)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(pageHTML))
+	}))
+	defer server.Close()
+
+	site.BaseURL = server.URL
+	NoCache = true
+	items, total, err := scaiListPage("news", 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 || total != 15 || requests != 2 {
+		t.Fatalf("items=%d total=%d requests=%d, want 2/15/2", len(items), total, requests)
+	}
+}
+
+func TestScaiListPageRejectsPersistentPageRepeat(t *testing.T) {
+	data, err := os.ReadFile("testdata/scai_pagination.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	site := AllSites["scai"]
+	if site == nil {
+		t.Fatal("scai site was not registered")
+	}
+	oldBaseURL, oldNoCache := site.BaseURL, NoCache
+	ClearCache()
+	t.Cleanup(func() {
+		site.BaseURL = oldBaseURL
+		NoCache = oldNoCache
+		ClearCache()
+	})
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(data)
+	}))
+	defer server.Close()
+
+	site.BaseURL = server.URL
+	NoCache = true
+	if _, _, err := scaiListPage("news", 2); err == nil || !strings.Contains(err.Error(), "requested page 2") {
+		t.Fatalf("persistent stale page error = %v", err)
+	}
+}
+
+func TestScaiEmptyFeedIsNotReportedAsPaginationFailure(t *testing.T) {
+	const emptyHTML = `<html><body><div class="container"><h1 class="list-big-title">资料下载</h1>
+<!-- 共【0】条，20条/页，共【0】页，当前第【0】页 --></div></body></html>`
+	site := AllSites["scai"]
+	if site == nil {
+		t.Fatal("scai site was not registered")
+	}
+	oldBaseURL, oldNoCache := site.BaseURL, NoCache
+	ClearCache()
+	t.Cleanup(func() {
+		site.BaseURL = oldBaseURL
+		NoCache = oldNoCache
+		ClearCache()
+	})
+
+	var requests int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(emptyHTML))
+	}))
+	defer server.Close()
+
+	site.BaseURL = server.URL
+	NoCache = true
+	items, err := site.ListNewsRange("undergraduate/downloads", "2026-01-01", "2026-12-31", 0)
+	if err != nil {
+		t.Fatalf("valid zero-item feed returned an error: %v", err)
+	}
+	if len(items) != 0 {
+		t.Fatalf("got %d items from an explicitly empty feed", len(items))
+	}
+	if requests != 2 {
+		t.Fatalf("requests = %d, want page 1 parse plus page-count fetch", requests)
+	}
+}
+
+func TestScaiRejectsUnavailableAndTemplatePages(t *testing.T) {
+	if _, err := parseScaiAdapterList([]byte(`<html><body><div class="header">统一身份认证登录</div></body></html>`), "https://scai.swjtu.edu.cn"); !errors.Is(err, errScaiUnavailablePage) {
+		t.Fatalf("login page error = %v, want %v", err, errScaiUnavailablePage)
+	}
+	if _, err := parseScaiAdapterList([]byte(`<html><body><div id="app"></div></body></html>`), "https://scai.swjtu.edu.cn"); !errors.Is(err, errScaiUnavailablePage) {
+		t.Fatalf("SPA shell error = %v, want %v", err, errScaiUnavailablePage)
+	}
+	if _, err := parseScaiArticle([]byte(`<html><body><header>首页</header><div class="footer">版权所有</div></body></html>`), "https://scai.swjtu.edu.cn"); !errors.Is(err, errScaiNoArticleDetail) {
+		t.Fatalf("template shell error = %v, want %v", err, errScaiNoArticleDetail)
 	}
 }
 

@@ -22,7 +22,8 @@ func TestINCAdapterRegistrationAndFeeds(t *testing.T) {
 		t.Fatalf("INC adapter is incomplete: %#v", site)
 	}
 	want := []string{
-		"xwdt", "tzgg", "wlaq", "zbrj", "djgz", "zcfg", "xsfw", "jsfw", "gdwfw", "wxwl", "english/News_Event",
+		"xwdt", "tzgg", "wlaq", "zbrj", "djgz", "zcfg", "xsfw", "jsfw", "gdwfw", "wxwl",
+		"english/About_Inc", "english/Campus_Network", "english/Service_Guide", "english/News_Event",
 	}
 	if !reflect.DeepEqual(site.SubPages, want) {
 		t.Fatalf("INC feeds = %#v, want %#v", site.SubPages, want)

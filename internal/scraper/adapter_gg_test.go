@@ -20,26 +20,26 @@ func readGGFixture(t *testing.T, name string) []byte {
 
 func TestGGAdapterRegistrationAndRealEntryPoints(t *testing.T) {
 	site := AllSites["gg"]
-	if site == nil || site.BaseURL != ggBaseURL || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil {
+	if site == nil || site.BaseURL != ggBaseURL || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.ArticleFetchFunc == nil {
 		t.Fatalf("gg adapter hooks are incomplete: %#v", site)
 	}
 	if !reflect.DeepEqual(site.SubPages, ggSubPages) {
 		t.Fatalf("gg routes = %#v, want %#v", site.SubPages, ggSubPages)
 	}
-	if len(site.SubPages) != 71 {
-		t.Fatalf("gg routes = %d, want all 71 discovered list entry points", len(site.SubPages))
+	if len(site.SubPages) != 68 {
+		t.Fatalf("gg routes = %d, want all 68 discovered list entry points", len(site.SubPages))
 	}
 	for _, required := range []string{
 		"xwgg/xyxw", "xwgg/xxgg", "rcpy/bkjw/bkjxtz", "rcpy/yjsjw/yjsjxtz",
 		"xsgz/wjxz/xsgl", "MPAzx/jxgl/ktdb", "MPAzx/wjxz/bgzl",
-		"zsgz/yjszs/tzgg", "xzzx/qrzyjsxg", "xyzj", "xyzj/yydt", "xyzj/yyfc", "xyzj/gywm", "xyzj/yqlj",
+		"zsgz/yjszs/tzgg", "xzzx/qrzyjsxg", "xyzj", "xyzj/yydt", "xyzj/yyfc",
 	} {
 		if !ggContainsString(site.SubPages, required) {
 			t.Errorf("missing gg list entry point %q", required)
 		}
 	}
 	for _, excluded := range []string{
-		"xygk/xyjj", "xygk/zzjg", "llzx1/yjdw", "risk", "job",
+		"xygk/xyjj", "xygk/zzjg", "llzx1/yjdw", "szdw", "xyzj/gywm", "xyzj/yqlj", "risk", "job",
 	} {
 		if ggContainsString(site.SubPages, excluded) {
 			t.Errorf("static/profile route registered as gg feed: %q", excluded)
@@ -125,6 +125,13 @@ func TestGGListParserExtractsTypeDatesAndRejectsNonArticles(t *testing.T) {
 	if _, err := parseAdapter_ggList([]byte(`<html><body><div class="article">静态页</div></body></html>`), ggFixtureBaseURL); err == nil {
 		t.Fatal("static page was accepted as a gg list")
 	}
+	noDate, err := parseAdapter_ggList([]byte(`<html><head><meta name="pageType" content="2"></head><body><div class="list-col"><h4>信息公告</h4><div class="list-list"><ul><li><a href="/info/1010/1.htm" title="活动将于2026年9月6日举行">活动将于2026年9月6日举行</a></li></ul></div></div></body></html>`), ggFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(noDate) != 1 || noDate[0].Date != "" {
+		t.Fatalf("row title date leaked into publication date: %#v", noDate)
+	}
 }
 
 func TestGGAdapterDistinguishesReachableEmptyListFromShell(t *testing.T) {
@@ -157,7 +164,7 @@ func TestGGArticleFieldsImagesAndOutsideAttachments(t *testing.T) {
 	if len(article.Images) != 1 || article.Images[0] != ggFixtureBaseURL+"/__local/body.png" {
 		t.Fatalf("article images = %#v", article.Images)
 	}
-	if len(article.Attachments) != 1 || article.Attachments[0].Name != "测试附件.xlsx" || article.Attachments[0].URL != ggFixtureBaseURL+"/system/_content/download.jsp?urltype=news.DownloadAttachUrl&owner=fixture&wbfileid=one" {
+	if len(article.Attachments) != 1 || article.Attachments[0].Name != "测试附件.xlsx" || article.Attachments[0].URL != ggFixtureBaseURL+"/__local/fixture.xlsx?e=.xlsx" {
 		t.Fatalf("article attachments = %#v", article.Attachments)
 	}
 }
@@ -195,6 +202,92 @@ func TestGGArticleDoesNotUseBodyDeadlineAsPublicationDate(t *testing.T) {
 	}
 	if article.Date != "2026-09-03" || article.PublishedAt != "" {
 		t.Fatalf("body deadline replaced publication date: date=%q published_at=%q", article.Date, article.PublishedAt)
+	}
+}
+
+func TestGGLiveHomepageAndListFixtures(t *testing.T) {
+	items, err := parseAdapter_ggList(readGGFixture(t, "gg_live_home.html"), ggFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 5 {
+		t.Fatalf("live homepage items = %d, want five deduplicated module entries: %#v", len(items), items)
+	}
+	for _, item := range items {
+		if !strings.HasPrefix(item.URL, ggFixtureBaseURL+"/info/") || item.Type == "" {
+			t.Fatalf("live homepage leaked a non-article or missing type: %#v", item)
+		}
+	}
+
+	listHTML := readGGFixture(t, "gg_live_list_xyxw_first.html")
+	items, err = parseAdapter_ggList(listHTML, ggFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 3 || items[0].Title != "凝心聚力启新程 笃行实干向未来——公共管理学院召开新学期全院大会" || items[0].Date != "2026-09-03" || items[0].Type != "学院新闻" {
+		t.Fatalf("live list result = %#v", items)
+	}
+	if total := parseTotalPages(listHTML); total != 26 {
+		t.Fatalf("live list total pages = %d, want 26", total)
+	}
+	if got := ggPageURL(ggFixtureBaseURL, "xwgg/xyxw", 13, 26, ".htm"); got != ggFixtureBaseURL+"/xwgg/xyxw/14.htm" {
+		t.Fatalf("live middle page URL = %q", got)
+	}
+}
+
+func TestGGLiveEmptyAndStaticFixtures(t *testing.T) {
+	items, err := parseAdapter_ggList(readGGFixture(t, "gg_live_empty_xkjs.html"), ggFixtureBaseURL)
+	if err != nil || items == nil || len(items) != 0 {
+		t.Fatalf("real empty list = %#v, err=%v", items, err)
+	}
+	if _, err := parseAdapter_ggList(readGGFixture(t, "gg_live_static_szdw.html"), ggFixtureBaseURL); err == nil {
+		t.Fatal("static faculty directory was accepted as an empty feed")
+	}
+	if _, err := parseAdapter_ggList(readGGFixture(t, "gg_live_waf.html"), ggFixtureBaseURL); err == nil {
+		t.Fatal("live WAF page was accepted as a list")
+	}
+}
+
+func TestGGLiveArticleFixturesUseFixedMetadataAndCompleteBody(t *testing.T) {
+	recent, err := parseAdapter_ggArticle(readGGFixture(t, "gg_live_article_recent.html"), ggFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recent.Title != "第十五届党委第六轮巡察第二巡察组结束工作公告" || recent.Type != "信息公告" || recent.Date != "2026-07-07" || recent.PublishedAt != "" {
+		t.Fatalf("live recent article metadata = %#v", recent)
+	}
+	if !strings.Contains(recent.Content, "2026年7月6日") || !strings.Contains(recent.ContentHTML, "特此公告") {
+		t.Fatalf("live recent article body is incomplete: content=%q html=%q", recent.Content, recent.ContentHTML)
+	}
+
+	old, err := parseAdapter_ggArticle(readGGFixture(t, "gg_live_article_old.html"), ggFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if old.Title != "公共管理学院关于2014届申请创新实践的通知及相关表格" || old.Type != "本科相关" || old.Date != "2014-06-06" {
+		t.Fatalf("live old article metadata = %#v", old)
+	}
+	if len(old.Attachments) != 1 || old.Attachments[0].URL != ggFixtureBaseURL+"/__local/7/8B/1A/2EA3B20C0B540A614342F2417A2_764BC3A8_15C74.rar?e=.rar" {
+		t.Fatalf("live old article attachments = %#v", old.Attachments)
+	}
+}
+
+func TestGGResourceValidationRejectsCaptchaHTMLAndBadMagic(t *testing.T) {
+	captcha := readGGFixture(t, "gg_live_captcha_download.html")
+	if ggResourceBodyIsUsable("text/html;charset=UTF-8", captcha, "附件.rar", false) {
+		t.Fatal("captcha HTML passed attachment validation")
+	}
+	if !ggResourceBodyIsUsable("image/jpeg", []byte{0xff, 0xd8, 0xff, 0xe0}, "photo.jpg", true) {
+		t.Fatal("JPEG magic was rejected")
+	}
+	if ggResourceBodyIsUsable("image/jpeg", []byte("not an image"), "photo.jpg", true) {
+		t.Fatal("bad JPEG magic was accepted")
+	}
+	if !ggResourceBodyIsUsable("application/x-rar-compressed", []byte("Rar!\x1a\x07\x00\x00"), "附件.rar", false) {
+		t.Fatal("RAR magic was rejected")
+	}
+	if ggAttachmentURL(ggFixtureBaseURL, "/system/_content/download.jsp?urltype=news.DownloadAttachUrl&wbfileid=CAPTCHA") != "" {
+		t.Fatal("bare CMS download URL was retained as an attachment")
 	}
 }
 

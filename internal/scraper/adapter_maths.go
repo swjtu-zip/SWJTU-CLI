@@ -1,8 +1,11 @@
 package scraper
 
 import (
+	"bytes"
 	"fmt"
 	"html"
+	"io"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -15,6 +18,8 @@ import (
 )
 
 const mathsCanonicalBaseURL = "https://maths.swjtu.edu.cn"
+
+const mathsMaxResourceBytes = 32 << 20
 
 // mathsSubPages is the complete set of article-bearing pages found by
 // walking the live navigation, homepage modules, and their visible/hidden
@@ -66,6 +71,7 @@ func init() {
 		ParseArticle: parseAdapter_mathsArticle,
 		PageURL:      mathsPageURL,
 		TotalPages:   mathsTotalPages,
+		FetchArticle: mathsFetchArticle,
 	})
 }
 
@@ -132,25 +138,6 @@ func mathsTotalPages(slug string) (int, error) {
 		return 0, fmt.Errorf("maths: %s is not an article list", slug)
 	}
 	total := mathsPageCount(doc)
-	if total > 1 {
-		// xsjl currently publishes a stale page-2 link: the first page says
-		// that the total is 47 and links to /46.htm, but that URL is a real
-		// 404. The adjacent /45.htm is 200 and labels itself logical page 2
-		// with a 46-page tail. Probe before adjusting; never guess a page
-		// count merely because a site resembles another Boda site.
-		secondURL := mathsPageURL(mathsCanonicalBaseURL, slug, 2, total, ".htm")
-		if _, secondErr := fetch(secondURL); secondErr != nil && strings.Contains(secondErr.Error(), "status 404") {
-			usableTotal := total - 1
-			candidateURL := mathsPageURL(mathsCanonicalBaseURL, slug, 2, usableTotal, ".htm")
-			candidateBody, candidateErr := fetch(candidateURL)
-			if candidateErr == nil {
-				candidateDoc, parseErr := goquery.NewDocumentFromReader(strings.NewReader(string(candidateBody)))
-				if parseErr == nil && mathsRejectPage(candidateBody, candidateDoc, "list") == nil && mathsListRegion(candidateDoc).Length() > 0 && mathsPageCount(candidateDoc) == usableTotal {
-					return usableTotal, nil
-				}
-			}
-		}
-	}
 	return total, nil
 }
 
@@ -222,7 +209,7 @@ func parseAdapter_mathsList(raw []byte, baseURL string) ([]model.NewsItem, error
 		if title == "" {
 			title = mathsText(anchor.Text())
 		}
-		if title == "" || !isValidNewsTitle(title) {
+		if title == "" || !mathsValidNewsTitle(title) {
 			invalidRows++
 			return
 		}
@@ -270,7 +257,7 @@ func mathsListType(doc *goquery.Document) string {
 func mathsHomepageItems(doc *goquery.Document, baseURL string) []model.NewsItem {
 	items := make([]model.NewsItem, 0)
 	seen := make(map[string]int)
-	add := func(row *goquery.Selection, title, typ string) {
+	addWithDate := func(row *goquery.Selection, title, typ string, includeDate bool) {
 		if row == nil || row.Length() == 0 {
 			return
 		}
@@ -286,10 +273,13 @@ func mathsHomepageItems(doc *goquery.Document, baseURL string) []model.NewsItem 
 			title = mathsHomepageTitle(row, anchor)
 		}
 		title = mathsText(title)
-		if title == "" || !isValidNewsTitle(title) {
+		if title == "" || !mathsValidNewsTitle(title) {
 			return
 		}
-		date, publishedAt := mathsHomeDate(row)
+		date, publishedAt := "", ""
+		if includeDate {
+			date, publishedAt = mathsHomeDate(row)
+		}
 		typ = mathsText(typ)
 		if index, exists := seen[fullURL]; exists {
 			current := &items[index]
@@ -313,6 +303,12 @@ func mathsHomepageItems(doc *goquery.Document, baseURL string) []model.NewsItem 
 			Type:        typ,
 			ParsedAt:    time.Now(),
 		})
+	}
+	add := func(row *goquery.Selection, title, typ string) {
+		addWithDate(row, title, typ, true)
+	}
+	addWithoutDate := func(row *goquery.Selection, title, typ string) {
+		addWithDate(row, title, typ, false)
 	}
 
 	// Carousel links are local article links even though they do not carry a
@@ -349,7 +345,10 @@ func mathsHomepageItems(doc *goquery.Document, baseURL string) []model.NewsItem 
 	if block := doc.Find(".news .activity").First(); block.Length() > 0 {
 		typ := mathsHomepageType(block)
 		block.Find(".list > ul > li").Each(func(_ int, row *goquery.Selection) {
-			add(row, mathsHomepageTitle(row, row.Find("a[href]").First()), typ)
+			// The activity card's .time is the event date, not the article's
+			// fixed publication timestamp. Leave it empty until the detail page
+			// supplies the authoritative publication node.
+			addWithoutDate(row, mathsHomepageTitle(row, row.Find("a[href]").First()), typ)
 		})
 	}
 
@@ -373,6 +372,17 @@ func mathsHomepageType(block *goquery.Selection) string {
 		return typ
 	}
 	return mathsText(block.Find(".titles .txts").First().Text())
+}
+
+func mathsValidNewsTitle(title string) bool {
+	if isValidNewsTitle(title) {
+		return true
+	}
+	// The shared title filter treats every title ending in the Chinese closing
+	// quote as a navigation label. Maths has real articles such as
+	// “数学学院研究生易曾瑞荣登《人民日报》” and archived forwarded notices
+	// that legitimately end with “》”, so retain those non-trivial titles.
+	return len(title) > 6 && strings.HasSuffix(title, "》")
 }
 
 func mathsHomepageTitle(row, anchor *goquery.Selection) string {
@@ -436,6 +446,34 @@ func mathsHasFullDate(value string) bool {
 	return mathsDateRE.MatchString(value)
 }
 
+func mathsArticleContent(doc *goquery.Document) *goquery.Selection {
+	for _, selector := range []string{
+		".inform .v_news_content",
+		".v_news_content",
+		"[id^='vsb_content'] .v_news_content",
+	} {
+		if content := doc.Find(selector).First(); content.Length() > 0 {
+			return content
+		}
+	}
+	return doc.Find("__maths_missing__")
+}
+
+func mathsFixedDateSource(titleSel *goquery.Selection) string {
+	if titleSel == nil || titleSel.Length() == 0 {
+		return ""
+	}
+	candidate := titleSel.Next()
+	if candidate.Length() == 0 || candidate.HasClass("v_news_content") || candidate.Find(".v_news_content").Length() > 0 {
+		return ""
+	}
+	id := strings.ToLower(candidate.AttrOr("id", ""))
+	if strings.HasPrefix(id, "vsb_content") {
+		return ""
+	}
+	return candidate.Text()
+}
+
 func parseAdapter_mathsArticle(raw []byte, baseURL string) (*model.Article, error) {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(raw)))
 	if err != nil {
@@ -447,8 +485,11 @@ func parseAdapter_mathsArticle(raw []byte, baseURL string) (*model.Article, erro
 	if mathsPageType(doc) != "3" {
 		return nil, fmt.Errorf("maths: page is not an article (pageType %q)", mathsPageType(doc))
 	}
-	titleSel := doc.Find(".dynamics .inform h1, .inform h1, form[name='_newscontent_fromname'] h1").First()
-	contentSel := doc.Find(".inform .v_news_content, .v_news_content").First()
+	titleSel := doc.Find("form[name='_newscontent_fromname'] > div > h1").First()
+	if titleSel.Length() == 0 {
+		titleSel = doc.Find(".dynamics .inform h1, .inform h1, form[name='_newscontent_fromname'] h1").First()
+	}
+	contentSel := mathsArticleContent(doc)
 	if titleSel.Length() == 0 {
 		return nil, fmt.Errorf("maths: article has no detail headline")
 	}
@@ -468,14 +509,23 @@ func parseAdapter_mathsArticle(raw []byte, baseURL string) (*model.Article, erro
 	if article.Type == "" {
 		return nil, fmt.Errorf("maths: article has no breadcrumb type")
 	}
-	dateSource := titleSel.Next().Text()
+	// parseBodaArticle has generic date fallbacks for unregistered sites. They
+	// are intentionally discarded here: maths' fixed line immediately after
+	// the headline is the only publication metadata source accepted by this
+	// adapter, so body dates such as event/deadline dates can never leak in.
+	article.Date = ""
+	article.PublishedAt = ""
+	dateSource := mathsFixedDateSource(titleSel)
 	date, publishedAt := mathsDateValues(dateSource)
 	if date != "" && mathsHasFullDate(date) {
 		article.Date = date
 		if publishedAt != "" {
 			article.PublishedAt = publishedAt
+		} else {
+			article.PublishedAt = date
 		}
 	}
+	mathsNormalizeArticleContent(article, contentSel, mathsCanonicalBaseURL)
 	mathsAppendDocumentAttachments(article, doc, mathsCanonicalBaseURL)
 	if article.Content == "" && contentSel.Find("img").Length() == 0 {
 		return nil, fmt.Errorf("maths: article body is empty")
@@ -493,7 +543,7 @@ func mathsAppendDocumentAttachments(article *model.Article, doc *goquery.Documen
 	}
 	doc.Find(".inform a[href]").Each(func(_ int, anchor *goquery.Selection) {
 		href := html.UnescapeString(strings.TrimSpace(anchor.AttrOr("href", "")))
-		if href == "" {
+		if href == "" || bodaIsPseudoResourceHref(href) {
 			return
 		}
 		name := mathsText(anchor.Text())
@@ -503,7 +553,10 @@ func mathsAppendDocumentAttachments(article *model.Article, doc *goquery.Documen
 		if !isDownload && !nearAttachment {
 			return
 		}
-		resolved := cleanURL(resolveURL(baseURL, href))
+		resolved := mathsResourceURL(baseURL, href)
+		if resolved == "" {
+			return
+		}
 		if seen[resolved] {
 			return
 		}
@@ -513,6 +566,292 @@ func mathsAppendDocumentAttachments(article *model.Article, doc *goquery.Documen
 		seen[resolved] = true
 		article.Attachments = append(article.Attachments, model.Attachment{Name: name, URL: resolved})
 	})
+}
+
+// mathsFetchArticle is the live detail path. The HTML parser remains usable
+// with saved source fixtures, while the live path verifies every advertised
+// image and attachment before exposing it to callers. The maths site has
+// returned HTTP 200 CAPTCHA pages from its download endpoint, so status alone
+// is not evidence that an attachment is available.
+func mathsFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	fullURL, ok := mathsArticleURL(mathsCanonicalBaseURL, articleURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("maths: refusing non-local or non-detail URL %q", articleURL)
+	}
+	body, err := fetch(fullURL)
+	if err != nil {
+		return nil, nil, err
+	}
+	article, err := parseAdapter_mathsArticle(body, mathsCanonicalBaseURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("maths article %s: %w", fullURL, err)
+	}
+	article.Images = mathsVerifyImages(article.Images, mathsCanonicalBaseURL)
+	article.Attachments = mathsVerifyAttachments(article.Attachments, mathsCanonicalBaseURL)
+	validImages := make(map[string]bool, len(article.Images))
+	for _, image := range article.Images {
+		validImages[image] = true
+	}
+	validAttachments := make(map[string]bool, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		validAttachments[attachment.URL] = true
+	}
+	article.ContentHTML = mathsSanitizeContentHTML(article.ContentHTML, mathsCanonicalBaseURL, validImages, validAttachments)
+	return article, body, nil
+}
+
+func mathsResourceURL(baseURL, raw string) string {
+	raw = html.UnescapeString(strings.TrimSpace(raw))
+	if raw == "" || bodaIsPseudoResourceHref(raw) {
+		return ""
+	}
+	return bodaResourceURL(baseURL, raw)
+}
+
+func mathsVerifyImages(images []string, baseURL string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool, len(images))
+	for _, raw := range images {
+		resolved := mathsResourceURL(baseURL, raw)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		if _, _, err := mathsFetchResource(resolved, baseURL, true); err != nil {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func mathsVerifyAttachments(attachments []model.Attachment, baseURL string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		resolved := mathsResourceURL(baseURL, attachment.URL)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		resourceName := strings.TrimSpace(attachment.Name + " " + resolved)
+		body, contentType, err := mathsFetchResource(resolved, baseURL, false)
+		if err != nil || !mathsResourceBodyIsUsable(contentType, body, resourceName, false) {
+			// mathsFetchResource already validates the response. Keep this
+			// guard close to the candidate as well so a future resource helper
+			// cannot accidentally turn an untyped response into an attachment.
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func mathsFetchResource(rawURL, baseURL string, image bool) ([]byte, string, error) {
+	resolved := mathsResourceURL(baseURL, rawURL)
+	if resolved == "" {
+		return nil, "", fmt.Errorf("maths: refusing invalid resource %q", rawURL)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("maths: create resource request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	if image {
+		req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+	} else {
+		req.Header.Set("Accept", "application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	}
+	if strings.TrimSpace(baseURL) != "" {
+		req.Header.Set("Referer", strings.TrimRight(baseURL, "/")+"/")
+	}
+	client := *defaultClient
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if len(via) == 0 || strings.EqualFold(next.URL.Hostname(), via[len(via)-1].URL.Hostname()) {
+			return nil
+		}
+		return http.ErrUseLastResponse
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("maths: fetch resource %s: %w", resolved, err)
+	}
+	defer response.Body.Close()
+	contentType := response.Header.Get("Content-Type")
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return nil, contentType, fmt.Errorf("maths: resource %s: HTTP %d", resolved, response.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, mathsMaxResourceBytes+1))
+	if err != nil {
+		return nil, contentType, fmt.Errorf("maths: read resource %s: %w", resolved, err)
+	}
+	if len(body) > mathsMaxResourceBytes || !mathsResourceBodyIsUsable(contentType, body, resolved, image) {
+		return nil, contentType, fmt.Errorf("maths: resource %s returned an invalid shell or file", resolved)
+	}
+	return body, contentType, nil
+}
+
+func mathsResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	if mediaType == "" {
+		return false
+	}
+	for _, invalid := range []string{"text/html", "application/xhtml+xml", "application/json", "text/xml", "application/xml"} {
+		if mediaType == invalid {
+			return false
+		}
+	}
+	probe := body
+	if len(probe) > 4096 {
+		probe = probe[:4096]
+	}
+	textProbe := strings.TrimPrefix(strings.TrimSpace(strings.ToLower(string(probe))), "\ufeff")
+	for _, marker := range []string{
+		"<!doctype html", "<html", "<head", "<body", "附件下载", "请输入验证码", "验证码下载附件",
+		"请先登录", "请登录后", "登录页面", "页面不存在", "404 not found", "access denied",
+		"cloudflare", "just a moment", "安全验证", "请求已被阻断", "captcha", "waf",
+	} {
+		if strings.Contains(textProbe, marker) {
+			return false
+		}
+	}
+
+	magic := mathsResourceMagic(body)
+	if image {
+		return strings.HasPrefix(mediaType, "image/") && mathsIsImageMagic(magic)
+	}
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf"):
+		return magic == "pdf"
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml"):
+		return magic == "zip"
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt") || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint":
+		return magic == "ole"
+	case strings.Contains(lowerName, ".zip") || strings.Contains(lowerName, ".rar") || strings.Contains(lowerName, ".7z") || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed":
+		return magic == "zip" || magic == "rar" || magic == "7z"
+	case strings.Contains(lowerName, ".txt") || strings.Contains(lowerName, ".csv") || strings.Contains(lowerName, ".tsv"):
+		return mediaType == "text/plain" || mediaType == "text/csv" || mediaType == "text/tab-separated-values"
+	case strings.HasPrefix(mediaType, "text/"):
+		return true
+	default:
+		return magic != ""
+	}
+}
+
+func mathsIsImageMagic(magic string) bool {
+	switch magic {
+	case "jpeg", "png", "gif", "webp", "bmp", "tiff", "svg":
+		return true
+	default:
+		return false
+	}
+}
+
+func mathsResourceMagic(body []byte) string {
+	switch {
+	case bytes.HasPrefix(body, []byte("%PDF-")):
+		return "pdf"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x03, 0x04}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x05, 0x06}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x07, 0x08}):
+		return "zip"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}):
+		return "ole"
+	case len(body) >= 3 && bytes.Equal(body[:3], []byte{0xff, 0xd8, 0xff}):
+		return "jpeg"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
+		return "png"
+	case len(body) >= 6 && (bytes.Equal(body[:6], []byte("GIF87a")) || bytes.Equal(body[:6], []byte("GIF89a"))):
+		return "gif"
+	case len(body) >= 12 && bytes.Equal(body[:4], []byte("RIFF")) && bytes.Equal(body[8:12], []byte("WEBP")):
+		return "webp"
+	case len(body) >= 2 && bytes.Equal(body[:2], []byte("BM")):
+		return "bmp"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{'I', 'I', '*', 0}) || bytes.Equal(body[:4], []byte{'M', 'M', 0, '*'})):
+		return "tiff"
+	case len(body) >= 7 && bytes.Equal(body[:7], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x00}):
+		return "rar"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x01, 0x00}):
+		return "rar"
+	case len(body) >= 6 && bytes.Equal(body[:6], []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}):
+		return "7z"
+	}
+	trimmed := bytes.TrimSpace(body)
+	if len(trimmed) > 0 {
+		probe := trimmed
+		if len(probe) > 4096 {
+			probe = probe[:4096]
+		}
+		lower := strings.ToLower(string(probe))
+		if strings.HasPrefix(lower, "<svg") || (strings.HasPrefix(lower, "<?xml") && strings.Contains(lower, "<svg")) {
+			return "svg"
+		}
+	}
+	return ""
+}
+
+func mathsSanitizeContentHTML(rawHTML, baseURL string, validImages, validAttachments map[string]bool) string {
+	if strings.TrimSpace(rawHTML) == "" {
+		return rawHTML
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(`<div id="maths-content">` + rawHTML + `</div>`))
+	if err != nil {
+		return rawHTML
+	}
+	content := doc.Find("#maths-content").First()
+	content.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := mathsImageResourceURL(image, baseURL)
+		if resolved == "" || !validImages[resolved] {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	content.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		href := html.UnescapeString(strings.TrimSpace(link.AttrOr("href", "")))
+		if bodaIsPseudoResourceHref(href) {
+			link.RemoveAttr("href")
+			link.RemoveAttr("download")
+			return
+		}
+		if !bodaLooksLikeAttachmentLink(link, href) {
+			return
+		}
+		resolved := mathsResourceURL(baseURL, href)
+		if resolved == "" || !validAttachments[resolved] {
+			link.RemoveAttr("href")
+			link.RemoveAttr("download")
+			return
+		}
+		link.SetAttr("href", resolved)
+	})
+	if contentHTML, err := content.Html(); err == nil {
+		return contentHTML
+	}
+	return rawHTML
+}
+
+func mathsImageResourceURL(image *goquery.Selection, baseURL string) string {
+	if image == nil || image.Length() == 0 {
+		return ""
+	}
+	for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+		if resolved := mathsResourceURL(baseURL, image.AttrOr(attr, "")); resolved != "" {
+			return resolved
+		}
+	}
+	return ""
 }
 
 func mathsArticleURL(baseURL, href string) (string, bool) {
@@ -535,15 +874,81 @@ func mathsPageType(doc *goquery.Document) string {
 	return strings.TrimSpace(doc.Find(`meta[name="pageType"], meta[name="pagetype"]`).First().AttrOr("content", ""))
 }
 
-func mathsRejectPage(raw []byte, doc *goquery.Document, kind string) error {
-	text := strings.ToLower(string(raw))
-	for _, marker := range []string{"验证码", "安全验证", "访问过于频繁", "captcha", "verifycode"} {
-		if strings.Contains(text, marker) {
-			return fmt.Errorf("maths: received %s verification page", kind)
-		}
+func mathsNormalizeArticleContent(article *model.Article, contentSel *goquery.Selection, baseURL string) {
+	if article == nil || contentSel == nil || contentSel.Length() == 0 {
+		return
 	}
+
+	images := make([]string, 0)
+	seenImages := make(map[string]bool)
+	contentSel.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := ""
+		for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			if candidate := mathsResourceURL(baseURL, image.AttrOr(attr, "")); candidate != "" {
+				resolved = candidate
+				break
+			}
+		}
+		if resolved == "" {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc"} {
+			image.RemoveAttr(attr)
+		}
+		if !seenImages[resolved] {
+			seenImages[resolved] = true
+			images = append(images, resolved)
+		}
+	})
+	article.Images = images
+
+	contentSel.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
+		href := html.UnescapeString(strings.TrimSpace(anchor.AttrOr("href", "")))
+		if bodaIsPseudoResourceHref(href) {
+			anchor.RemoveAttr("href")
+			return
+		}
+		if !bodaLooksLikeAttachmentLink(anchor, href) {
+			return
+		}
+		if resolved := mathsResourceURL(baseURL, href); resolved != "" {
+			anchor.SetAttr("href", resolved)
+		} else {
+			anchor.RemoveAttr("href")
+		}
+	})
+	if contentHTML, err := contentSel.Html(); err == nil {
+		article.ContentHTML = contentHTML
+	}
+}
+
+func mathsRejectPage(_ []byte, doc *goquery.Document, kind string) error {
 	if doc == nil {
 		return fmt.Errorf("maths: nil %s document", kind)
+	}
+	pageTitle := strings.ToLower(mathsText(doc.Find("title").First().Text()))
+	visible := doc.Find("body").First().Clone()
+	visible.Find("script, style, noscript, template").Remove()
+	if kind == "article" {
+		// “验证码” may be legitimate prose in an article. It is only a page
+		// marker when it appears in the shell/meta area, not in the body.
+		visible.Find(".v_news_content").Remove()
+	}
+	pageText := strings.ToLower(mathsText(visible.Text()))
+	for _, marker := range []string{
+		"验证码", "安全验证", "访问过于频繁", "captcha", "verifycode", "人机验证",
+		"请完成验证", "请先登录", "请登录后", "附件下载", "页面不存在",
+		"404错误", "404 not found", "access denied", "request blocked", "请求已被阻断",
+		"cloudflare", "just a moment", "waf",
+	} {
+		if strings.Contains(pageTitle, marker) || strings.Contains(pageText, marker) {
+			return fmt.Errorf("maths: received %s verification/error page", kind)
+		}
+	}
+	if doc.Find(`#captcha, .captcha, [id*="captcha"], [class*="captcha"], input[name="codeValue"], img[src*="createimage.jsp"]`).Length() > 0 {
+		return fmt.Errorf("maths: received %s verification page", kind)
 	}
 	return nil
 }

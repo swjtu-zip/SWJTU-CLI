@@ -1,6 +1,9 @@
 package scraper
 
 import (
+	"encoding/json"
+	"io"
+	"net/http"
 	"os"
 	"reflect"
 	"strings"
@@ -20,34 +23,33 @@ func readLibFixture(t *testing.T, name string) []byte {
 
 func TestLibAdapterRegistrationAndCanonicalPagination(t *testing.T) {
 	site := AllSites["lib"]
-	if site == nil || site.BaseURL != libCanonicalBaseURL || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil {
+	if site == nil || site.BaseURL != libCanonicalBaseURL || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.ListPageFunc == nil || site.TotalPagesFunc == nil || site.ArticleFetchFunc == nil {
 		t.Fatalf("lib adapter is incomplete: %#v", site)
 	}
 	wantFeeds := []string{
-		"home/service/1005/0", "home/service/0/2564", "home/service/0/1165", "home/service/0/2561",
-		"home/service/0/2563", "home/service/0/1006", "lecture/1007", "news/newslist/1007",
-		"news/newslist/1020", "news/newslist/1021",
+		"resources", "news", "image-news", "latest", "notices", "publicity",
+		"lectures", "activities", "exhibitions",
 	}
 	if !reflect.DeepEqual(site.SubPages, wantFeeds) {
 		t.Fatalf("lib feeds = %#v, want %#v", site.SubPages, wantFeeds)
 	}
-	if got := libPageURL("http://www.lib.swjtu.edu.cn", "home/service/1005/0", 1, 132, ".htm"); got != libCanonicalBaseURL+"/home/service/1005/0?page=1" {
+	if got := libPageURL("http://www.lib.swjtu.edu.cn", "news", 1, 5, ".htm"); got != libCanonicalBaseURL+"/news/web_newsList?cid=Ds8XD6N32k1BF9%24F&pageIndex=1" {
 		t.Fatalf("page 1 URL = %q", got)
 	}
-	if got := libPageURL("http://www.lib.swjtu.edu.cn", "home/service/1005/0", 66, 132, ".html"); got != libCanonicalBaseURL+"/home/service/1005/0?page=66" {
+	if got := libPageURL("http://www.lib.swjtu.edu.cn", "news", 3, 5, ".html"); got != libCanonicalBaseURL+"/news/web_newsList?cid=Ds8XD6N32k1BF9%24F&pageIndex=3" {
 		t.Fatalf("middle page URL = %q", got)
 	}
-	if got := libPageURL("http://www.lib.swjtu.edu.cn", "home/service/1005/0", 132, 132, ".htm"); got != libCanonicalBaseURL+"/home/service/1005/0?page=132" {
+	if got := libPageURL("http://www.lib.swjtu.edu.cn", "news", 5, 5, ".htm"); got != libCanonicalBaseURL+"/news/web_newsList?cid=Ds8XD6N32k1BF9%24F&pageIndex=5" {
 		t.Fatalf("last page URL = %q", got)
 	}
 	if got := libPageURL("http://www.lib.swjtu.edu.cn", "index", 1, 1, ".htm"); got != libCanonicalBaseURL+"/" {
 		t.Fatalf("homepage URL = %q", got)
 	}
-	if got := libPageURL("http://www.lib.swjtu.edu.cn", "home/service/1005/0", 133, 132, ".htm"); got != "" {
+	if got := libPageURL("http://www.lib.swjtu.edu.cn", "news", 6, 5, ".htm"); got != "" {
 		t.Fatalf("out-of-range page URL = %q, want empty", got)
 	}
-	if got := libPageURL("http://www.lib.swjtu.edu.cn", "home/service/1005/0", 2, 0, ".htm"); got != "" {
-		t.Fatalf("unknown-total page URL = %q, want empty", got)
+	if got := libPageURL("http://www.lib.swjtu.edu.cn", "news", 2, 0, ".htm"); !strings.Contains(got, "pageIndex=2") {
+		t.Fatalf("unknown-total page URL = %q", got)
 	}
 }
 
@@ -175,6 +177,142 @@ func TestLibEmptyAndNonArticleResponsesAreStrict(t *testing.T) {
 		if article, err := parseAdapter_libArticle(readLibFixture(t, name), libCanonicalBaseURL); err == nil || article != nil {
 			t.Fatalf("%s was accepted as an article: article=%#v err=%v", name, article, err)
 		}
+	}
+}
+
+func TestLibLiveAPIListFixtureUsesSourceColumnsAndDateOnly(t *testing.T) {
+	feed, ok := libFeedForSlug("news")
+	if !ok {
+		t.Fatal("news feed is not registered")
+	}
+	items, pages, err := parseLibAPIList(readLibFixture(t, "lib_api_list_live.json"), feed)
+	if err != nil {
+		t.Fatalf("parse live API list: %v", err)
+	}
+	if len(items) != 2 || pages != 5 {
+		t.Fatalf("live API list = %d items/%d pages, want 2/5", len(items), pages)
+	}
+	wantURL := libCanonicalBaseURL + "/news/web_newsDetails?cid=Ds8XD6N32k1BF9%24F&id=09922304-25f3-4114-acb5-9c7df478860d"
+	if items[0].URL != wantURL || items[0].Type != "最新动态" || items[0].Date != "2026-09-04" || items[0].PublishedAt != "2026-09-04" {
+		t.Fatalf("live API item = %#v, want URL/type/date from source fields", items[0])
+	}
+}
+
+func TestLibLiveAPIArticleFixtureUsesDetailMetadataAndBodyScope(t *testing.T) {
+	article, err := parseLibAPIArticle(readLibFixture(t, "lib_api_article_live.json"), libCanonicalBaseURL)
+	if err != nil {
+		t.Fatalf("parse live API article: %v", err)
+	}
+	if article.Title != "图书馆召开树立和践行正确政绩观学习教育总结会" || article.Source != "图书馆" || article.Type != "新闻动态" {
+		t.Fatalf("live API article metadata = %#v", article)
+	}
+	if article.Date != "2026-09-04" || article.PublishedAt != "2026-09-04" {
+		t.Fatalf("live API article date = %q/%q, body activity date leaked", article.Date, article.PublishedAt)
+	}
+	if !strings.Contains(article.Content, "活动时间：2026年12月31日") || strings.Contains(article.ContentHTML, "editor-style") {
+		t.Fatalf("API body scope/style cleanup failed: content=%q html=%q", article.Content, article.ContentHTML)
+	}
+	if len(article.Images) != 2 || len(article.Attachments) != 2 || article.Attachments[0].Name != "会议材料.pdf" {
+		t.Fatalf("API body resources = images %#v attachments %#v", article.Images, article.Attachments)
+	}
+	if strings.Contains(article.ContentHTML, "external.pdf") {
+		t.Fatal("external attachment was promoted into article resources")
+	}
+}
+
+type libTestRoundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f libTestRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func libTestResponse(req *http.Request, status int, contentType string, body []byte) *http.Response {
+	return &http.Response{
+		StatusCode: status,
+		Header:     http.Header{"Content-Type": []string{contentType}},
+		Body:       io.NopCloser(strings.NewReader(string(body))),
+		Request:    req,
+	}
+}
+
+func TestLibAPIAndResourceFetchChecksPaginationAndBadAssets(t *testing.T) {
+	oldClient := defaultClient
+	defer func() { defaultClient = oldClient }()
+
+	listFixture := readLibFixture(t, "lib_api_list_live.json")
+	detailFixture := readLibFixture(t, "lib_api_article_live.json")
+	var requestedPage int
+	defaultClient = &http.Client{Transport: libTestRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		switch req.URL.Path {
+		case "/jwt/api/Auth/AccessToken":
+			return libTestResponse(req, http.StatusOK, "application/json", []byte(`{"statusCode":"200","data":{"token":"fixture-token"}}`)), nil
+		case "/gateway/news/api/news/pront-news-list-data-get":
+			var payload struct {
+				PageIndex int `json:"pageIndex"`
+			}
+			if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+				return nil, err
+			}
+			requestedPage = payload.PageIndex
+			return libTestResponse(req, http.StatusOK, "application/json", listFixture), nil
+		case "/gateway/news/api/news/pront-news-content-get":
+			return libTestResponse(req, http.StatusOK, "application/json", detailFixture), nil
+		case "/file/good.png":
+			return libTestResponse(req, http.StatusOK, "image/png", []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}), nil
+		case "/file/bad.png":
+			return libTestResponse(req, http.StatusOK, "image/png", []byte("<html>captcha</html>")), nil
+		case "/files/good.pdf":
+			return libTestResponse(req, http.StatusOK, "application/pdf", []byte("%PDF-1.7\n")), nil
+		case "/files/bad.pdf":
+			return libTestResponse(req, http.StatusNotFound, "text/html", []byte("not found")), nil
+		default:
+			return libTestResponse(req, http.StatusNotFound, "text/html", []byte("not found")), nil
+		}
+	})}
+
+	if _, pages, err := libListPage("news", 3); err != nil || pages != 5 || requestedPage != 3 {
+		t.Fatalf("API page fetch = pages %d/requested %d/err %v", pages, requestedPage, err)
+	}
+	articleURL := libNewsDetailURL("Ds8XD6N32k1BF9$F", "09922304-25f3-4114-acb5-9c7df478860d")
+	article, _, err := libFetchArticle(articleURL)
+	if err != nil {
+		t.Fatalf("fetch API article: %v", err)
+	}
+	if len(article.Images) != 1 || !strings.HasSuffix(article.Images[0], "/file/good.png") {
+		t.Fatalf("verified images = %#v", article.Images)
+	}
+	if len(article.Attachments) != 1 || !strings.HasSuffix(article.Attachments[0].URL, "/files/good.pdf") || article.Attachments[0].Size == "" {
+		t.Fatalf("verified attachments = %#v", article.Attachments)
+	}
+	for _, rejected := range []string{"bad.png", "bad.pdf", "external.pdf", "captcha"} {
+		if strings.Contains(strings.ToLower(article.ContentHTML), strings.ToLower(rejected)) {
+			t.Fatalf("rejected resource %q remained in ContentHTML: %s", rejected, article.ContentHTML)
+		}
+	}
+}
+
+func TestLibResourceValidationRequiresTypeMagicAndRejectsShells(t *testing.T) {
+	cases := []struct {
+		name        string
+		contentType string
+		body        []byte
+		resource    string
+		image       bool
+		want        bool
+	}{
+		{"png", "image/png", []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}, "good.png", true, true},
+		{"missing type", "", []byte("anything"), "good.png", true, false},
+		{"wrong image magic", "image/png", []byte("<html>captcha</html>"), "bad.png", true, false},
+		{"pdf", "application/pdf", []byte("%PDF-1.7"), "good.pdf", false, true},
+		{"wrong pdf magic", "application/pdf", []byte("plain text"), "bad.pdf", false, false},
+		{"html shell", "application/octet-stream", []byte("<!doctype html><title>验证码</title>"), "download", false, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := libResourceBodyIsUsable(tc.contentType, tc.body, tc.resource, tc.image); got != tc.want {
+				t.Fatalf("usable = %v, want %v", got, tc.want)
+			}
+		})
 	}
 }
 

@@ -1,6 +1,8 @@
 package scraper
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -22,7 +24,7 @@ func TestAIAdapterRegistrationAndReversePagination(t *testing.T) {
 	if !ok {
 		t.Fatal("ai site is not registered")
 	}
-	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil {
+	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil || site.ArticleFetchFunc == nil {
 		t.Fatalf("AI adapter hooks are incomplete: %+v", site)
 	}
 	wantSubPages := []string{"tzgg", "xwdt", "xsbg", "kxyj", "jcsj"}
@@ -47,10 +49,10 @@ func TestAIAdapterRegistrationAndReversePagination(t *testing.T) {
 		{"xwdt", 2, 4, aiBaseURL + "/xwdt/3.htm"},
 		{"xwdt", 3, 4, aiBaseURL + "/xwdt/2.htm"},
 		{"xwdt", 4, 4, aiBaseURL + "/xwdt/1.htm"},
-		// The audited total wins over a stale caller hint; otherwise page 2
-		// would incorrectly request /xwdt/0.htm.
 		{"xwdt", 2, 1, aiBaseURL + "/xwdt/3.htm"},
 		{"xwdt", 2, 10, aiBaseURL + "/xwdt/9.htm"},
+		{"xwdt", 5, 4, ""},
+		{"unknown", 2, 0, ""},
 		{"xsbg", 2, 2, aiBaseURL + "/xsbg/1.htm"},
 		{"kxyj", 2, 2, aiBaseURL + "/kxyj/1.htm"},
 		{"jcsj", 1, 1, aiBaseURL + "/jcsj.htm"},
@@ -59,6 +61,85 @@ func TestAIAdapterRegistrationAndReversePagination(t *testing.T) {
 		if got := site.PageURL(aiBaseURL, tc.slug, tc.page, tc.total, ".htm"); got != tc.want {
 			t.Errorf("page URL %s page %d/%d = %q, want %q", tc.slug, tc.page, tc.total, got, tc.want)
 		}
+	}
+}
+
+func TestAILiveFixturesCoverAuditedHomepageAndArchivePages(t *testing.T) {
+	cases := []struct {
+		name, fixture, firstURL, lastURL string
+		total, count                     int
+	}{
+		{"homepage", "ai_live_home.html", aiBaseURL + "/info/1067/1301.htm", aiBaseURL + "/info/1111/1133.htm", 0, 35},
+		{"notice first", "ai_live_tzgg_first.html", aiBaseURL + "/info/1067/1301.htm", aiBaseURL + "/info/1067/1095.htm", 2, 10},
+		{"notice last", "ai_live_tzgg_last.html", aiBaseURL + "/info/1067/1094.htm", aiBaseURL + "/info/1067/1004.htm", 2, 4},
+		{"news first", "ai_live_xwdt_first.html", aiBaseURL + "/info/1051/1312.htm", aiBaseURL + "/info/1051/1205.htm", 4, 10},
+		{"news middle", "ai_live_xwdt_middle.html", aiBaseURL + "/info/1051/1202.htm", aiBaseURL + "/info/1051/1151.htm", 4, 10},
+		{"news last", "ai_live_xwdt_last.html", aiBaseURL + "/info/1051/1043.htm", aiBaseURL + "/info/1051/1043.htm", 4, 1},
+		{"report first", "ai_live_xsbg_first.html", aiBaseURL + "/info/1109/1322.htm", aiBaseURL + "/info/1109/1111.htm", 2, 10},
+		{"report last", "ai_live_xsbg_last.html", aiBaseURL + "/info/1109/1105.htm", aiBaseURL + "/info/1109/1050.htm", 2, 10},
+		{"research first", "ai_live_kxyj_first.html", aiBaseURL + "/info/1052/1271.htm", aiBaseURL + "/info/1052/1063.htm", 2, 10},
+		{"research last", "ai_live_kxyj_last.html", aiBaseURL + "/info/1052/1062.htm", aiBaseURL + "/info/1052/1062.htm", 2, 1},
+		{"highlights", "ai_live_jcsj.html", aiBaseURL + "/info/1111/1212.htm", aiBaseURL + "/info/1111/1133.htm", 1, 7},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			raw := loadAIFixture(t, tc.fixture)
+			if tc.total > 0 && aiTotalPagesFromHTML(raw) != tc.total {
+				t.Fatalf("total pages = %d, want %d", aiTotalPagesFromHTML(raw), tc.total)
+			}
+			items, err := parseAdapter_aiList(raw, aiBaseURL)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(items) != tc.count {
+				t.Fatalf("items = %d, want %d: %#v", len(items), tc.count, items)
+			}
+			if items[0].URL != tc.firstURL || items[len(items)-1].URL != tc.lastURL {
+				t.Fatalf("boundary items = %q ... %q, want %q ... %q", items[0].URL, items[len(items)-1].URL, tc.firstURL, tc.lastURL)
+			}
+			for _, item := range items {
+				if strings.Contains(item.URL, "swjtu.edu.cn/index") || strings.Contains(item.URL, "browsehappy") {
+					t.Fatalf("non-article link leaked into feed: %#v", item)
+				}
+			}
+		})
+	}
+}
+
+func TestAITotalPagesHookReadsLivePageBox(t *testing.T) {
+	firstPage := loadAIFixture(t, "ai_live_xwdt_first.html")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/xwdt.htm" {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write(firstPage)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+
+	site := AllSites["ai"]
+	oldBase, oldNoCache := site.BaseURL, NoCache
+	site.BaseURL, NoCache = server.URL, true
+	t.Cleanup(func() {
+		site.BaseURL, NoCache = oldBase, oldNoCache
+		ClearCache()
+	})
+
+	total, err := site.GetTotalPages("xwdt")
+	if err != nil || total != 4 {
+		t.Fatalf("AI total page hook = %d, %v; want 4", total, err)
+	}
+}
+
+func TestAITotalPagesRejectsStaticAndVerificationResponses(t *testing.T) {
+	static := []byte(`<html><head><meta name="pageType" content="2"></head><body><div class="article"><h1>人才培养</h1></div></body></html>`)
+	if got := aiTotalPagesFromHTML(static); got != 0 {
+		t.Fatalf("static page total = %d, want 0", got)
+	}
+	waf := []byte(`<!doctype html><html><head><title>安全验证</title></head><body><h1>请求被拦截</h1></body></html>`)
+	if got := aiTotalPagesFromHTML(waf); got != 0 {
+		t.Fatalf("WAF page total = %d, want 0", got)
 	}
 }
 
@@ -157,7 +238,6 @@ func TestAIArticleParserExtractsPreciseMetadataResourcesAndAttachments(t *testin
 
 	wantAttachments := map[string]string{
 		"附件材料.docx": aiBaseURL + "/system/_content/download.jsp?urltype=news.DownloadAttachUrl&owner=1541857851&wbfileid=DOCFIX",
-		"论文.pdf":    "https://example.org/paper.pdf",
 	}
 	if len(article.Attachments) != len(wantAttachments) {
 		t.Fatalf("got %d attachments, want %d: %#v", len(article.Attachments), len(wantAttachments), article.Attachments)
@@ -167,8 +247,146 @@ func TestAIArticleParserExtractsPreciseMetadataResourcesAndAttachments(t *testin
 			t.Errorf("unexpected attachment: %#v", attachment)
 		}
 	}
-	if !strings.Contains(article.ContentHTML, `src="https://ai.swjtu.edu.cn/__local/body.png"`) || !strings.Contains(article.ContentHTML, "wbfileid=DOCFIX") {
+	if !strings.Contains(article.ContentHTML, `src="https://ai.swjtu.edu.cn/__local/body.png"`) || !strings.Contains(article.ContentHTML, "wbfileid=DOCFIX") || !strings.Contains(article.ContentHTML, "https://example.org/paper.pdf") {
 		t.Fatalf("content HTML did not retain resolved resources: %s", article.ContentHTML)
+	}
+	for _, attachment := range article.Attachments {
+		if strings.Contains(attachment.URL, "example.org") {
+			t.Fatal("external PDF link was promoted to an AI-site attachment")
+		}
+	}
+}
+
+func TestAILiveDetailFixturesUseFixedMetadataAndKeepBodyLinks(t *testing.T) {
+	cases := []struct {
+		fixture, title, source, date, publishedAt, typ string
+	}{
+		{"ai_live_article_notice.html", "关于张钧波博士参与申报 2020年度吴文俊人工智能科学技术奖的公示", "人工智能研究院", "2020-08-07", "2020-08-07 10:24:00", "通知公告"},
+		{"ai_live_article_research.html", "研究院与京东城市合作提出快速定位新冠病毒易感人群新方案", "服务管理办公室", "2020-04-16", "2020-04-16 13:00:00", "科学研究"},
+		{"ai_live_article_report.html", "西南交通大学 “1896交子讲堂” 学术讲座", "服务管理办公室", "2019-12-25", "2019-12-25 12:03:00", "学术报告"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.fixture, func(t *testing.T) {
+			article, err := parseAdapter_aiArticle(loadAIFixture(t, tc.fixture), aiBaseURL)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if article.Title != tc.title || article.Source != tc.source || article.Date != tc.date || article.PublishedAt != tc.publishedAt || article.Type != tc.typ {
+				t.Fatalf("fixed metadata = %#v, want title=%q source=%q date=%q published=%q type=%q", article, tc.title, tc.source, tc.date, tc.publishedAt, tc.typ)
+			}
+		})
+	}
+
+	research, err := parseAdapter_aiArticle(loadAIFixture(t, "ai_live_article_research.html"), aiBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(research.Images) != 2 || !strings.Contains(research.Content, "论文下载链接") || !strings.Contains(research.ContentHTML, "https://arxiv.org/pdf/2004.06653.pdf") {
+		t.Fatalf("research body/resources were not retained accurately: content=%q images=%#v html=%s", research.Content, research.Images, research.ContentHTML)
+	}
+	if len(research.Attachments) != 0 {
+		t.Fatalf("external arXiv link was incorrectly emitted as an attachment: %#v", research.Attachments)
+	}
+}
+
+func TestAIFetchArticleVerifiesResourcesAndDateOnly(t *testing.T) {
+	fixture := loadAIFixture(t, "ai_resource_article.html")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/info/1067/1301.htm":
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write(fixture)
+		case "/images/valid.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n', 0x00})
+		case "/images/bad.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte("<!doctype html><h1>验证码下载附件</h1>"))
+		case "/files/valid.pdf":
+			w.Header().Set("Content-Type", "application/pdf")
+			_, _ = w.Write([]byte("%PDF-1.7 fixture"))
+		case "/files/bad.pdf":
+			w.Header().Set("Content-Type", "application/pdf")
+			_, _ = w.Write([]byte("not a PDF"))
+		case "/system/_content/download.jsp":
+			if r.URL.Query().Get("wbfileid") == "VALID" {
+				w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+				_, _ = w.Write([]byte{'P', 'K', 0x03, 0x04, 'A', 'I'})
+				return
+			}
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write([]byte("<html><body>请输入验证码下载附件</body></html>"))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	site := AllSites["ai"]
+	oldBase, oldNoCache := site.BaseURL, NoCache
+	site.BaseURL, NoCache = server.URL, true
+	t.Cleanup(func() {
+		site.BaseURL, NoCache = oldBase, oldNoCache
+		ClearCache()
+	})
+
+	article, raw, err := aiFetchArticle(server.URL + "/info/1067/1301.htm")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(raw) == 0 || article.Date != "2026-09-04" || article.PublishedAt != "" {
+		t.Fatalf("date-only publication was changed: raw=%d date=%q published=%q", len(raw), article.Date, article.PublishedAt)
+	}
+	if len(article.Images) != 1 || article.Images[0] != server.URL+"/images/valid.png" {
+		t.Fatalf("verified images = %#v", article.Images)
+	}
+	if len(article.Attachments) != 2 || article.Attachments[0].Name != "有效文件.pdf" || article.Attachments[1].Name != "有效材料.docx" {
+		t.Fatalf("verified attachments = %#v", article.Attachments)
+	}
+	for _, rejected := range []string{"bad.png", "bad.pdf", "CAPTCHA", "loading.gif", "javascript:"} {
+		if strings.Contains(article.ContentHTML, rejected) {
+			t.Fatalf("rejected resource remained in ContentHTML: %q in %s", rejected, article.ContentHTML)
+		}
+	}
+	if !strings.Contains(article.ContentHTML, "https://external.example/guide") || !strings.Contains(article.ContentHTML, server.URL+"/files/valid.pdf") {
+		t.Fatalf("valid/external links were not retained: %s", article.ContentHTML)
+	}
+}
+
+func TestAIResourceVerificationChecksHTTPStatusTypeAndMagic(t *testing.T) {
+	if aiResourceBodyIsUsable("text/html; charset=UTF-8", loadAIFixture(t, "ai_attachment_captcha_live.html"), "download.jsp", false) {
+		t.Fatal("captured AI download CAPTCHA HTML was accepted as an attachment")
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/valid.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'})
+		case "/fake.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte("<html>captcha</html>"))
+		case "/valid.pdf":
+			w.Header().Set("Content-Type", "application/pdf; charset=binary")
+			_, _ = w.Write([]byte("%PDF-1.7\n"))
+		case "/fake.pdf":
+			w.Header().Set("Content-Type", "application/pdf")
+			_, _ = w.Write([]byte("<html>登录页面</html>"))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	if body, typ, err := aiFetchResource(server.URL+"/valid.png", server.URL, true); err != nil || typ != "image/png" || len(body) == 0 {
+		t.Fatalf("valid image fetch = len=%d type=%q err=%v", len(body), typ, err)
+	}
+	for _, resource := range []string{"/fake.png", "/fake.pdf", "/missing.pdf"} {
+		if _, _, err := aiFetchResource(server.URL+resource, server.URL, strings.HasSuffix(resource, ".png")); err == nil {
+			t.Fatalf("invalid resource %s was accepted", resource)
+		}
+	}
+	if !aiResourceBodyIsUsable("application/pdf", []byte("%PDF-1.7"), "valid.pdf", false) || aiResourceBodyIsUsable("application/pdf", []byte("not pdf"), "fake.pdf", false) {
+		t.Fatal("PDF Content-Type/magic validation is incorrect")
 	}
 }
 
@@ -184,5 +402,9 @@ func TestAIParsersRejectShellsAndErrorPages(t *testing.T) {
 	captcha := []byte(`<html><head><title>附件下载</title></head><body><h1>请输入验证码下载附件</h1></body></html>`)
 	if _, err := parseAdapter_aiArticle(captcha, aiBaseURL); err == nil {
 		t.Fatal("verification page was accepted as an AI article")
+	}
+	waf := []byte(`<!doctype html><html><head><title>安全验证</title></head><body><h1>请求被拦截</h1></body></html>`)
+	if _, err := parseAdapter_aiList(waf, aiBaseURL); err == nil {
+		t.Fatal("WAF response was accepted as an AI list")
 	}
 }

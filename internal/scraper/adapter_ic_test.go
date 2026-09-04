@@ -1,8 +1,12 @@
 package scraper
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -62,6 +66,57 @@ func TestICPageURLUsesReverseGeneratedFiles(t *testing.T) {
 	}
 	if _, _, err := icListPage("xwzx", 0); err == nil {
 		t.Fatal("IC custom list accepted page zero")
+	}
+}
+
+func TestICListPageFetchesFirstMiddleLastAndRejectsOutOfRange(t *testing.T) {
+	fixtures := map[string][]byte{
+		"/xwzx.htm":   loadICFixture(t, "ic_list_first.html"),
+		"/xwzx/2.htm": loadICFixture(t, "ic_list_middle.html"),
+		"/xwzx/1.htm": loadICFixture(t, "ic_list_last.html"),
+		"/xwzx/0.htm": loadICFixture(t, "ic_list_out_of_range.html"),
+	}
+	var requests []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests = append(requests, r.URL.Path)
+		body, ok := fixtures[r.URL.Path]
+		if !ok || r.URL.Path == "/xwzx/0.htm" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(body)
+	}))
+	defer server.Close()
+
+	site := AllSites["ic"]
+	oldBase, oldClient, oldNoCache := site.BaseURL, defaultClient, NoCache
+	site.BaseURL, defaultClient, NoCache = server.URL, server.Client(), true
+	t.Cleanup(func() { site.BaseURL, defaultClient, NoCache = oldBase, oldClient, oldNoCache })
+
+	wantIDs := []string{"4001", "4002", "4003"}
+	for page, wantID := range wantIDs {
+		items, total, err := icListPage("xwzx", page+1)
+		if err != nil {
+			t.Fatalf("logical page %d: %v", page+1, err)
+		}
+		if total != 3 || len(items) != 1 {
+			t.Fatalf("logical page %d result = total %d items %#v, want total 3 and one item", page+1, total, items)
+		}
+		if !strings.HasSuffix(items[0].URL, "/info/1061/"+wantID+".htm") {
+			t.Fatalf("logical page %d URL = %q, want article %s", page+1, items[0].URL, wantID)
+		}
+	}
+	if _, total, err := icListPage("xwzx", 4); err == nil || total != 3 || !strings.Contains(err.Error(), "out of range") {
+		t.Fatalf("out-of-range page result = total %d err %v", total, err)
+	}
+	if _, _, err := icListPage("gywm", 1); err == nil || !strings.Contains(err.Error(), "non-article feed") {
+		t.Fatalf("static route was accepted: %v", err)
+	}
+	for _, path := range requests {
+		if path == "/xwzx/0.htm" {
+			t.Fatal("out-of-range page requested physical /0.htm")
+		}
 	}
 }
 
@@ -193,5 +248,139 @@ func TestICArticleExtractsMetadataBodyImagesAndAttachments(t *testing.T) {
 	}
 	if !strings.Contains(article.ContentHTML, `src="https://ic.swjtu.edu.cn/__local/ic-body.png"`) || !strings.Contains(article.ContentHTML, `href="https://ic.swjtu.edu.cn/system/_content/download.jsp?urltype=news.DownloadAttachUrl&amp;wbfileid=ICFIX"`) {
 		t.Fatalf("resolved resources not retained in content HTML: %s", article.ContentHTML)
+	}
+}
+
+func TestICArticleDateOnlyDoesNotInventClockOrUseBodyDates(t *testing.T) {
+	article, err := parseAdapter_icArticle(loadICFixture(t, "ic_article_date_only.html"), icTestBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Date != "2026-08-30" || article.PublishedAt != "2026-08-30" {
+		t.Fatalf("date-only metadata = date %q published_at %q", article.Date, article.PublishedAt)
+	}
+	if strings.Contains(article.PublishedAt, "00:00:00") || strings.Contains(article.PublishedAt, "2027") {
+		t.Fatalf("publication clock/body event leaked into metadata: %q", article.PublishedAt)
+	}
+	if !strings.Contains(article.Content, "活动时间：2027年9月16日") {
+		t.Fatalf("fixed article body was not retained: %q", article.Content)
+	}
+}
+
+func TestICFetchArticleVerifiesAndSanitizesResources(t *testing.T) {
+	articleHTML := loadICFixture(t, "ic_article_resources.html")
+	validPNG := []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}
+	var requests []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests = append(requests, r.URL.Path)
+		switch r.URL.Path {
+		case "/info/1061/4101.htm":
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write(articleHTML)
+		case "/good.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write(validPNG)
+		case "/bad.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte("not an image"))
+		case "/captcha.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte("<html>请输入验证码</html>"))
+		case "/good.pdf":
+			w.Header().Set("Content-Type", "application/pdf")
+			_, _ = w.Write([]byte("%PDF-1.7\nfixture"))
+		case "/bad.pdf":
+			w.Header().Set("Content-Type", "application/pdf")
+			_, _ = w.Write([]byte("not a PDF"))
+		case "/captcha.pdf":
+			w.Header().Set("Content-Type", "application/pdf")
+			_, _ = w.Write([]byte("<html><body>验证码下载附件</body></html>"))
+		case "/missing.pdf":
+			http.NotFound(w, r)
+		case "/large.bin":
+			w.Header().Set("Content-Type", "application/octet-stream")
+			w.Header().Set("Content-Length", strconv.FormatInt(icMaxResourceBytes+1, 10))
+			_, _ = w.Write([]byte("too large"))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	site := AllSites["ic"]
+	oldBase, oldClient, oldNoCache := site.BaseURL, defaultClient, NoCache
+	site.BaseURL, defaultClient, NoCache = server.URL, server.Client(), true
+	t.Cleanup(func() { site.BaseURL, defaultClient, NoCache = oldBase, oldClient, oldNoCache })
+
+	article, raw, err := icFetchArticle(server.URL + "/info/1061/4101.htm")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(raw) == 0 || article.Date != "2026-08-31" || article.PublishedAt != "2026-08-31 14:20:11" {
+		t.Fatalf("raw/date metadata = %d/%#v", len(raw), article)
+	}
+	if len(article.Images) != 1 || article.Images[0] != server.URL+"/good.png" {
+		t.Fatalf("verified images = %#v", article.Images)
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].URL != server.URL+"/good.pdf" || article.Attachments[0].Size != strconv.Itoa(len("%PDF-1.7\nfixture")) {
+		t.Fatalf("verified attachments = %#v", article.Attachments)
+	}
+	for _, rejected := range []string{"bad.png", "captcha.png", "bad.pdf", "captcha.pdf", "missing.pdf"} {
+		if strings.Contains(article.ContentHTML, rejected) {
+			t.Fatalf("rejected resource %q survived sanitization: %s", rejected, article.ContentHTML)
+		}
+	}
+	if !strings.Contains(article.ContentHTML, server.URL+"/good.png") || !strings.Contains(article.ContentHTML, server.URL+"/good.pdf") || !strings.Contains(article.ContentHTML, "https://example.com/reference") {
+		t.Fatalf("valid resource or external normal link was lost: %s", article.ContentHTML)
+	}
+	if _, _, err := icFetchResource(server.URL+"/large.bin", server.URL, server.URL+"/info/1061/4101.htm", false); err == nil || !strings.Contains(err.Error(), "exceeds") {
+		t.Fatalf("oversized resource error = %v", err)
+	}
+	if len(requests) == 0 {
+		t.Fatal("resource/article test made no requests")
+	}
+}
+
+func TestICResourceBodyValidationChecksContentTypeMagicAndShells(t *testing.T) {
+	validPNG := []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}
+	tests := []struct {
+		name        string
+		contentType string
+		body        []byte
+		resource    string
+		image       bool
+		want        bool
+	}{
+		{"valid png", "image/png", validPNG, "good.png", true, true},
+		{"wrong image magic", "image/png", []byte("not png"), "bad.png", true, false},
+		{"missing content type", "", []byte("%PDF-1.7"), "good.pdf", false, false},
+		{"valid pdf", "application/pdf; charset=binary", []byte("%PDF-1.7"), "good.pdf", false, true},
+		{"captcha html", "application/pdf", []byte("<html>请输入验证码下载附件</html>"), "bad.pdf", false, false},
+		{"json error", "application/json", []byte(`{"error":"denied"}`), "bad.pdf", false, false},
+		{"valid docx zip", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", []byte{'P', 'K', 0x03, 0x04}, "good.docx", false, true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := icResourceBodyIsUsable(tc.contentType, tc.body, tc.resource, tc.image); got != tc.want {
+				t.Fatalf("usable = %v, want %v", got, tc.want)
+			}
+		})
+	}
+	for _, raw := range []string{"javascript:void(0)", "data:image/png;base64,AA", "/captcha/image.png", "/login/file.pdf", "file:///tmp/a.pdf", "https://other.example/file.pdf"} {
+		if got := icResourceURL(icTestBaseURL, raw); got != "" {
+			t.Errorf("unsafe resource %q resolved to %q", raw, got)
+		}
+	}
+}
+
+func TestICPageFixtureNamesAreStable(t *testing.T) {
+	for page, name := range map[int]string{1: "ic_list_first.html", 2: "ic_list_middle.html", 3: "ic_list_last.html"} {
+		items, err := parseAdapter_icList(loadICFixture(t, name), icTestBaseURL)
+		if err != nil || len(items) != 1 {
+			t.Fatalf("fixture page %d (%s): items=%d err=%v", page, name, len(items), err)
+		}
+		if !strings.Contains(items[0].Title, fmt.Sprintf("第%d页", page)) {
+			t.Fatalf("fixture page %d title = %q", page, items[0].Title)
+		}
 	}
 }

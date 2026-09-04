@@ -1,9 +1,14 @@
 package scraper
 
 import (
+	"bytes"
 	"fmt"
+	htmlstd "html"
+	"io"
+	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,9 +22,8 @@ const lixueCanonicalBaseURL = "https://lixue.swjtu.edu.cn"
 // lixueSubPages contains the list shells found by walking the live home page,
 // its hidden notice tabs, and every linked section. Empty shells are retained
 // when the source exposes a real paginated article-list template. Static
-// profile/landing pages and parent pages that duplicate a different feed are
-// deliberately not registered: accepting their navigation links as news
-// would create false articles and incorrect types.
+// profile/landing pages, external-only pages, and the student-introduction
+// parent are deliberately not registered as article feeds.
 var lixueSubPages = []string{
 	"xwgg/xytz",
 	"xwgg/xytz/dj",
@@ -36,47 +40,52 @@ var lixueSubPages = []string{
 	"djgz/jgdj",
 	"djgz/xsdj",
 	"djgz/llxx",
+	"jyjx",
 	"jyjx/jxxw",
 	"jyjx/kcjs",
-	"jyjx/bkjw1",
 	"jyjx/jcjs",
 	"jyjx/jxjy",
 	"jyjx/jxtd",
 	"jyjx/yjsjy",
+	"xsky",
 	"xsky/xkxw",
 	"xsky/xkgk",
 	"xsky/xkpt",
 	"xsky/xktz",
 	"xsky/yjfx",
 	"xsky/yjtd",
-	"xsgz",
 	"xsgz/xgtz",
 	"xsgz/xgdt",
 	"xsgz/txhd",
 	"xsgz/bjfc1",
+	"jwgz",
 	"jwgz/jwtz",
 	"jwgz/jwdt",
+	"ghgz",
 	"ghgz/ghtz",
 	"ghgz/ghdt",
-	"xygk/lxcgz",
+	"xygz",
+	"xygz/xyfc",
+	"xygz/xyhd",
+	"jlhz",
 	"jlhz/gjxshy",
 	"jlhz/gjzmzjlf",
 	"jlhz/gjhytybg",
 	"jlhz/gjhkc",
 	"jlhz/lxtd",
 	"jlhz/gjxsjgrz",
+	"zsjy",
 	"zsjy/zsgz",
 	"zsjy/yjsds",
 	"zsjy/jygz",
-	"szll/szjj",
 	"xzzq",
-	"yxjd",
 	"sycc",
 }
 
 var (
-	lixueArticlePathRE = regexp.MustCompile(`(?i)^/info/(\d+)/\d+\.html?$`)
-	lixueSplitDateRE   = regexp.MustCompile(`(20\d{2})\s+(\d{1,2})\s*[-/.]\s*(\d{1,2})`)
+	lixueArticlePathRE      = regexp.MustCompile(`(?i)^/info/(\d+)/\d+\.html?$`)
+	lixueSplitDateRE        = regexp.MustCompile(`(20\d{2})\s+(\d{1,2})\s*[-/.]\s*(\d{1,2})`)
+	lixuePublicationLabelRE = regexp.MustCompile(`(?i)(?:发布日期|发布时间|发表日期|发表时间|发布于|日期)\s*[:：]?`)
 )
 
 // The column id is part of every detail URL and is the only reliable type
@@ -85,9 +94,11 @@ var (
 var lixueColumnTypes = map[string]string{
 	"1022": "科学研究",
 	"1024": "科学研究",
+	"1028": "理论学习",
 	"1031": "学生工作",
 	"1032": "学工通知",
 	"1034": "团学活动",
+	"1035": "班级风采",
 	"1044": "国际知名专家来访",
 	"1056": "工会动态",
 	"1059": "学院新闻",
@@ -183,7 +194,11 @@ func lixueTotalPages(slug string) (int, error) {
 		if pageType != "2" || !lixueListShell(doc) {
 			return 0, fmt.Errorf("lixue: %s is not a list shell (pageType=%q)", listURL, pageType)
 		}
-		return lixuePageCount(doc), nil
+		total := lixuePageCount(doc)
+		if total < 1 {
+			return 0, fmt.Errorf("lixue: %s has no trustworthy page count", listURL)
+		}
+		return total, nil
 	}
 	return 0, fmt.Errorf("lixue: unable to fetch audited feed %q", slug)
 }
@@ -218,7 +233,6 @@ func parseAdapter_lixueList(rawHTML []byte, baseURL string) ([]model.NewsItem, e
 
 	typ := strings.TrimSpace(doc.Find(`meta[name="pageTitle"]`).AttrOr("content", ""))
 	items := make([]model.NewsItem, 0)
-	seen := make(map[string]bool)
 	localRows := make(map[string]bool)
 	invalidRows := 0
 	for _, row := range lixueListRows(doc) {
@@ -253,7 +267,6 @@ func parseAdapter_lixueList(rawHTML []byte, baseURL string) ([]model.NewsItem, e
 			Type:        itemType,
 			ParsedAt:    time.Now(),
 		})
-		seen[articleURL] = true
 	}
 	if invalidRows > 0 {
 		return nil, fmt.Errorf("lixue: %d local article rows could not be parsed", invalidRows)
@@ -322,9 +335,6 @@ func lixuePageCount(doc *goquery.Document) int {
 			maxPage = page
 		}
 	})
-	if maxPage == 0 && doc.Find(".p_pages").Length() > 0 {
-		return 1
-	}
 	return maxPage
 }
 
@@ -512,11 +522,26 @@ func parseAdapter_lixueArticle(rawHTML []byte, baseURL string) (*model.Article, 
 	}
 	article.Title = lixueText(titleSel.Text())
 	article.Type = lixueBreadcrumbType(doc)
+	// parseBodaArticle has intentionally broad fallbacks for other Boda
+	// templates. This site has a fixed metadata line, so never retain a date
+	// that the shared parser may have found in the prose body.
+	article.Date = ""
+	article.PublishedAt = ""
 	if date, publishedAt := lixueDateValues(lixueDetailMetaText(titleSel)); date != "" {
 		article.Date = date
 		article.PublishedAt = publishedAt
 	}
 	lixueAddAttachments(article, doc, baseURL)
+	lixueNormalizeArticleResources(article, baseURL)
+	allowedImages := make(map[string]bool, len(article.Images))
+	for _, image := range article.Images {
+		allowedImages[image] = true
+	}
+	candidateAttachments := make(map[string]bool, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		candidateAttachments[attachment.URL] = true
+	}
+	article.ContentHTML = lixueSanitizeContentHTML(article.ContentHTML, baseURL, allowedImages, candidateAttachments, candidateAttachments)
 	normalizeArticlePublishedAt(article)
 	return article, nil
 }
@@ -534,6 +559,21 @@ func lixueFetchArticle(articleURL string) (*model.Article, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	candidateAttachments := make(map[string]bool, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		candidateAttachments[attachment.URL] = true
+	}
+	article.Images = lixueVerifyImages(article.Images, canonicalURL)
+	article.Attachments = lixueVerifyAttachments(article.Attachments, canonicalURL)
+	allowedImages := make(map[string]bool, len(article.Images))
+	for _, image := range article.Images {
+		allowedImages[image] = true
+	}
+	allowedAttachments := make(map[string]bool, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		allowedAttachments[attachment.URL] = true
+	}
+	article.ContentHTML = lixueSanitizeContentHTML(article.ContentHTML, lixueCanonicalBaseURL, allowedImages, candidateAttachments, allowedAttachments)
 	if typ := lixueTypeForURL(canonicalURL); typ != "" {
 		article.Type = typ
 	}
@@ -546,25 +586,75 @@ func lixueDetailMetaText(titleSel *goquery.Selection) string {
 	}
 	parent := titleSel.Parent()
 	var result string
+	titleNode := titleSel.Get(0)
+	seenTitle := false
 	parent.Children().EachWithBreak(func(_ int, child *goquery.Selection) bool {
-		if node := child.Get(0); node != nil && strings.EqualFold(node.Data, "div") {
-			value := lixueText(child.Text())
-			if dateTimeRe.FindString(value) != "" || lixueSplitDateRE.FindString(value) != "" || bareDateRe.FindString(value) != "" {
-				result = value
-				return false
-			}
+		if child.Get(0) == titleNode {
+			seenTitle = true
+			return true
+		}
+		if !seenTitle {
+			return true
+		}
+		if child.Is("hr") || child.Find(".v_news_content").Length() > 0 {
+			return false
+		}
+		if _, _, ok := lixueFixedMetaDate(child); ok {
+			result = lixueText(child.Text())
+			return false
 		}
 		return true
 	})
 	if result != "" {
 		return result
 	}
-	for _, selector := range []string{".news_source", ".top-info", ".xxx"} {
-		if value := lixueText(parent.Find(selector).First().Text()); value != "" {
-			return value
+	form := titleSel.Closest("form")
+	for _, selector := range []string{".news_source", ".top-info", ".article-meta", ".detail-meta", ".news-meta", "time[datetime]"} {
+		found := ""
+		form.Find(selector).EachWithBreak(func(_ int, candidate *goquery.Selection) bool {
+			if candidate.Closest(".v_news_content").Length() > 0 {
+				return true
+			}
+			if _, _, ok := lixueFixedMetaDate(candidate); ok {
+				found = lixueText(candidate.Text())
+				if found == "" {
+					found = lixueText(candidate.AttrOr("datetime", ""))
+				}
+				return false
+			}
+			return true
+		})
+		if found != "" {
+			return found
 		}
 	}
-	return lixueText(parent.Text())
+	return ""
+}
+
+func lixueFixedMetaDate(sel *goquery.Selection) (string, string, bool) {
+	if sel == nil || sel.Length() == 0 || sel.Closest(".v_news_content").Length() > 0 {
+		return "", "", false
+	}
+	value := lixueText(sel.Text())
+	if datetime := lixueText(sel.AttrOr("datetime", "")); datetime != "" {
+		if date, published := lixueDateValues(datetime); date != "" {
+			return date, published, true
+		}
+	}
+	if value == "" {
+		return "", "", false
+	}
+	if match := lixuePublicationLabelRE.FindStringIndex(value); match != nil {
+		if date, published := lixueDateValues(value[match[1]:]); date != "" {
+			return date, published, true
+		}
+		return "", "", false
+	}
+	date, published := lixueDateValues(value)
+	if date == "" {
+		return "", "", false
+	}
+	return date, published, true
 }
 
 func lixueBreadcrumbType(doc *goquery.Document) string {
@@ -592,23 +682,29 @@ func lixueAddAttachments(article *model.Article, doc *goquery.Document, baseURL 
 		return
 	}
 	seen := make(map[string]bool, len(article.Attachments))
+	normalized := make([]model.Attachment, 0, len(article.Attachments))
 	for _, attachment := range article.Attachments {
-		seen[attachment.URL] = true
+		resolved, ok := lixueAttachmentURL(baseURL, attachment.URL)
+		if !ok || seen[resolved] {
+			continue
+		}
+		attachment.URL = resolved
+		seen[resolved] = true
+		normalized = append(normalized, attachment)
 	}
+	article.Attachments = normalized
 	form := doc.Find(`form[name="_newscontent_fromname"]`).First()
 	form.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
 		href := link.AttrOr("href", "")
-		lowerHref := strings.ToLower(href)
-		parentText := lixueText(link.Parent().Text())
-		downloadAttr := strings.TrimSpace(link.AttrOr("download", ""))
-		if !strings.Contains(lowerHref, "/system/_content/download.jsp") && downloadAttr == "" && !strings.Contains(parentText, "附件") {
+		if !bodaLooksLikeAttachmentLink(link, href) {
 			return
 		}
+		downloadAttr := strings.TrimSpace(link.AttrOr("download", ""))
 		name := lixueText(link.Text())
 		if name == "" {
 			name = lixueText(downloadAttr)
 		}
-		resolved, ok := lixueLocalURL(baseURL, href)
+		resolved, ok := lixueAttachmentURL(baseURL, href)
 		if name == "" || !ok || seen[resolved] {
 			return
 		}
@@ -617,7 +713,248 @@ func lixueAddAttachments(article *model.Article, doc *goquery.Document, baseURL 
 	})
 }
 
+func lixueNormalizeArticleResources(article *model.Article, baseURL string) {
+	if article == nil {
+		return
+	}
+	images := make([]string, 0, len(article.Images))
+	seenImages := make(map[string]bool, len(article.Images))
+	for _, raw := range article.Images {
+		resolved, ok := lixueResourceURL(baseURL, raw)
+		if !ok || seenImages[resolved] {
+			continue
+		}
+		seenImages[resolved] = true
+		images = append(images, resolved)
+	}
+	article.Images = images
+
+	attachments := make([]model.Attachment, 0, len(article.Attachments))
+	seenAttachments := make(map[string]bool, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		resolved, ok := lixueAttachmentURL(baseURL, attachment.URL)
+		if !ok || seenAttachments[resolved] {
+			continue
+		}
+		attachment.URL = resolved
+		seenAttachments[resolved] = true
+		attachments = append(attachments, attachment)
+	}
+	article.Attachments = attachments
+}
+
+func lixueVerifyImages(images []string, referer string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool, len(images))
+	for _, raw := range images {
+		resolved, ok := lixueResourceURL(lixueCanonicalBaseURL, raw)
+		if !ok || seen[resolved] {
+			continue
+		}
+		body, contentType, err := lixueFetchResource(resolved, referer)
+		if err != nil || !lixueResourceBodyIsUsable(contentType, body, resolved, true) {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func lixueVerifyAttachments(attachments []model.Attachment, referer string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		resolved, ok := lixueAttachmentURL(lixueCanonicalBaseURL, attachment.URL)
+		if !ok || seen[resolved] {
+			continue
+		}
+		body, contentType, err := lixueFetchResource(resolved, referer)
+		if err != nil || !lixueResourceBodyIsUsable(contentType, body, attachment.Name+" "+resolved, false) {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func lixueFetchResource(rawURL, referer string) ([]byte, string, error) {
+	resolved, ok := lixueResourceURL(lixueCanonicalBaseURL, rawURL)
+	if !ok {
+		resolved, ok = lixueAttachmentURL(lixueCanonicalBaseURL, rawURL)
+	}
+	if !ok {
+		return nil, "", fmt.Errorf("lixue: refusing non-local resource %q", rawURL)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("lixue: create resource request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "image/*,application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	if referer = strings.TrimSpace(referer); referer != "" {
+		req.Header.Set("Referer", referer)
+	}
+	client := *defaultClient
+	client.CheckRedirect = func(next *http.Request, _ []*http.Request) error {
+		if _, ok := lixueLocalURL(lixueCanonicalBaseURL, next.URL.String()); !ok {
+			return http.ErrUseLastResponse
+		}
+		return nil
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("lixue: fetch resource %s: %w", resolved, err)
+	}
+	defer resp.Body.Close()
+	contentType := resp.Header.Get("Content-Type")
+	if resp.StatusCode != http.StatusOK {
+		return nil, contentType, fmt.Errorf("lixue: resource %s: HTTP %d", resolved, resp.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, lixueMaxResourceBytes+1))
+	if err != nil {
+		return nil, contentType, fmt.Errorf("lixue: read resource %s: %w", resolved, err)
+	}
+	if int64(len(body)) > lixueMaxResourceBytes {
+		return nil, contentType, fmt.Errorf("lixue: resource %s exceeds %d bytes", resolved, lixueMaxResourceBytes)
+	}
+	return body, contentType, nil
+}
+
+const lixueMaxResourceBytes int64 = 32 << 20
+
+func lixueResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType := strings.ToLower(strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0]))
+	if mediaType == "" {
+		return false
+	}
+	probeLen := len(body)
+	if probeLen > 4096 {
+		probeLen = 4096
+	}
+	probe := strings.TrimPrefix(strings.TrimSpace(strings.ToLower(string(body[:probeLen]))), "\ufeff")
+	for _, marker := range []string{
+		"<!doctype html", "<html", "<head", "<body", "请输入验证码", "验证码下载附件",
+		"captcha", "请先登录", "请登录后", "access denied", "just a moment", "cloudflare",
+		"请求已被阻断", "安全威胁", "系统提示",
+	} {
+		if strings.Contains(probe, marker) {
+			return false
+		}
+	}
+	if image {
+		switch mediaType {
+		case "image/png":
+			return bytes.HasPrefix(body, []byte("\x89PNG\r\n\x1a\n"))
+		case "image/jpeg", "image/jpg":
+			return bytes.HasPrefix(body, []byte{0xff, 0xd8, 0xff})
+		case "image/gif":
+			return bytes.HasPrefix(body, []byte("GIF87a")) || bytes.HasPrefix(body, []byte("GIF89a"))
+		case "image/webp":
+			return len(body) >= 12 && bytes.Equal(body[:4], []byte("RIFF")) && bytes.Equal(body[8:12], []byte("WEBP"))
+		case "image/bmp":
+			return bytes.HasPrefix(body, []byte("BM"))
+		case "image/tiff":
+			return bytes.HasPrefix(body, []byte{0x49, 0x49, 0x2a, 0x00}) || bytes.HasPrefix(body, []byte{0x4d, 0x4d, 0x00, 0x2a})
+		case "image/svg+xml":
+			return strings.Contains(probe, "<svg")
+		default:
+			return false
+		}
+	}
+
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf":
+		return bytes.HasPrefix(body, []byte("%PDF-"))
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(lowerName, ".zip") || mediaType == "application/zip":
+		return bytes.HasPrefix(body, []byte("PK\x03\x04")) || bytes.HasPrefix(body, []byte("PK\x05\x06")) || bytes.HasPrefix(body, []byte("PK\x07\x08"))
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt") || mediaType == "application/msword":
+		return bytes.HasPrefix(body, []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1})
+	case strings.Contains(lowerName, ".rar"):
+		return bytes.HasPrefix(body, []byte("Rar!\x1a\x07"))
+	case strings.Contains(lowerName, ".7z"):
+		return bytes.HasPrefix(body, []byte{0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c})
+	case strings.Contains(lowerName, ".txt") || strings.Contains(lowerName, ".csv"):
+		return mediaType == "text/plain" || mediaType == "text/csv" || mediaType == "application/octet-stream"
+	default:
+		return lixueKnownBinaryMagic(body) && mediaType != "text/html" && mediaType != "application/xhtml+xml" && mediaType != "application/json" && mediaType != "text/xml" && mediaType != "application/xml"
+	}
+}
+
+func lixueKnownBinaryMagic(body []byte) bool {
+	return bytes.HasPrefix(body, []byte("%PDF-")) ||
+		bytes.HasPrefix(body, []byte("PK\x03\x04")) ||
+		bytes.HasPrefix(body, []byte("PK\x05\x06")) ||
+		bytes.HasPrefix(body, []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}) ||
+		bytes.HasPrefix(body, []byte("Rar!\x1a\x07")) ||
+		bytes.HasPrefix(body, []byte{0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c}) ||
+		(bytes.HasPrefix(body, []byte{0xff, 0xd8, 0xff})) ||
+		bytes.HasPrefix(body, []byte("\x89PNG\r\n\x1a\n"))
+}
+
+func lixueSanitizeContentHTML(rawHTML, baseURL string, allowedImages, candidateAttachments, allowedAttachments map[string]bool) string {
+	if strings.TrimSpace(rawHTML) == "" {
+		return rawHTML
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(`<div id="lixue-content-root">` + rawHTML + `</div>`))
+	if err != nil {
+		return rawHTML
+	}
+	root := doc.Find("#lixue-content-root").First()
+	root.Find("img").Each(func(_ int, image *goquery.Selection) {
+		var resolved string
+		for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc", "vurl"} {
+			if value := strings.TrimSpace(htmlstd.UnescapeString(image.AttrOr(attr, ""))); value != "" {
+				if candidate, ok := lixueResourceURL(baseURL, value); ok {
+					resolved = candidate
+					break
+				}
+			}
+		}
+		if resolved == "" || !allowedImages[resolved] {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vurl", "vsbhref", "word_img"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	root.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
+		href := strings.TrimSpace(htmlstd.UnescapeString(anchor.AttrOr("href", "")))
+		if bodaIsPseudoResourceHref(href) {
+			anchor.RemoveAttr("href")
+			return
+		}
+		resolved, ok := lixueAttachmentURL(baseURL, href)
+		if !ok || !candidateAttachments[resolved] {
+			return
+		}
+		if !allowedAttachments[resolved] {
+			anchor.RemoveAttr("href")
+			return
+		}
+		anchor.SetAttr("href", resolved)
+	})
+	result, err := root.Html()
+	if err != nil {
+		return rawHTML
+	}
+	return result
+}
+
 func lixueArticleURL(baseURL, href string) (string, bool) {
+	href = htmlstd.UnescapeString(strings.TrimSpace(href))
+	if href == "" || bodaIsPseudoResourceHref(href) {
+		return "", false
+	}
 	resolved := resolveURL(lixueBase(baseURL), href)
 	u, ok := lixueParsedLocalURL(resolved)
 	if !ok || !lixueArticlePathRE.MatchString(u.Path) {
@@ -629,6 +966,10 @@ func lixueArticleURL(baseURL, href string) (string, bool) {
 }
 
 func lixueLocalURL(baseURL, href string) (string, bool) {
+	href = htmlstd.UnescapeString(strings.TrimSpace(href))
+	if href == "" || bodaIsPseudoResourceHref(href) {
+		return "", false
+	}
 	resolved := resolveURL(lixueBase(baseURL), href)
 	u, ok := lixueParsedLocalURL(resolved)
 	if !ok {
@@ -636,6 +977,28 @@ func lixueLocalURL(baseURL, href string) (string, bool) {
 	}
 	u.Fragment = ""
 	return u.String(), true
+}
+
+func lixueResourceURL(baseURL, raw string) (string, bool) {
+	resolved, ok := lixueLocalURL(baseURL, raw)
+	if !ok {
+		return "", false
+	}
+	u, err := url.Parse(resolved)
+	if err != nil {
+		return "", false
+	}
+	lowerPath := strings.ToLower(u.Path)
+	for _, placeholder := range []string{"/spacer.gif", "/blank.gif", "/transparent.gif"} {
+		if strings.HasSuffix(lowerPath, placeholder) {
+			return "", false
+		}
+	}
+	return resolved, true
+}
+
+func lixueAttachmentURL(baseURL, raw string) (string, bool) {
+	return lixueLocalURL(baseURL, raw)
 }
 
 func lixueParsedLocalURL(rawURL string) (*url.URL, bool) {
@@ -675,15 +1038,27 @@ func lixueResponseError(doc *goquery.Document) error {
 		return fmt.Errorf("lixue: empty response")
 	}
 	title := strings.ToLower(lixueText(doc.Find("title").First().Text()))
-	for _, marker := range []string{"cloudflare", "just a moment", "captcha", "access denied", "forbidden", "页面不存在", "404 not found", "500 internal server error"} {
+	for _, marker := range []string{
+		"cloudflare", "just a moment", "captcha", "access denied", "forbidden", "页面不存在",
+		"404", "500 internal server error", "系统提示", "附件下载", "请输入验证码", "用户登录",
+		"统一身份认证", "login",
+	} {
 		if strings.Contains(title, marker) {
 			return fmt.Errorf("lixue: WAF/error response (%q)", title)
 		}
 	}
+	pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"]`).AttrOr("content", ""))
+	if pageType == "1" || pageType == "2" || pageType == "3" {
+		return nil
+	}
 	clone := doc.Clone()
 	clone.Find("script, style, noscript").Remove()
 	visible := strings.ToLower(lixueText(clone.Text()))
-	for _, marker := range []string{"请完成安全验证", "安全验证", "access denied", "just a moment", "cf-chl-"} {
+	for _, marker := range []string{
+		"请完成安全验证", "安全验证", "access denied", "just a moment", "cf-chl-",
+		"请输入验证码", "验证码下载附件", "请先登录", "请登录后", "访问被拒绝", "请求已被阻断",
+		"系统错误", "页面不存在", "系统提示",
+	} {
 		if strings.Contains(visible, marker) {
 			return fmt.Errorf("lixue: WAF/verification response")
 		}

@@ -1,7 +1,11 @@
 package scraper
 
 import (
+	"bytes"
 	"fmt"
+	"html"
+	"io"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -15,13 +19,14 @@ import (
 
 const hzcCanonicalBaseURL = "https://hzc.swjtu.edu.cn"
 
-// hzcSubPages contains every article-bearing list discovered from the site's
-// navigation, its hidden news tabs, and the homepage's "more" links.  The
-// parent pages for 部门概况、对外合作、继续教育、对口支援 and 定点帮扶 are
+// hzcSubPages contains the local article lists confirmed from the homepage,
+// navigation and the hidden news tabs.  xwdt/dw is deliberately absent: its
+// rows point to news.swjtu.edu.cn and therefore are external-only.  The
+// parent pages for 部门概况、对外合作、继续教育、对口支援 and 定点帮扶, along
+// with 继续教育's description pages and 定点帮扶's policy page, are
 // landing/static pages and are intentionally not feeds.
 var hzcSubPages = []string{
 	"xwdt/zx",
-	"xwdt/dw",
 	"xwdt/zh",
 	"tzgs",
 	"xzzq/xzzq",
@@ -40,6 +45,8 @@ var (
 	hzcAttachmentRE  = regexp.MustCompile(`(?i)\.(?:pdf|docx?|xlsx?|pptx?|zip|rar|7z|txt|csv|wps|rtf)(?:$|[?#])`)
 )
 
+const hzcMaxResourceBytes = 32 << 20
+
 func init() {
 	if site := AllSites["hzc"]; site != nil {
 		site.BaseURL = hzcCanonicalBaseURL
@@ -50,6 +57,7 @@ func init() {
 		ParseArticle: parseAdapter_hzcArticle,
 		PageURL:      hzcPageURL,
 		TotalPages:   hzcTotalPages,
+		FetchArticle: hzcFetchArticle,
 	})
 }
 
@@ -382,11 +390,22 @@ func parseAdapter_hzcArticle(raw []byte, baseURL string) (*model.Article, error)
 		return nil, fmt.Errorf("hzc: parse article: %w", err)
 	}
 	article.Title = strings.TrimSpace(titleSel.Text())
+	// The shared parser has deliberately broad fallbacks for legacy Boda
+	// pages.  hzc has a fixed metadata line, so clear the fallback first: a
+	// notice's body may contain an event/deadline date which is not its
+	// publication date.
+	article.Date = ""
+	article.PublishedAt = ""
 	if date, publishedAt := hzcDateValues(articleShell.Find(".wz_sx").First().Text()); date != "" {
 		article.Date = date
 		article.PublishedAt = publishedAt
 	}
 	article.Type = hzcCurrentType(doc)
+	contentSel := articleShell.Find(".v_news_content").First()
+	article.Content = extractBodaContentText(contentSel)
+	article.Images = hzcContentImages(contentSel, baseURL)
+	article.ContentHTML = hzcContentHTML(contentSel, baseURL)
+	article.Attachments = nil
 	hzcAppendArticleAttachments(article, articleShell, baseURL)
 	if strings.TrimSpace(article.Content) == "" && len(article.Images) == 0 && len(article.Attachments) == 0 {
 		return nil, fmt.Errorf("hzc: article has no body or resource")
@@ -408,18 +427,20 @@ func hzcAppendArticleAttachments(article *model.Article, shell *goquery.Selectio
 		if href == "" {
 			return
 		}
-		lowerHref := strings.ToLower(href)
-		isDownloadEndpoint := strings.Contains(lowerHref, "download.jsp")
-		isFile := hzcAttachmentRE.MatchString(lowerHref)
-		if !isDownloadEndpoint && !isFile {
+		if !hzcAttachmentLink(anchor, href, baseURL) {
 			return
 		}
 		linkText := strings.Join(strings.Fields(anchor.Text()), " ")
 		parentText := strings.Join(strings.Fields(anchor.Parent().Text()), " ")
+		lowerHref := strings.ToLower(href)
+		isDownloadEndpoint := strings.Contains(lowerHref, "download.jsp") || strings.Contains(lowerHref, "downloadattachurl")
 		if isDownloadEndpoint && !strings.Contains(linkText, "附件") && !strings.Contains(parentText, "附件") {
 			return
 		}
-		resolved := resolveURL(baseURL, href)
+		resolved := hzcAttachmentURL(baseURL, href)
+		if resolved == "" {
+			return
+		}
 		if seen[resolved] {
 			return
 		}
@@ -434,4 +455,563 @@ func hzcAppendArticleAttachments(article *model.Article, shell *goquery.Selectio
 		seen[resolved] = true
 		article.Attachments = append(article.Attachments, model.Attachment{Name: name, URL: resolved})
 	})
+}
+
+func hzcFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	baseURL := hzcCanonicalBaseURL
+	if site := AllSites["hzc"]; site != nil && strings.TrimSpace(site.BaseURL) != "" {
+		baseURL = site.BaseURL
+	}
+	return hzcFetchArticleAt(articleURL, baseURL)
+}
+
+func hzcFetchArticleAt(articleURL, baseURL string) (*model.Article, []byte, error) {
+	fullURL, ok := hzcArticleURL(baseURL, articleURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("hzc: refusing non-local or non-detail URL %q", articleURL)
+	}
+	body, err := hzcFetchHTML(fullURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("hzc: fetch article %s: %w", fullURL, err)
+	}
+	article, err := parseAdapter_hzcArticle(body, baseURL)
+	if err != nil {
+		return nil, body, fmt.Errorf("hzc: parse article %s: %w", fullURL, err)
+	}
+
+	candidateImages := append([]string(nil), article.Images...)
+	candidateAttachments := append([]model.Attachment(nil), article.Attachments...)
+	article.Images = hzcVerifyImages(candidateImages, baseURL, fullURL)
+	article.Attachments = hzcVerifyAttachments(candidateAttachments, baseURL, fullURL)
+	article.ContentHTML = hzcSanitizeContentHTML(article.ContentHTML, baseURL, fullURL, article.Images, candidateAttachments, article.Attachments)
+	article.Content = hzcContentTextFromHTML(article.ContentHTML)
+	return article, body, nil
+}
+
+func hzcFetchHTML(rawURL string) ([]byte, error) {
+	parsed, err := url.Parse(rawURL)
+	if err != nil || parsed.Host == "" || !hzcHTTPURL(parsed) {
+		return nil, fmt.Errorf("refusing non-HTTP article URL %q", rawURL)
+	}
+	req, err := http.NewRequest(http.MethodGet, rawURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create article request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+	client := hzcHTTPClient()
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if !hzcHTTPURL(next.URL) || (len(via) > 0 && !hzcURLAuthorityEqual(parsed, next.URL)) {
+			return http.ErrUseLastResponse
+		}
+		return nil
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("fetch article %s: %w", rawURL, err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return nil, fmt.Errorf("article %s: HTTP %d", rawURL, response.StatusCode)
+	}
+	contentType := strings.ToLower(response.Header.Get("Content-Type"))
+	if contentType != "" && !strings.Contains(contentType, "text/html") && !strings.Contains(contentType, "application/xhtml+xml") {
+		return nil, fmt.Errorf("article %s returned non-HTML Content-Type %q", rawURL, contentType)
+	}
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read article %s: %w", rawURL, err)
+	}
+	return body, nil
+}
+
+func hzcHTTPClient() http.Client {
+	if defaultClient != nil {
+		return *defaultClient
+	}
+	return http.Client{Timeout: 15 * time.Second}
+}
+
+func hzcHTTPURL(parsed *url.URL) bool {
+	if parsed == nil || parsed.Host == "" {
+		return false
+	}
+	scheme := strings.ToLower(parsed.Scheme)
+	return scheme == "http" || scheme == "https"
+}
+
+func hzcURLAuthorityEqual(left, right *url.URL) bool {
+	return left != nil && right != nil && hzcHTTPURL(left) && hzcHTTPURL(right) &&
+		strings.EqualFold(left.Scheme, right.Scheme) && strings.EqualFold(left.Host, right.Host)
+}
+
+func hzcContentImages(contentSel *goquery.Selection, baseURL string) []string {
+	images := make([]string, 0)
+	seen := make(map[string]bool)
+	if contentSel == nil || contentSel.Length() == 0 {
+		return images
+	}
+	contentSel.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := hzcResourceURL(baseURL, hzcImageSource(image))
+		if resolved == "" || seen[resolved] {
+			return
+		}
+		seen[resolved] = true
+		images = append(images, resolved)
+	})
+	return images
+}
+
+func hzcImageSource(image *goquery.Selection) string {
+	if image == nil || image.Length() == 0 {
+		return ""
+	}
+	var fallback string
+	for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+		value := strings.TrimSpace(image.AttrOr(attr, ""))
+		if value == "" {
+			continue
+		}
+		if fallback == "" {
+			fallback = value
+		}
+		if !hzcResourceMarked(value) {
+			return value
+		}
+	}
+	return fallback
+}
+
+func hzcResourceMarked(raw string) bool {
+	raw = strings.ToLower(strings.TrimSpace(html.UnescapeString(raw)))
+	if raw == "" || bodaIsPseudoResourceHref(raw) {
+		return true
+	}
+	for _, marker := range []string{
+		"captcha", "verifycode", "verification", "createimage", "getcode", "codevalue",
+		"access-denied", "access_denied", "waf", "login", "验证码", "人机验证", "安全验证",
+		"spacer.gif", "blank.gif", "transparent.gif", "placeholder", "loading.gif", "pixel.gif",
+	} {
+		if strings.Contains(raw, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func hzcResourceURL(baseURL, raw string) string {
+	raw = strings.TrimSpace(html.UnescapeString(raw))
+	if raw == "" || hzcResourceMarked(raw) {
+		return ""
+	}
+	resolved := cleanURL(resolveURL(baseURL, raw))
+	parsed, err := url.Parse(resolved)
+	if err != nil || !hzcHTTPURL(parsed) {
+		return ""
+	}
+	parsed.Fragment = ""
+	return cleanURL(parsed.String())
+}
+
+func hzcAttachmentURL(baseURL, raw string) string {
+	resolved := hzcResourceURL(baseURL, raw)
+	if resolved == "" {
+		return ""
+	}
+	base, baseErr := url.Parse(baseURL)
+	target, targetErr := url.Parse(resolved)
+	if baseErr != nil || targetErr != nil || !hzcHTTPURL(base) || !hzcHTTPURL(target) ||
+		!strings.EqualFold(base.Host, target.Host) {
+		return ""
+	}
+	return resolved
+}
+
+func hzcAttachmentLink(link *goquery.Selection, href, baseURL string) bool {
+	if link == nil || link.Length() == 0 || strings.TrimSpace(href) == "" || bodaIsPseudoResourceHref(href) {
+		return false
+	}
+	if hzcAttachmentURL(baseURL, href) == "" {
+		return false
+	}
+	if strings.TrimSpace(link.AttrOr("download", "")) != "" {
+		return true
+	}
+	lower := strings.ToLower(href)
+	if strings.Contains(lower, "download.jsp") || strings.Contains(lower, "downloadattachurl") || hzcAttachmentRE.MatchString(lower) {
+		return true
+	}
+	for _, selector := range []string{".attachment", ".attachments", ".news-attachment", ".download", ".annex"} {
+		if ancestor := link.Closest(selector); ancestor.Length() > 0 && strings.Contains(ancestor.Text(), "附件") {
+			return true
+		}
+	}
+	return strings.Contains(strings.ToLower(strings.Join(strings.Fields(link.Text()), " ")), "下载")
+}
+
+func hzcAttachmentName(link *goquery.Selection, resolved string) string {
+	for _, attr := range []string{"download", "data-filename", "data-name", "name"} {
+		if value := strings.Join(strings.Fields(html.UnescapeString(link.AttrOr(attr, ""))), " "); value != "" {
+			return value
+		}
+	}
+	if value := strings.Join(strings.Fields(link.Text()), " "); value != "" {
+		return strings.Trim(strings.TrimSpace(value), "【】[]")
+	}
+	if parsed, err := url.Parse(resolved); err == nil {
+		if index := strings.LastIndex(parsed.Path, "/"); index >= 0 && index+1 < len(parsed.Path) {
+			if value, err := url.PathUnescape(parsed.Path[index+1:]); err == nil && value != "" {
+				return value
+			}
+		}
+	}
+	return "附件"
+}
+
+func hzcVerifyImages(images []string, baseURL, referer string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool)
+	for _, raw := range images {
+		resolved := hzcResourceURL(baseURL, raw)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		if _, _, err := hzcFetchResource(resolved, baseURL, referer, resolved, true); err != nil {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func hzcVerifyAttachments(attachments []model.Attachment, baseURL, referer string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool)
+	for _, attachment := range attachments {
+		resolved := hzcAttachmentURL(baseURL, attachment.URL)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, _, err := hzcFetchResource(resolved, baseURL, referer, strings.Join([]string{attachment.Name, resolved}, " "), false)
+		if err != nil {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func hzcFetchResource(rawURL, baseURL, referer, nameOrURL string, image bool) ([]byte, string, error) {
+	resolved := hzcResourceURL(baseURL, rawURL)
+	if resolved == "" {
+		return nil, "", fmt.Errorf("hzc: refusing invalid resource %q", rawURL)
+	}
+	parsed, err := url.Parse(resolved)
+	if err != nil || !hzcHTTPURL(parsed) {
+		return nil, "", fmt.Errorf("hzc: refusing non-HTTP resource %q", resolved)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("hzc: create resource request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	if strings.TrimSpace(referer) != "" {
+		req.Header.Set("Referer", referer)
+	}
+	if image {
+		req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+	} else {
+		req.Header.Set("Accept", "application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	}
+	client := hzcHTTPClient()
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if !hzcHTTPURL(next.URL) || (len(via) > 0 && !hzcURLAuthorityEqual(parsed, next.URL)) {
+			return http.ErrUseLastResponse
+		}
+		return nil
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("hzc: fetch resource %s: %w", resolved, err)
+	}
+	defer response.Body.Close()
+	contentType := response.Header.Get("Content-Type")
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return nil, contentType, fmt.Errorf("hzc: resource %s: HTTP %d", resolved, response.StatusCode)
+	}
+	if response.ContentLength > hzcMaxResourceBytes {
+		return nil, contentType, fmt.Errorf("hzc: resource %s exceeds size limit", resolved)
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, hzcMaxResourceBytes+1))
+	if err != nil {
+		return nil, contentType, fmt.Errorf("hzc: read resource %s: %w", resolved, err)
+	}
+	if int64(len(body)) > hzcMaxResourceBytes || !hzcResourceBodyIsUsable(contentType, body, nameOrURL, image) {
+		return nil, contentType, fmt.Errorf("hzc: resource %s returned an invalid Content-Type, shell, or magic signature", resolved)
+	}
+	return body, contentType, nil
+}
+
+func hzcResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	if mediaType == "" {
+		return false
+	}
+	for _, invalid := range []string{"text/html", "application/xhtml+xml", "application/json", "text/xml", "application/xml"} {
+		if mediaType == invalid {
+			return false
+		}
+	}
+	probe := bytes.TrimSpace(bytes.TrimPrefix(body, []byte{0xef, 0xbb, 0xbf}))
+	if len(probe) > 4096 {
+		probe = probe[:4096]
+	}
+	textProbe := strings.ToLower(string(probe))
+	for _, marker := range []string{
+		"<!doctype html", "<html", "<head", "<body", "cloudflare", "just a moment", "cf-chl-",
+		"请输入验证码", "验证码下载附件", "请先登录", "请登录后", "请求已被阻断", "安全威胁", "应用维护中",
+	} {
+		if strings.Contains(textProbe, marker) {
+			return false
+		}
+	}
+	magic := hzcResourceMagic(body)
+	if image {
+		switch mediaType {
+		case "image/jpeg", "image/jpg", "image/pjpeg":
+			return magic == "jpeg"
+		case "image/png":
+			return magic == "png"
+		case "image/gif":
+			return magic == "gif"
+		case "image/webp":
+			return magic == "webp"
+		case "image/bmp":
+			return magic == "bmp"
+		case "image/tiff":
+			return magic == "tiff"
+		case "image/svg+xml":
+			return magic == "svg"
+		default:
+			return false
+		}
+	}
+
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf"):
+		return magic == "pdf" && hzcBinaryContentTypeOK(mediaType, "pdf")
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(mediaType, "officedocument") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml"):
+		return magic == "zip" && hzcBinaryContentTypeOK(mediaType, "office-zip")
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt") || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint":
+		return magic == "ole" && hzcBinaryContentTypeOK(mediaType, "office-ole")
+	case strings.Contains(lowerName, ".zip") || strings.Contains(lowerName, ".rar") || strings.Contains(lowerName, ".7z") || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed":
+		return (magic == "zip" || magic == "rar" || magic == "7z") && hzcBinaryContentTypeOK(mediaType, "archive")
+	case strings.Contains(lowerName, ".rtf") || mediaType == "application/rtf" || mediaType == "text/rtf":
+		return magic == "rtf" && hzcBinaryContentTypeOK(mediaType, "rtf")
+	case strings.Contains(lowerName, ".txt") || strings.Contains(lowerName, ".csv") || strings.HasPrefix(mediaType, "text/"):
+		return !strings.Contains(textProbe, "<html")
+	default:
+		return magic != "" && hzcBinaryContentTypeOK(mediaType, "binary")
+	}
+}
+
+func hzcBinaryContentTypeOK(mediaType, kind string) bool {
+	if mediaType == "application/octet-stream" || mediaType == "application/force-download" || mediaType == "application/download" {
+		return true
+	}
+	switch kind {
+	case "pdf":
+		return mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf")
+	case "office-zip":
+		return mediaType == "application/zip" || strings.Contains(mediaType, "officedocument") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml")
+	case "office-ole":
+		return mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint"
+	case "archive":
+		return mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed"
+	case "rtf":
+		return mediaType == "application/rtf" || mediaType == "text/rtf"
+	case "binary":
+		return true
+	default:
+		return false
+	}
+}
+
+func hzcResourceMagic(body []byte) string {
+	switch {
+	case bytes.HasPrefix(body, []byte("%PDF-")):
+		return "pdf"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x03, 0x04}) || bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x05, 0x06}) || bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x07, 0x08})):
+		return "zip"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}):
+		return "ole"
+	case len(body) >= 3 && bytes.Equal(body[:3], []byte{0xff, 0xd8, 0xff}):
+		return "jpeg"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
+		return "png"
+	case len(body) >= 6 && (bytes.Equal(body[:6], []byte("GIF87a")) || bytes.Equal(body[:6], []byte("GIF89a"))):
+		return "gif"
+	case len(body) >= 12 && bytes.Equal(body[:4], []byte("RIFF")) && bytes.Equal(body[8:12], []byte("WEBP")):
+		return "webp"
+	case len(body) >= 2 && bytes.Equal(body[:2], []byte("BM")):
+		return "bmp"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{'I', 'I', '*', 0}) || bytes.Equal(body[:4], []byte{'M', 'M', 0, '*'})):
+		return "tiff"
+	case len(body) >= 7 && bytes.Equal(body[:7], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x00}):
+		return "rar"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x01, 0x00}):
+		return "rar"
+	case len(body) >= 6 && bytes.Equal(body[:6], []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}):
+		return "7z"
+	}
+	trimmed := bytes.TrimSpace(bytes.TrimPrefix(body, []byte{0xef, 0xbb, 0xbf}))
+	probe := trimmed
+	if len(probe) > 4096 {
+		probe = probe[:4096]
+	}
+	if bytes.HasPrefix(trimmed, []byte("{\\rtf")) {
+		return "rtf"
+	}
+	if bytes.Contains(bytes.ToLower(probe), []byte("<svg")) {
+		return "svg"
+	}
+	return ""
+}
+
+func hzcSanitizeContentHTML(raw, baseURL, referer string, images []string, candidateAttachments, attachments []model.Attachment) string {
+	if strings.TrimSpace(raw) == "" {
+		return ""
+	}
+	validImages := make(map[string]bool, len(images))
+	for _, image := range images {
+		if resolved := hzcResourceURL(baseURL, image); resolved != "" {
+			validImages[resolved] = true
+		}
+	}
+	validAttachments := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		if resolved := hzcAttachmentURL(baseURL, attachment.URL); resolved != "" {
+			validAttachments[resolved] = true
+		}
+	}
+	candidateSet := make(map[string]bool, len(candidateAttachments))
+	for _, attachment := range candidateAttachments {
+		if resolved := hzcAttachmentURL(baseURL, attachment.URL); resolved != "" {
+			candidateSet[resolved] = true
+		}
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader("<div id=\"hzc-content-root\">" + raw + "</div>"))
+	if err != nil {
+		return ""
+	}
+	root := doc.Find("#hzc-content-root").First()
+	root.Find("script, style, noscript").Remove()
+	root.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := hzcResourceURL(baseURL, hzcImageSource(image))
+		if resolved == "" || !validImages[resolved] {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	root.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		href := strings.TrimSpace(html.UnescapeString(link.AttrOr("href", "")))
+		if href == "" {
+			link.Remove()
+			return
+		}
+		if bodaIsPseudoResourceHref(href) && !strings.HasPrefix(href, "#") {
+			link.Remove()
+			return
+		}
+		if hzcAttachmentLink(link, href, baseURL) {
+			resolved := hzcAttachmentURL(baseURL, href)
+			if resolved == "" || !candidateSet[resolved] || !validAttachments[resolved] {
+				link.Remove()
+				return
+			}
+			link.SetAttr("href", resolved)
+			return
+		}
+		resolved := hzcResourceURL(baseURL, href)
+		if resolved == "" {
+			if strings.HasPrefix(href, "#") {
+				return
+			}
+			link.Remove()
+			return
+		}
+		link.SetAttr("href", resolved)
+	})
+	rendered, err := root.Html()
+	if err != nil {
+		return ""
+	}
+	_ = referer // kept in the signature to make the sanitizer's call-site explicit
+	return rendered
+}
+
+func hzcContentHTML(contentSel *goquery.Selection, baseURL string) string {
+	if contentSel == nil || contentSel.Length() == 0 {
+		return ""
+	}
+	clone := contentSel.Clone()
+	clone.Find("script, style, noscript").Remove()
+	clone.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := hzcResourceURL(baseURL, hzcImageSource(image))
+		if resolved == "" {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	clone.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		href := strings.TrimSpace(html.UnescapeString(link.AttrOr("href", "")))
+		if href == "" || (bodaIsPseudoResourceHref(href) && !strings.HasPrefix(href, "#")) {
+			link.Remove()
+			return
+		}
+		if hzcAttachmentLink(link, href, baseURL) {
+			if resolved := hzcAttachmentURL(baseURL, href); resolved != "" {
+				link.SetAttr("href", resolved)
+			} else {
+				link.Remove()
+			}
+			return
+		}
+		if resolved := hzcResourceURL(baseURL, href); resolved != "" {
+			link.SetAttr("href", resolved)
+		}
+	})
+	rendered, err := clone.Html()
+	if err != nil {
+		return ""
+	}
+	return rendered
+}
+
+func hzcContentTextFromHTML(raw string) string {
+	if strings.TrimSpace(raw) == "" {
+		return ""
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader("<div id=\"hzc-text-root\">" + raw + "</div>"))
+	if err != nil {
+		return ""
+	}
+	return extractBodaContentText(doc.Find("#hzc-text-root").First())
 }

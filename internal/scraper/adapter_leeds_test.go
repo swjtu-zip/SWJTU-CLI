@@ -1,6 +1,9 @@
 package scraper
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -8,10 +11,10 @@ import (
 
 func TestLeedsAdapterRegistered(t *testing.T) {
 	site := AllSites["leeds"]
-	if site == nil || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil {
+	if site == nil || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil || site.ArticleFetchFunc == nil {
 		t.Fatal("leeds adapter hooks are not registered")
 	}
-	want := []string{"index/xyxw", "xytz/dzbg", "xytz/jwjx", "xytz/xszc", "xxgs/dzbg", "xxgs/jwjx", "xxgs/xszc", "index/hdyg", "index/zsxx", "index/zyxz", "xszc/xshd", "xszc/xsfc", "xszc/gjjl", "ztjy/xjpxsdzgtsshzysxztjy/xxdt"}
+	want := []string{"index/xyxw", "xytz/dzbg", "xytz/jwjx", "xytz/xszc", "xxgs/dzbg", "xxgs/jwjx", "xxgs/xszc", "index/hdyg", "index/zsxx", "index/zyxz", "xszc/xshd", "xszc/xsfc", "xszc/gjjl", "djysz/djyd", "djysz/jszj", "ztjy/xjpxsdzgtsshzysxztjy/xxdt", "yyzj"}
 	if !reflect.DeepEqual(site.SubPages, want) {
 		t.Fatalf("leeds feeds = %#v, want %#v", site.SubPages, want)
 	}
@@ -128,5 +131,155 @@ func TestLeedsArticleDoesNotUseBodyDeadlineAsPublicationDate(t *testing.T) {
 	}
 	if article.Date != "2026-09-02" || article.PublishedAt != "2026-09-02" {
 		t.Fatalf("body deadline replaced publication date: date=%q published_at=%q", article.Date, article.PublishedAt)
+	}
+}
+
+func readLeedsFixture(t *testing.T, name string) []byte {
+	t.Helper()
+	body, err := os.ReadFile("testdata/" + name)
+	if err != nil {
+		t.Fatalf("read leeds fixture %q: %v", name, err)
+	}
+	return body
+}
+
+func TestLeedsMeasuredListFixturesCoverFirstMiddleLastAndNewFeeds(t *testing.T) {
+	cases := []struct {
+		fixture string
+		slug    string
+		total   int
+		title   string
+		date    string
+	}{
+		{"leeds_list_xyxw_first.html", "index/xyxw", 162, "凝心聚力 蓄力奋进——利兹学院全体教职工暑期集中攻坚两周 推进重点工作", "2026-07-31"},
+		{"leeds_list_xyxw_middle.html", "index/xyxw", 162, "利兹动态｜百卅相聚展新篇 利兹大学校长韦希如一行到访利兹学院", "2026-05-18"},
+		{"leeds_list_xyxw_last.html", "index/xyxw", 162, "西南交大—利兹学院正式成立", "2015-02-28"},
+		{"leeds_list_djyd_first.html", "djysz/djyd", 34, "深化中外交流 共话青年成长——利兹大学校长韦希如一行与利兹学院师生开展座谈交流活动", "2026-05-16"},
+		{"leeds_list_jszj_first.html", "djysz/jszj", 3, "利兹学院召开教师座谈会", "2023-06-09"},
+		{"leeds_list_yyzj_first.html", "yyzj", 2, "利兹校友返校交流", "2025-05-10"},
+	}
+	for _, tc := range cases {
+		body := readLeedsFixture(t, tc.fixture)
+		items, err := parseLeedsNews(body, "https://leeds.swjtu.edu.cn")
+		if err != nil {
+			t.Fatalf("%s parse error: %v", tc.fixture, err)
+		}
+		if len(items) != 1 || items[0].Title != tc.title || items[0].Date != tc.date {
+			t.Fatalf("%s items = %#v", tc.fixture, items)
+		}
+		if got, err := leedsTotalPagesFromHTML(body, tc.slug); err != nil || got != tc.total {
+			t.Fatalf("%s pages = %d/%v, want %d", tc.fixture, got, err, tc.total)
+		}
+	}
+}
+
+func TestLeedsHomeEmptyWAFAndStaticResponsesAreDistinguished(t *testing.T) {
+	home, err := parseLeedsNews(readLeedsFixture(t, "leeds_home_live.html"), "https://leeds.swjtu.edu.cn")
+	if err != nil || len(home) != 4 {
+		t.Fatalf("leeds measured home = %#v, err=%v", home, err)
+	}
+	if home[1].Type != "学院通知" || home[2].Type != "信息公示" || home[3].Date != "2026-03-31" {
+		t.Fatalf("leeds measured home metadata = %#v", home)
+	}
+	empty := readLeedsFixture(t, "leeds_empty_list.html")
+	if items, err := parseLeedsNews(empty, "https://leeds.swjtu.edu.cn"); err != nil || len(items) != 0 {
+		t.Fatalf("leeds empty list = %#v, err=%v", items, err)
+	}
+	if pages, err := leedsTotalPagesFromHTML(empty, "xszc/xsfc"); err != nil || pages != 1 {
+		t.Fatalf("leeds empty pages = %d/%v, want 1", pages, err)
+	}
+	for _, fixture := range []string{"leeds_waf.html", "leeds_static.html"} {
+		if _, err := parseLeedsNews(readLeedsFixture(t, fixture), "https://leeds.swjtu.edu.cn"); err == nil {
+			t.Fatalf("%s was accepted as a list", fixture)
+		}
+	}
+}
+
+func TestLeedsMeasuredArticleUsesFixedMetadataAndContentContainer(t *testing.T) {
+	article, err := parseLeedsArticle(readLeedsFixture(t, "leeds_article_live.html"), "https://leeds.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title != "利兹学院2026年“利兹科技月”报名通知" || article.Date != "2026-06-09" || article.PublishedAt != "2026-06-09" {
+		t.Fatalf("leeds article metadata = %#v", article)
+	}
+	if !strings.Contains(article.Content, "报名截止日期") || strings.Contains(article.Content, "最新阅读") {
+		t.Fatalf("leeds article content escaped its fixed container: %q", article.Content)
+	}
+	if len(article.Images) != 2 || len(article.Attachments) != 2 {
+		t.Fatalf("leeds article resources before HTTP verification = %#v / %#v", article.Images, article.Attachments)
+	}
+}
+
+func TestLeedsFetchArticleVerifiesContentTypeMagicAndKeepsExternalLinks(t *testing.T) {
+	page := readLeedsFixture(t, "leeds_article_live.html")
+	pageServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/info/1035/22504.htm":
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write(page)
+		case "/images/good.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'})
+		case "/images/bad.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte("<html>captcha</html>"))
+		case "/files/good.pdf":
+			w.Header().Set("Content-Type", "application/pdf")
+			_, _ = w.Write([]byte("%PDF-1.7 fixture"))
+		case "/files/bad.pdf":
+			w.Header().Set("Content-Type", "application/pdf")
+			_, _ = w.Write([]byte("<html>验证码下载附件</html>"))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer pageServer.Close()
+
+	site := AllSites["leeds"]
+	oldBase, oldNoCache := site.BaseURL, NoCache
+	defer func() {
+		site.BaseURL = oldBase
+		NoCache = oldNoCache
+		ClearCache()
+	}()
+	site.BaseURL = pageServer.URL
+	NoCache = true
+	ClearCache()
+
+	article, _, err := leedsFetchArticle(pageServer.URL + "/info/1035/22504.htm")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(article.Images) != 1 || !strings.HasSuffix(article.Images[0], "/images/good.png") {
+		t.Fatalf("verified images = %#v", article.Images)
+	}
+	if len(article.Attachments) != 1 || !strings.HasSuffix(article.Attachments[0].URL, "/files/good.pdf") || article.Attachments[0].Size == "" {
+		t.Fatalf("verified attachments = %#v", article.Attachments)
+	}
+	if strings.Contains(article.ContentHTML, "bad.png") || strings.Contains(article.ContentHTML, "bad.pdf") || strings.Contains(article.ContentHTML, "downloadCaptcha") {
+		t.Fatalf("invalid resources remained in content html: %s", article.ContentHTML)
+	}
+	if !strings.Contains(article.ContentHTML, "https://external.example/guide") {
+		t.Fatalf("external ordinary link was not preserved: %s", article.ContentHTML)
+	}
+	if article.Date != "2026-06-09" || article.PublishedAt != "2026-06-09" {
+		t.Fatalf("verified article date = %q/%q", article.Date, article.PublishedAt)
+	}
+}
+
+func TestLeedsResourceValidationRequiresHTTPContentTypeAndMagic(t *testing.T) {
+	png := []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}
+	if !leedsResourceBodyIsUsable("image/png", png, "good.png", true) {
+		t.Fatal("valid PNG was rejected")
+	}
+	if leedsResourceBodyIsUsable("image/png", []byte("<html>captcha</html>"), "bad.png", true) {
+		t.Fatal("HTML CAPTCHA was accepted as an image")
+	}
+	if !leedsResourceBodyIsUsable("application/pdf", []byte("%PDF-1.7"), "good.pdf", false) {
+		t.Fatal("valid PDF was rejected")
+	}
+	if leedsResourceBodyIsUsable("application/pdf", []byte("not a PDF"), "bad.pdf", false) {
+		t.Fatal("mismatched PDF magic was accepted")
 	}
 }

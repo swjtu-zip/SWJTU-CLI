@@ -1,6 +1,8 @@
 package scraper
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"reflect"
 	"strings"
@@ -20,7 +22,7 @@ func readOalmFixture(t *testing.T, name string) []byte {
 
 func TestOalmAdapterRegistrationAndAuditedFeeds(t *testing.T) {
 	site := AllSites["oalm"]
-	if site == nil || site.BaseURL != oalmCanonicalBaseURL || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.ListPageFunc == nil || site.TotalPagesFunc == nil {
+	if site == nil || site.BaseURL != oalmCanonicalBaseURL || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.ListPageFunc == nil || site.TotalPagesFunc == nil || site.ArticleFetchFunc == nil {
 		t.Fatalf("oalm adapter hooks are incomplete: %#v", site)
 	}
 	want := []string{
@@ -189,5 +191,88 @@ func TestOalmAllowsExplicitEmptyListsAndRejectsStaticOrCaptchaShells(t *testing.
 	malformed := []byte(`<meta name="pageType" content="2"><div class="xwdt-right-content"><div class="current-title">新闻动态</div><ul class="news-list"><li id="line_u9_1"><a href="/info/1191/24201.htm"></a><span class="time">2026-09-01</span></li></ul></div>`)
 	if _, err := parseAdapter_oalmList(malformed, oalmFixtureBaseURL); err == nil {
 		t.Fatal("malformed local OALM row was silently discarded")
+	}
+}
+
+func TestOalmFetchArticleVerifiesAndSanitizesResources(t *testing.T) {
+	articleHTML := readOalmFixture(t, "oalm_article_resources.html")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/info/1191/90001.htm":
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write(articleHTML)
+		case "/img/good.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'})
+		case "/img/captcha.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte("<html><body>captcha</body></html>"))
+		case "/files/good.pdf":
+			w.Header().Set("Content-Type", "application/pdf")
+			_, _ = w.Write([]byte("%PDF-1.7\nfixture"))
+		case "/files/wrong.pdf":
+			w.Header().Set("Content-Type", "application/pdf")
+			_, _ = w.Write([]byte("not a pdf"))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	site := AllSites["oalm"]
+	oldBase, oldClient, oldNoCache := site.BaseURL, defaultClient, NoCache
+	site.BaseURL, defaultClient, NoCache = server.URL, server.Client(), true
+	defer func() {
+		site.BaseURL, defaultClient, NoCache = oldBase, oldClient, oldNoCache
+		ClearCache()
+	}()
+
+	article, raw, err := site.ArticleFetchFunc(server.URL + "/info/1191/90001.htm")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(raw) == 0 {
+		t.Fatal("article response body was empty")
+	}
+	if !reflect.DeepEqual(article.Images, []string{server.URL + "/img/good.png"}) {
+		t.Fatalf("verified images = %#v", article.Images)
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].URL != server.URL+"/files/good.pdf" {
+		t.Fatalf("verified attachments = %#v", article.Attachments)
+	}
+	if !strings.Contains(article.ContentHTML, server.URL+"/img/good.png") || !strings.Contains(article.ContentHTML, server.URL+"/files/good.pdf") {
+		t.Fatalf("valid resources missing from content HTML: %s", article.ContentHTML)
+	}
+	for _, rejected := range []string{"captcha.png", "wrong.pdf", "javascript:"} {
+		if strings.Contains(article.ContentHTML, rejected) {
+			t.Errorf("rejected resource %q remained in content HTML: %s", rejected, article.ContentHTML)
+		}
+	}
+}
+
+func TestOalmResourceBodyChecksContentTypeAndMagic(t *testing.T) {
+	checks := []struct {
+		name        string
+		contentType string
+		body        []byte
+		resource    string
+		image       bool
+		want        bool
+	}{
+		{name: "valid image", contentType: "image/png", body: []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}, resource: "good.png", image: true, want: true},
+		{name: "captcha html", contentType: "image/png", body: []byte("<html>captcha</html>"), resource: "bad.png", image: true, want: false},
+		{name: "wrong pdf magic", contentType: "application/pdf", body: []byte("plain text"), resource: "bad.pdf", want: false},
+		{name: "valid pdf", contentType: "application/pdf; charset=binary", body: []byte("%PDF-1.4"), resource: "good.pdf", want: true},
+		{name: "missing content type", contentType: "", body: []byte("%PDF-1.4"), resource: "good.pdf", want: false},
+	}
+	for _, tt := range checks {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := oalmResourceBodyIsUsable(tt.contentType, tt.body, tt.resource, tt.image); got != tt.want {
+				t.Fatalf("usable = %v, want %v", got, tt.want)
+			}
+		})
+	}
+	if !oalmResourceBodyIsUsable("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", []byte("PK\x03\x04"), "good.xlsx", false) {
+		t.Fatal("valid OOXML magic was rejected")
 	}
 }

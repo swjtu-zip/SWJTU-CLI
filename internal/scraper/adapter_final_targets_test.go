@@ -19,15 +19,15 @@ func (f finalTargetRoundTripper) RoundTrip(req *http.Request) (*http.Response, e
 func TestFinalTargetAdaptersExposeAuditedFeeds(t *testing.T) {
 	want := map[string][]string{
 		"talent": {"xwzx/rczc", "xwzx/tzgg", "xwzx/xwdt", "xwzx/xzzx"},
-		"wkjsc":  {"tzgg", "wkxw", "xsdt", "gzzd", "xzzx", "bszn"},
+		"wkjsc":  {"tzgg", "wkxw", "xsdt", "wkpt", "gzzd", "gzzd/gj", "gzzd/jyb", "gzzd/qt", "xzzx", "xzzx/gj", "xzzx/jyb", "xzzx/qt", "bszn"},
 		"xb":     {"xxfb/tzgg", "xxfb/xwdt", "cyxz", "fwzn/gflc", "fwzn/glwj", "zdgf/bgswj", "zdgf/xjwj"},
-		"xczx":   {"tzxw/tzgg", "tzxw/xwdt", "tzxw/xydt", "xsyt/xsfx", "xsyt/xsjl", "xsyt/zjtd", "ktyj/kfkt", "ktyj/yjcg", "ktyj/yjxm", "cyzx/xmch", "cyzx/zxfw"},
+		"xczx":   {"tzxw/tzgg", "tzxw/xwdt"},
 		"xg":     xgSubPages,
 		"xgh":    {"xwzx1", "tzgg", "jcdt", "jgfc", "szyl", "ghdj", "gzzd", "hdyx1", "bszn", "xzzx"},
 		"xuncha": {"gzdt", "sjjs", "xxgongkai", "zcfg", "zcfg/tlztxx", "zcfg/dnfg", "zcfg/xxzd", "zyjh", "jyjl/tszs"},
-		"xyb":    {"xwdt1", "xwdt1/djgz", "xwdt1/tzgg", "xwdt1/xwzx", "xwdt1/xwzx/jj", "xwdt1/xwzx/xy", "xyzh/qnxyh", "xyzh/xyfc"},
-		"ygb":    {"xwzx/xwdt", "xwzx/tzgg", "xwzx/dcxy", "xwzx/hdyg", "xwzx/ssfc", "xwzx/gsxx", "djyl1/xzzg"},
-		"zzxy":   {"xyyw", "xwdt", "tzgg", "xsgz/xsdt", "djjgh/djgz/djfc", "szkc", "cgzs", "xsgg"},
+		"xyb":    {"xwdt1", "xwdt1/djgz", "xwdt1/tzgg", "xwdt1/xwzx", "xwdt1/xwzx/jj", "xwdt1/xwzx/xy", "xyzh/xyfc"},
+		"ygb":    {"xwzx/xwdt", "xwzx/tzgg", "xwzx/dcxy", "xwzx/hdyg", "xwzx/ssfc", "djyl1/zbfc", "djyl1/xzzg", "djyl1/_hl_xj", "djyl1/gzdl", "bszn/gzzd"},
+		"zzxy":   {"xyyw", "tzgg", "szkc", "xwdt", "xsgg", "mtjj", "cgzs", "djjgh/djgz/djfc", "djjgh/djgz/tzgg", "djjgh/djgz/dwwj", "djjgh/jjgz", "djjgh/ghgz/xxzili", "djjgh/ltgz/gzdt", "xsgz/xsdt", "xsgz/tzgg", "xsgz/jyxx", "kyyxk/kxyj", "kyyxk/kxyj/xsdt", "kyyxk/kxyj/kytz", "kyyxk/kxyj/kycg", "kyyxk/kxyj/kyxm", "zlxz1/mbxz", "zlxz1/wjxz"},
 	}
 	for id, feeds := range want {
 		site := AllSites[id]
@@ -68,12 +68,12 @@ func TestFinalTargetAdaptersParseLiveListShapes(t *testing.T) {
 		{
 			id: "xb", typ: "通知公告", date: "2026-08-29", published: "2026-08-29 09:12:00",
 			title: "校长办公室测试通知公告", href: "/info/1003/9003.htm",
-			html: `<meta name="pageTitle" content="通知公告"><div class="news-list-box"><ul><li><a href="/info/1003/9003.htm"><span class="new-l_b_title">校长办公室测试通知公告</span><span class="new-list_date">2026-08-29 09:12</span></a></li></ul></div>`,
+			html: `<meta name="pageTitle" content="通知公告"><main><div class="cont-left"><ul class="cont-right-ul"><li class="active"><span class="line1">通知公告</span></li></ul></div><div class="cont-diff-right"><div class="news-list-box"><ul><li><a href="/info/1003/9003.htm"><span class="new-l_b_title">校长办公室测试通知公告</span><span class="date">2026-08-29 09:12</span></a></li></ul></div></div></main>`,
 		},
 		{
 			id: "xczx", typ: "通知公告", date: "2026-08-28", published: "2026-08-28 08:05:00",
 			title: "乡村振兴研究院测试通知", href: "/info/1004/9004.htm",
-			html: `<meta name="pageTitle" content="通知公告"><div class="main_conRCb"><ul><li><span>2026年8月28日 08:05</span><a href="/info/1004/9004.htm"><em>乡村振兴研究院测试通知</em></a></li></ul></div><div id="fanye">共9条 1/2</div>`,
+			html: `<meta name="pageTitle" content="通知公告"><div class="main_titT"><a href="/tzxw/tzgg.htm">通知公告</a></div><div class="main_conRCb"><ul><li><span>2026年8月28日 08:05</span><a href="/info/1004/9004.htm"><em>乡村振兴研究院测试通知</em></a></li></ul></div><div id="fanye">共9条 1/2</div>`,
 		},
 		{
 			id: "xgh", typ: "通知公告", date: "2026-08-27", published: "2026-08-27 10:11:00",
@@ -120,7 +120,10 @@ func TestFinalTargetAdaptersParseLiveListShapes(t *testing.T) {
 }
 
 func TestFinalTargetAdaptersParseBodyAndOutsideAttachments(t *testing.T) {
-	ids := []string{"talent", "wkjsc", "xb", "xczx", "xgh", "xuncha", "xyb", "ygb", "zzxy"}
+	// zzxy has a distinct detail template and is covered by its dedicated
+	// live-shaped fixtures below; keep this generic test for the adapters that
+	// intentionally share this synthetic Boda-like shape.
+	ids := []string{"talent", "wkjsc", "xb", "xczx", "xgh", "xuncha", "xyb", "ygb"}
 	for _, id := range ids {
 		t.Run(id, func(t *testing.T) {
 			articleType := "通知公告"
@@ -134,7 +137,17 @@ func TestFinalTargetAdaptersParseBodyAndOutsideAttachments(t *testing.T) {
 				html = `<html><head><meta name="pageTitle" content="详情测试标题"></head><body>
 <h2>通知公告</h2><div id="div_title"><span id="lb_title">详情测试标题</span><span id="lb_hits">[2026-08-22 12:34 来源 测试来源]</span></div>
 <div id="div_wenzi"><div id="vsb_content"><div class="v_news_content"><p>这是必须保留的正文精确文本。</p></div></div></div>
-<div class="attachments"><a href="/files/meeting.pdf" download="meeting.pdf">下载</a></div>
+<form name="_newscontent_fromname"><div class="attachments"><a href="/files/meeting.pdf" download="meeting.pdf">下载</a></div></form>
+</body></html>`
+			}
+			if id == "xb" {
+				html = `<html><head><meta name="pageTitle" content="详情测试标题"></head><body>
+<main><div class="cont-left"><ul class="cont-right-ul"><li class="active"><span class="line1">通知公告</span></li></ul></div><div class="cont-right"><form name="_newscontent_fromname"><div class="left-top"><h3 class="news-title">详情测试标题</h3><div class="news-sub-title">发表时间：2026-08-22 12:34</div></div><div id="vsb_content_501"><div class="v_news_content"><p>这是必须保留的正文精确文本。</p></div></div><div class="attachments"><a href="/files/meeting.pdf" download="meeting.pdf">下载</a></div></form></div></main>
+</body></html>`
+			}
+			if id == "xczx" {
+				html = `<html><head><meta name="pageTitle" content="详情测试标题"></head><body>
+<div class="main_titT"><a href="/tzxw/tzgg.htm">通知公告</a></div><div class="main_content"><div class="main_contit"><h2>详情测试标题</h2><p>时间：2026年08月22日 12:34</p></div><div class="main_conDiv" id="vsb_content"><div class="v_news_content"><div id="vsb_content"><div class="v_news_content"><p>这是必须保留的正文精确文本。</p></div></div></div></div><div class="attachments"><a href="/files/meeting.pdf" download="meeting.pdf">下载 meeting.pdf</a></div></div>
 </body></html>`
 			}
 			if id == "xuncha" {

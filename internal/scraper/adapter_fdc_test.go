@@ -1,6 +1,8 @@
 package scraper
 
 import (
+	"io"
+	"net/http"
 	"os"
 	"reflect"
 	"strings"
@@ -20,7 +22,7 @@ func readFdcFixture(t *testing.T, name string) []byte {
 
 func TestFdcAdapterRegistrationAndRoutes(t *testing.T) {
 	site := AllSites["fdc"]
-	if site == nil || site.BaseURL != fdcFixtureBaseURL || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil {
+	if site == nil || site.BaseURL != fdcFixtureBaseURL || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.ListPageFunc == nil || site.TotalPagesFunc == nil || site.ArticleFetchFunc == nil {
 		t.Fatalf("fdc adapter hooks are incomplete: %#v", site)
 	}
 	want := []string{
@@ -82,6 +84,65 @@ func TestFdcHomepageScopesAllNewsPanels(t *testing.T) {
 	}
 	if items[3].Title != "习近平给四所交通大学全体师生的回信" {
 		t.Fatalf("hidden theory tab was not parsed: %#v", items[3])
+	}
+}
+
+func TestFdcMeasuredHomepageFixtureBindsAllVisibleRoutes(t *testing.T) {
+	data := readFdcFixture(t, "fdc_live_home.html")
+	for _, route := range []string{"index.htm", "bmjj.htm", "bmjj/gzzz.htm", "bmjj/jgsz.htm", "bmjj/gzry.htm"} {
+		if !strings.Contains(string(data), `href="`+route+`"`) {
+			t.Errorf("measured homepage fixture is missing route %q", route)
+		}
+	}
+	for _, route := range fdcSubPages {
+		if !strings.Contains(string(data), `href="`+route+`.htm"`) {
+			t.Errorf("measured homepage fixture is missing route %q", route)
+		}
+	}
+	items, err := parseAdapter_fdcList(data, fdcFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 13 {
+		t.Fatalf("measured homepage items = %d, want 13 local articles: %#v", len(items), items)
+	}
+	wantTypes := map[string]int{"通知公告": 6, "新闻动态": 1, "理论学习": 6}
+	gotTypes := make(map[string]int)
+	for _, item := range items {
+		gotTypes[item.Type]++
+		if strings.Contains(item.URL, "news.swjtu.edu.cn") || strings.Contains(item.URL, "www.swjtu.edu.cn") {
+			t.Errorf("external homepage link leaked into feed: %#v", item)
+		}
+	}
+	if !reflect.DeepEqual(gotTypes, wantTypes) {
+		t.Fatalf("measured homepage types = %#v, want %#v", gotTypes, wantTypes)
+	}
+}
+
+func TestFdcMeasuredTzggFixtureBindsFirstMiddleAndLastPages(t *testing.T) {
+	cases := []struct {
+		fixture string
+		page    int
+		count   int
+		wantURL string
+	}{
+		{fixture: "fdc_live_tzgg_first.html", page: 1, count: 10, wantURL: fdcFixtureBaseURL + "/info/1118/14863.htm"},
+		{fixture: "fdc_live_tzgg_middle.html", page: 2, count: 10, wantURL: fdcFixtureBaseURL + "/info/1118/10493.htm"},
+		{fixture: "fdc_live_tzgg_last.html", page: 3, count: 7, wantURL: fdcFixtureBaseURL + "/info/1118/10723.htm"},
+	}
+	for _, tc := range cases {
+		data := readFdcFixture(t, tc.fixture)
+		items, err := parseAdapter_fdcList(data, fdcFixtureBaseURL)
+		if err != nil {
+			t.Fatalf("parse %s: %v", tc.fixture, err)
+		}
+		if len(items) != tc.count || items[0].URL != tc.wantURL || items[0].Type != "通知公告" {
+			t.Fatalf("%s page %d = %#v", tc.fixture, tc.page, items)
+		}
+		totalItems, currentPage, totalPages, ok := fdcPaginationFromHTML(data)
+		if !ok || totalItems != 27 || currentPage != tc.page || totalPages != 3 {
+			t.Fatalf("%s pagination = %d/%d/%d/%v", tc.fixture, totalItems, currentPage, totalPages, ok)
+		}
 	}
 }
 
@@ -153,6 +214,22 @@ func TestFdcArticleParsesMetadataBodyImagesAndAttachments(t *testing.T) {
 	}
 }
 
+func TestFdcMeasuredArticleUsesFixedMetadataAndExactBodyBoundary(t *testing.T) {
+	article, err := parseAdapter_fdcArticle(readFdcFixture(t, "fdc_live_article_notice.html"), fdcFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title != "关于组织参加第六届全国防范非法金融活动知识答题赛的通知" || article.Type != "通知公告" || article.Date != "2026-06-11" || article.PublishedAt != "" {
+		t.Fatalf("measured article metadata = %#v", article)
+	}
+	if !strings.Contains(article.Content, "活动时间为即日起至6月18日") || strings.Contains(article.ContentHTML, "参赛指引.pdf") || strings.Contains(article.ContentHTML, "download.jsp") {
+		t.Fatalf("measured article body escaped fixed content boundary: content=%q html=%q", article.Content, article.ContentHTML)
+	}
+	if len(article.Attachments) != 1 || !strings.Contains(article.Attachments[0].URL, "download.jsp") {
+		t.Fatalf("measured article attachment = %#v", article.Attachments)
+	}
+}
+
 func TestFdcRejectsNonArticleAndVerificationShells(t *testing.T) {
 	if _, err := parseAdapter_fdcArticle(readFdcFixture(t, "fdc_static.html"), fdcFixtureBaseURL); err == nil {
 		t.Fatal("static page was accepted as an article")
@@ -171,5 +248,134 @@ func TestFdcDateValuesPreserveMinutePrecision(t *testing.T) {
 	}
 	if date, publishedAt := fdcDateValues("日期：2026-08-31 14:34"); date != "2026-08-31" || publishedAt != "2026-08-31 14:34:00" {
 		t.Fatalf("precise value = %q/%q", date, publishedAt)
+	}
+}
+
+func TestFdcListPageUsesReverseMappingAndRejectsOutOfRange(t *testing.T) {
+	oldClient, oldNoCache := defaultClient, NoCache
+	oldBase := AllSites["fdc"].BaseURL
+	requested := make([]string, 0, 5)
+	defaultClient = &http.Client{Transport: fdcTestRoundTripper(func(req *http.Request) (*http.Response, error) {
+		requested = append(requested, req.URL.Path)
+		switch req.URL.Path {
+		case "/tzgg.htm":
+			return fdcTestResponse(req, http.StatusOK, "text/html; charset=utf-8", readFdcFixture(t, "fdc_live_tzgg_first.html")), nil
+		case "/tzgg/2.htm":
+			return fdcTestResponse(req, http.StatusOK, "text/html; charset=utf-8", readFdcFixture(t, "fdc_live_tzgg_middle.html")), nil
+		case "/tzgg/1.htm":
+			return fdcTestResponse(req, http.StatusOK, "text/html; charset=utf-8", readFdcFixture(t, "fdc_live_tzgg_last.html")), nil
+		default:
+			return fdcTestResponse(req, http.StatusNotFound, "text/html; charset=utf-8", []byte("not found")), nil
+		}
+	})}
+	AllSites["fdc"].BaseURL = fdcFixtureBaseURL
+	NoCache = true
+	ClearCache()
+	t.Cleanup(func() {
+		defaultClient, NoCache = oldClient, oldNoCache
+		AllSites["fdc"].BaseURL = oldBase
+		ClearCache()
+	})
+
+	items, err := AllSites["fdc"].ListNewsPage("tzgg", 2)
+	if err != nil || len(items) != 10 || items[0].URL != fdcFixtureBaseURL+"/info/1118/10493.htm" {
+		t.Fatalf("logical page 2 = items=%#v err=%v", items, err)
+	}
+	if _, err := AllSites["fdc"].ListNewsPage("tzgg", 4); err == nil {
+		t.Fatal("out-of-range page was accepted")
+	}
+	if _, err := AllSites["fdc"].GetTotalPages("tzgg"); err != nil {
+		t.Fatalf("total pages after reverse lookup: %v", err)
+	}
+	for _, path := range requested {
+		if path == "/tzgg/0.htm" || path == "/tzgg/4.htm" {
+			t.Fatalf("out-of-range physical page was requested: %#v", requested)
+		}
+	}
+}
+
+func TestFdcFetchArticleVerifiesStatusContentTypeMagicAndExternalLinks(t *testing.T) {
+	oldClient, oldNoCache := defaultClient, NoCache
+	oldBase := AllSites["fdc"].BaseURL
+	articleURL := "https://fdc-test.invalid/info/1118/9001.htm"
+	resourceRequests := make([]string, 0, 5)
+	defaultClient = &http.Client{Transport: fdcTestRoundTripper(func(req *http.Request) (*http.Response, error) {
+		switch req.URL.Path {
+		case "/info/1118/9001.htm":
+			return fdcTestResponse(req, http.StatusOK, "text/html; charset=utf-8", readFdcFixture(t, "fdc_article_resources.html")), nil
+		case "/good.png":
+			resourceRequests = append(resourceRequests, req.URL.Path)
+			if req.Header.Get("Referer") != articleURL {
+				t.Errorf("image Referer = %q, want %q", req.Header.Get("Referer"), articleURL)
+			}
+			return fdcTestResponse(req, http.StatusOK, "image/png", []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n', 0x00}), nil
+		case "/bad.png":
+			resourceRequests = append(resourceRequests, req.URL.Path)
+			return fdcTestResponse(req, http.StatusOK, "image/png", []byte("<html>请输入验证码</html>")), nil
+		case "/missing.png":
+			resourceRequests = append(resourceRequests, req.URL.Path)
+			return fdcTestResponse(req, http.StatusNotFound, "text/html; charset=utf-8", []byte("not found")), nil
+		case "/good.pdf":
+			resourceRequests = append(resourceRequests, req.URL.Path)
+			if req.Header.Get("Referer") != articleURL {
+				t.Errorf("attachment Referer = %q, want %q", req.Header.Get("Referer"), articleURL)
+			}
+			return fdcTestResponse(req, http.StatusOK, "application/pdf", []byte("%PDF-1.7\nfixture")), nil
+		case "/bad.pdf":
+			resourceRequests = append(resourceRequests, req.URL.Path)
+			return fdcTestResponse(req, http.StatusOK, "application/pdf", []byte("<!DOCTYPE html><html>请输入验证码下载附件</html>")), nil
+		default:
+			return fdcTestResponse(req, http.StatusNotFound, "text/html; charset=utf-8", []byte("not found")), nil
+		}
+	})}
+	AllSites["fdc"].BaseURL = "https://fdc-test.invalid"
+	NoCache = true
+	ClearCache()
+	t.Cleanup(func() {
+		defaultClient, NoCache = oldClient, oldNoCache
+		AllSites["fdc"].BaseURL = oldBase
+		ClearCache()
+	})
+
+	article, raw, err := fdcFetchArticle(articleURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(raw) == 0 || article.Date != "2026-08-31" || article.PublishedAt != "" {
+		t.Fatalf("fetched article/date = raw=%d article=%#v", len(raw), article)
+	}
+	if len(article.Images) != 1 || article.Images[0] != "https://fdc-test.invalid/good.png" {
+		t.Fatalf("verified images = %#v", article.Images)
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].Name != "有效附件.pdf" || article.Attachments[0].Size == "" {
+		t.Fatalf("verified attachments = %#v", article.Attachments)
+	}
+	if strings.Contains(article.ContentHTML, "bad.png") || strings.Contains(article.ContentHTML, "missing.png") || strings.Contains(article.ContentHTML, "bad.pdf") || strings.Contains(article.ContentHTML, `href="vurl"`) {
+		t.Fatalf("invalid/pseudo resources remained in ContentHTML: %s", article.ContentHTML)
+	}
+	if !strings.Contains(article.ContentHTML, `src="https://fdc-test.invalid/good.png"`) || !strings.Contains(article.ContentHTML, `href="https://example.com/notice"`) {
+		t.Fatalf("valid image or external link was lost: %s", article.ContentHTML)
+	}
+	if len(resourceRequests) != 5 {
+		t.Fatalf("resource requests = %#v, want one status/type/magic check per candidate", resourceRequests)
+	}
+	if got := fdcResourceURL("https://fdc-test.invalid", "https://example.com/foreign.pdf"); got != "" {
+		t.Fatalf("external file was admitted as downloadable resource: %q", got)
+	}
+}
+
+type fdcTestRoundTripper func(*http.Request) (*http.Response, error)
+
+func (f fdcTestRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func fdcTestResponse(req *http.Request, status int, contentType string, body []byte) *http.Response {
+	return &http.Response{
+		StatusCode: status,
+		Status:     http.StatusText(status),
+		Header:     http.Header{"Content-Type": []string{contentType}},
+		Body:       io.NopCloser(strings.NewReader(string(body))),
+		Request:    req,
 	}
 }

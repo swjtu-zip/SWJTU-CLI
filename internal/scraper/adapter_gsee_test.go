@@ -17,8 +17,29 @@ func TestGseeAdapterRegistrationAndRoutes(t *testing.T) {
 	if site.BaseURL != gseeCanonicalBaseURL {
 		t.Fatalf("gsee base URL = %q, want %q", site.BaseURL, gseeCanonicalBaseURL)
 	}
-	if !reflect.DeepEqual(site.SubPages, gseeSubPages) {
-		t.Fatalf("gsee sub-pages = %#v, want %#v", site.SubPages, gseeSubPages)
+	wantSubPages := []string{
+		"xwzx/xwdt",
+		"xwzx/tzgg/dzbg1",
+		"xwzx/tzgg",
+		"xwzx/xsxx",
+		"xwzx/tzgg/sysgl",
+		"bksjy/tzgg",
+		"yjsjy/tzgg",
+		"xsky/xsdt",
+		"djgz/djdt",
+		"djgz/zxtz",
+		"djgz/dwgg",
+		"djgz/dxgz",
+		"djgz/llyd",
+		"djgz/hszd",
+		"xtgz/xtdt",
+		"xtgz/tzgg",
+		"xtgz/jygz/jyxx",
+		"xtgz/jygz/jyzd",
+		"xygz/tzgg",
+	}
+	if !reflect.DeepEqual(site.SubPages, wantSubPages) {
+		t.Fatalf("gsee sub-pages = %#v, want %#v", site.SubPages, wantSubPages)
 	}
 	for _, resource := range gseeResourcePages {
 		for _, feed := range site.SubPages {
@@ -53,13 +74,34 @@ func TestGseePageURLUsesReverseGeneratedPages(t *testing.T) {
 	}
 }
 
+func TestGseePageURLRejectsUnknownOrOutOfRangePages(t *testing.T) {
+	tests := []struct {
+		name       string
+		page       int
+		totalPages int
+		want       string
+	}{
+		{name: "zero page", page: 0, totalPages: 131},
+		{name: "past last page", page: 132, totalPages: 131},
+		{name: "unknown total", page: 2, totalPages: 0},
+		{name: "first page does not need total", page: 1, totalPages: 0, want: gseeFixtureBaseURL + "/xwzx/xwdt.htm"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := gseePageURL(gseeFixtureBaseURL, "xwzx/xwdt", tt.page, tt.totalPages, "htm"); got != tt.want {
+				t.Fatalf("gseePageURL page %d/%d = %q, want %q", tt.page, tt.totalPages, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGseeHomepageIncludesVisibleHiddenAndAcademicModules(t *testing.T) {
 	items, err := parseGseeNews(readGseeFixture(t, "gsee_home.html"), gseeFixtureBaseURL)
 	if err != nil {
 		t.Fatalf("parse gsee homepage: %v", err)
 	}
-	if len(items) != 4 {
-		t.Fatalf("got %d homepage articles, want four unique local articles: %#v", len(items), items)
+	if len(items) != 5 {
+		t.Fatalf("got %d homepage articles, want five unique local articles: %#v", len(items), items)
 	}
 
 	want := map[string]struct {
@@ -70,7 +112,8 @@ func TestGseeHomepageIncludesVisibleHiddenAndAcademicModules(t *testing.T) {
 		"轮播文章标题":   {typ: "新闻动态"},
 		"公告文章完整标题": {typ: "本科教学", date: "2026-08-01"},
 		"党务文章完整标题": {typ: "党政办公", date: "07-31"},
-		"学术活动完整标题": {typ: "学术信息", date: "07-16"},
+		"学术活动完整标题": {typ: "学术信息"},
+		"学术日程完整标题": {typ: "学术信息"},
 	}
 	for _, item := range items {
 		expected, ok := want[item.Title]
@@ -140,6 +183,34 @@ func TestGseeAcademicArticleAllowsImageOnlyContent(t *testing.T) {
 	}
 	if article.PublishedAt != "" || len(article.Images) != 1 || article.Images[0] != gseeFixtureBaseURL+"/__local/event.jpg" {
 		t.Fatalf("unexpected academic date/image fields: %+v", article)
+	}
+}
+
+func TestGseeAcademicScheduleDoesNotBecomePublicationDate(t *testing.T) {
+	items, err := parseGseeNews(readGseeFixture(t, "gsee_home.html"), gseeFixtureBaseURL)
+	if err != nil {
+		t.Fatalf("parse gsee academic schedule: %v", err)
+	}
+	for _, item := range items {
+		if item.Title == "学术日程完整标题" && (item.Date != "" || item.PublishedAt != "") {
+			t.Fatalf("academic event date was promoted to publication metadata: %#v", item)
+		}
+	}
+}
+
+func TestGseeArticleFiltersPseudoImagesAndLinks(t *testing.T) {
+	article, err := parseGseeArticle(readGseeFixture(t, "gsee_article.html"), gseeFixtureBaseURL)
+	if err != nil {
+		t.Fatalf("parse gsee resource fixture: %v", err)
+	}
+	if len(article.Images) != 1 || article.Images[0] != gseeFixtureBaseURL+"/__local/article.jpg" {
+		t.Fatalf("unexpected filtered images: %#v", article.Images)
+	}
+	if strings.Contains(article.Content, "伪附件") || strings.Contains(article.ContentHTML, "spacer.gif") || strings.Contains(article.ContentHTML, "data:image") || strings.Contains(article.ContentHTML, "javascript:") {
+		t.Fatalf("pseudo image/link leaked into content HTML: %q", article.ContentHTML)
+	}
+	if len(article.Attachments) != 1 {
+		t.Fatalf("pseudo attachment link was accepted: %#v", article.Attachments)
 	}
 }
 

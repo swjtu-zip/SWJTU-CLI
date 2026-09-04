@@ -1,0 +1,325 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><HTML><HEAD><TITLE>新闻动态-西南交通大学人工智能研究院</TITLE><meta name="pageType" content="2">
+<meta name="pageTitle" content="新闻动态">
+<META Name="keywords" Content="西南交通大学,人工智能研究院,swjtu,新闻动态" />
+
+
+
+
+
+<META charset="utf-8">
+<META content="ie=edge" http-equiv="x-ua-compatible">
+<META name="description" content="">
+<META name="viewport" content="width=device-width,minimum-scale=1,maximum-scale=1,user-scalable=1"><LINK rel="apple-touch-icon" href="apple-touch-icon.png"><LINK rel="stylesheet" href="dfiles/8700/css/main.css"><LINK rel="stylesheet" href="dfiles/8700/css/comm.css">
+
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="showlist.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1051,'/showlist.jsp',-1,1541857851)</script>
+</HEAD>
+<BODY><!--  header  --><HEADER>
+ <A href="https://ai.swjtu.edu.cn/index.htm"><IMG src="images/log11.png" width="520" height="80" style="padding-left: 100px;padding-top: 10px"></A> 
+<DIV class="search">
+<!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu0 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+        margin-top: -15px;
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu0 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu0"></div>
+<script type="text/html" id="htmlu0">
+    <div id="appu0">
+        <div v-if="!isError">
+          
+             <input type="search" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit" class="search-content"  placeholder="Search" style="font-size:15px" /><span class="divider">|</span><input type="submit" v-on:click="onSubmit()"  value="" class="search-btn"/>
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu0").html($("#htmlu0").text());
+</script>
+<script>
+    var appOwner = "1541857851";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu0",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu0 = document.querySelector("#appu0");
+   if (appElementu0 && appElementu0.__vue__) {
+
+   } else {
+      $("#divu0").html($("#htmlu0").text());
+      var appOwner = "1541857851";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou0 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu0(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu0();
+        }
+      };
+
+      function onSubmitu0(e) {
+        queryInfou0.query.keyWord= $("#appu0  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou0.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script></DIV>
+<DIV></DIV>
+<DIV class="box bg1" style="overflow: visible"><!-- navigator-->      <nav>
+<ul>
+      <li>
+        <a href="index.htm">首页</a>
+      </li>
+      <li>
+        <a href="yjygk.htm">研究院概况</a>
+      </li>
+      <li>
+        <a href="szdw.htm">师资队伍</a>
+      </li>
+      <li>
+        <a href="rcpy.htm">人才培养</a>
+      </li>
+      <li>
+        <a href="kxyj.htm">科学研究</a>
+      </li>
+      <li>
+        <a href="jlhz.htm">交流合作</a>
+      </li>
+      <li>
+        <a href="cpyc.htm">诚聘英才</a>
+      </li>
+      <li>
+        <a href="rdlj.htm">热点链接</a>
+      </li>
+      <li>
+        <a href="English_Version.htm">English Version</a>
+      </li>
+         </ul>
+</nav><!-- navigator end --></DIV></HEADER><!-- header end --><!--内容--><!--banner-->
+<DIV class="banner">
+<DIV class="banner_con"></DIV></DIV><!--banner End-->
+<DIV class="wrap"><!--PageLeft-->
+<DIV class="main_left">
+<DIV class="menu">
+<H3>
+新闻动态</H3></DIV></DIV><!--PageLeft-->
+<DIV class="main_right">
+<DIV class="current">
+<H3>
+新闻动态</H3><div>
+    当前位置: 
+                        <a href="index.htm">首页</a>
+                >>
+                <a href="xwdt.htm">新闻动态</a>
+</div></DIV>
+
+
+<script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script><div class="conlistComm">
+<dl>
+<dt><span> <a href="xwdt.htm">[新闻动态]</a></span><a title="中国人工智能学会理事长戴琼海院士受聘为西南交通大学顾问教授" href="info/1051/1312.htm">中国人工智能学会理事长戴琼海院士受聘为西南交通大学顾问教授</a></dt><dd>时间：2020年09月18日 &nbsp;&nbsp;&nbsp;阅读次数：<span id="dynclicks_u6_1312" name="dynclicks_u6_1312"></span></dd> 
+</dl>
+<dl>
+<dt><span> <a href="xwdt.htm">[新闻动态]</a></span><a title="四川省人工智能学会秘书长任志宇一行调研交流" href="info/1051/1311.htm">四川省人工智能学会秘书长任志宇一行调研交流</a></dt><dd>时间：2020年09月15日 &nbsp;&nbsp;&nbsp;阅读次数：<span id="dynclicks_u6_1311" name="dynclicks_u6_1311"></span></dd> 
+</dl>
+<dl>
+<dt><span> <a href="xwdt.htm">[新闻动态]</a></span><a title="2020年信息、电子与控制技术学术会议 (IECT2020)顺利召开" href="info/1051/1291.htm">2020年信息、电子与控制技术学术会议 (IECT2020)顺利召开</a></dt><dd>时间：2020年05月19日 &nbsp;&nbsp;&nbsp;阅读次数：<span id="dynclicks_u6_1291" name="dynclicks_u6_1291"></span></dd> 
+</dl>
+<dl>
+<dt><span> <a href="xwdt.htm">[新闻动态]</a></span><a title="研究院与京东城市合作提出快速定位新冠病毒易感人群新方案" href="info/1051/1272.htm">研究院与京东城市合作提出快速定位新冠病毒易感人群新方案</a></dt><dd>时间：2020年04月16日 &nbsp;&nbsp;&nbsp;阅读次数：<span id="dynclicks_u6_1272" name="dynclicks_u6_1272"></span></dd> 
+</dl>
+<dl>
+<dt><span> <a href="xwdt.htm">[新闻动态]</a></span><a title="服务线上，步履不停，AI大讲堂第29讲与您“云”相聚" href="info/1051/1253.htm">服务线上，步履不停，AI大讲堂第29讲与您“云”相聚</a></dt><dd>时间：2020年03月04日 &nbsp;&nbsp;&nbsp;阅读次数：<span id="dynclicks_u6_1253" name="dynclicks_u6_1253"></span></dd> 
+</dl>
+<dl>
+<dt><span> <a href="xwdt.htm">[新闻动态]</a></span><a title="我校和德国哈根大学（FernUniversität in Hagen）联合培养的首位双博士生顺利通过答辩" href="info/1051/1241.htm">我校和德国哈根大学（FernUniversität in Hagen）联合培养的首位双博士生顺利通过答辩</a></dt><dd>时间：2020年01月17日 &nbsp;&nbsp;&nbsp;阅读次数：<span id="dynclicks_u6_1241" name="dynclicks_u6_1241"></span></dd> 
+</dl>
+<dl>
+<dt><span> <a href="xwdt.htm">[新闻动态]</a></span><a title="【1896交子讲堂】郑宇校友：用AI和大数据打造智能城市" href="info/1051/1232.htm">【1896交子讲堂】郑宇校友：用AI和大数据打造智能城市</a></dt><dd>时间：2019年12月31日 &nbsp;&nbsp;&nbsp;阅读次数：<span id="dynclicks_u6_1232" name="dynclicks_u6_1232"></span></dd> 
+</dl>
+<dl>
+<dt><span> <a href="xwdt.htm">[新闻动态]</a></span><a title="李天瑞教授当选四川省人工智能学会副理事长" href="info/1051/1221.htm">李天瑞教授当选四川省人工智能学会副理事长</a></dt><dd>时间：2019年12月21日 &nbsp;&nbsp;&nbsp;阅读次数：<span id="dynclicks_u6_1221" name="dynclicks_u6_1221"></span></dd> 
+</dl>
+<dl>
+<dt><span> <a href="xwdt.htm">[新闻动态]</a></span><a title="西南交通大学人工智能研究院承办的2019 KDD China 技术峰会 &amp; 四川省计算机学会年会顺利召开" href="info/1051/1203.htm">西南交通大学人工智能研究院承办的2019 KDD China 技术峰会 &amp; 四川省计算机学会年会顺利召开</a></dt><dd>时间：2019年12月02日 &nbsp;&nbsp;&nbsp;阅读次数：<span id="dynclicks_u6_1203" name="dynclicks_u6_1203"></span></dd> 
+</dl>
+<dl>
+<dt><span> <a href="xwdt.htm">[新闻动态]</a></span><a title="我校成功联合举办2019 IEEE智能系统与知识工程国际会议" href="info/1051/1205.htm">我校成功联合举办2019 IEEE智能系统与知识工程国际会议</a></dt><dd>时间：2019年11月18日 &nbsp;&nbsp;&nbsp;阅读次数：<span id="dynclicks_u6_1205" name="dynclicks_u6_1205"></span></dd> 
+</dl>
+ </div>
+
+            <div class="clear10">  </div> 
+            <div class="page-box">
+               <link rel="stylesheet" Content-type="text/css" href="/system/resource/css/pagedown/sys.css"><div class="pb_sys_common pb_sys_normal pb_sys_style1" style="margin-top:10px;text-align:center;"><span class="p_pages"><span class="p_first_d p_fun_d">首页</span><span class="p_prev_d p_fun_d">上页</span><span class="p_no_d">1</span><span class="p_no"><a href="xwdt/3.htm">2</a></span><span class="p_no"><a href="xwdt/2.htm">3</a></span><span class="p_no"><a href="xwdt/1.htm">4</a></span><span class="p_next p_fun"><a href="xwdt/3.htm">下页</a></span><span class="p_last p_fun"><a href="xwdt/1.htm">尾页</a></span></span></div>
+            </div>
+            <div class="clear10">  </div> <script>_showDynClickBatch(['dynclicks_u6_1312','dynclicks_u6_1311','dynclicks_u6_1291','dynclicks_u6_1272','dynclicks_u6_1253','dynclicks_u6_1241','dynclicks_u6_1232','dynclicks_u6_1221','dynclicks_u6_1203','dynclicks_u6_1205'],[1312,1311,1291,1272,1253,1241,1232,1221,1203,1205],"wbnews", 1541857851)</script></DIV>
+<DIV class="clear"></DIV></DIV><!-- 版权内容请在本组件"内容配置-版权"处填写 -->
+<footer class="full-width">
+    <div class="box box-b">
+      <address style="text-align:certer">
+        <p><span style="font-size: 16px">版权所有© 西南交通大学人工智能研究院</span></p><p><span style="font-size: 16px">Copyright© Southwest Jiaotong University</span></p><p><span style="font-size: 16px">地址： 四川省成都市高新西部园区西南交大 邮编：611756&nbsp;&nbsp; 联系电话：(028) 028-6636-7649 邮箱:ai@swjtu.edu.cn</span></p><p><span style="font-size: 16px">Xipu Campus, Southwest Jiaotong University, West Section, High-tech Zone,&nbsp;Chengdu&nbsp;611756, China</span></p>
+        <img class="QR wechat" src="images/VXPicAISwjtu.jpg">
+        <p> </p>
+        <p style="position: absolute;font-size:15px;right:220px">人工智能研究院
+        </p>
+        <img class="QR weibo" src="dfiles/8700/images/qr_wb.png"> 
+        <p> </p>
+        <p style="position: absolute;font-size:15px;right:35px">西南交通大学
+        </p>
+      </address>    
+    </div>
+  </footer>
+<script src="dfiles/8700/js/vendor/modernizr.min.js">
+    </script><script src="dfiles/8700/js/ery.min.js">
+    </script>
+    </script><script src="dfiles/8700/js/jianjie.js">
+    </script><script src="dfiles/8700/js/imgjs.js">
+    </script>
+</BODY></HTML>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

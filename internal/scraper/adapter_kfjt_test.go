@@ -1,8 +1,12 @@
 package scraper
 
 import (
+	"bytes"
+	"io"
+	"net/http"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -22,17 +26,28 @@ func readKFJTFixture(t *testing.T, name string) []byte {
 
 func TestKFJTAdapterRegistrationAndFeeds(t *testing.T) {
 	site := AllSites["kfjt"]
-	if site == nil || site.BaseURL != kfjtCanonicalBaseURL || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil {
+	if site == nil || site.BaseURL != kfjtCanonicalBaseURL || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil || site.ArticleFetchFunc == nil {
 		t.Fatalf("KFJT adapter is incomplete: %#v", site)
 	}
 	want := []string{
 		"xwzx/xwdt", "xwzx/tzgg",
-		"djgz/djdt", "djgz/zbdj", "djgz/lxjc",
+		"djgz/djdt", "djgz/zbdj",
 		"jjgz/jjdt", "jjgz/djfg", "jjgz/jsjy",
 		"qywh/qydt", "qywh/whjs", "zcfg", "tzqy/qyjs",
 	}
 	if !reflect.DeepEqual(site.SubPages, want) {
 		t.Fatalf("KFJT feeds = %#v, want %#v", site.SubPages, want)
+	}
+}
+
+func TestKFJTLiveFeedInventoryAndExcludedRoutes(t *testing.T) {
+	if kfjtKnownFeed("djgz/lxjc") {
+		t.Fatal("live empty 联系基层 route was registered as an article feed")
+	}
+	for _, excluded := range []string{"jtgk/jtjj", "jtgk/zzjg", "jtgk/bmzz", "qywh", "jjgz/jdjb"} {
+		if kfjtKnownFeed(excluded) {
+			t.Fatalf("static/service route %q was registered as an article feed", excluded)
+		}
 	}
 }
 
@@ -178,4 +193,116 @@ func TestKFJTArticleRejectsNonArticleAndCaptchaShells(t *testing.T) {
 	if _, err := parseAdapter_kfjtArticle(readKFJTFixture(t, "kfjt_captcha.html"), kfjtFixtureBaseURL); err == nil {
 		t.Fatal("captcha page was accepted as a KFJT article")
 	}
+}
+
+func TestKFJTArticleKeepsDateOnlyAndDoesNotReadBodyDates(t *testing.T) {
+	article, err := parseAdapter_kfjtArticle(readKFJTFixture(t, "kfjt_article_date_only.html"), kfjtFixtureBaseURL)
+	if err != nil {
+		t.Fatalf("parse KFJT date-only article: %v", err)
+	}
+	if article.Date != "2026-09-04" || article.PublishedAt != "" {
+		t.Fatalf("date-only metadata = (%q, %q), want date-only", article.Date, article.PublishedAt)
+	}
+	if !strings.Contains(article.Content, "活动时间：2026年10月16日") {
+		t.Fatalf("article body was not retained: %q", article.Content)
+	}
+}
+
+func TestKFJTFetchArticleVerifiesResourcesAndSanitizesHTML(t *testing.T) {
+	detail := readKFJTFixture(t, "kfjt_article_resources.html")
+	oldClient, oldNoCache := defaultClient, NoCache
+	defaultClient, NoCache = &http.Client{Transport: kfjtTestRoundTripper(func(req *http.Request) (*http.Response, error) {
+		response := func(status int, contentType string, body []byte) (*http.Response, error) {
+			return &http.Response{
+				StatusCode:    status,
+				Status:        strconv.Itoa(status),
+				Header:        http.Header{"Content-Type": []string{contentType}},
+				Body:          io.NopCloser(bytes.NewReader(body)),
+				Request:       req,
+				ContentLength: int64(len(body)),
+			}, nil
+		}
+		switch req.URL.Path {
+		case "/info/1025/9001.htm":
+			return response(http.StatusOK, "text/html; charset=utf-8", detail)
+		case "/images/good.png":
+			return response(http.StatusOK, "image/png", []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'})
+		case "/images/bad.png":
+			return response(http.StatusOK, "image/png", []byte("<html><body>security verification</body></html>"))
+		case "/files/good.pdf":
+			return response(http.StatusOK, "application/pdf", []byte("%PDF-1.7 fixture"))
+		case "/files/bad.pdf":
+			return response(http.StatusOK, "application/pdf", []byte("not a PDF"))
+		case "/files/captcha.pdf":
+			return response(http.StatusOK, "application/octet-stream", []byte("<html><body>请输入验证码下载附件</body></html>"))
+		case "/files/missing.pdf":
+			return response(http.StatusNotFound, "text/html; charset=utf-8", []byte("not found"))
+		case "/files/wrong.pdf":
+			return response(http.StatusOK, "text/plain", []byte("%PDF-1.7 fixture"))
+		default:
+			return response(http.StatusNotFound, "text/html; charset=utf-8", []byte("not found"))
+		}
+	})}, true
+	t.Cleanup(func() {
+		defaultClient, NoCache = oldClient, oldNoCache
+		ClearCache()
+	})
+
+	article, raw, err := kfjtFetchArticleAt(kfjtFixtureBaseURL+"/info/1025/9001.htm", kfjtFixtureBaseURL)
+	if err != nil {
+		t.Fatalf("fetch KFJT article: %v", err)
+	}
+	if !bytes.Equal(raw, detail) {
+		t.Fatal("fetcher did not retain the original detail response")
+	}
+	if !reflect.DeepEqual(article.Images, []string{kfjtFixtureBaseURL + "/images/good.png"}) {
+		t.Fatalf("verified images = %#v", article.Images)
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].URL != kfjtFixtureBaseURL+"/files/good.pdf" || article.Attachments[0].Size != strconv.Itoa(len("%PDF-1.7 fixture")) {
+		t.Fatalf("verified attachments = %#v", article.Attachments)
+	}
+	if !strings.Contains(article.ContentHTML, "good.png") || !strings.Contains(article.ContentHTML, "good.pdf") {
+		t.Fatalf("valid resources were not retained: %s", article.ContentHTML)
+	}
+	for _, rejected := range []string{"bad.png", "bad.pdf", "captcha.pdf", "missing.pdf", "wrong.pdf", "javascript:"} {
+		if strings.Contains(article.ContentHTML, rejected) {
+			t.Fatalf("rejected resource %q survived sanitization: %s", rejected, article.ContentHTML)
+		}
+	}
+	if !strings.Contains(article.ContentHTML, "https://example.com/reference") {
+		t.Fatalf("ordinary external link was not retained: %s", article.ContentHTML)
+	}
+}
+
+func TestKFJTResourceGuardsRequireStatusTypeAndMagic(t *testing.T) {
+	checks := []struct {
+		name        string
+		contentType string
+		body        []byte
+		resource    string
+		image       bool
+		want        bool
+	}{
+		{name: "valid image", contentType: "image/png", body: []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}, resource: "good.png", image: true, want: true},
+		{name: "captcha shell", contentType: "application/octet-stream", body: []byte("<html>验证码</html>"), resource: "bad.pdf", want: false},
+		{name: "wrong magic", contentType: "application/pdf", body: []byte("plain text"), resource: "bad.pdf", want: false},
+		{name: "valid pdf", contentType: "application/pdf; charset=binary", body: []byte("%PDF-1.7"), resource: "good.pdf", want: true},
+		{name: "missing content type", contentType: "", body: []byte("%PDF-1.7"), resource: "good.pdf", want: false},
+	}
+	for _, tt := range checks {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := kfjtResourceBodyIsUsable(tt.contentType, tt.body, tt.resource, tt.image); got != tt.want {
+				t.Fatalf("usable = %v, want %v", got, tt.want)
+			}
+		})
+	}
+	if !kfjtResourceBodyIsUsable("application/zip", []byte("PK\x03\x04"), "good.zip", false) {
+		t.Fatal("valid ZIP magic was rejected")
+	}
+}
+
+type kfjtTestRoundTripper func(*http.Request) (*http.Response, error)
+
+func (f kfjtTestRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }

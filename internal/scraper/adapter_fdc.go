@@ -1,8 +1,11 @@
 package scraper
 
 import (
+	"bytes"
 	"fmt"
 	htmlstd "html"
+	"io"
+	"net/http"
 	"net/url"
 	"path"
 	"regexp"
@@ -17,6 +20,8 @@ import (
 )
 
 const fdcBaseURL = "https://fdc.swjtu.edu.cn"
+
+const fdcMaxResourceBytes = 32 << 20
 
 // These are the article-list routes exposed by the live navigation.  The
 // bmjj pages and sdjd/jbxz are static information pages, while the homepage,
@@ -53,7 +58,9 @@ func init() {
 		ParseList:    parseAdapter_fdcList,
 		ParseArticle: parseAdapter_fdcArticle,
 		PageURL:      fdcPageURL,
+		ListPage:     fdcListPage,
 		TotalPages:   fdcTotalPages,
+		FetchArticle: fdcFetchArticle,
 	})
 }
 
@@ -234,7 +241,7 @@ func parseAdapter_fdcArticle(html []byte, baseURL string) (*model.Article, error
 	if scope.Length() == 0 {
 		return nil, fmt.Errorf("fdc article has no article container")
 	}
-	content := scope.Find(".v_news_content").First()
+	content := scope.Find(".art_con .v_news_content").First()
 	if content.Length() == 0 {
 		content = scope.Find("[id^='vsb_content']").Find(".v_news_content").First()
 	}
@@ -249,7 +256,12 @@ func parseAdapter_fdcArticle(html []byte, baseURL string) (*model.Article, error
 	if err != nil {
 		return nil, err
 	}
-	article.Title = strings.Join(strings.Fields(scope.Find("h1").First().Text()), " ")
+	// Do not let the generic parser's broad fallbacks promote a date or type
+	// found elsewhere in the document. FDC exposes both in fixed shell nodes.
+	article.Date = ""
+	article.PublishedAt = ""
+	article.Type = ""
+	article.Title = strings.Join(strings.Fields(scope.ChildrenFiltered("h1").First().Text()), " ")
 	if article.Title == "" {
 		return nil, fmt.Errorf("fdc article has no title")
 	}
@@ -283,7 +295,7 @@ func parseAdapter_fdcArticle(html []byte, baseURL string) (*model.Article, error
 	// shared parser intentionally scopes body resources more narrowly, so
 	// append only explicit file/download links inside this article shell.
 	appendFdcAttachments(article, scope, baseURL)
-	normalizeArticlePublishedAt(article)
+	fdcNormalizeArticlePublishedAt(article)
 	return article, nil
 }
 
@@ -336,6 +348,9 @@ func fdcArticleURL(baseURL, href string) (string, bool) {
 	if err != nil || parsed.Host == "" || !fdcArticlePathRE.MatchString(parsed.Path) {
 		return "", false
 	}
+	if scheme := strings.ToLower(parsed.Scheme); scheme != "http" && scheme != "https" {
+		return "", false
+	}
 	base, err := url.Parse(baseURL)
 	if err != nil || base.Host == "" || !strings.EqualFold(parsed.Host, base.Host) {
 		return "", false
@@ -356,6 +371,24 @@ func fdcDateValues(raw string) (string, string) {
 		return date, ""
 	}
 	return "", ""
+}
+
+// fdcNormalizeArticlePublishedAt deliberately does not turn a date-only
+// source node into a PublishedAt timestamp.  The shared helper is useful for
+// older adapters, but its date-only fallback is too permissive for this site's
+// fixed .source node.
+func fdcNormalizeArticlePublishedAt(article *model.Article) {
+	if article == nil {
+		return
+	}
+	if normalized := normalizePublishedAt(article.Date); len(normalized) >= 10 {
+		article.Date = normalized[:10]
+	}
+	if normalized := normalizePublishedAt(article.PublishedAt); publishedAtHasClock(normalized) {
+		article.PublishedAt = normalized
+	} else {
+		article.PublishedAt = ""
+	}
 }
 
 func fdcMetaFields(text string) map[string]string {
@@ -385,14 +418,12 @@ func appendFdcAttachments(article *model.Article, scope *goquery.Selection, base
 		seen[attachment.URL] = true
 	}
 	scope.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
-		href := strings.TrimSpace(anchor.AttrOr("href", ""))
-		if !fdcLooksLikeAttachmentLink(anchor, href) {
+		href := htmlstd.UnescapeString(strings.TrimSpace(anchor.AttrOr("href", "")))
+		if fdcIsPseudoResourceHref(href) || !fdcLooksLikeAttachmentLink(anchor, href) {
 			return
 		}
-		resolved := cleanURL(resolveURL(baseURL, href))
-		parsed, err := url.Parse(resolved)
-		base, baseErr := url.Parse(baseURL)
-		if err != nil || baseErr != nil || parsed.Host == "" || base.Host == "" || !strings.EqualFold(parsed.Host, base.Host) {
+		resolved := fdcResourceURL(baseURL, href)
+		if resolved == "" {
 			return
 		}
 		if seen[resolved] {
@@ -409,6 +440,10 @@ func appendFdcAttachments(article *model.Article, scope *goquery.Selection, base
 
 func fdcLooksLikeAttachmentLink(anchor *goquery.Selection, href string) bool {
 	if anchor == nil || anchor.Length() == 0 || href == "" {
+		return false
+	}
+	href = htmlstd.UnescapeString(strings.TrimSpace(href))
+	if fdcIsPseudoResourceHref(href) {
 		return false
 	}
 	lowerHref := strings.ToLower(href)
@@ -429,6 +464,14 @@ func fdcLooksLikeAttachmentLink(anchor *goquery.Selection, href string) bool {
 		return strings.Contains(name, "附件") || fdcAttachmentRE.MatchString(name)
 	}
 	return true
+}
+
+func fdcIsPseudoResourceHref(href string) bool {
+	href = strings.ToLower(strings.TrimSpace(htmlstd.UnescapeString(href)))
+	if bodaIsPseudoResourceHref(href) {
+		return true
+	}
+	return href == "vurl" || href == "vsbhref" || strings.HasPrefix(href, "vsb:")
 }
 
 func fdcAttachmentName(anchor *goquery.Selection, resolved string) string {
@@ -452,6 +495,390 @@ func fdcAttachmentName(anchor *goquery.Selection, resolved string) string {
 		name = decoded
 	}
 	return name
+}
+
+// fdcFetchArticle is the live detail path. FDC's download.jsp has been
+// observed returning HTTP 200 HTML verification pages, so every same-origin
+// image and attachment is checked for status, media type, and file signature
+// before it is exposed to callers.
+func fdcFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	baseURL := fdcSiteBaseURL()
+	canonicalURL, ok := fdcArticleURL(baseURL, articleURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("fdc: refusing non-local or non-detail URL %q", articleURL)
+	}
+	body, err := fetch(canonicalURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("fdc: fetch article %s: %w", canonicalURL, err)
+	}
+	article, err := parseAdapter_fdcArticle(body, baseURL)
+	if err != nil {
+		return nil, body, fmt.Errorf("fdc: parse article %s: %w", canonicalURL, err)
+	}
+
+	images := append([]string{}, article.Images...)
+	images = append(images, fdcContentImageCandidates(article.ContentHTML, baseURL)...)
+	article.Images = fdcVerifyImages(images, canonicalURL)
+	article.Attachments = fdcVerifyAttachments(article.Attachments, canonicalURL)
+	article.ContentHTML = fdcSanitizeContentHTML(article.ContentHTML, canonicalURL, article.Images, article.Attachments)
+	return article, body, nil
+}
+
+func fdcVerifyImages(images []string, baseURL string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool, len(images))
+	for _, raw := range images {
+		resolved := fdcResourceURL(baseURL, raw)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		seen[resolved] = true
+		if _, _, err := fdcFetchResource(resolved, baseURL, true); err != nil {
+			continue
+		}
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func fdcVerifyAttachments(attachments []model.Attachment, baseURL string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		resolved := fdcResourceURL(baseURL, attachment.URL)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, _, err := fdcFetchResource(resolved, baseURL, false)
+		if err != nil {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func fdcFetchResource(rawURL, baseURL string, image bool) ([]byte, string, error) {
+	resolved := fdcResourceURL(baseURL, rawURL)
+	if resolved == "" {
+		return nil, "", fmt.Errorf("fdc: refusing invalid resource %q", rawURL)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("fdc: create resource request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	req.Header.Set("Referer", baseURL)
+	if image {
+		req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+	} else {
+		req.Header.Set("Accept", "application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	}
+	client := *defaultClient
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if len(via) == 0 || strings.EqualFold(next.URL.Host, via[len(via)-1].URL.Host) {
+			return nil
+		}
+		return http.ErrUseLastResponse
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("fdc: fetch resource %s: %w", resolved, err)
+	}
+	defer response.Body.Close()
+	contentType := response.Header.Get("Content-Type")
+	if response.StatusCode != http.StatusOK {
+		return nil, contentType, fmt.Errorf("fdc: resource %s: HTTP %d", resolved, response.StatusCode)
+	}
+	if response.ContentLength > fdcMaxResourceBytes {
+		return nil, contentType, fmt.Errorf("fdc: resource %s exceeds %d bytes", resolved, fdcMaxResourceBytes)
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, fdcMaxResourceBytes+1))
+	if err != nil {
+		return nil, contentType, fmt.Errorf("fdc: read resource %s: %w", resolved, err)
+	}
+	if len(body) > fdcMaxResourceBytes || !fdcResourceBodyIsUsable(contentType, body, resolved, image) {
+		return nil, contentType, fmt.Errorf("fdc: resource %s returned invalid Content-Type, shell, or magic signature", resolved)
+	}
+	return body, contentType, nil
+}
+
+func fdcResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	if mediaType == "" || mediaType == "text/html" || mediaType == "application/xhtml+xml" || strings.Contains(mediaType, "json") || strings.HasSuffix(mediaType, "+xml") || mediaType == "application/xml" {
+		return false
+	}
+	if fdcResourceLooksLikeShell(body) {
+		return false
+	}
+	magic := fdcResourceMagic(body)
+	if image {
+		if !strings.HasPrefix(mediaType, "image/") || !fdcIsImageMagic(magic) {
+			return false
+		}
+		switch mediaType {
+		case "image/jpeg", "image/jpg":
+			return magic == "jpeg"
+		case "image/png":
+			return magic == "png"
+		case "image/gif":
+			return magic == "gif"
+		case "image/webp":
+			return magic == "webp"
+		case "image/bmp":
+			return magic == "bmp"
+		case "image/tiff":
+			return magic == "tiff"
+		case "image/svg+xml":
+			return magic == "svg"
+		default:
+			return true
+		}
+	}
+
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf"):
+		return magic == "pdf"
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml"):
+		return magic == "zip"
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt") || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint":
+		return magic == "ole"
+	case strings.Contains(lowerName, ".zip") || strings.Contains(lowerName, ".rar") || strings.Contains(lowerName, ".7z") || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed":
+		return magic == "zip" || magic == "rar" || magic == "7z"
+	case strings.Contains(lowerName, ".rtf") || mediaType == "application/rtf":
+		return bytes.HasPrefix(bytes.TrimSpace(body), []byte(`{\rtf`))
+	case strings.Contains(lowerName, ".txt") || strings.Contains(lowerName, ".csv") || strings.HasPrefix(mediaType, "text/"):
+		return !bytes.Contains(body, []byte{0})
+	default:
+		return magic != ""
+	}
+}
+
+func fdcResourceLooksLikeShell(body []byte) bool {
+	probe := bytes.TrimSpace(body)
+	if len(probe) > 8192 {
+		probe = probe[:8192]
+	}
+	lower := strings.ToLower(string(probe))
+	if strings.HasPrefix(lower, "<!doctype html") || strings.HasPrefix(lower, "<html") {
+		return true
+	}
+	for _, marker := range []string{
+		"请输入验证码下载附件", "请输入验证码", "验证码下载附件", "页面不存在", "access denied",
+		"request blocked", "请求已被阻断", "网站防火墙", "安全验证", "请先登录", "登录页面",
+		"cloudflare", "just a moment", "404 not found",
+	} {
+		if strings.Contains(lower, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func fdcResourceMagic(body []byte) string {
+	switch {
+	case bytes.HasPrefix(body, []byte("%PDF-")):
+		return "pdf"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x03, 0x04}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x05, 0x06}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x07, 0x08}):
+		return "zip"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}):
+		return "ole"
+	case len(body) >= 3 && bytes.Equal(body[:3], []byte{0xff, 0xd8, 0xff}):
+		return "jpeg"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
+		return "png"
+	case len(body) >= 6 && (bytes.Equal(body[:6], []byte("GIF87a")) || bytes.Equal(body[:6], []byte("GIF89a"))):
+		return "gif"
+	case len(body) >= 12 && bytes.Equal(body[:4], []byte("RIFF")) && bytes.Equal(body[8:12], []byte("WEBP")):
+		return "webp"
+	case len(body) >= 2 && bytes.Equal(body[:2], []byte("BM")):
+		return "bmp"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{'I', 'I', '*', 0}) || bytes.Equal(body[:4], []byte{'M', 'M', 0, '*'})):
+		return "tiff"
+	case len(body) >= 7 && bytes.Equal(body[:7], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x00}):
+		return "rar"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x01, 0x00}):
+		return "rar"
+	case len(body) >= 6 && bytes.Equal(body[:6], []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}):
+		return "7z"
+	}
+	trimmed := bytes.TrimSpace(bytes.TrimPrefix(body, []byte{0xef, 0xbb, 0xbf}))
+	if len(trimmed) > 0 {
+		probe := strings.ToLower(string(trimmed))
+		if strings.HasPrefix(probe, "<svg") || (strings.HasPrefix(probe, "<?xml") && strings.Contains(probe, "<svg")) {
+			return "svg"
+		}
+	}
+	return ""
+}
+
+func fdcIsImageMagic(magic string) bool {
+	switch magic {
+	case "jpeg", "png", "gif", "webp", "bmp", "tiff", "svg":
+		return true
+	default:
+		return false
+	}
+}
+
+// fdcResourceURL is intentionally same-origin. Ordinary external article
+// hyperlinks are handled by fdcContentLinkURL and are never downloaded.
+func fdcResourceURL(baseURL, raw string) string {
+	raw = htmlstd.UnescapeString(strings.TrimSpace(raw))
+	if raw == "" || fdcIsPseudoResourceHref(raw) {
+		return ""
+	}
+	resolved := cleanURL(resolveURL(baseURL, raw))
+	parsed, err := url.Parse(resolved)
+	base, baseErr := url.Parse(baseURL)
+	if err != nil || baseErr != nil || parsed.Host == "" || base.Host == "" || !strings.EqualFold(parsed.Host, base.Host) {
+		return ""
+	}
+	if scheme := strings.ToLower(parsed.Scheme); scheme != "http" && scheme != "https" {
+		return ""
+	}
+	resourceText := strings.ToLower(parsed.Path + "?" + parsed.RawQuery)
+	for _, marker := range []string{
+		"/captcha", "/verify", "/validate", "/login", "/signin", "/placeholder",
+		"/transparent", "/spacer", "/blank", "/loading", "/pixel.gif", "createimage",
+		"getcode", "access-denied", "request-blocked", "/waf",
+	} {
+		if strings.Contains(resourceText, marker) {
+			return ""
+		}
+	}
+	parsed.Fragment = ""
+	return parsed.String()
+}
+
+func fdcContentImageCandidates(raw, baseURL string) []string {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader("<div id=\"fdc-content-root\">" + raw + "</div>"))
+	if err != nil {
+		return nil
+	}
+	seen := make(map[string]bool)
+	images := make([]string, 0)
+	doc.Find("#fdc-content-root img").Each(func(_ int, image *goquery.Selection) {
+		for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			resolved := fdcResourceURL(baseURL, image.AttrOr(attr, ""))
+			if resolved == "" {
+				continue
+			}
+			if !seen[resolved] {
+				seen[resolved] = true
+				images = append(images, resolved)
+			}
+			break
+		}
+	})
+	return images
+}
+
+func fdcContentLinkURL(baseURL, raw string) string {
+	raw = htmlstd.UnescapeString(strings.TrimSpace(raw))
+	if raw == "" {
+		return ""
+	}
+	lower := strings.ToLower(raw)
+	if strings.HasPrefix(lower, "#") || strings.HasPrefix(lower, "mailto:") || strings.HasPrefix(lower, "tel:") {
+		return raw
+	}
+	if fdcIsPseudoResourceHref(raw) {
+		return ""
+	}
+	resolved := cleanURL(resolveURL(baseURL, raw))
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Hostname() == "" {
+		return ""
+	}
+	if scheme := strings.ToLower(parsed.Scheme); scheme != "http" && scheme != "https" {
+		return ""
+	}
+	return resolved
+}
+
+func fdcSanitizeContentHTML(raw, baseURL string, images []string, attachments []model.Attachment) string {
+	if strings.TrimSpace(raw) == "" {
+		return ""
+	}
+	imageSet := make(map[string]bool, len(images))
+	for _, image := range images {
+		if resolved := fdcResourceURL(baseURL, image); resolved != "" {
+			imageSet[resolved] = true
+		}
+	}
+	attachmentSet := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		if resolved := fdcResourceURL(baseURL, attachment.URL); resolved != "" {
+			attachmentSet[resolved] = true
+		}
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader("<div id=\"fdc-content-root\">" + raw + "</div>"))
+	if err != nil {
+		return ""
+	}
+	root := doc.Find("#fdc-content-root").First()
+	root.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := ""
+		for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			candidate := fdcResourceURL(baseURL, image.AttrOr(attr, ""))
+			if candidate != "" && imageSet[candidate] {
+				resolved = candidate
+				break
+			}
+		}
+		if resolved == "" {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vsbhref", "vurl"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	root.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		href := htmlstd.UnescapeString(strings.TrimSpace(link.AttrOr("href", "")))
+		if href == "" {
+			return
+		}
+		if fdcIsPseudoResourceHref(href) {
+			lower := strings.ToLower(href)
+			if !strings.HasPrefix(lower, "#") && !strings.HasPrefix(lower, "mailto:") && !strings.HasPrefix(lower, "tel:") {
+				link.RemoveAttr("href")
+			}
+			return
+		}
+		if fdcLooksLikeAttachmentLink(link, href) {
+			resolved := fdcResourceURL(baseURL, href)
+			if resolved == "" || !attachmentSet[resolved] {
+				link.Remove()
+				return
+			}
+			link.SetAttr("href", resolved)
+			return
+		}
+		if resolved := fdcContentLinkURL(baseURL, href); resolved != "" {
+			link.SetAttr("href", resolved)
+		} else {
+			link.RemoveAttr("href")
+		}
+	})
+	rendered, err := root.Html()
+	if err != nil {
+		return ""
+	}
+	return rendered
 }
 
 func fdcPaginationFromDocument(doc *goquery.Document) (totalItems, currentPage, totalPages int, ok bool) {
@@ -489,36 +916,84 @@ func fdcPaginationFromHTML(html []byte) (totalItems, currentPage, totalPages int
 	return fdcPaginationFromDocument(doc)
 }
 
-func fdcTotalPages(slug string) (int, error) {
-	if strings.EqualFold(strings.Trim(slug, "/"), "index") {
-		return 1, nil
-	}
-	baseURL := fdcBaseURL
+func fdcSiteBaseURL() string {
 	if site := AllSites["fdc"]; site != nil && strings.TrimSpace(site.BaseURL) != "" {
-		baseURL = site.BaseURL
+		return strings.TrimRight(strings.TrimSpace(site.BaseURL), "/")
 	}
+	return fdcBaseURL
+}
+
+// fdcListPage owns the GET-and-parse path because the generated filenames are
+// reverse-numbered.  It also checks the logical page echoed by the source;
+// otherwise a WAF/SPA fallback can make every requested page look successful.
+func fdcListPage(slug string, page int) ([]model.NewsItem, int, error) {
+	if page < 1 {
+		return nil, 0, fmt.Errorf("fdc: list page must be positive: %d", page)
+	}
+	baseURL := fdcSiteBaseURL()
 	firstURL := fdcPageURL(baseURL, slug, 1, 0, ".htm")
-	body, err := fdcFetchListPage(firstURL)
+	if firstURL == "" {
+		return nil, 0, fmt.Errorf("fdc: no first-page URL for %q", slug)
+	}
+	firstBody, err := fdcFetchListPage(firstURL)
 	if err != nil {
-		return 0, fmt.Errorf("fdc: read first page for %s: %w", slug, err)
+		return nil, 0, fmt.Errorf("fdc: read first page for %s: %w", slug, err)
 	}
-	doc, parseErr := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
-	if parseErr != nil || fdcLooksLikeErrorPage(doc) {
-		return 0, fmt.Errorf("fdc: %s is not a valid list page", slug)
+	firstItems, err := parseAdapter_fdcList(firstBody, baseURL)
+	if err != nil {
+		return nil, 0, err
 	}
-	content := fdcListContent(doc)
-	rows := content.Find("dl")
-	if content.Length() == 0 || (rows.Length() == 0 && !fdcPaginationIsPresent(doc)) {
-		return 0, fmt.Errorf("fdc: %s is not a supported article list", slug)
+
+	if strings.EqualFold(strings.Trim(slug, "/"), "index") {
+		if page != 1 {
+			return nil, 1, fmt.Errorf("fdc: homepage has no page %d", page)
+		}
+		return firstItems, 1, nil
 	}
-	if totalPages := fdcTotalPagesFromHTML(body); totalPages > 0 {
-		return totalPages, nil
+
+	_, firstCurrent, totalPages, hasPagination := fdcPaginationFromHTML(firstBody)
+	if !hasPagination {
+		totalPages = 1
+	} else if totalPages == 0 {
+		if page != 1 {
+			return nil, 0, fmt.Errorf("fdc: %s is an explicit empty list; page %d is out of range", slug, page)
+		}
+		if firstCurrent != 0 {
+			return nil, 0, fmt.Errorf("fdc: %s reported invalid empty-list page %d", slug, firstCurrent)
+		}
+		return firstItems, 0, nil
+	} else if firstCurrent != 1 {
+		return nil, totalPages, fmt.Errorf("fdc: %s first page echoed %d/%d", slug, firstCurrent, totalPages)
 	}
-	if fdcPaginationIsPresent(doc) {
-		// 0/0 is the site's explicit legal empty-list marker.
-		return 0, nil
+
+	if page == 1 {
+		return firstItems, totalPages, nil
 	}
-	return 1, nil
+	if page > totalPages {
+		return nil, totalPages, fmt.Errorf("fdc: %s page %d is out of range 1..%d", slug, page, totalPages)
+	}
+
+	pageURL := fdcPageURL(baseURL, slug, page, totalPages, ".htm")
+	body, err := fdcFetchListPage(pageURL)
+	if err != nil {
+		return nil, totalPages, fmt.Errorf("fdc: read %s page %d: %w", slug, page, err)
+	}
+	items, err := parseAdapter_fdcList(body, baseURL)
+	if err != nil {
+		return nil, totalPages, err
+	}
+	_, currentPage, reportedTotalPages, hasPagination := fdcPaginationFromHTML(body)
+	if hasPagination {
+		if currentPage != page || reportedTotalPages != totalPages {
+			return nil, totalPages, fmt.Errorf("fdc: %s requested logical page %d, source echoed %d/%d", slug, page, currentPage, reportedTotalPages)
+		}
+	}
+	return items, totalPages, nil
+}
+
+func fdcTotalPages(slug string) (int, error) {
+	_, totalPages, err := fdcListPage(slug, 1)
+	return totalPages, err
 }
 
 func fdcPaginationIsPresent(doc *goquery.Document) bool {
@@ -544,16 +1019,26 @@ func fdcLooksLikeErrorPage(doc *goquery.Document) bool {
 		return true
 	}
 	title := strings.ToLower(strings.Join(strings.Fields(doc.Find("title").First().Text()), " "))
-	for _, marker := range []string{"404", "403", "access denied", "not found", "页面不存在", "请求错误", "安全验证", "滑块验证"} {
+	for _, marker := range []string{
+		"404", "403", "500", "access denied", "not found", "页面不存在", "请求错误",
+		"请求被阻断", "安全验证", "滑块验证", "验证码", "access forbidden", "login", "登录",
+	} {
 		if strings.Contains(title, marker) {
 			return true
 		}
 	}
 	body := strings.ToLower(strings.Join(strings.Fields(doc.Find("body").First().Text()), " "))
-	for _, marker := range []string{"请输入验证码下载附件", "请输入验证码", "页面不存在", "access denied", "404 not found"} {
+	for _, marker := range []string{
+		"请输入验证码下载附件", "请输入验证码", "页面不存在", "access denied", "404 not found",
+		"请求已被阻断", "请求被阻断", "网站防火墙", "安全验证", "请先登录", "登录页面",
+		"无权限访问", "访问被拒绝", "cloudflare", "just a moment", "request blocked",
+	} {
 		if strings.Contains(body, marker) {
 			return true
 		}
+	}
+	if doc.Find("#app, #root").Length() > 0 && doc.Find(".main_right, .article, .v_news_content, .news-list").Length() == 0 {
+		return true
 	}
 	return false
 }

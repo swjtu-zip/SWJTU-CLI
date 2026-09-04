@@ -1,8 +1,11 @@
 package scraper
 
 import (
+	"bytes"
 	"fmt"
 	htmlstd "html"
+	"io"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -16,14 +19,14 @@ import (
 
 const dbBaseURL = "https://db.swjtu.edu.cn"
 
-// dbSubPages contains the article-bearing pages exposed by the site's visible
-// navigation.  The profile pages under bmgk are static pages; the three
-// download pages under bmgz are article lists whose content.jsp details carry
-// the actual files, so they must remain separate feeds.
+// dbSubPages contains only pages which were verified to contain article rows.
+// The profile pages under bmgk and the bmgz landing page are static/category
+// shells. fwzn/gzcx and llqy are legacy links not present in the current top
+// navigation, but both still expose real article lists and are intentionally
+// retained as audited feeds.
 var dbSubPages = []string{
 	"xwdt",
 	"tzgg",
-	"bmgz",
 	"bmgz/bmdt",
 	"bmgz/jzzm",
 	"bmgz/bmgzbslc",
@@ -31,37 +34,45 @@ var dbSubPages = []string{
 	"bmgz/1806",
 	"bmgz/1816",
 	"fwzn",
+	"fwzn/gzcx",
 	"gzzd",
+	"llqy",
 }
 
 type dbFeedRoute struct {
 	path    string
 	treeID  string
 	reverse bool
+	// numbered means the first generated file is slug.htm and the logical
+	// second page is slug/1.htm. This is the convention used by db's static
+	// list generator for forward-numbered archives.
+	numbered bool
 }
 
 var dbRoutes = map[string]dbFeedRoute{
 	"index":         {path: "index.htm"},
-	"xwdt":          {path: "xwdt.htm", reverse: true},
-	"tzgg":          {path: "tzgg.htm"},
-	"bmgz":          {path: "bmgz.htm"},
-	"bmgz/bmdt":     {path: "bmgz/bmdt.htm"},
-	"bmgz/jzzm":     {path: "bmgz/jzzm.htm"},
-	"bmgz/bmgzbslc": {path: "bmgz/bmgzbslc.htm"},
+	"xwdt":          {path: "xwdt.htm", reverse: true, numbered: true},
+	"tzgg":          {path: "tzgg.htm", numbered: true},
+	"bmgz/bmdt":     {path: "bmgz/bmdt.htm", numbered: true},
+	"bmgz/jzzm":     {path: "bmgz/jzzm.htm", numbered: true},
+	"bmgz/bmgzbslc": {path: "bmgz/bmgzbslc.htm", numbered: true},
 	"bmgz/1796":     {treeID: "1796"},
 	"bmgz/1806":     {treeID: "1806"},
 	"bmgz/1816":     {treeID: "1816"},
-	"fwzn":          {path: "fwzn.htm"},
-	"gzzd":          {path: "gzzd.htm"},
+	"fwzn":          {path: "fwzn.htm", numbered: true},
+	"fwzn/gzcx":     {path: "fwzn/gzcx.htm", numbered: true},
+	"gzzd":          {path: "gzzd.htm", numbered: true},
+	"llqy":          {path: "llqy.htm", reverse: true, numbered: true},
 }
 
 var (
-	dbArticlePathRE = regexp.MustCompile(`(?i)^/info/\d+/\d+\.html?$`)
-	dbDateTimeRE    = regexp.MustCompile(`日期\s*[:：]\s*(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})(?:日|号)?(?:\s+|[Tt]+)(\d{1,2}):(\d{2})(?::(\d{2}))?`)
-	dbDateRE        = regexp.MustCompile(`日期\s*[:：]\s*(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})`)
-	dbListDateRE    = regexp.MustCompile(`时间\s*[:：]\s*(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})`)
-	dbBareDateRE    = regexp.MustCompile(`(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})`)
-	dbPageNumberRE  = regexp.MustCompile(`^\s*(\d+)\s*$`)
+	dbArticlePathRE   = regexp.MustCompile(`(?i)^/info/\d+/\d+\.html?$`)
+	dbDateTimeRE      = regexp.MustCompile(`(?:发布日期|发布时间|发表时间|日期)\s*[:：]\s*(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})(?:日|号)?(?:\s+|[Tt]+)(\d{1,2}):(\d{2})(?::(\d{2}))?`)
+	dbDateRE          = regexp.MustCompile(`(?:发布日期|发布时间|发表时间|日期)\s*[:：]\s*(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})`)
+	dbListDateRE      = regexp.MustCompile(`时间\s*[:：]\s*(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})`)
+	dbBareDateRE      = regexp.MustCompile(`(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})`)
+	dbPageNumberRE    = regexp.MustCompile(`^\s*(\d+)\s*$`)
+	dbResourceShellRE = regexp.MustCompile(`(?is)<!doctype\s+html|<html(?:\s|>)|<head(?:\s|>)|<body(?:\s|>)|请输入验证码|验证码下载附件|安全验证|访问被拒绝|access\s+denied|cloudflare|just\s+a\s+moment|页面不存在|404\s+not\s+found|登录页面|请先登录`)
 )
 
 func init() {
@@ -75,6 +86,7 @@ func init() {
 		// list.jsp query pagination used by the download tabs.
 		ListPage:     dbListPage,
 		ParseArticle: parseAdapter_dbArticle,
+		FetchArticle: dbFetchArticle,
 	})
 }
 
@@ -100,6 +112,9 @@ func parseAdapter_dbList(raw []byte, baseURL string) ([]model.NewsItem, error) {
 		return nil, fmt.Errorf("db page is not a supported article list")
 	}
 	items := parseDBRows(rows, baseURL, dbListType(doc))
+	if len(items) == 0 {
+		return nil, fmt.Errorf("db article list contains no valid article rows")
+	}
 	return items, nil
 }
 
@@ -262,9 +277,10 @@ func dbArticleURL(baseURL, href string) (string, bool) {
 	return "", false
 }
 
-// dbListPage fetches one logical page.  xwdt is reverse-numbered (the source
-// advertises page 2 as xwdt/1.htm), while the three list.jsp feeds use
-// PAGENUM/totalpage query parameters.
+// dbListPage fetches one logical page. xwdt and llqy are reverse-numbered
+// static archives; the other static archives use the source's zero-based
+// generated filenames (logical page 2 is /1.htm). The three list.jsp feeds
+// use PAGENUM/totalpage query parameters.
 func dbListPage(slug string, page int) ([]model.NewsItem, int, error) {
 	if page < 1 {
 		return nil, 0, fmt.Errorf("db: page must be positive")
@@ -313,6 +329,12 @@ func dbSiteBaseURL() string {
 
 func dbRouteURL(baseURL string, route dbFeedRoute, page, totalPages int) string {
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if baseURL == "" || page < 1 {
+		return ""
+	}
+	if page > 1 && (totalPages < 1 || page > totalPages) {
+		return ""
+	}
 	if route.treeID != "" {
 		u, _ := url.Parse(baseURL + "/list.jsp")
 		query := u.Query()
@@ -325,10 +347,19 @@ func dbRouteURL(baseURL string, route dbFeedRoute, page, totalPages int) string 
 		u.RawQuery = query.Encode()
 		return u.String()
 	}
-	if page <= 1 || !route.reverse || totalPages <= 1 {
+	if page == 1 {
 		return baseURL + "/" + strings.TrimLeft(route.path, "/")
 	}
-	filePage := totalPages - page + 1
+	filePage := page
+	if route.numbered {
+		filePage = page - 1
+	}
+	if route.reverse {
+		filePage = totalPages - page + 1
+	}
+	if filePage < 1 {
+		return ""
+	}
 	path := strings.TrimSuffix(route.path, ".htm")
 	return fmt.Sprintf("%s/%s/%d.htm", baseURL, path, filePage)
 }
@@ -385,33 +416,36 @@ func parseAdapter_dbArticle(raw []byte, baseURL string) (*model.Article, error) 
 	if content.Length() == 0 {
 		return nil, fmt.Errorf("db article has no content container")
 	}
-	if strings.TrimSpace(content.Text()) == "" && content.Find("img, table, a").Length() == 0 && scope.Find("li a[href]").Length() == 0 {
-		return nil, fmt.Errorf("db article has empty content")
-	}
 
-	article, err := parseBodaArticle(raw, baseURL)
-	if err != nil {
-		return nil, err
-	}
-	article.Title = dbArticleTitle(scope, doc)
-	if article.Title == "" {
+	// db's detail template has one authoritative metadata block and one
+	// authoritative .v_news_content block. Do not call the generic article
+	// parser here: its global fallback can select a sidebar content block and
+	// its broad metadata search can see dates in the article body.
+	title := dbArticleTitle(scope, doc)
+	if title == "" {
 		return nil, fmt.Errorf("db article has no title")
 	}
-
-	metaText := flattenedText(scope.Find(".source").First())
+	meta := scope.Find(".source").First()
+	if meta.Length() == 0 {
+		meta = scope.Find(".news_source").First()
+	}
+	metaText := flattenedText(meta)
+	article := &model.Article{
+		Title:  title,
+		Source: dbFirstField(metaText, []string{"信息来源", "来源"}, "作者", "日期", "发布日期", "发布时间", "点击数"),
+		Author: dbField(metaText, "作者", "日期", "发布日期", "发布时间", "点击数"),
+		Type:   dbArticleType(doc, baseURL),
+	}
 	if date, publishedAt := dbArticleDate(metaText); date != "" {
 		article.Date = date
 		article.PublishedAt = publishedAt
 	}
-	source := dbField(metaText, "信息来源", "作者", "日期", "点击数")
-	if source == "" {
-		source = dbField(metaText, "来源", "作者", "日期", "点击数")
+
+	article.Content, article.ContentHTML, article.Images = dbExtractContent(content, baseURL)
+	if strings.TrimSpace(article.Content) == "" && len(article.Images) == 0 && content.Find("table, a").Length() == 0 && scope.Find("li a[href]").Length() == 0 {
+		return nil, fmt.Errorf("db article has empty content")
 	}
-	if source != "" {
-		article.Source = source
-	}
-	article.Type = dbArticleType(doc, baseURL)
-	dbAppendAttachments(article, scope, baseURL)
+	article.Attachments = dbCollectAttachments(scope, baseURL)
 	normalizeArticlePublishedAt(article)
 	return article, nil
 }
@@ -426,18 +460,33 @@ func dbArticleTitle(scope *goquery.Selection, doc *goquery.Document) string {
 
 func dbArticleDate(text string) (string, string) {
 	if match := dbDateTimeRE.FindStringSubmatch(text); match != nil {
-		second := match[6]
-		if second == "" {
-			second = "00"
+		date := normalizeDateParts(match[1], match[2], match[3])
+		hour, hourErr := strconv.Atoi(match[4])
+		minute, minuteErr := strconv.Atoi(match[5])
+		second := 0
+		var secondErr error
+		if match[6] != "" {
+			second, secondErr = strconv.Atoi(match[6])
 		}
-		publishedAt := fmt.Sprintf("%s-%02s-%02s %02s:%s:%s", match[1], match[2], match[3], match[4], match[5], second)
-		return publishedAt[:10], publishedAt
+		if date == "" || hourErr != nil || minuteErr != nil || secondErr != nil || hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59 {
+			return "", ""
+		}
+		return date, fmt.Sprintf("%s %02d:%02d:%02d", date, hour, minute, second)
 	}
 	if match := dbDateRE.FindStringSubmatch(text); match != nil {
 		date := normalizeDateParts(match[1], match[2], match[3])
 		return date, date
 	}
 	return "", ""
+}
+
+func dbFirstField(text string, labels []string, stopLabels ...string) string {
+	for _, label := range labels {
+		if value := dbField(text, label, stopLabels...); value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func dbField(text, label string, stopLabels ...string) string {
@@ -463,25 +512,37 @@ func dbField(text, label string, stopLabels ...string) string {
 }
 
 func dbArticleType(doc *goquery.Document, baseURL string) string {
+	if doc == nil {
+		return ""
+	}
+	// Prefer the breadcrumb's route href. It remains unambiguous for content.jsp
+	// pages, where the numeric tree ID is the only stable type identifier.
 	var typ string
-	doc.Find(".current a[href]").EachWithBreak(func(_ int, anchor *goquery.Selection) bool {
-		href := anchor.AttrOr("href", "")
-		resolvedHref := resolveURL(baseURL, href)
-		if _, ok := dbArticleURL(baseURL, resolvedHref); ok {
-			// Article links can appear in the current trail on some templates;
-			// only the known list route links represent a type.
-			if candidate := dbRouteType(resolvedHref); candidate != "" {
-				typ = candidate
-				return false
+	typRank := 0
+	doc.Find(".current a[href]").Each(func(_ int, anchor *goquery.Selection) {
+		if candidate := dbRouteType(resolveURL(baseURL, anchor.AttrOr("href", ""))); candidate != "" {
+			rank := dbTypeRank(candidate)
+			if rank >= typRank {
+				typ, typRank = candidate, rank
 			}
 		}
-		if candidate := dbRouteType(resolvedHref); candidate != "" {
-			typ = candidate
-			return false
-		}
-		return true
 	})
-	return typ
+	if typ != "" {
+		return typ
+	}
+
+	// Some db detail pages render the category as a heading while their
+	// breadcrumb ends in only “正文”. Keep this lookup inside known header
+	// zones; never search the body text for a category name.
+	for _, selector := range []string{
+		".current h3", ".current h2", ".current .title", ".current .current-title",
+		".article-category", ".article-type", ".con_tit h3", ".con_tit h2",
+	} {
+		if candidate := dbKnownTypeFromText(doc.Find(selector).First().Text()); candidate != "" {
+			return candidate
+		}
+	}
+	return dbKnownTypeFromText(doc.Find(".current").First().Text())
 }
 
 func dbRouteType(href string) string {
@@ -499,58 +560,436 @@ func dbRouteType(href string) string {
 			return "涉密部位相关下载"
 		}
 	}
-	switch strings.Trim(strings.TrimSpace(parsed.Path), "/") {
-	case "xwdt.htm":
+	path := strings.Trim(strings.TrimSpace(parsed.Path), "/")
+	switch {
+	case path == "xwdt.htm" || strings.HasPrefix(path, "xwdt/"):
 		return "新闻动态"
-	case "tzgg.htm":
+	case path == "tzgg.htm" || strings.HasPrefix(path, "tzgg/"):
 		return "通知公告"
-	case "bmgz.htm":
-		return "保密工作"
-	case "bmgz/bmdt.htm":
+	case path == "bmgz/bmdt.htm" || strings.HasPrefix(path, "bmgz/bmdt/"):
 		return "保密动态"
-	case "bmgz/jzzm.htm":
+	case path == "bmgz/jzzm.htm" || strings.HasPrefix(path, "bmgz/jzzm/"):
 		return "警钟长鸣"
-	case "bmgz/bmgzbslc.htm":
+	case path == "bmgz/bmgzbslc.htm" || strings.HasPrefix(path, "bmgz/bmgzbslc/"):
 		return "保密工作办事流程"
-	case "fwzn.htm":
+	case path == "bmgz.htm" || strings.HasPrefix(path, "bmgz/"):
+		return "保密工作"
+	case path == "fwzn/gzcx.htm" || strings.HasPrefix(path, "fwzn/gzcx/"):
+		return "工作程序"
+	case path == "fwzn.htm" || strings.HasPrefix(path, "fwzn/"):
 		return "服务指南"
-	case "gzzd.htm":
+	case path == "gzzd.htm" || strings.HasPrefix(path, "gzzd/"):
 		return "规章制度"
+	case path == "llqy.htm" || strings.HasPrefix(path, "llqy/"):
+		return "理论前沿"
 	default:
 		return ""
 	}
 }
 
+var dbKnownArticleTypes = []string{
+	"保密工作办事流程", "涉密人员相关下载", "涉密载体相关下载", "涉密部位相关下载",
+	"新闻动态", "通知公告", "保密动态", "警钟长鸣", "服务指南", "规章制度", "理论前沿", "工作程序", "保密工作",
+}
+
+func dbKnownTypeFromText(text string) string {
+	text = dbCompactText(text)
+	if text == "" {
+		return ""
+	}
+	for _, part := range strings.FieldsFunc(text, func(r rune) bool {
+		return strings.ContainsRune(">»|｜", r)
+	}) {
+		part = strings.TrimSpace(strings.Trim(part, "[]【】"))
+		for _, typ := range dbKnownArticleTypes {
+			if part == typ || strings.Contains(part, typ) {
+				return typ
+			}
+		}
+	}
+	return ""
+}
+
+func dbTypeRank(typ string) int {
+	if typ == "保密工作" || typ == "服务指南" {
+		return 1
+	}
+	return 2
+}
+
+func dbExtractContent(content *goquery.Selection, baseURL string) (string, string, []string) {
+	if content == nil || content.Length() == 0 {
+		return "", "", nil
+	}
+	text := extractBodaContentText(content)
+	clone := content.Clone()
+	clone.Find("script, style, noscript").Remove()
+	images := make([]string, 0)
+	seen := make(map[string]bool)
+	clone.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := dbImageURLFromSelection(baseURL, image)
+		if resolved == "" {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vsbhref", "vurl"} {
+			image.RemoveAttr(attr)
+		}
+		if !seen[resolved] {
+			seen[resolved] = true
+			images = append(images, resolved)
+		}
+	})
+	clone.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		href := strings.TrimSpace(link.AttrOr("href", ""))
+		if bodaIsPseudoResourceHref(href) {
+			link.RemoveAttr("href")
+			return
+		}
+		if !dbIsAttachmentLink(link, href) {
+			return
+		}
+		resolved := dbResourceURL(baseURL, href)
+		if resolved == "" {
+			link.RemoveAttr("href")
+			return
+		}
+		link.SetAttr("href", resolved)
+	})
+	html, _ := clone.Html()
+	return text, html, images
+}
+
+func dbCollectAttachments(scope *goquery.Selection, baseURL string) []model.Attachment {
+	if scope == nil || scope.Length() == 0 {
+		return nil
+	}
+	attachments := make([]model.Attachment, 0)
+	seen := make(map[string]bool)
+	scope.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		href := strings.TrimSpace(link.AttrOr("href", ""))
+		if !dbIsAttachmentLink(link, href) {
+			return
+		}
+		resolved := dbResourceURL(baseURL, href)
+		if resolved == "" || seen[resolved] {
+			return
+		}
+		name := dbCompactText(link.AttrOr("download", ""))
+		if name == "" {
+			name = dbCompactText(link.Text())
+		}
+		if name == "" {
+			name = pathBaseFromURL(resolved)
+		}
+		if name == "" {
+			return
+		}
+		seen[resolved] = true
+		attachments = append(attachments, model.Attachment{Name: name, URL: resolved})
+	})
+	return attachments
+}
+
+// dbAppendAttachments is kept as a small compatibility wrapper for callers
+// which used the former parser helper. The live parser uses the returned slice
+// directly so it can verify every candidate before exposing it.
 func dbAppendAttachments(article *model.Article, scope *goquery.Selection, baseURL string) {
+	if article == nil {
+		return
+	}
 	seen := make(map[string]bool, len(article.Attachments))
 	for _, attachment := range article.Attachments {
 		seen[attachment.URL] = true
 	}
-	scope.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
-		href := strings.TrimSpace(anchor.AttrOr("href", ""))
-		if href == "" {
+	for _, attachment := range dbCollectAttachments(scope, baseURL) {
+		if seen[attachment.URL] {
+			continue
+		}
+		seen[attachment.URL] = true
+		article.Attachments = append(article.Attachments, attachment)
+	}
+}
+
+func dbIsAttachmentLink(link *goquery.Selection, href string) bool {
+	if link != nil && bodaIsPseudoResourceHref(href) {
+		return strings.TrimSpace(link.AttrOr("download", "")) != "" || strings.Contains(dbCompactText(link.Closest("li").Text()), "附件")
+	}
+	return bodaLooksLikeAttachmentLink(link, href)
+}
+
+func dbImageURLFromSelection(baseURL string, image *goquery.Selection) string {
+	for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+		if raw := strings.TrimSpace(image.AttrOr(attr, "")); raw != "" {
+			return dbResourceURL(baseURL, raw)
+		}
+	}
+	return ""
+}
+
+func dbResourceURL(baseURL, raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || bodaIsPseudoResourceHref(raw) {
+		return ""
+	}
+	resolved := bodaResourceURL(baseURL, raw)
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Hostname() == "" {
+		return ""
+	}
+	lower := strings.ToLower(parsed.Path + "?" + parsed.RawQuery)
+	for _, marker := range []string{"/captcha", "/verify", "/validate", "/login", "/signin", "/placeholder", "/transparent", "/spacer", "/blank", "/loading", "/pixel.gif"} {
+		if strings.Contains(lower, marker) {
+			return ""
+		}
+	}
+	return cleanURL(parsed.String())
+}
+
+const dbMaxResourceBytes = 32 << 20
+
+func dbFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	baseURL := dbSiteBaseURL()
+	fullURL, ok := dbArticleURL(baseURL, articleURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("db: refusing non-local or non-detail URL %q", articleURL)
+	}
+	body, err := fetch(fullURL)
+	if err != nil {
+		return nil, nil, err
+	}
+	article, err := parseAdapter_dbArticle(body, baseURL)
+	if err != nil {
+		return nil, body, err
+	}
+	article.Images = dbVerifyImages(article.Images, baseURL)
+	article.Attachments = dbVerifyAttachments(article.Attachments, baseURL)
+	dbSanitizeContentHTML(article, baseURL)
+	if strings.TrimSpace(article.Content) == "" && len(article.Images) == 0 && len(article.Attachments) == 0 {
+		return nil, body, fmt.Errorf("db article has no usable content or resources")
+	}
+	return article, body, nil
+}
+
+func dbVerifyImages(images []string, baseURL string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool)
+	for _, raw := range images {
+		resolved := dbResourceURL(baseURL, raw)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, contentType, err := dbFetchResource(resolved, baseURL, true)
+		if err != nil || !dbResourceBodyIsUsable(contentType, body, resolved, true) {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func dbVerifyAttachments(attachments []model.Attachment, baseURL string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool)
+	for _, attachment := range attachments {
+		resolved := dbResourceURL(baseURL, attachment.URL)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, contentType, err := dbFetchResource(resolved, baseURL, false)
+		if err != nil || !dbResourceBodyIsUsable(contentType, body, attachment.Name+" "+resolved, false) {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func dbFetchResource(rawURL, baseURL string, image bool) ([]byte, string, error) {
+	resolved := dbResourceURL(baseURL, rawURL)
+	if resolved == "" {
+		return nil, "", fmt.Errorf("db: refusing invalid resource %q", rawURL)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("db: create resource request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	if image {
+		req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+	} else {
+		req.Header.Set("Accept", "application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	}
+	client := *defaultClient
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if len(via) == 0 || strings.EqualFold(next.URL.Hostname(), via[len(via)-1].URL.Hostname()) {
+			return nil
+		}
+		return http.ErrUseLastResponse
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("db: fetch resource %s: %w", resolved, err)
+	}
+	defer response.Body.Close()
+	contentType := response.Header.Get("Content-Type")
+	if response.StatusCode != http.StatusOK {
+		return nil, contentType, fmt.Errorf("db: resource %s: HTTP %d", resolved, response.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, dbMaxResourceBytes+1))
+	if err != nil {
+		return nil, contentType, fmt.Errorf("db: read resource %s: %w", resolved, err)
+	}
+	if len(body) > dbMaxResourceBytes {
+		return nil, contentType, fmt.Errorf("db: resource %s exceeds %d bytes", resolved, dbMaxResourceBytes)
+	}
+	return body, contentType, nil
+}
+
+func dbResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	if mediaType == "" {
+		return false
+	}
+	probe := body
+	if len(probe) > 4096 {
+		probe = probe[:4096]
+	}
+	if dbResourceShellRE.Match(probe) {
+		return false
+	}
+	magic := dbResourceMagic(body)
+	if image {
+		return strings.HasPrefix(mediaType, "image/") && dbIsImageMagic(magic)
+	}
+	if strings.HasPrefix(mediaType, "text/") || mediaType == "application/xhtml+xml" || mediaType == "application/json" || mediaType == "application/xml" {
+		lowerName := strings.ToLower(nameOrURL)
+		if strings.Contains(lowerName, ".txt") || strings.Contains(lowerName, ".csv") {
+			return mediaType == "text/plain" || mediaType == "text/csv"
+		}
+		return false
+	}
+
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf"):
+		return magic == "pdf"
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml"):
+		return magic == "zip"
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt") || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint":
+		return magic == "ole"
+	case strings.Contains(lowerName, ".zip") || strings.Contains(lowerName, ".rar") || strings.Contains(lowerName, ".7z") || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed":
+		return magic == "zip" || magic == "rar" || magic == "7z"
+	default:
+		return magic != ""
+	}
+}
+
+func dbResourceMagic(body []byte) string {
+	switch {
+	case bytes.HasPrefix(body, []byte("%PDF-")):
+		return "pdf"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x03, 0x04}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x05, 0x06}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x07, 0x08}):
+		return "zip"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}):
+		return "ole"
+	case len(body) >= 3 && bytes.Equal(body[:3], []byte{0xff, 0xd8, 0xff}):
+		return "jpeg"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
+		return "png"
+	case len(body) >= 6 && (bytes.Equal(body[:6], []byte("GIF87a")) || bytes.Equal(body[:6], []byte("GIF89a"))):
+		return "gif"
+	case len(body) >= 12 && bytes.Equal(body[:4], []byte("RIFF")) && bytes.Equal(body[8:12], []byte("WEBP")):
+		return "webp"
+	case len(body) >= 2 && bytes.Equal(body[:2], []byte("BM")):
+		return "bmp"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{'I', 'I', '*', 0}) || bytes.Equal(body[:4], []byte{'M', 'M', 0, '*'})):
+		return "tiff"
+	case len(body) >= 7 && bytes.Equal(body[:7], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x00}):
+		return "rar"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x01, 0x00}):
+		return "rar"
+	case len(body) >= 6 && bytes.Equal(body[:6], []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}):
+		return "7z"
+	case bytes.HasPrefix(bytes.ToLower(bytes.TrimSpace(body)), []byte("<svg")):
+		return "svg"
+	default:
+		return ""
+	}
+}
+
+func dbIsImageMagic(magic string) bool {
+	switch magic {
+	case "jpeg", "png", "gif", "webp", "bmp", "tiff", "svg":
+		return true
+	default:
+		return false
+	}
+}
+
+func dbSanitizeContentHTML(article *model.Article, baseURL string) {
+	if article == nil || strings.TrimSpace(article.ContentHTML) == "" {
+		return
+	}
+	validImages := make(map[string]bool, len(article.Images))
+	for _, image := range article.Images {
+		if resolved := dbResourceURL(baseURL, image); resolved != "" {
+			validImages[resolved] = true
+		}
+	}
+	validAttachments := make(map[string]bool, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		if resolved := dbResourceURL(baseURL, attachment.URL); resolved != "" {
+			validAttachments[resolved] = true
+		}
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader("<div id=\"db-content-root\">" + article.ContentHTML + "</div>"))
+	if err != nil {
+		return
+	}
+	content := doc.Find("#db-content-root").First()
+	content.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := dbImageURLFromSelection(baseURL, image)
+		if resolved == "" || !validImages[resolved] {
+			image.Remove()
 			return
 		}
-		parentText := dbCompactText(anchor.Closest("li").Text())
-		lowerHref := strings.ToLower(href)
-		if !strings.Contains(parentText, "附件") && !strings.Contains(lowerHref, "/download.jsp") {
-			return
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vsbhref", "vurl"} {
+			image.RemoveAttr(attr)
 		}
-		fullURL := resolveURL(baseURL, href)
-		if seen[fullURL] {
-			return
-		}
-		name := dbCompactText(anchor.Text())
-		if name == "" {
-			name = pathBaseFromURL(fullURL)
-		}
-		if name == "" {
-			return
-		}
-		seen[fullURL] = true
-		article.Attachments = append(article.Attachments, model.Attachment{Name: name, URL: fullURL})
-		anchor.SetAttr("href", fullURL)
 	})
+	content.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		href := strings.TrimSpace(link.AttrOr("href", ""))
+		if bodaIsPseudoResourceHref(href) {
+			link.RemoveAttr("href")
+			return
+		}
+		if !dbIsAttachmentLink(link, href) {
+			return
+		}
+		resolved := dbResourceURL(baseURL, href)
+		if resolved == "" || !validAttachments[resolved] {
+			link.RemoveAttr("href")
+			return
+		}
+		link.SetAttr("href", resolved)
+	})
+	if html, err := content.Html(); err == nil {
+		article.ContentHTML = html
+	}
 }
 
 func pathBaseFromURL(raw string) string {

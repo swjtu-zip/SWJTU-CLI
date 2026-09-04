@@ -5,6 +5,7 @@ import (
 	htmlstd "html"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,6 +24,7 @@ func init() {
 		ParseList:    parseAdapter_bioengList,
 		ParseArticle: parseAdapter_bioengArticle,
 		PageURL:      bioengPageURL,
+		TotalPages:   bioengTotalPages,
 	})
 }
 
@@ -42,6 +44,7 @@ var bioengSubPages = []string{
 	"rcpy/bkspy",
 	"rcpy/bkspy/zyjs",
 	"rcpy/bkspy/tzgg",
+	"rcpy/bkspy/gcrz",
 	"rcpy/yjspy",
 	"rcpy/zwhzbx",
 	"xsgz",
@@ -57,10 +60,13 @@ var bioengSubPages = []string{
 }
 
 var (
-	bioengArticlePathRe = regexp.MustCompile(`(?i)^/info/\d+/\d+\.html?$`)
-	bioengDateRe        = regexp.MustCompile(`(20\d{2})\s*(?:年|[-/.])\s*(\d{1,2})\s*(?:月|[-/.])\s*(\d{1,2})\s*日?`)
-	bioengClockRe       = regexp.MustCompile(`\d{1,2}\s*:\s*\d{2}`)
-	bioengMetaLabelRe   = regexp.MustCompile(`(来源|作者|编辑|责编|摄影|日期|发布时间|点击数)\s*[:：]\s*`)
+	bioengArticlePathRe   = regexp.MustCompile(`(?i)^/info/\d+/\d+\.html?$`)
+	bioengDateRe          = regexp.MustCompile(`(20\d{2})\s*(?:年|[-/.])\s*(\d{1,2})\s*(?:月|[-/.])\s*(\d{1,2})\s*日?`)
+	bioengClockRe         = regexp.MustCompile(`(?:\d{1,2}\s*[:：]\s*\d{2}(?:\s*[:：]\s*\d{2})?|\d{1,2}\s*时\s*\d{2}\s*分(?:\s*\d{2}\s*秒)?)`)
+	bioengDateLabelRe     = regexp.MustCompile(`(?:发布日期|发布时间|日期|时间)\s*[:：]\s*`)
+	bioengMetaLabelRe     = regexp.MustCompile(`(来源|作者|编辑|责编|摄影|发布日期|日期|发布时间|点击数)\s*[:：]\s*`)
+	bioengAttachmentExtRe = regexp.MustCompile(`(?i)\.(?:pdf|docx?|xlsx?|pptx?|zip|rar|7z|txt|csv)(?:$|[?#])`)
+	bioengImageExtRe      = regexp.MustCompile(`(?i)\.(?:jpe?g|png|gif|webp|svg)(?:$|[?#])`)
 )
 
 // bioengPageURL maps the logical page number (1 = newest) to the reversed
@@ -68,10 +74,15 @@ var (
 // pages and its logical page 2 is xydt/46.htm, while the last page is
 // xydt/1.htm.
 func bioengPageURL(baseURL, slug string, page, totalPages int, extension string) string {
-	baseURL = strings.TrimRight(baseURL, "/")
-	slug = strings.Trim(slug, "/")
-	if page < 1 || (totalPages > 0 && page > totalPages) {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if baseURL == "" || slug == "" || page < 1 || (totalPages > 0 && page > totalPages) {
 		return ""
+	}
+	if extension == "" {
+		extension = ".htm"
+	} else if !strings.HasPrefix(extension, ".") {
+		extension = "." + extension
 	}
 	if page == 1 {
 		return fmt.Sprintf("%s/%s%s", baseURL, slug, extension)
@@ -86,10 +97,95 @@ func bioengPageURL(baseURL, slug string, page, totalPages int, extension string)
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, filePage, extension)
 }
 
+func bioengTotalPages(slug string) (int, error) {
+	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if slug == "index" {
+		return 1, nil
+	}
+	if !bioengKnownSubPage(slug) {
+		return 0, fmt.Errorf("bioeng: %q is not an article-list route", slug)
+	}
+
+	site := AllSites["bioeng"]
+	if site == nil || strings.TrimSpace(site.BaseURL) == "" {
+		return 0, fmt.Errorf("bioeng: site registration is missing")
+	}
+	baseURL := strings.TrimRight(strings.TrimSpace(site.BaseURL), "/")
+	var lastErr error
+	for _, extension := range []string{".htm", ".html"} {
+		body, err := fetch(bioengPageURL(baseURL, slug, 1, 0, extension))
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if total := bioengTotalPagesFromHTML(body); total > 0 {
+			return total, nil
+		}
+		lastErr = fmt.Errorf("bioeng: %s is not a recognized article list", slug)
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("bioeng: unable to read page count for %s", slug)
+	}
+	return 0, lastErr
+}
+
+func bioengKnownSubPage(slug string) bool {
+	for _, known := range bioengSubPages {
+		if known == slug {
+			return true
+		}
+	}
+	return false
+}
+
+// bioengTotalPagesFromHTML reads the displayed logical page labels. The
+// hrefs themselves point at reverse-numbered files (page 2 links to 46.htm
+// on a 47-page feed), so using the largest href would undercount the feed.
+func bioengTotalPagesFromHTML(raw []byte) int {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(raw)))
+	if err != nil || bioengLooksLikeErrorPage(doc) {
+		return 0
+	}
+	if doc.Find(".news > .con > .list").Length() > 0 {
+		return 1
+	}
+	rows, recognized := bioengListRows(doc)
+	if !recognized {
+		return 0
+	}
+	if rows.Length() > 0 && !bioengRowsHaveArticle(rows) {
+		return 0
+	}
+	if rows.Length() == 0 && !bioengExplicitEmptyList(doc) {
+		return 0
+	}
+
+	maxPage := 0
+	doc.Find(".p_pages .p_no, .p_pages .p_no_d").Each(func(_ int, sel *goquery.Selection) {
+		page, err := strconv.Atoi(strings.TrimSpace(sel.Text()))
+		if err == nil && page > maxPage {
+			maxPage = page
+		}
+	})
+	if maxPage > 0 {
+		return maxPage
+	}
+	if doc.Find(".p_pages, .p_t, .paging, .page").Length() > 0 {
+		return 1
+	}
+	if rows.Length() > 0 {
+		return 1
+	}
+	return 0
+}
+
 func parseAdapter_bioengList(html []byte, baseURL string) ([]model.NewsItem, error) {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
 	if err != nil {
 		return nil, fmt.Errorf("parse bioeng list: %w", err)
+	}
+	if bioengLooksLikeErrorPage(doc) {
+		return nil, fmt.Errorf("bioeng: received an error or verification page instead of a news list")
 	}
 
 	// index.htm is a dashboard. Its six .news .list panels are real feeds;
@@ -105,13 +201,11 @@ func parseAdapter_bioengList(html []byte, baseURL string) ([]model.NewsItem, err
 	// All article-list pages use the same narrow content container. Selecting
 	// the row, rather than every info/ link in the document, excludes the
 	// header, side navigation, breadcrumb, footer and related links.
-	rows := doc.Find(".content dl")
-	if rows.Length() == 0 {
-		// Nested menu pages use the older site-wide list component.  It is a
-		// real article list, but sits beside .content rather than inside it.
-		rows = doc.Find(".conlistComm > dl")
+	rows, recognized := bioengListRows(doc)
+	if !recognized {
+		return nil, fmt.Errorf("bioeng page has no recognized article list")
 	}
-	if rows.Length() == 0 {
+	if rows.Length() == 0 && !bioengExplicitEmptyList(doc) {
 		return nil, fmt.Errorf("bioeng page has no article list rows")
 	}
 
@@ -133,8 +227,9 @@ func parseAdapter_bioengList(html []byte, baseURL string) ([]model.NewsItem, err
 			return
 		}
 		date, publishedAt := bioengListDate(row)
-		if pageType == "" {
-			pageType = strings.Trim(strings.TrimSpace(row.Find(".spp a").First().Text()), "[]【】")
+		rowType := strings.Trim(strings.TrimSpace(row.Find(".spp a, .spp").First().Text()), "[]【】")
+		if rowType == "" {
+			rowType = pageType
 		}
 
 		seen[fullURL] = true
@@ -143,15 +238,82 @@ func parseAdapter_bioengList(html []byte, baseURL string) ([]model.NewsItem, err
 			URL:         fullURL,
 			Date:        date,
 			PublishedAt: publishedAt,
-			Type:        pageType,
+			Type:        rowType,
 			ParsedAt:    time.Now(),
 		})
 	})
 
 	if len(items) == 0 {
+		if bioengExplicitEmptyList(doc) {
+			return items, nil
+		}
 		return nil, fmt.Errorf("bioeng page contains no valid article rows")
 	}
 	return items, nil
+}
+
+func bioengListRows(doc *goquery.Document) (*goquery.Selection, bool) {
+	if doc == nil {
+		return nil, false
+	}
+	if rows := doc.Find(".content dl"); rows.Length() > 0 {
+		return rows, true
+	}
+	// Nested menu pages use the older site-wide list component. It is a real
+	// article list, but sits beside .content rather than inside it.
+	if rows := doc.Find(".conlistComm > dl"); rows.Length() > 0 {
+		return rows, true
+	}
+	if doc.Find(".main_right .content .conlistComm, .main_right .content .list, .conlistComm").Length() > 0 {
+		return doc.Find(".conlistComm > dl"), true
+	}
+	if doc.Find(".main_right .content .p_pages, .content .p_pages").Length() > 0 {
+		return doc.Find(".content dl"), true
+	}
+	return nil, false
+}
+
+func bioengRowsHaveArticle(rows *goquery.Selection) bool {
+	if rows == nil {
+		return false
+	}
+	valid := false
+	rows.Find("a[href]").EachWithBreak(func(_ int, anchor *goquery.Selection) bool {
+		_, valid = bioengArticleURL("https://bioeng.swjtu.edu.cn", anchor.AttrOr("href", ""))
+		return !valid
+	})
+	return valid
+}
+
+func bioengExplicitEmptyList(doc *goquery.Document) bool {
+	if doc == nil {
+		return false
+	}
+	if doc.Find(".content dl, .conlistComm > dl").Length() > 0 {
+		return false
+	}
+	return doc.Find(".conlistComm, .main_right .content .list, .p_pages, .p_t, .paging, .page").Length() > 0
+}
+
+func bioengLooksLikeErrorPage(doc *goquery.Document) bool {
+	if doc == nil {
+		return true
+	}
+	title := strings.ToLower(strings.Join(strings.Fields(doc.Find("title").First().Text()), " "))
+	for _, marker := range []string{"404", "403", "500", "error", "错误", "不存在", "验证码", "安全验证", "请登录"} {
+		if strings.Contains(title, marker) {
+			return true
+		}
+	}
+	body := doc.Find("body").Clone()
+	body.Find("script, style, noscript").Remove()
+	text := strings.ToLower(strings.Join(strings.Fields(body.Text()), " "))
+	for _, marker := range []string{"请输入验证码", "验证码下载附件", "访问被拒绝", "页面不存在", "无权访问", "请先登录", "安全验证", "just a moment", "waf"} {
+		if strings.Contains(text, marker) {
+			return true
+		}
+	}
+	return false
 }
 
 func parseBioengHomeLists(lists *goquery.Selection, baseURL string) []model.NewsItem {
@@ -179,14 +341,15 @@ func parseBioengHomeLists(lists *goquery.Selection, baseURL string) []model.News
 			if title == "" || !isValidNewsTitle(title) || len([]rune(title)) > 160 {
 				return
 			}
-			date := strings.Join(strings.Fields(row.Find("em, time, .date, .time").First().Text()), " ")
+			date, publishedAt := bioengDateValues(row.Find("em, time, .date, .time").First().Text())
 			seen[fullURL] = true
 			items = append(items, model.NewsItem{
-				Title:    title,
-				URL:      fullURL,
-				Date:     date,
-				Type:     sectionType,
-				ParsedAt: time.Now(),
+				Title:       title,
+				URL:         fullURL,
+				Date:        date,
+				PublishedAt: publishedAt,
+				Type:        sectionType,
+				ParsedAt:    time.Now(),
 			})
 		})
 	})
@@ -266,6 +429,9 @@ func bioengDateValues(raw string) (string, string) {
 	if raw == "" {
 		return "", ""
 	}
+	if label := bioengDateLabelRe.FindStringIndex(raw); label != nil {
+		raw = strings.TrimSpace(raw[label[1]:])
+	}
 	if normalized := normalizePublishedAt(raw); normalized != "" {
 		date := normalized[:10]
 		if bioengClockRe.MatchString(raw) {
@@ -273,8 +439,19 @@ func bioengDateValues(raw string) (string, string) {
 		}
 		return date, ""
 	}
-	if match := bioengDateRe.FindStringSubmatch(raw); match != nil {
-		return normalizeDateParts(match[1], match[2], match[3]), ""
+	if match := bioengDateRe.FindStringSubmatchIndex(raw); match != nil {
+		dateValue := raw[match[0]:match[1]]
+		clock := bioengClockRe.FindString(raw[match[1]:])
+		if clock != "" {
+			dateValue += " " + clock
+		}
+		if normalized := normalizePublishedAt(dateValue); normalized != "" {
+			if clock != "" {
+				return normalized[:10], normalized
+			}
+			return normalized[:10], ""
+		}
+		return normalizeDateParts(raw[match[2]:match[3]], raw[match[4]:match[5]], raw[match[6]:match[7]]), ""
 	}
 	return strings.TrimSpace(raw), ""
 }
@@ -303,13 +480,16 @@ func bioengArticleURL(baseURL, href string) (string, bool) {
 }
 
 func parseAdapter_bioengArticle(html []byte, baseURL string) (*model.Article, error) {
-	article, err := parseBodaArticle(html, baseURL)
-	if err != nil {
-		return nil, err
-	}
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
 	if err != nil {
 		return nil, fmt.Errorf("parse bioeng article: %w", err)
+	}
+	if bioengLooksLikeErrorPage(doc) {
+		return nil, fmt.Errorf("bioeng: received an error or verification page instead of an article")
+	}
+	article, err := parseBodaArticle(html, baseURL)
+	if err != nil {
+		return nil, err
 	}
 
 	if pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"]`).AttrOr("content", "")); pageType != "" && pageType != "3" {
@@ -332,7 +512,10 @@ func parseAdapter_bioengArticle(html []byte, baseURL string) (*model.Article, er
 		// empty source/author must not be filled from unrelated page text.
 		article.Source = fields["来源"]
 		article.Author = fields["作者"]
-		dateValue := fields["日期"]
+		dateValue := fields["发布日期"]
+		if dateValue == "" {
+			dateValue = fields["日期"]
+		}
 		if dateValue == "" {
 			dateValue = fields["发布时间"]
 		}
@@ -346,6 +529,7 @@ func parseAdapter_bioengArticle(html []byte, baseURL string) (*model.Article, er
 	if typ := bioengPageType(doc); typ != "" {
 		article.Type = typ
 	}
+	filterBioengImages(article, baseURL)
 	appendBioengAttachments(article, doc, baseURL)
 	normalizeArticlePublishedAt(article)
 	return article, nil
@@ -375,10 +559,18 @@ func appendBioengAttachments(article *model.Article, doc *goquery.Document, base
 	if article == nil || doc == nil {
 		return
 	}
+	filtered := make([]model.Attachment, 0, len(article.Attachments))
 	seen := make(map[string]bool, len(article.Attachments))
 	for _, attachment := range article.Attachments {
-		seen[attachment.URL] = true
+		resolved, ok := bioengAttachmentURL(baseURL, attachment.URL, attachment.Name)
+		if !ok || seen[resolved] {
+			continue
+		}
+		attachment.URL = resolved
+		seen[resolved] = true
+		filtered = append(filtered, attachment)
 	}
+	article.Attachments = filtered
 
 	// Bioeng renders the attachment <ul> after .v_news_content, still inside
 	// .article. The generic parser intentionally scopes links to the body and
@@ -389,19 +581,100 @@ func appendBioengAttachments(article *model.Article, doc *goquery.Document, base
 	}
 	scope.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
 		href := strings.TrimSpace(anchor.AttrOr("href", ""))
-		lowerHref := strings.ToLower(href)
-		if href == "" || !strings.Contains(lowerHref, "download.jsp") || !strings.Contains(lowerHref, "downloadattachurl") {
+		if !bioengAttachmentAnchor(anchor) {
 			return
 		}
 		name := strings.Join(strings.Fields(htmlstd.UnescapeString(anchor.Text())), " ")
-		if name == "" {
-			return
-		}
-		resolved := cleanURL(resolveURL(baseURL, href))
-		if seen[resolved] {
+		resolved, ok := bioengAttachmentURL(baseURL, href, name)
+		if !ok || seen[resolved] {
 			return
 		}
 		seen[resolved] = true
 		article.Attachments = append(article.Attachments, model.Attachment{Name: name, URL: resolved})
 	})
+}
+
+func filterBioengImages(article *model.Article, baseURL string) {
+	if article == nil {
+		return
+	}
+	images := make([]string, 0, len(article.Images))
+	seen := make(map[string]bool, len(article.Images))
+	for _, image := range article.Images {
+		resolved, ok := bioengImageURL(baseURL, image)
+		if !ok || seen[resolved] {
+			continue
+		}
+		seen[resolved] = true
+		images = append(images, resolved)
+	}
+	article.Images = images
+}
+
+func bioengAttachmentAnchor(anchor *goquery.Selection) bool {
+	if anchor == nil || anchor.Length() == 0 {
+		return false
+	}
+	li := anchor.Closest("li")
+	if li.Length() == 0 {
+		return false
+	}
+	text := strings.ToLower(strings.Join(strings.Fields(li.Text()), " "))
+	return strings.Contains(text, "附件") || strings.Contains(text, "下载")
+}
+
+func bioengAttachmentURL(baseURL, href, name string) (string, bool) {
+	resolved, ok := bioengResourceURL(baseURL, href)
+	if !ok {
+		return "", false
+	}
+	lower := strings.ToLower(resolved + " " + name)
+	// The live CMS download.jsp endpoint was checked directly and returned a
+	// 200 text/html CAPTCHA page, not the advertised file. Only retain direct
+	// file URLs whose suffix identifies a resource type.
+	if strings.Contains(lower, "download.jsp") || strings.Contains(lower, "downloadattachurl") {
+		return "", false
+	}
+	if strings.Contains(lower, "captcha") || strings.Contains(lower, "验证码") || strings.Contains(lower, "placeholder") || strings.Contains(lower, "请登录") {
+		return "", false
+	}
+	parsed, err := url.Parse(resolved)
+	if err != nil || !bioengAttachmentExtRe.MatchString(parsed.Path) {
+		return "", false
+	}
+	return resolved, true
+}
+
+func bioengImageURL(baseURL, href string) (string, bool) {
+	resolved, ok := bioengResourceURL(baseURL, href)
+	if !ok {
+		return "", false
+	}
+	lower := strings.ToLower(resolved)
+	if strings.Contains(lower, "captcha") || strings.Contains(lower, "验证码") || strings.Contains(lower, "placeholder") || strings.Contains(lower, "loading") || strings.HasSuffix(lower, "/code.png") {
+		return "", false
+	}
+	parsed, err := url.Parse(resolved)
+	if err != nil || !bioengImageExtRe.MatchString(parsed.Path) {
+		return "", false
+	}
+	return resolved, true
+}
+
+func bioengResourceURL(baseURL, href string) (string, bool) {
+	href = htmlstd.UnescapeString(strings.TrimSpace(href))
+	lowerHref := strings.ToLower(href)
+	if href == "" || strings.HasPrefix(href, "#") || strings.HasPrefix(lowerHref, "javascript:") || strings.HasPrefix(lowerHref, "data:") {
+		return "", false
+	}
+	resolved := cleanURL(resolveURL(baseURL, href))
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return "", false
+	}
+	base, err := url.Parse(baseURL)
+	if err != nil || base.Host == "" || !strings.EqualFold(parsed.Hostname(), base.Hostname()) {
+		return "", false
+	}
+	return resolved, true
 }

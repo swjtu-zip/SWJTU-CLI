@@ -1,0 +1,312 @@
+
+
+
+
+
+
+<!DOCTYPE html>
+<html>
+   <head>
+		<meta charset="UTF-8">
+		<title>本科生院教学事务管理-VATUU为途教学信息服务平台</title>
+		<meta name="keywords" content="教学信息服务平台,教务管理系统,教务网,教务系统" />
+		<meta name="description" content="西南交通大学是教育部直属全国重点大学，国家首批“双一流”、“211工程”、“985工程优势学科创新平台”、“2011协同创新计划”重点建设高校，设有研究生院。坐落于中国历史文化名城、国家中心城市、“成渝地区双城经济圈”核心城市——成都。" />
+		<link rel="stylesheet" type="text/css" href="../css/web/iecommon.css?version=2019"/>
+		<link rel="stylesheet" type="text/css" href="../css/web/blueStyle.css?version=2019"/>
+		<!--[if IE 6]>
+		<script src="../js/iepng.js" language="javascript" type="text/javascript"></script>
+		<![endif]-->
+	</head>
+	<body>
+		<!--
+        	描述：header部分
+        -->
+		<div class="full header-bg" id="header">
+	<div class="mainBox">
+		<div class="header header-bg clearfix">
+				<div class="fl mt20"><a href="../index.jsp"><img src="../images/web/icon/index_logo.png?v=2025"/></a></div>
+				<div class="fr">
+					<ul class="header-share mt5 clearfix">
+						<li><a href="#" class="relative-btm1">English</a></li>
+						<li class="clearfix"><span class="weixin_icon"></span><a href="javascript:void(0)" id="wechar" onclick="showWechatBox()">微信</a></li>
+						<li class="clearfix"><span class="weibo_icon"></span><a href="http://weibo.com/jiaowu580" target=_blank>微博</a></li>
+					</ul>
+					<div class="searchBox clearfix">
+					    <form action="../vatuu/WebAction" method="post" name="commSearch" id="commSearch" style="margin:0px;" target=_blank onsubmit="setKeyValue()">
+					    <input type="hidden" name="setAction" value="newsList">
+					    <input type="hidden" name="type" value="form">
+					    <input type="hidden" name="key1" value="">
+					    <input type="hidden" name="keyword" value="">
+					    <input type="hidden" name="keyWord" value="">
+					    <input type="hidden" name="selectType" value="keyWord">
+					    <input type="hidden" name="selectAction" value="QueryName">
+						<div class="fr clearfix">
+							<input type="text" name="kw" value="" class="searchInput fl"  />
+							<div class="searchBtn inline-block fl" onclick="setKeyValue()"><span class="searchBtn-icon fl"></span></div>
+						</div>
+						<div class="fr w180px">
+							<input type="radio" name="searchCommType" value="web"  class="relative2"  checked="checked" onclick="setSearchComm()"/><span class="cwhite">公共</span>&nbsp;
+							<input type="radio" name="searchCommType" value="course"  class="relative2" onclick="setSearchComm()"/><span class="cwhite">课程</span>&nbsp;
+							<input type="radio" name="searchCommType" value="people"  class="relative2" onclick="setSearchComm()"/><span class="cwhite">找人</span>&nbsp;
+						</div>
+						</form>
+					</div>
+				</div>
+		</div>
+   </div></div>
+		<!--
+        	描述：header部分
+        -->
+        <!--
+        	描述：nav部分
+        -->
+        <div class="full nav-bg mb20" id="nav">
+    <div class="mainBox">
+		<div class="nav clearfix" >
+			<ul>
+			   <li><a href="/index.html?version=2020">网站首页</a></li>
+				<li><a href="/vatuu/WebAction?setAction=commonList&viewType=view&infoType=detail&infoIndex=61E92EF67418DC54">机构设置</a></li>
+				<li><a href="/vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=bigType&bigTypeId=FB2D32BEAD066637&newsType=yes">教学动态</a></li>
+				<li><a href="/vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=bigType&bigTypeId=61E92EF67418DC54&newsType=yes">教务管理</a></li>
+				<li><a href="/vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=bigType&bigTypeId=0E4BF4D36E232918&newsType=yes">教学运行</a></li>
+				<li><a href="/vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=bigType&bigTypeId=79FADCFD4573759D&newsType=yes">教改研究</a></li>
+				<li><a href="/vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=bigType&bigTypeId=42ED96EE3E089C19&newsType=yes">实践教学</a></li>
+				<li><a href="/vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=bigType&bigTypeId=2CC5A6C6AA4A8CB9&newsType=yes">实验教学</a></li>
+				<li><a href="http://zb.swjtu.edu.cn/" target=_blank>质量保障</a></li>
+				<li><a href="/vatuu/WebAction?setAction=ruleList&viewType=web&selectType=all">管理规定</a></li>
+				<li><a href="/vatuu/WebAction?setAction=fileList&viewType=web&selectType=all">表格文档</a></li>
+                <li><a href="https://jiaowu.swjtu.edu.cn/vatuu/WebSite?setAction=index" target=_blank>网上办事</a></li>
+			</ul>
+			<a class="wrap_box fl mt10" href="../web/date.html" target="_blank">
+				<img src="../images/web/icon/calendar_week_icon.jpg" class="calendar_week_icon"/>第<span id="weekTeach" class="cr f16" ></span>周
+			</a>
+			<dl id="nav_dl">
+
+				<dd><a href="../vatuu/UserLoginForWiseduAction" target=_blank val="studentBox">用户登录</a>
+					<span class="navbar-btm-active"></span>
+				</dd>
+			</dl>
+		</div>
+	</div>
+</div>
+		<!--
+        	描述：nav部分
+        -->
+        <!--主要内容区-->
+        	<div class="mainBox">
+				<div class="studentManagementMain clearfix">
+					<div class="lefrNav">
+						<a href="#" style="display:block; width: 100%; height:76px;background: url(../images/web/img/teaching.jpg) no-repeat;"></a>
+						<ul class="leftFirstUl">
+
+
+
+
+
+							<li><a href="../vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=smallType&keyWord=80DAAD9DB75A3941&newsType=all">•&nbsp;实验室建设</a></li>
+
+
+							<li><a href="../vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=smallType&keyWord=EA17DE3866C34097&newsType=all">•&nbsp;实验教学</a></li>
+
+
+							<li><a href="../vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=smallType&keyWord=929F7F277D58C759&newsType=all">•&nbsp;个性化重点实验室项目</a></li>
+
+
+							<li><a href="../vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=smallType&keyWord=EBE56A00ACF08041&newsType=all">•&nbsp;课外实验竞赛</a></li>
+
+
+							<li><a href="../vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=smallType&keyWord=474725BF5729535B&newsType=all">•&nbsp;示范中心(虚仿中心)</a></li>
+
+
+							<li><a href="../vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=smallType&keyWord=93353645569D2AD5&newsType=all">•&nbsp;虚仿课程</a></li>
+
+
+
+							<li><a href="../vatuu/WebAction?setAction=ruleList&viewType=web&selectType=all">•&nbsp;教学管理规定</a></li>
+							<li><a href="../vatuu/WebAction?setAction=fileList&viewType=web&selectType=all">•&nbsp;文件表格下载</a></li>
+						</ul>
+						<div class="leftNavBtmDiv">
+							<p class="oftenTools">常用工具导航</p>
+							<ul class="oftenUl">
+							    <li><span class="oftenCricle"></span> <a href="../vatuu/PublicInfoQueryAction?setAction=queryCollege">学院教务信息</a></li>
+								<li><span class="oftenCricle"></span> <a href="../web/date.html" target="_blank">学校校历</a></li>
+								<li><span class="oftenCricle"></span> <a href="../vatuu/PublicInfoQueryAction?setAction=queryGraduate">学历学位查询</a></li>
+								<li><span class="oftenCricle"></span> <a href="http://cet.neea.edu.cn/cet" target="_blank">四六级考试报名</a></li>
+								<li><span class="oftenCricle"></span> <a href="../vatuu/CourseAction?setAction=classroomQuery">空闲教室查询</a></li>
+								<li><span class="oftenCricle"></span> <a href="../vatuu/CourseAction?setAction=queryCourseList&selectTableType=ThisTerm" target=_blank>本学期课程安排</a></li>
+								<li><span class="oftenCricle"></span> <a href="../vatuu/TestInfoAction?setAction=TestArrange&selectTableType=Test" target=_blank>期末考试安排</a></li>
+								<li><span class="oftenCricle"></span> <a href="../vatuu/PublicInfoQueryAction?setAction=queryTeacher">查询任课教师信息</a></li>
+								<li><span class="oftenCricle"></span> <a href="../vatuu/PublicInfoQueryAction?setAction=queryStudent">查询在校学生信息</a></li>
+							</ul>
+						 </div>
+					</div>
+					<div class="second-right">
+						<div class="banner-box">
+						   <img src="../images/web/banner/intro_banner_02.jpg" alt="">
+						</div>
+						<h2 class="title">
+
+
+
+
+
+
+						</h2>
+						<div class="intro-detail">
+
+
+                    	         <span style="line-height:40px;color:#ff0000">&nbsp;没有找到信息</span>
+
+
+
+					    </div>
+					    <div class="news-page">
+					    <form name="pageForm"  action="../vatuu/WebAction" method="get">
+		    		    <input type="hidden" name="setAction" value="newsList">
+		    		    <input type="hidden" name="viewType" value="secondStyle">
+		    		    <input type="hidden" name="orderType" value="news_addtime">
+		    		    <input type="hidden" name="orderValue" value="desc">
+		    		    <input type="hidden" name="selectType" value="smallType">
+		    		    <input type="hidden" name="keyWord" value="93353645569D2AD5">
+		    		    <input type="hidden" name="bigTypeId" value="68A414800A650C97">
+            		    <p style="height:40px;line-height:40px;">共有记录【0】条，当前第【<span style="color:#ff0000; font-weight:bold;">1</span>】页，50条/页，共【0】页</p>
+					    <div class="page">
+
+					    	<a  class="btn btn-page">首页</a>
+					    	<a  class="btn btn-page">上一页</a>
+
+
+
+
+
+
+
+
+
+
+
+					    	转到：<SELECT name="jumpPage" onchange="document.pageForm.submit()" class="btn btn-page">
+
+            		            </SELECT>
+					    	<a  class="btn btn-page">下一页</a>
+					    	<a  class="btn btn-page">尾页</a>
+					    	</div>
+		    		    </form>
+					    </div>
+					</div>
+				</div>
+			</div>
+		<!--主要内容区-->
+
+        <!--
+        	描述：底部导航区
+        -->
+        <div class="full bottom-nav-bg mt20" id="footerNav">
+   <div class="mainBox">
+		<div class="footer-nav-div clearfix">
+			<div class="bottmNavDiv">
+				<p class="f14 fw color-main mb5">热点关注</p>
+				<ul>
+					<li><a href="../vatuu/CourseAction?setAction=queryCourseList&selectTableType=ThisTerm" target=_blank>本学期课程表</a></li>
+					<li><a href="../vatuu/CourseAction?setAction=queryCourseList&selectTableType=NextTerm" target=_blank>下学期课程表</a></li>
+					<li><a href="../vatuu/TestInfoAction?setAction=TestArrange&selectTableType=Test" target=_blank>期末考试安排</a></li>
+					<li><a href="../vatuu/TestInfoAction?setAction=TestArrange&selectTableType=Makeup" target=_blank>补考安排</a></li>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryProgram" >培养计划查询</a></li>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryMajor" >专业目录</a></li>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryCETScore" target=_blank>四六级成绩查询</a></li>
+					<li><a href="../vatuu/CourseAction?setAction=queryCourseList&selectTableType=History" target=_blank>历史课程查询</a></li>
+					<li><a href="../vatuu/CourseAction?setAction=printCourse&termSelect=this" target=_blank>班级、教室课表打印</a></li>
+				</ul>
+			</div>
+			<div class="bottmNavDiv">
+				<p class="f14 fw color-main mb5">信息服务</p>
+				<ul>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryGraduate" >学历查询</a></li>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryCollege" >学院教务信息</a></li>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryStudent" >学生信息查询</a></li>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryTeacher" >教师信息查询</a></li>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryCourse" >课程代码查询</a></li>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryClass" >班级信息查询</a></li>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryClassroom" >教室信息查询</a></li>
+					<li><a href="../vatuu/CourseAction?setAction=classroomStatus">教室使用状态</a></li>
+				</ul>
+			</div>
+			<div class="bottmNavDiv">
+				<p class="f14 fw color-main mb5">办事指南</p>
+				<ul>
+					<li><a href="../web/deanPerson.html?pageLink=deanPerson" >工作人员介绍</a></li>
+					<li><a href="https://jiaowu.swjtu.edu.cn/vatuu/WebSite?setAction=index" >办事流程</a></li>
+					<li><a href="../web/deanPhone.html?pageLink=deanPhone" >教务处电话</a></li>
+					<li><a href="../vatuu/RuleAction?setAction=RuleMore&type=form" >管理规章制度</a></li>
+					<li><a href="../vatuu/WebFileAction?setAction=FileMore&type=form" >办事常用表格</a></li>
+					<li><a href="../vatuu/ClassroomBorrowInfoAction?setAction=classroomLendList" target=_blank>教室借用信息查询</a></li>
+					<li><a href="../vatuu/ClassroomBorrowInfoAction?setAction=classroomUseChart" target=_blank>教室使用图示</a></li>
+				</ul>
+			</div>
+			<div class="bottmNavDiv">
+				<p class="f14 fw color-main mb5">常用表格</p>
+				<ul>
+					<li><a href="../vatuu/WebAction?setAction=download&fileType=file&fileId=326BFA8145A2016A" target=_blank>期末试卷模板</a></li>
+					<li><a href="../vatuu/WebAction?setAction=download&fileType=file&fileId=18E00963806A89BA" target=_blank>教师调课申请表</a></li>
+					<li><a href="../vatuu/WebAction?setAction=download&fileType=file&fileId=222CA45DE8C217ED" target=_blank>学生休学申请表</a></li>
+					<li><a href="../vatuu/WebAction?setAction=download&fileType=file&fileId=C6C32E1A338AECA5" target=_blank>学生复学申请表</a></li>
+					<li><a href="../vatuu/WebAction?setAction=download&fileType=file&fileId=8490E86F02B470CB" target=_blank>学生退学申请表</a></li>
+					<li><a href="../vatuu/WebAction?setAction=download&fileType=file&fileId=D54546309E97CBDF" target=_blank>超学分选课申请表</a></li>
+					<li><a href="../vatuu/WebAction?setAction=download&fileType=file&fileId=13B3555E8E5FF4E9" target=_blank>成绩复议申请表</a></li>
+					<li><a href="../vatuu/WebAction?setAction=download&fileType=file&fileId=3FA089F9B836F454" target=_blank>本科生课程替代申请表</a></li>
+				</ul>
+			</div>
+			<div class="bottmNavDiv">
+				<p class="f15 fw color-main mb5">推荐链接</p>
+				<ul>
+					<li><a href="http://www.swjtu.edu.cn" target=_blank>西南交通大学</a></li>
+					<li><a href="http://yz.swjtu.edu.cn" target=_blank>西南交通大学研究生招生网</a></li>
+					<li><a href="http://lib.swjtu.edu.cn/" target=_blank>西南交通大学图书馆</a></li>
+					<li><a href="http://jwc.swjtu.edu.cn/vatuu/WebAction?setAction=leedsIndex" target=_blank>西南交大利兹学院教学平台</a></li>
+					<li><a href="http://www.stuvip.com" target=_blank>西南交通大学第二课堂</a></li>
+					<li><a href="http://www.icourse163.org" target=_blank>中国大学MOOC</a></li>
+					<li><a href="http://www.xuetangx.com/" target=_blank>学堂在线</a></li>
+					<li><a href="https://www.coursera.org/" target=_blank>Coursera慕课平台</a></li>
+				</ul>
+			</div>
+			<div class="bottmNavDiv2">
+				<div class="btmNavLinkBtn"><a href="http://www.chsi.cn" target=_blank>教育部学信网</a></div>
+				<div class="btmNavLinkBtn"><a href="http://www.cdgdc.edu.cn" target=_blank>学位与研究生教育信息网</a></div>
+				<div class="btmNavLinkBtn"><a href="../vatuu/SyllabusAction?setAction=publicOutLine" target=_blank>课程大纲</a></div>
+				<div class="btmNavLinkBtn"><a href="../vatuu/SyllabusAction?setAction=publicSyllabus" target=_blank>课程执行大纲</a></div>
+				<div class="btmNavLinkBtn"><a href="https://wannianli.tianqi.com" target=_blank>万年历</a></div>
+			</div>
+		</div>
+	</div></div>
+        <!--
+        	描述：底部导航区
+        -->
+        <!--
+        	描述：footer底部内容区
+        -->
+        <div class="full header-bg" id="footerInfo">
+   <div class="mainBox">
+		<div class="footer mt2082803 clearfix">
+			<div class="fl mt30"><img src="../images/web/icon/index_logo2.png" alt="VATUU为途教学信息服务平台" /></div>
+			<div class="fr">
+				<p class="mt30">电话联系学校本科生院请点击此处<a href="../vatuu/WebAction?setAction=commonList&viewType=view&infoType=detail&infoIndex=36A0F9DAB7403C19">查阅号码</a>，您也可以通过<a href="#">新浪微博</a>或关注官方微信联系我们，如您有对系统的建议，请发至：<a href="mailto:vip@vatuu.com" style="color:#ffffff;">vip@vatuu.com</a></p>
+				<p class="mt10"> © 2025  本科生院教学信息服务平台由<a href="http://jwc.swjtu.edu.cn" target=_blank>本科生院</a>提供技术支持&nbsp;&nbsp;网站备案号：<a href="http://www.miitbeian.gov.cn" target=_blank>蜀ICP备15026398号</a>&nbsp;&nbsp; <img src="../images/web/icon/baidu_icon.jpg" class="pos-relative-5"/></p>
+			</div>
+		</div>
+	</div></div>
+         <!--
+        	描述：footer底部内容区
+        -->
+        <script src="../js/jquery/1.12.4/jquery.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../js/web/load.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../js/web/baidu.js" type="text/javascript" charset="utf-8"></script>
+        <script>
+		function gotoPage(pagenum){
+			document.pageForm.jumpPage.value = pagenum;
+			document.pageForm.submit();
+			return ;
+		}
+		</script>
+	</body>
+</html>
+

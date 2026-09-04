@@ -18,21 +18,19 @@ func TestSicAdapterRegistered(t *testing.T) {
 	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.ListPageFunc == nil || site.ArticleFetchFunc == nil {
 		t.Fatalf("sic adapter hooks are incomplete: %+v", site)
 	}
-	for _, want := range []string{
+	wantSubPages := []string{
 		"xydt", "dqgz/dqdt", "dqgz/ghzj", "dqgz/xytw", "dqgz/jwgz",
+		"rcpy/bkspy/pyfa", "rcpy/bkspy/gzzd", "rcpy/yjspy/pyfa", "rcpy/yjspy/gzzd",
 		"tzgg/qb", "tzgg/dzb", "tzgg/yjsjx", "tzgg/bkjx", "tzgg/ky",
 		"tzgg/xsgz", "tzgg/sy", "tzgg/xshd", "tzgg/zsjy", "xsgz/xsfc",
-		"xsjl", "jxhd",
-	} {
-		found := false
-		for _, got := range site.SubPages {
-			if got == want {
-				found = true
-				break
-			}
-		}
-		if !found {
-			t.Errorf("missing sic sub-page %q in %#v", want, site.SubPages)
+		"xsjl", "jxhd", "cyzl",
+	}
+	if len(site.SubPages) != len(wantSubPages) {
+		t.Fatalf("sic sub-pages = %#v, want exactly %#v", site.SubPages, wantSubPages)
+	}
+	for i, want := range wantSubPages {
+		if site.SubPages[i] != want {
+			t.Errorf("sic sub-page[%d] = %q, want %q", i, site.SubPages[i], want)
 		}
 	}
 }
@@ -149,6 +147,44 @@ func TestSicParseListFiltersBannerAndMergesDuplicate(t *testing.T) {
 	}
 }
 
+func TestSicParseListKeepsVerifiedForwardedArticleEntries(t *testing.T) {
+	html := []byte(`<html><head><meta name="pageType" content="2"></head><body>
+<div id="nav_slide"><div class="n_title"><h1 class="margin_auto_1">研究生教学</h1></div></div>
+<ul>
+  <li><a href="https://gsnews.swjtu.edu.cn/info/1637/31564.htm" title="【转发研究生院通知】2025-2026-1学期选课通知"><div class="time"><div class="day">05</div><div class="year">2025.09</div></div></a></li>
+  <li><a href="http://jwc.swjtu.edu.cn/vatuu/WebAction?setAction=newsDetail&amp;viewType=web&amp;newsId=DC6209AAB1E99721" title="【转发教务处通知】关于高等教育自学考试全国统考期间封楼的通知"><div class="time"><div class="day">02</div><div class="year">2025.04</div></div></a></li>
+  <li><a href="https://evil.example/info/1/2.htm" title="不应被采集的外域链接"><div class="time"><div class="day">01</div><div class="year">2025.01</div></div></a></li>
+</ul><span class="p_t">共2条</span>
+</body></html>`)
+
+	items, err := parseSicNews(html, "https://sic.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("expected two source entries, got %d: %#v", len(items), items)
+	}
+	if items[0].URL != "https://gsnews.swjtu.edu.cn/info/1637/31564.htm" || items[0].Date != "2025-09-05" || items[0].Type != "研究生教学" {
+		t.Fatalf("unexpected graduate-school forwarding entry: %+v", items[0])
+	}
+	wantJWC := "http://jwc.swjtu.edu.cn/vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=DC6209AAB1E99721"
+	if items[1].URL != wantJWC || items[1].Date != "2025-04-02" || items[1].Type != "研究生教学" {
+		t.Fatalf("unexpected academic-affairs forwarding entry: %+v", items[1])
+	}
+}
+
+func TestSicFetchArticleRejectsExternalForwardedDetail(t *testing.T) {
+	for _, rawURL := range []string{
+		"https://gsnews.swjtu.edu.cn/info/1637/31564.htm",
+		"http://jwc.swjtu.edu.cn/vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=DC6209AAB1E99721",
+	} {
+		_, _, err := sicFetchArticle(rawURL)
+		if err == nil || !strings.Contains(err.Error(), "external forwarded detail URL") {
+			t.Errorf("sicFetchArticle(%q) error = %v, want an explicit external-forwarding error", rawURL, err)
+		}
+	}
+}
+
 func TestSicParseArticleNormalizesTimestamp(t *testing.T) {
 	html := []byte(`<html><body>
 <h1 class="news_tit">职引未来｜集成电路学院、利兹学院学子走进成都京东方研学</h1>
@@ -218,6 +254,59 @@ func TestSicParseLiveArticleFixturePreservesMetadataAndResources(t *testing.T) {
 	}
 }
 
+func TestSicParseNestedArticlePreservesSourceAttachment(t *testing.T) {
+	html := []byte(`<html><head><meta name="pageType" content="3"></head><body>
+<section id="nav_slide"><div class="n_title"><h1 class="margin_auto_1">规章制度</h1></div></section>
+<section class="show"><div class="show01"><h5>西南交通大学集成电路科学与工程学院专业学位硕士研究生行业导师选聘办法</h5>
+<p><em>来源：</em><em>日期：2026/04/13 11:23:45</em></p></div>
+<div id="vsb_content" class="show02"><div class="v_news_content"><p>行业导师选聘办法正文。</p><p><img src="/__local/guide.jpg"></p></div></div>
+<p><ul><li>附件【<a href="/system/_content/download.jsp?urltype=news.DownloadAttachUrl&amp;wbfileid=fixture">附件：行业导师信息备案表.xlsx</a>】</li></ul></p>
+</section></body></html>`)
+
+	article, err := parseSicArticle(html, "https://sic.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title != "西南交通大学集成电路科学与工程学院专业学位硕士研究生行业导师选聘办法" {
+		t.Fatalf("title = %q", article.Title)
+	}
+	if article.Type != "规章制度" {
+		t.Fatalf("type = %q, want 规章制度", article.Type)
+	}
+	if article.Date != "2026-04-13" || article.PublishedAt != "2026-04-13 11:23:45" {
+		t.Fatalf("date metadata = (%q, %q)", article.Date, article.PublishedAt)
+	}
+	if article.Content != "行业导师选聘办法正文。" {
+		t.Fatalf("content = %q", article.Content)
+	}
+	if len(article.Images) != 1 || article.Images[0] != "https://sic.swjtu.edu.cn/__local/guide.jpg" {
+		t.Fatalf("images = %#v", article.Images)
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].Name != "附件：行业导师信息备案表.xlsx" || article.Attachments[0].URL != "https://sic.swjtu.edu.cn/system/_content/download.jsp?urltype=news.DownloadAttachUrl&wbfileid=fixture" {
+		t.Fatalf("attachments = %#v", article.Attachments)
+	}
+}
+
+func TestSicParseNestedListEntryAndPageTotal(t *testing.T) {
+	html := []byte(`<html><body><h1 class="margin_auto_1">规章制度</h1>
+<ul><li><a href="../../info/1191/6211.htm"><div class="time"><div class="day">13</div><div class="year">2026.04</div></div><div class="con"><h5>西南交通大学集成电路科学与工程学院专业学位硕士研究生行业导师选聘办法</h5></div></a></li></ul>
+<span class="p_t">共1条</span></body></html>`)
+
+	items, err := parseSicNews(html, "https://sic.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("items = %#v", items)
+	}
+	if items[0].URL != "https://sic.swjtu.edu.cn/info/1191/6211.htm" || items[0].Title != "西南交通大学集成电路科学与工程学院专业学位硕士研究生行业导师选聘办法" || items[0].Date != "2026-04-13" || items[0].Type != "规章制度" {
+		t.Fatalf("nested list item = %#v", items[0])
+	}
+	if got, err := sicTotalPagesFromHTML(html, "rcpy/yjspy/gzzd"); err != nil || got != 1 {
+		t.Fatalf("nested list pages = %d, %v; want 1", got, err)
+	}
+}
+
 func TestSicRejectsNonArticlePage(t *testing.T) {
 	html, err := os.ReadFile("testdata/sic_static.html")
 	if err != nil {
@@ -225,5 +314,70 @@ func TestSicRejectsNonArticlePage(t *testing.T) {
 	}
 	if _, err := parseSicArticle(html, "https://sic.swjtu.edu.cn"); err == nil {
 		t.Fatal("static page was accepted as an article")
+	}
+}
+
+func TestSicRejectsUnavailableShellsButAcceptsExplicitEmptyList(t *testing.T) {
+	cases := []struct {
+		name string
+		html string
+	}{
+		{
+			name: "waf",
+			html: `<html><head><title>Access Denied</title></head><body>访问受限</body></html>`,
+		},
+		{
+			name: "login",
+			html: `<html><head><title>统一身份认证登录</title></head><body><form>用户名 密码 请登录</form></body></html>`,
+		},
+		{
+			name: "spa",
+			html: `<html><head><title>集成电路科学与工程学院</title></head><body><div id="app"></div><script>window.enableJavaScript = true</script></body></html>`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := parseSicNews([]byte(tc.html), "https://sic.swjtu.edu.cn"); err == nil {
+				t.Fatal("unavailable shell was accepted as a successful list")
+			}
+		})
+	}
+
+	empty := []byte(`<html><body><h1 class="margin_auto_1">党政办</h1><span class="p_t">共0条</span></body></html>`)
+	items, err := parseSicNews(empty, "https://sic.swjtu.edu.cn")
+	if err != nil {
+		t.Fatalf("explicit empty tab returned an error: %v", err)
+	}
+	if len(items) != 0 {
+		t.Fatalf("explicit empty tab returned %d items", len(items))
+	}
+}
+
+func TestSicParseImageOnlyArticlePreservesHTMLAndImage(t *testing.T) {
+	html := []byte(`<html><head><meta name="pageType" content="3"></head><body>
+<section id="nav_slide"><div class="n_title"><h1 class="margin_auto_1">常用资料</h1></div></section>
+<section class="show"><div class="show01"><h5>集成电路科学与工程学院标识</h5>
+<p><em>来源：</em><em>日期：2024/08/05 15:32:02</em></p></div>
+<div class="show02"><div class="v_news_content"><p><img src="/__local/logo.jpg"></p></div></div></section>
+</body></html>`)
+
+	article, err := parseSicArticle(html, "https://sic.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title != "集成电路科学与工程学院标识" || article.Type != "常用资料" {
+		t.Fatalf("metadata = (%q, %q)", article.Title, article.Type)
+	}
+	if article.Date != "2024-08-05" || article.PublishedAt != "2024-08-05 15:32:02" {
+		t.Fatalf("date metadata = (%q, %q)", article.Date, article.PublishedAt)
+	}
+	if article.Content != "" {
+		t.Fatalf("image-only body acquired fabricated text: %q", article.Content)
+	}
+	if len(article.Images) != 1 || article.Images[0] != "https://sic.swjtu.edu.cn/__local/logo.jpg" {
+		t.Fatalf("images = %#v", article.Images)
+	}
+	if !strings.Contains(article.ContentHTML, `src="https://sic.swjtu.edu.cn/__local/logo.jpg"`) {
+		t.Fatalf("resolved image missing from content HTML: %s", article.ContentHTML)
 	}
 }

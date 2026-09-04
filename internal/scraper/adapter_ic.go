@@ -1,8 +1,11 @@
 package scraper
 
 import (
+	"bytes"
 	"fmt"
+	htmlstd "html"
 	"io"
+	"mime"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -18,6 +21,8 @@ import (
 
 const icCanonicalBaseURL = "https://ic.swjtu.edu.cn"
 
+const icMaxResourceBytes int64 = 32 << 20
+
 // The IC site has a small custom front end.  These are the two article-list
 // entry points linked by the current navigation/home page.  The campus
 // gallery and video center are media surfaces rather than /info article
@@ -29,12 +34,13 @@ var icSubPages = []string{
 }
 
 var (
-	icArticlePathRe = regexp.MustCompile(`(?i)^/info/[0-9]+/[0-9]+\.html?$`)
-	icDateTimeRe    = regexp.MustCompile(`20[0-9]{2}\s*(?:年|[-/.])\s*[0-9]{1,2}\s*(?:月|[-/.])\s*[0-9]{1,2}\s*(?:日|号)?\s*(?:[Tt]|\s)+\s*[0-9]{1,2}\s*[:：]\s*[0-9]{2}(?:\s*[:：]\s*[0-9]{2})?`)
-	icDateRe        = regexp.MustCompile(`20[0-9]{2}\s*(?:年|[-/.])\s*[0-9]{1,2}\s*(?:月|[-/.])\s*[0-9]{1,2}\s*(?:日|号)?`)
-	icTotalCountRe  = regexp.MustCompile(`共\s*([0-9]+)\s*条`)
-	icPageCountRe   = regexp.MustCompile(`(?:/|共|第)\s*([0-9]+)\s*页`)
-	icFileExtRe     = regexp.MustCompile(`(?i)\.(?:pdf|docx?|xlsx?|pptx?|zip|rar|7z|txt|csv|wps|rtf)(?:$|[?#])`)
+	icArticlePathRe   = regexp.MustCompile(`(?i)^/info/[0-9]+/[0-9]+\.html?$`)
+	icDateTimeRe      = regexp.MustCompile(`20[0-9]{2}\s*(?:年|[-/.])\s*[0-9]{1,2}\s*(?:月|[-/.])\s*[0-9]{1,2}\s*(?:日|号)?\s*(?:[Tt]|\s)+\s*[0-9]{1,2}\s*[:：]\s*[0-9]{2}(?:\s*[:：]\s*[0-9]{2})?`)
+	icDateRe          = regexp.MustCompile(`20[0-9]{2}\s*(?:年|[-/.])\s*[0-9]{1,2}\s*(?:月|[-/.])\s*[0-9]{1,2}\s*(?:日|号)?`)
+	icTotalCountRe    = regexp.MustCompile(`共\s*([0-9]+)\s*条`)
+	icPageCountRe     = regexp.MustCompile(`(?:/|共|第)\s*([0-9]+)\s*页`)
+	icFileExtRe       = regexp.MustCompile(`(?i)\.(?:pdf|docx?|xlsx?|pptx?|zip|rar|7z|txt|csv|wps|rtf)(?:$|[?#])`)
+	icResourceShellRe = regexp.MustCompile(`(?is)<!doctype\s+html|<html(?:\s|>)|<head(?:\s|>)|<body(?:\s|>)|请输入验证码|验证码下载附件|请先登录|请登录后|登录页面|页面不存在|404\s+not\s+found|access\s+denied|cloudflare|just\s+a\s+moment|安全验证|请求已被阻断|暂无权限访问`)
 )
 
 func init() {
@@ -75,13 +81,34 @@ func icPageURL(baseURL, slug string, page, totalPages int, extension string) str
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, filePage, extension)
 }
 
+func icBaseURL() string {
+	if site := AllSites["ic"]; site != nil && strings.TrimSpace(site.BaseURL) != "" {
+		return strings.TrimRight(strings.TrimSpace(site.BaseURL), "/")
+	}
+	return icCanonicalBaseURL
+}
+
+func icIsKnownFeed(slug string) bool {
+	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	for _, candidate := range icSubPages {
+		if slug == candidate {
+			return true
+		}
+	}
+	return false
+}
+
 // icListPage owns the request so that the site receives a browser-like
 // Referer and so an access-denied HTML shell cannot be mistaken for a list.
 func icListPage(slug string, page int) ([]model.NewsItem, int, error) {
 	if page < 1 {
 		return nil, 0, fmt.Errorf("ic: page must be positive: %d", page)
 	}
-	firstURL := icPageURL(icCanonicalBaseURL, slug, 1, 0, ".htm")
+	if !icIsKnownFeed(slug) {
+		return nil, 0, fmt.Errorf("ic: unknown or non-article feed %q", slug)
+	}
+	baseURL := icBaseURL()
+	firstURL := icPageURL(baseURL, slug, 1, 0, ".htm")
 	firstBody, err := icFetchHTML(firstURL)
 	if err != nil {
 		return nil, 0, err
@@ -94,20 +121,23 @@ func icListPage(slug string, page int) ([]model.NewsItem, int, error) {
 		return nil, totalPages, fmt.Errorf("ic: page %d is out of range 1..%d for %s", page, totalPages, slug)
 	}
 	if page == 1 {
-		items, parseErr := parseAdapter_icList(firstBody, icCanonicalBaseURL)
+		items, parseErr := parseAdapter_icList(firstBody, baseURL)
 		return items, totalPages, parseErr
 	}
-	listURL := icPageURL(icCanonicalBaseURL, slug, page, totalPages, ".htm")
+	listURL := icPageURL(baseURL, slug, page, totalPages, ".htm")
 	body, err := icFetchHTML(listURL)
 	if err != nil {
 		return nil, 0, err
 	}
-	items, err := parseAdapter_icList(body, icCanonicalBaseURL)
+	items, err := parseAdapter_icList(body, baseURL)
 	return items, totalPages, err
 }
 
 func icTotalPages(slug string) (int, error) {
-	body, err := icFetchHTML(icPageURL(icCanonicalBaseURL, slug, 1, 0, ".htm"))
+	if !icIsKnownFeed(slug) {
+		return 0, fmt.Errorf("ic: unknown or non-article feed %q", slug)
+	}
+	body, err := icFetchHTML(icPageURL(icBaseURL(), slug, 1, 0, ".htm"))
 	if err != nil {
 		return 0, err
 	}
@@ -129,7 +159,7 @@ func icTotalPagesFromHTML(body []byte, slug string) (int, error) {
 		return 0, fmt.Errorf("ic: %s is an article page, not a list", slug)
 	}
 
-	items, parseErr := parseAdapter_icList(body, icCanonicalBaseURL)
+	items, parseErr := parseAdapter_icList(body, icBaseURL())
 	if parseErr != nil {
 		return 0, parseErr
 	}
@@ -137,7 +167,7 @@ func icTotalPagesFromHTML(body []byte, slug string) (int, error) {
 		return 0, fmt.Errorf("ic: %s has no article rows or explicit empty marker", slug)
 	}
 
-	pageZone := doc.Find(".p_t, .p_pages, .pb_sys_common, .pagination, .paging, .page").First()
+	pageZone := doc.Find(".pb_sys_common, .p_t, .p_pages, .pagination, .paging, .page").First()
 	pageText := strings.Join(strings.Fields(pageZone.Text()), "")
 	if match := icPageCountRe.FindStringSubmatch(pageText); match != nil {
 		if total, convErr := strconv.Atoi(match[1]); convErr == nil && total > 0 {
@@ -203,13 +233,18 @@ func icFetchHTML(rawURL string) ([]byte, error) {
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
-	req.Header.Set("Referer", icCanonicalBaseURL+"/")
-	resp, err := defaultClient.Do(req)
+	if parsed, parseErr := url.Parse(rawURL); parseErr == nil && parsed.Scheme != "" && parsed.Host != "" {
+		req.Header.Set("Referer", parsed.Scheme+"://"+parsed.Host+"/")
+	} else {
+		req.Header.Set("Referer", icCanonicalBaseURL+"/")
+	}
+	client := icHTTPClient()
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("ic: fetch %s: %w", rawURL, err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, fmt.Errorf("ic: fetch %s: status %d", rawURL, resp.StatusCode)
 	}
 	contentType := strings.ToLower(resp.Header.Get("Content-Type"))
@@ -224,15 +259,349 @@ func icFetchHTML(rawURL string) ([]byte, error) {
 }
 
 func icFetchArticle(articleURL string) (*model.Article, []byte, error) {
-	body, err := icFetchHTML(articleURL)
+	baseURL := icBaseURL()
+	fullURL, ok := icArticleURL(baseURL, articleURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("ic: refusing non-local or non-detail URL %q", articleURL)
+	}
+	body, err := icFetchHTML(fullURL)
 	if err != nil {
 		return nil, nil, err
 	}
-	article, err := parseAdapter_icArticle(body, icCanonicalBaseURL)
+	article, err := parseAdapter_icArticle(body, baseURL)
 	if err != nil {
 		return nil, nil, err
 	}
+	candidateImages := append([]string(nil), article.Images...)
+	candidateAttachments := append([]model.Attachment(nil), article.Attachments...)
+	article.Images = icVerifyImages(candidateImages, baseURL, fullURL)
+	article.Attachments = icVerifyAttachments(candidateAttachments, baseURL, fullURL)
+	article.ContentHTML = icSanitizeContentHTML(article.ContentHTML, baseURL, candidateImages, candidateAttachments, article.Images, article.Attachments)
+	icDeduplicateResources(article)
 	return article, body, nil
+}
+
+func icHTTPClient() http.Client {
+	if defaultClient != nil {
+		return *defaultClient
+	}
+	return http.Client{}
+}
+
+func icVerifyImages(images []string, baseURL, referer string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool, len(images))
+	for _, raw := range images {
+		resolved := icResourceURL(baseURL, raw)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, contentType, err := icFetchResource(resolved, baseURL, referer, true)
+		if err != nil || !icResourceBodyIsUsable(contentType, body, resolved, true) {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func icVerifyAttachments(attachments []model.Attachment, baseURL, referer string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		resolved := icResourceURL(baseURL, attachment.URL)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, contentType, err := icFetchResource(resolved, baseURL, referer, false)
+		if err != nil || !icResourceBodyIsUsable(contentType, body, attachment.Name+" "+resolved, false) {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func icFetchResource(rawURL, baseURL, referer string, image bool) ([]byte, string, error) {
+	resolved := icResourceURL(baseURL, rawURL)
+	if resolved == "" {
+		return nil, "", fmt.Errorf("ic: refusing invalid resource %q", rawURL)
+	}
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return nil, "", fmt.Errorf("ic: refusing non-HTTP resource %q", resolved)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("ic: create resource request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	if strings.TrimSpace(referer) != "" {
+		req.Header.Set("Referer", referer)
+	}
+	if image {
+		req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+	} else {
+		req.Header.Set("Accept", "application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	}
+	client := icHTTPClient()
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if next == nil || (next.URL.Scheme != "http" && next.URL.Scheme != "https") {
+			return fmt.Errorf("ic: refusing non-HTTP resource redirect")
+		}
+		if len(via) > 0 && !icSameAuthority(parsed, via[len(via)-1].URL) {
+			return fmt.Errorf("ic: refusing cross-site resource redirect")
+		}
+		if !icSameAuthority(parsed, next.URL) {
+			return fmt.Errorf("ic: refusing cross-site resource redirect")
+		}
+		return nil
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("ic: fetch resource %s: %w", resolved, err)
+	}
+	defer response.Body.Close()
+	contentType := response.Header.Get("Content-Type")
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return nil, contentType, fmt.Errorf("ic: resource %s: HTTP %d", resolved, response.StatusCode)
+	}
+	if response.ContentLength > icMaxResourceBytes {
+		return nil, contentType, fmt.Errorf("ic: resource %s exceeds %d bytes", resolved, icMaxResourceBytes)
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, icMaxResourceBytes+1))
+	if err != nil {
+		return nil, contentType, fmt.Errorf("ic: read resource %s: %w", resolved, err)
+	}
+	if int64(len(body)) > icMaxResourceBytes || !icResourceBodyIsUsable(contentType, body, resolved, image) {
+		return nil, contentType, fmt.Errorf("ic: resource %s returned invalid Content-Type, shell, or magic", resolved)
+	}
+	return body, contentType, nil
+}
+
+func icResourceURL(baseURL, raw string) string {
+	raw = htmlstd.UnescapeString(strings.TrimSpace(raw))
+	if raw == "" || bodaIsPseudoResourceHref(raw) {
+		return ""
+	}
+	resolved := cleanURL(resolveURL(baseURL, raw))
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return ""
+	}
+	base, err := url.Parse(baseURL)
+	if err != nil || base.Host == "" || !strings.EqualFold(base.Host, parsed.Host) {
+		return ""
+	}
+	lower := strings.ToLower(parsed.Path + "?" + parsed.RawQuery)
+	for _, marker := range []string{
+		"captcha", "verifycode", "verification", "createimage", "getcode", "access-denied", "waf",
+		"/login", "/signin", "placeholder", "transparent", "spacer", "blank", "loading", "pixel",
+	} {
+		if strings.Contains(lower, marker) {
+			return ""
+		}
+	}
+	parsed.Fragment = ""
+	return cleanURL(parsed.String())
+}
+
+func icSameAuthority(left, right *url.URL) bool {
+	return left != nil && right != nil && strings.EqualFold(left.Host, right.Host)
+}
+
+func icResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		mediaType = strings.TrimSpace(strings.Split(contentType, ";")[0])
+	}
+	mediaType = strings.ToLower(strings.TrimSpace(mediaType))
+	if mediaType == "" {
+		return false
+	}
+	switch mediaType {
+	case "text/html", "application/xhtml+xml", "application/json", "text/xml", "application/xml":
+		return false
+	}
+	probe := body
+	if len(probe) > 4096 {
+		probe = probe[:4096]
+	}
+	if icResourceShellRe.Match(probe) {
+		return false
+	}
+
+	magic := icResourceMagic(body)
+	if image {
+		return icImageTypeMatchesMagic(mediaType, magic)
+	}
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf"):
+		return magic == "pdf"
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml"):
+		return magic == "zip"
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt") || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint":
+		return magic == "ole"
+	case strings.Contains(lowerName, ".zip") || strings.Contains(lowerName, ".rar") || strings.Contains(lowerName, ".7z") || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed":
+		return magic == "zip" || magic == "rar" || magic == "7z"
+	case strings.Contains(lowerName, ".txt") || strings.Contains(lowerName, ".csv"):
+		return mediaType == "text/plain" || mediaType == "text/csv" || mediaType == "application/octet-stream"
+	case strings.HasPrefix(mediaType, "text/"):
+		return true
+	default:
+		return magic != ""
+	}
+}
+
+func icImageTypeMatchesMagic(mediaType, magic string) bool {
+	switch mediaType {
+	case "image/jpeg", "image/jpg":
+		return magic == "jpeg"
+	case "image/png":
+		return magic == "png"
+	case "image/gif":
+		return magic == "gif"
+	case "image/webp":
+		return magic == "webp"
+	case "image/bmp":
+		return magic == "bmp"
+	case "image/tiff":
+		return magic == "tiff"
+	case "image/svg+xml":
+		return magic == "svg"
+	default:
+		return false
+	}
+}
+
+func icResourceMagic(body []byte) string {
+	switch {
+	case bytes.HasPrefix(body, []byte("%PDF-")):
+		return "pdf"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x03, 0x04}) || bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x05, 0x06}) || bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x07, 0x08})):
+		return "zip"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}):
+		return "ole"
+	case len(body) >= 3 && bytes.Equal(body[:3], []byte{0xff, 0xd8, 0xff}):
+		return "jpeg"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
+		return "png"
+	case len(body) >= 6 && (bytes.Equal(body[:6], []byte("GIF87a")) || bytes.Equal(body[:6], []byte("GIF89a"))):
+		return "gif"
+	case len(body) >= 12 && bytes.Equal(body[:4], []byte("RIFF")) && bytes.Equal(body[8:12], []byte("WEBP")):
+		return "webp"
+	case len(body) >= 2 && bytes.Equal(body[:2], []byte("BM")):
+		return "bmp"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{'I', 'I', '*', 0}) || bytes.Equal(body[:4], []byte{'M', 'M', 0, '*'})):
+		return "tiff"
+	case len(body) >= 7 && bytes.Equal(body[:7], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x00}):
+		return "rar"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x01, 0x00}):
+		return "rar"
+	case len(body) >= 6 && bytes.Equal(body[:6], []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}):
+		return "7z"
+	}
+	trimmed := bytes.TrimSpace(bytes.TrimPrefix(body, []byte{0xef, 0xbb, 0xbf}))
+	if len(trimmed) > 0 {
+		probe := trimmed
+		if len(probe) > 4096 {
+			probe = probe[:4096]
+		}
+		if bytes.Contains(bytes.ToLower(probe), []byte("<svg")) {
+			return "svg"
+		}
+	}
+	return ""
+}
+
+func icSanitizeContentHTML(rawHTML, baseURL string, candidateImages []string, candidateAttachments []model.Attachment, validImages []string, validAttachments []model.Attachment) string {
+	if strings.TrimSpace(rawHTML) == "" {
+		return rawHTML
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader("<div id=\"ic-content-root\">" + rawHTML + "</div>"))
+	if err != nil {
+		return rawHTML
+	}
+	root := doc.Find("#ic-content-root").First()
+	root.Find("script, style, noscript").Remove()
+	candidateImagesSet := make(map[string]bool, len(candidateImages))
+	for _, image := range candidateImages {
+		if resolved := icResourceURL(baseURL, image); resolved != "" {
+			candidateImagesSet[resolved] = true
+		}
+	}
+	validImagesSet := make(map[string]bool, len(validImages))
+	for _, image := range validImages {
+		if resolved := icResourceURL(baseURL, image); resolved != "" {
+			validImagesSet[resolved] = true
+		}
+	}
+	candidateAttachmentsSet := make(map[string]bool, len(candidateAttachments))
+	for _, attachment := range candidateAttachments {
+		if resolved := icResourceURL(baseURL, attachment.URL); resolved != "" {
+			candidateAttachmentsSet[resolved] = true
+		}
+	}
+	validAttachmentsSet := make(map[string]bool, len(validAttachments))
+	for _, attachment := range validAttachments {
+		if resolved := icResourceURL(baseURL, attachment.URL); resolved != "" {
+			validAttachmentsSet[resolved] = true
+		}
+	}
+	root.Find("img").Each(func(_ int, image *goquery.Selection) {
+		var resolved string
+		for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			if raw := strings.TrimSpace(image.AttrOr(attr, "")); raw != "" {
+				resolved = icResourceURL(baseURL, raw)
+				if resolved != "" {
+					break
+				}
+			}
+		}
+		if resolved == "" || !candidateImagesSet[resolved] || !validImagesSet[resolved] {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vsbhref", "vurl"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	root.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		href := htmlstd.UnescapeString(strings.TrimSpace(link.AttrOr("href", "")))
+		if bodaIsPseudoResourceHref(href) {
+			link.RemoveAttr("href")
+			return
+		}
+		resolved := icResourceURL(baseURL, href)
+		if resolved != "" && candidateAttachmentsSet[resolved] {
+			if !validAttachmentsSet[resolved] {
+				link.RemoveAttr("href")
+				return
+			}
+			link.SetAttr("href", resolved)
+			return
+		}
+		if resolved == "" && icLooksLikeAttachment(link) {
+			link.RemoveAttr("href")
+			return
+		}
+		if resolved != "" {
+			link.SetAttr("href", resolved)
+		}
+	})
+	if html, err := root.Html(); err == nil {
+		return html
+	}
+	return rawHTML
 }
 
 func parseAdapter_icList(rawHTML []byte, baseURL string) ([]model.NewsItem, error) {
@@ -360,6 +729,10 @@ func parseAdapter_icArticle(rawHTML []byte, baseURL string) (*model.Article, err
 	if pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"]`).AttrOr("content", "")); pageType != "" && pageType != "3" {
 		return nil, fmt.Errorf("ic: page type %q is not an article", pageType)
 	}
+	contentSel := icArticleContent(doc)
+	if contentSel.Length() == 0 {
+		return nil, fmt.Errorf("ic: response is not an article page: fixed body is missing")
+	}
 
 	article, err := parseBodaArticle(rawHTML, baseURL)
 	if err != nil {
@@ -377,29 +750,125 @@ func parseAdapter_icArticle(rawHTML []byte, baseURL string) (*model.Article, err
 	}
 	article.Title = headline
 	article.Type = icSectionType(doc)
-
-	if meta := doc.Find(".show01").First(); meta.Length() > 0 {
-		meta.Find("em, span").Each(func(_ int, field *goquery.Selection) {
-			value := strings.TrimSpace(field.Text())
-			if strings.HasPrefix(value, "来源：") || strings.HasPrefix(value, "来源:") {
-				article.Source = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(value, "来源："), "来源:"))
-			}
-		})
-		if precise := icPreciseDate(flattenedText(meta)); precise != "" {
-			article.PublishedAt = precise
-			article.Date = precise[:10]
-		}
-	}
-	if article.Date == "" {
-		if precise := icPreciseDate(flattenedText(doc.Find(".show01 p, .article-meta, .news_source").First())); precise != "" {
-			article.PublishedAt = precise
-			article.Date = precise[:10]
-		}
+	article.Source = icArticleSource(doc)
+	article.Date, article.PublishedAt = icArticleDateFields(doc)
+	article.Content = extractBodaContentText(contentSel)
+	icResolveContentResources(contentSel, baseURL)
+	if html, htmlErr := contentSel.Html(); htmlErr == nil {
+		article.ContentHTML = html
 	}
 	normalizeArticlePublishedAt(article)
 	icExtractAttachments(doc, article, baseURL)
 	icDeduplicateResources(article)
 	return article, nil
+}
+
+func icArticleContent(doc *goquery.Document) *goquery.Selection {
+	if doc == nil {
+		return &goquery.Selection{}
+	}
+	for _, selector := range []string{
+		".show02 .v_news_content",
+		".show02 #vsb_content .v_news_content",
+		"#vsb_content .v_news_content",
+		".article-content .v_news_content",
+		".v_news_content",
+	} {
+		if content := doc.Find(selector).First(); content.Length() > 0 {
+			return content
+		}
+	}
+	return doc.Find(".__ic_missing_content__").First()
+}
+
+func icArticleSource(doc *goquery.Document) string {
+	if doc == nil {
+		return ""
+	}
+	meta := doc.Find(".show01, .article-meta, .news_source").First()
+	var source string
+	meta.Find("em, span, [data-source], .source").EachWithBreak(func(_ int, field *goquery.Selection) bool {
+		value := strings.TrimSpace(strings.Join(strings.Fields(field.Text()), " "))
+		for _, prefix := range []string{"来源：", "来源:"} {
+			if strings.HasPrefix(value, prefix) {
+				source = strings.TrimSpace(strings.TrimPrefix(value, prefix))
+				return false
+			}
+		}
+		return true
+	})
+	return source
+}
+
+func icArticleDateFields(doc *goquery.Document) (string, string) {
+	if doc == nil {
+		return "", ""
+	}
+	for _, selector := range []string{
+		`meta[name="date"]`, `meta[name="publishdate"]`, `meta[name="publishDate"]`,
+		`meta[name="publish_date"]`, `meta[property="article:published_time"]`,
+	} {
+		meta := doc.Find(selector).First()
+		if meta.Length() == 0 {
+			continue
+		}
+		if date, published := icDateFieldsFromValue(meta.AttrOr("content", ""), true); date != "" {
+			return date, published
+		}
+	}
+
+	meta := doc.Find(".show01, .article-meta, .news_source").First()
+	for _, selector := range []string{
+		"time[datetime]", "[data-date]", ".date", ".time", "[class*='date']", "[class*='time']", "em", "span",
+	} {
+		var date, published string
+		meta.Find(selector).EachWithBreak(func(_ int, field *goquery.Selection) bool {
+			trusted := selector == "time[datetime]" || selector == "[data-date]" || strings.Contains(strings.ToLower(field.AttrOr("class", "")), "date") || strings.Contains(strings.ToLower(field.AttrOr("class", "")), "time")
+			value := field.AttrOr("datetime", "")
+			if value == "" {
+				value = field.AttrOr("data-date", "")
+			}
+			if value == "" {
+				value = field.Text()
+			}
+			date, published = icDateFieldsFromValue(value, trusted)
+			return date == ""
+		})
+		if date != "" {
+			return date, published
+		}
+	}
+	return "", ""
+}
+
+func icDateFieldsFromValue(raw string, trusted bool) (string, string) {
+	raw = strings.Join(strings.Fields(htmlstd.UnescapeString(strings.TrimSpace(raw))), " ")
+	if raw == "" {
+		return "", ""
+	}
+	if !trusted {
+		lower := strings.ToLower(raw)
+		labels := []string{"发布日期", "发布时间", "发表时间", "日期", "时间"}
+		value := ""
+		for _, label := range labels {
+			if index := strings.Index(lower, strings.ToLower(label)); index >= 0 {
+				value = strings.TrimSpace(raw[index+len(label):])
+				break
+			}
+		}
+		if value == "" {
+			return "", ""
+		}
+		raw = strings.TrimLeft(value, " ：:：")
+	}
+	precise := icPreciseDate(raw)
+	if precise == "" || len(precise) < 10 {
+		return "", ""
+	}
+	if publishedAtHasClock(precise) {
+		return precise[:10], precise
+	}
+	return precise[:10], ""
 }
 
 func icResponseError(doc *goquery.Document) error {
@@ -582,7 +1051,7 @@ func icExtractAttachments(doc *goquery.Document, article *model.Article, baseURL
 		if href == "" || !icLooksLikeAttachment(anchor) {
 			return
 		}
-		resolved := cleanURL(resolveURL(baseURL, href))
+		resolved := icResourceURL(baseURL, href)
 		if resolved == "" || seen[resolved] {
 			return
 		}
@@ -611,7 +1080,7 @@ func icLooksLikeAttachment(anchor *goquery.Selection) bool {
 	if download != "" || icFileExtRe.MatchString(href) || icFileExtRe.MatchString(name) || strings.Contains(href, "download") {
 		return true
 	}
-	for depth, parent := 0, anchor; parent.Length() > 0 && depth < 4; depth, parent = depth+1, parent.Parent() {
+	for depth, parent := 0, anchor; parent.Length() > 0 && depth < 2; depth, parent = depth+1, parent.Parent() {
 		if parent.Is("body") || parent.Is("html") {
 			break
 		}
@@ -621,6 +1090,45 @@ func icLooksLikeAttachment(anchor *goquery.Selection) bool {
 		}
 	}
 	return false
+}
+
+func icResolveContentResources(content *goquery.Selection, baseURL string) {
+	if content == nil || content.Length() == 0 {
+		return
+	}
+	content.Find("img").Each(func(_ int, image *goquery.Selection) {
+		var resolved string
+		for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			if raw := strings.TrimSpace(image.AttrOr(attr, "")); raw != "" {
+				resolved = bodaResourceURL(baseURL, raw)
+				if resolved != "" {
+					break
+				}
+			}
+		}
+		if resolved == "" {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vsbhref", "vurl"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	content.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		href := htmlstd.UnescapeString(strings.TrimSpace(link.AttrOr("href", "")))
+		if bodaIsPseudoResourceHref(href) {
+			link.RemoveAttr("href")
+			return
+		}
+		resolved := cleanURL(resolveURL(baseURL, href))
+		parsed, err := url.Parse(resolved)
+		if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+			link.RemoveAttr("href")
+			return
+		}
+		link.SetAttr("href", resolved)
+	})
 }
 
 func icDeduplicateResources(article *model.Article) {

@@ -1,0 +1,977 @@
+
+
+ 
+
+
+
+<!DOCTYPE html>
+<html>
+   <head>
+		<meta charset="UTF-8">
+		<title>本科生院教学事务管理-VATUU为途教学信息服务平台</title>
+		<meta name="keywords" content="教学信息服务平台,教务管理系统,教务网,教务系统" />
+		<meta name="description" content="西南交通大学是教育部直属全国重点大学，国家首批“双一流”、“211工程”、“985工程优势学科创新平台”、“2011协同创新计划”重点建设高校，设有研究生院。坐落于中国历史文化名城、国家中心城市、“成渝地区双城经济圈”核心城市——成都。" />
+		<link rel="stylesheet" type="text/css" href="../css/web/iecommon.css?version=2019"/>
+		<link rel="stylesheet" type="text/css" href="../css/web/blueStyle.css?version=2019"/>
+		<!--[if IE 6]>
+		<script src="../js/iepng.js" language="javascript" type="text/javascript"></script>
+		<![endif]-->
+	</head>
+	<body>
+		<!--
+        	描述：header部分
+        -->
+		<div class="full header-bg" id="header">
+	<div class="mainBox">
+		<div class="header header-bg clearfix">
+				<div class="fl mt20"><a href="../index.jsp"><img src="../images/web/icon/index_logo.png?v=2025"/></a></div>
+				<div class="fr">
+					<ul class="header-share mt5 clearfix">
+						<li><a href="#" class="relative-btm1">English</a></li>
+						<li class="clearfix"><span class="weixin_icon"></span><a href="javascript:void(0)" id="wechar" onclick="showWechatBox()">微信</a></li>
+						<li class="clearfix"><span class="weibo_icon"></span><a href="http://weibo.com/jiaowu580" target=_blank>微博</a></li>
+					</ul>
+					<div class="searchBox clearfix">
+					    <form action="../vatuu/WebAction" method="post" name="commSearch" id="commSearch" style="margin:0px;" target=_blank onsubmit="setKeyValue()">
+					    <input type="hidden" name="setAction" value="newsList">
+					    <input type="hidden" name="type" value="form">
+					    <input type="hidden" name="key1" value="">
+					    <input type="hidden" name="keyword" value="">
+					    <input type="hidden" name="keyWord" value="">
+					    <input type="hidden" name="selectType" value="keyWord">
+					    <input type="hidden" name="selectAction" value="QueryName">
+						<div class="fr clearfix">
+							<input type="text" name="kw" value="" class="searchInput fl"  />
+							<div class="searchBtn inline-block fl" onclick="setKeyValue()"><span class="searchBtn-icon fl"></span></div>
+						</div>
+						<div class="fr w180px">
+							<input type="radio" name="searchCommType" value="web"  class="relative2"  checked="checked" onclick="setSearchComm()"/><span class="cwhite">公共</span>&nbsp; 
+							<input type="radio" name="searchCommType" value="course"  class="relative2" onclick="setSearchComm()"/><span class="cwhite">课程</span>&nbsp;
+							<input type="radio" name="searchCommType" value="people"  class="relative2" onclick="setSearchComm()"/><span class="cwhite">找人</span>&nbsp;
+						</div>
+						</form>
+					</div>
+				</div>
+		</div>
+   </div></div>
+		<!--
+        	描述：header部分
+        -->
+        <!--
+        	描述：nav部分
+        -->
+        <div class="full nav-bg mb20" id="nav">
+    <div class="mainBox">
+		<div class="nav clearfix" >
+			<ul>
+			   <li><a href="/index.html?version=2020">网站首页</a></li>
+				<li><a href="/vatuu/WebAction?setAction=commonList&viewType=view&infoType=detail&infoIndex=61E92EF67418DC54">机构设置</a></li>
+				<li><a href="/vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=bigType&bigTypeId=FB2D32BEAD066637&newsType=yes">教学动态</a></li>
+				<li><a href="/vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=bigType&bigTypeId=61E92EF67418DC54&newsType=yes">教务管理</a></li>
+				<li><a href="/vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=bigType&bigTypeId=0E4BF4D36E232918&newsType=yes">教学运行</a></li>
+				<li><a href="/vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=bigType&bigTypeId=79FADCFD4573759D&newsType=yes">教改研究</a></li>
+				<li><a href="/vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=bigType&bigTypeId=42ED96EE3E089C19&newsType=yes">实践教学</a></li>
+				<li><a href="/vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=bigType&bigTypeId=2CC5A6C6AA4A8CB9&newsType=yes">实验教学</a></li>
+				<li><a href="http://zb.swjtu.edu.cn/" target=_blank>质量保障</a></li>
+				<li><a href="/vatuu/WebAction?setAction=ruleList&viewType=web&selectType=all">管理规定</a></li>
+				<li><a href="/vatuu/WebAction?setAction=fileList&viewType=web&selectType=all">表格文档</a></li>
+                <li><a href="https://jiaowu.swjtu.edu.cn/vatuu/WebSite?setAction=index" target=_blank>网上办事</a></li>
+			</ul>
+			<a class="wrap_box fl mt10" href="../web/date.html" target="_blank">
+				<img src="../images/web/icon/calendar_week_icon.jpg" class="calendar_week_icon"/>第<span id="weekTeach" class="cr f16" ></span>周
+			</a>
+			<dl id="nav_dl">
+				
+				<dd><a href="../vatuu/UserLoginForWiseduAction" target=_blank val="studentBox">用户登录</a>
+					<span class="navbar-btm-active"></span>
+				</dd>
+			</dl>
+		</div>
+	</div>
+</div>
+		<!--
+        	描述：nav部分
+        -->
+        <!--主要内容区-->
+        	<div class="mainBox">
+				<div class="studentManagementMain clearfix">
+					<div class="lefrNav">
+						<a href="#" style="display:block; width: 100%; height:76px;background: url(../images/web/img/teaching.jpg) no-repeat;"></a>
+						<ul class="leftFirstUl">
+						    
+                    	    
+                    	    
+                    	     
+                    	    
+							<li><a href="../vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=smallType&keyWord=054870155A7061CD&newsType=all">•&nbsp;要闻及动态</a></li>
+							 
+                    	    
+							<li><a href="../vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=smallType&keyWord=6A21C537BA042F30&newsType=all">•&nbsp;科创活动相关</a></li>
+							 
+                    	    
+							<li><a href="../vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=smallType&keyWord=8E3746FC429F906F&newsType=all">•&nbsp;媒体及社会关注</a></li>
+							 
+                    	    
+							<li><a href="../vatuu/WebAction?setAction=newsList&viewType=secondStyle&selectType=smallType&keyWord=49F06446FD42E242&newsType=all">•&nbsp;视频新闻</a></li>
+							
+                    	    
+                    	    
+							<li><a href="../vatuu/WebAction?setAction=ruleList&viewType=web&selectType=all">•&nbsp;教学管理规定</a></li>
+							<li><a href="../vatuu/WebAction?setAction=fileList&viewType=web&selectType=all">•&nbsp;文件表格下载</a></li>
+						</ul>
+						<div class="leftNavBtmDiv">
+							<p class="oftenTools">常用工具导航</p>
+							<ul class="oftenUl">
+							    <li><span class="oftenCricle"></span> <a href="../vatuu/PublicInfoQueryAction?setAction=queryCollege">学院教务信息</a></li>
+								<li><span class="oftenCricle"></span> <a href="../web/date.html" target="_blank">学校校历</a></li>
+								<li><span class="oftenCricle"></span> <a href="../vatuu/PublicInfoQueryAction?setAction=queryGraduate">学历学位查询</a></li>
+								<li><span class="oftenCricle"></span> <a href="http://cet.neea.edu.cn/cet" target="_blank">四六级考试报名</a></li>
+								<li><span class="oftenCricle"></span> <a href="../vatuu/CourseAction?setAction=classroomQuery">空闲教室查询</a></li>
+								<li><span class="oftenCricle"></span> <a href="../vatuu/CourseAction?setAction=queryCourseList&selectTableType=ThisTerm" target=_blank>本学期课程安排</a></li>
+								<li><span class="oftenCricle"></span> <a href="../vatuu/TestInfoAction?setAction=TestArrange&selectTableType=Test" target=_blank>期末考试安排</a></li>
+								<li><span class="oftenCricle"></span> <a href="../vatuu/PublicInfoQueryAction?setAction=queryTeacher">查询任课教师信息</a></li>
+								<li><span class="oftenCricle"></span> <a href="../vatuu/PublicInfoQueryAction?setAction=queryStudent">查询在校学生信息</a></li>
+							</ul>
+						 </div>
+					</div>
+					<div class="second-right">
+						<div class="banner-box">
+						   <img src="../images/web/banner/intro_banner_02.jpg" alt="">
+						</div>
+						<h2 class="title">
+						
+						
+						
+						新闻动态
+						
+						
+						</h2>
+						<div class="intro-detail">
+						
+                    	    
+                    	    
+                    	         
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=C3BA39BA23394812" target="_blank">【科研训练营第一讲公告】再现港珠澳大桥建设幕后的故事</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-11-22 18:12:06.863</span><span><img src="../images/web/icon/eyes_gray.png">1104</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=C3BA39BA23394812" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=D3894D379F10273B" target="_blank">我校学子在第十届全国大学生数学竞赛（四川赛区） 取得优异成绩</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--科创活动相关</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-11-19 17:50:20.283</span><span><img src="../images/web/icon/eyes_gray.png">7497</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=D3894D379F10273B" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=562C7769BE9EB884" target="_blank">我校代表队在第十二届全国大学生结构设计中喜获竞赛一等奖</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--科创活动相关</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-11-15 09:14:26.283</span><span><img src="../images/web/icon/eyes_gray.png">5227</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=562C7769BE9EB884" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=25006F18102B024D" target="_blank">2018-2019学年第一学期本科课程评估宣讲会顺利召开</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-11-08 14:30:54.19</span><span><img src="../images/web/icon/eyes_gray.png">442</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=25006F18102B024D" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=7E9AC9AF0A0B728D" target="_blank">青春绽放?学子有爱—创新公益让社区不一样—— 西南交通大学主题公益活动圆满成功</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-11-08 11:57:31.05</span><span><img src="../images/web/icon/eyes_gray.png">259</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=7E9AC9AF0A0B728D" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=70D701343604BCB7" target="_blank">转发人事处：关于核算2017-2018学年第二学期成峨两地通勤教学人员津补贴的通知</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-11-06 10:33:58.473</span><span><img src="../images/web/icon/eyes_gray.png">337</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=70D701343604BCB7" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=D1C6A086571358F0" target="_blank">我校在中国高校经管类在线开放课程建设与应用研讨会上交流经验</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-11-05 14:24:01.66</span><span><img src="../images/web/icon/eyes_gray.png">614</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=D1C6A086571358F0" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=5624812C771993A5" target="_blank">我校主办四川省大学生英语挑战赛并创造历史突破</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-11-01 10:12:42.503</span><span><img src="../images/web/icon/eyes_gray.png">825</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=5624812C771993A5" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=D76ADBE5ADB8A75E" target="_blank">我校在2018年“惠诚杯”四川省大学生模拟法庭大赛中勇夺冠军</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-10-30 19:03:39.957</span><span><img src="../images/web/icon/eyes_gray.png">2972</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=D76ADBE5ADB8A75E" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=73B6FC43DC41A0A2" target="_blank">三校区同上一堂课，共营全校科创氛围——西南交通大学学科竞赛及创新创业活动讲座周顺利举行</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-10-29 18:52:07.473</span><span><img src="../images/web/icon/eyes_gray.png">871</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=73B6FC43DC41A0A2" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=5BE2E4F21F3B293E" target="_blank">我校学子参加第三届全国高校城市地下空间 工程专业大学生模型设计竞赛获特等奖</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--科创活动相关</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-10-23 17:09:08.517</span><span><img src="../images/web/icon/eyes_gray.png">5982</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=5BE2E4F21F3B293E" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=2B8CD6EEDCC729AA" target="_blank">校领导率队参加第三届中国高等工程教育峰会</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-10-22 16:31:24.627</span><span><img src="../images/web/icon/eyes_gray.png">771</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=2B8CD6EEDCC729AA" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=0433C8ACC93DCC1B" target="_blank">第19届全国大学生英语竞赛（NECCS）全国总决赛获奖赛报</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-10-19 11:14:16.16</span><span><img src="../images/web/icon/eyes_gray.png">2912</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=0433C8ACC93DCC1B" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=B0284F1233BB31AF" target="_blank">我校举办2018年教育部“高校创业教育师资特训课程”培训班</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-09-30 14:49:29.323</span><span><img src="../images/web/icon/eyes_gray.png">870</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=B0284F1233BB31AF" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=CB2F40B9E4DE4268" target="_blank">教务处崔凯处长赴峨眉校区调研本科教学工作</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-09-20 14:38:58.353</span><span><img src="../images/web/icon/eyes_gray.png">1014</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=CB2F40B9E4DE4268" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=FC1739DDA7B25633" target="_blank">我校学子在第三届全国大学生起重机创意大赛中勇获4项一等奖、总成绩位列全国第一</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-08-31 09:06:34.527</span><span><img src="../images/web/icon/eyes_gray.png">5953</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=FC1739DDA7B25633" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=613BDE08F16A3251" target="_blank">我校代表队在第九届中国大学生物理学术竞赛中喜获佳绩</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--科创活动相关</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-08-28 15:53:11.277</span><span><img src="../images/web/icon/eyes_gray.png">4094</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=613BDE08F16A3251" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=C89053EE1FF09F52" target="_blank">我校学子在第十一届全国大学生节能减排社会实践与科技竞赛中再创佳绩</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--科创活动相关</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-08-22 17:20:29.963</span><span><img src="../images/web/icon/eyes_gray.png">5327</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=C89053EE1FF09F52" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=B82056DE86A0D1E4" target="_blank">我校在第六届全国大学生光电设计竞赛中喜获一等奖</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--科创活动相关</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-07-30 23:53:56.15</span><span><img src="../images/web/icon/eyes_gray.png">4660</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=B82056DE86A0D1E4" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=78940FC99109A4A2" target="_blank">奋进新时代 聚合一体化 本科教学一体化工作座谈会及现场办公会在峨眉校区举行</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-07-23 15:21:43.917</span><span><img src="../images/web/icon/eyes_gray.png">2347</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=78940FC99109A4A2" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=5A0FE703D44D1799" target="_blank">我校学子在2018年第十届四川省大学生ACM程序设计竞赛取得优异成绩</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--科创活动相关</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-07-17 09:20:30.823</span><span><img src="../images/web/icon/eyes_gray.png">7080</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=5A0FE703D44D1799" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=0C6B365B19D12B1C" target="_blank">聆听学子心声，促进教学提升——物理科学与技术学院物理系第一期学生午间研讨会顺利举行</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-06-29 17:32:12.747</span><span><img src="../images/web/icon/eyes_gray.png">1000</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=0C6B365B19D12B1C" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=6F9D507B17B09F6D" target="_blank">交大学子夺得世界大学生桥梁设计大赛一等奖</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-06-22 14:57:57.417</span><span><img src="../images/web/icon/eyes_gray.png">4633</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=6F9D507B17B09F6D" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=B2541CF792DD2A32" target="_blank">让“灵魂课程”有情有义有滋有味——校领导为青年学子讲授思政课</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-06-20 23:44:55.557</span><span><img src="../images/web/icon/eyes_gray.png">2075</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=B2541CF792DD2A32" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=AE234EBAD16CECF1" target="_blank">“一带一路”铁路国际人才教育联盟在北京揭牌</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-06-19 19:27:12.667</span><span><img src="../images/web/icon/eyes_gray.png">1527</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=AE234EBAD16CECF1" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=96420ADFCBF5B050" target="_blank">【教育导报】在平仄押韵中找回真实生活——走进西南交通大学教师沈如泉的诗词写作通识课</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-06-14 15:53:45.277</span><span><img src="../images/web/icon/eyes_gray.png">1166</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=96420ADFCBF5B050" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=9652203437EAA544" target="_blank">【对话?江沐子】生命中最美的必然——专访“竢实扬华”奖章获得者江沐子</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-06-12 15:44:20.073</span><span><img src="../images/web/icon/eyes_gray.png">2453</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=9652203437EAA544" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=007DB8E08B6F2084" target="_blank">西南交通大学2018年本科教育教学研究与改革项目结题答辩会顺利举行</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-06-07 10:39:38.183</span><span><img src="../images/web/icon/eyes_gray.png">1196</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=007DB8E08B6F2084" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=A9FE3558D6B2F8DC" target="_blank">2018届本科生毕业设计（论文）校抽样答辩顺利举行</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-05-31 19:10:35.323</span><span><img src="../images/web/icon/eyes_gray.png">4328</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=A9FE3558D6B2F8DC" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=67CA0274FBC00374" target="_blank">教务处组织在线开放课程建设与应用工作坊</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-05-30 15:40:40.853</span><span><img src="../images/web/icon/eyes_gray.png">941</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=67CA0274FBC00374" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=BBF647A49DF6853C" target="_blank">峨眉校区2017-2018学年第二学期本科课程评估宣讲会顺利召开</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-05-25 20:34:23.697</span><span><img src="../images/web/icon/eyes_gray.png">1402</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=BBF647A49DF6853C" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=ECD8670E0E77E254" target="_blank">2018西南交通大学面向未来的深层学习体验与评价论坛顺利举行</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-05-01 23:21:04.693</span><span><img src="../images/web/icon/eyes_gray.png">1335</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=ECD8670E0E77E254" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=2337E8BB8D01547B" target="_blank">西南交通大学代表队勇夺四川省结构设计竞赛第一名</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-04-28 10:47:34.503</span><span><img src="../images/web/icon/eyes_gray.png">1495</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=2337E8BB8D01547B" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=A8AAA2C713103D66" target="_blank">【跨学科课程】生命之舞：与生命相知，和自我相识</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-04-23 11:21:22.617</span><span><img src="../images/web/icon/eyes_gray.png">1672</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=A8AAA2C713103D66" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=813917534E9B8A07" target="_blank">一道杠的青春 ——专访竢实扬华奖章获得者、2014级国防生何曦</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-04-23 11:12:58.597</span><span><img src="../images/web/icon/eyes_gray.png">1913</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=813917534E9B8A07" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=4FBDD28A6C1FF074" target="_blank">2018西南交通大学面向未来的深层学习体验与评价论坛顺利举行</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-04-18 17:00:20.237</span><span><img src="../images/web/icon/eyes_gray.png">1401</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=4FBDD28A6C1FF074" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=834795A55CE0EF42" target="_blank">【通识课】走进文化遗产——于遗产中静悟文化魅力</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-04-17 16:12:59.813</span><span><img src="../images/web/icon/eyes_gray.png">1395</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=834795A55CE0EF42" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=5EB11FE3C4C763D8" target="_blank">“高校教师教学能力专业化发展”经验报告会在西南交大举行</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-04-11 22:12:00.26</span><span><img src="../images/web/icon/eyes_gray.png">1484</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=5EB11FE3C4C763D8" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=6A34200F7E5464AD" target="_blank">【跨学科课程】经典名著导读： 一卷书中看世界，字里行间有学问</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-04-11 15:59:46.173</span><span><img src="../images/web/icon/eyes_gray.png">1474</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=6A34200F7E5464AD" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=458D6A1438C60286" target="_blank">西南交通大学代表队应邀参加“青年红色筑梦之旅”活动启动仪式</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-04-08 18:27:54.543</span><span><img src="../images/web/icon/eyes_gray.png">1574</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=458D6A1438C60286" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=AF40F8F9B0331D20" target="_blank">西南交通大学召开通识教育教学分享会</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-04-02 14:36:24.537</span><span><img src="../images/web/icon/eyes_gray.png">1633</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=AF40F8F9B0331D20" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=497AD2640A252BD1" target="_blank">中美青年创客交流中心首批微课程建设研讨会</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-03-31 22:50:17.657</span><span><img src="../images/web/icon/eyes_gray.png">1647</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=497AD2640A252BD1" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=980BA888DBFF7C70" target="_blank">西南交通大学承办的“本科教学工作审核评估 2018年参评学校工作培训会（第三期）”隆重召开</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-03-31 22:13:14.58</span><span><img src="../images/web/icon/eyes_gray.png">1777</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=980BA888DBFF7C70" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=AF228238B9605EA4" target="_blank">我校学子在第九届全国大学生数学竞赛决赛中荣获佳绩</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--科创活动相关</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-03-27 10:55:48.507</span><span><img src="../images/web/icon/eyes_gray.png">5818</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=AF228238B9605EA4" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=D92CE63EB9F40480" target="_blank">美国俄克拉荷马州立大学Norbert J. Delatte教授来我校作“美国工程技术认证委员会专业认证”专题讲座</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-03-22 11:34:05.16</span><span><img src="../images/web/icon/eyes_gray.png">2459</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=D92CE63EB9F40480" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=A55C20BA30F5283A" target="_blank">【招贤纳士】交大教务全媒体中心——为学工作室招新公告</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-03-21 21:36:43.677</span><span><img src="../images/web/icon/eyes_gray.png">1102</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=A55C20BA30F5283A" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=C13D86BA69E39EEA" target="_blank">【招贤纳士】交大教务全媒体中心——为学工作室招新公告</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-03-21 21:36:43.677</span><span><img src="../images/web/icon/eyes_gray.png">2051</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=C13D86BA69E39EEA" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=CE44D7B93905A56D" target="_blank">2017-2018学年第二学期第一次本科教学工作委员会及教学负责人会议召开</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-03-19 15:21:12.953</span><span><img src="../images/web/icon/eyes_gray.png">1967</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=CE44D7B93905A56D" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=260938093050ED4F" target="_blank">2017-2018学年第二学期第一次本科教学工作委员会及教学负责人会议召开</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-03-19 15:21:12.953</span><span><img src="../images/web/icon/eyes_gray.png">1284</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=260938093050ED4F" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							     
+                    	        
+							    <div class="littleResultDiv">
+									<h3><a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=54E7C833CDD54498" target="_blank">【跨学科课程】三维激光扫描技术--新技术·新视野</a></h3>
+									<p class="relativeInfo clearfix">
+				   			        <span><img src="../images/web/icon/circle_nav.png" style="top:2;margin-left:5px;">新闻动态--要闻及动态</span><span><img src="../images/web/icon/time_gray_icon.png" style="top:2;margin-left:5px;">2018-03-17 09:40:15.223</span><span><img src="../images/web/icon/eyes_gray.png">1387</span>
+								    <a href="../vatuu/WebAction?setAction=newsDetail&viewType=web&newsId=54E7C833CDD54498" class="searchMoreBtn" target="_blank">MORE+</a>
+							        </p>
+							    </div>
+							    
+					        
+					    
+					    </div>
+					    <div class="news-page">
+					    <form name="pageForm"  action="../vatuu/WebAction" method="get">
+		    		    <input type="hidden" name="setAction" value="newsList">
+		    		    <input type="hidden" name="viewType" value="secondStyle">
+		    		    <input type="hidden" name="orderType" value="news_addtime">
+		    		    <input type="hidden" name="orderValue" value="desc">
+		    		    <input type="hidden" name="selectType" value="bigType">
+		    		    <input type="hidden" name="keyWord" value="">
+		    		    <input type="hidden" name="bigTypeId" value="FB2D32BEAD066637">
+            		    <p style="height:40px;line-height:40px;">共有记录【1393】条，当前第【<span style="color:#ff0000; font-weight:bold;">14</span>】页，50条/页，共【28】页</p>
+					    <div class="page">
+				
+					    	<a href="javascript:gotoPage(1)" class="btn btn-page">首页</a>
+					    	<a href="javascript:gotoPage(13)" class="btn btn-page">上一页</a>
+					    	
+					    	
+					    	
+					    	  
+					    	  
+					    	     
+					    	         
+					    	         
+					    	             
+					    	             
+					    	         
+					    	     
+					    	  
+					    	
+					    	
+					    	
+					    	   <a href="javascript:gotoPage(10)" class="btn btn-page">10</a>
+					    	
+					    	   <a href="javascript:gotoPage(11)" class="btn btn-page">11</a>
+					    	
+					    	   <a href="javascript:gotoPage(12)" class="btn btn-page">12</a>
+					    	
+					    	   <a href="javascript:gotoPage(13)" class="btn btn-page">13</a>
+					    	
+					    	   <a href="javascript:gotoPage(14)" class="btn btn-page">14</a>
+					    	
+					    	   <a href="javascript:gotoPage(15)" class="btn btn-page">15</a>
+					    	
+					    	   <a href="javascript:gotoPage(16)" class="btn btn-page">16</a>
+					    	
+					    	   <a href="javascript:gotoPage(17)" class="btn btn-page">17</a>
+					    	
+					    	   <a href="javascript:gotoPage(18)" class="btn btn-page">18</a>
+					    	
+					    	   <a href="javascript:gotoPage(19)" class="btn btn-page">19</a>
+					    	
+					    	转到：<SELECT name="jumpPage" onchange="document.pageForm.submit()" class="btn btn-page">
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="1">1</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="2">2</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="3">3</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="4">4</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="5">5</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="6">6</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="7">7</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="8">8</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="9">9</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="10">10</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="11">11</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="12">12</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="13">13</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   <OPTION selected value="14">14</OPTION>
+            		                   
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="15">15</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="16">16</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="17">17</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="18">18</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="19">19</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="20">20</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="21">21</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="22">22</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="23">23</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="24">24</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="25">25</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="26">26</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="27">27</OPTION>
+            		                   
+            		                 
+            		            
+            		                
+            		                   
+            		                   
+            		                   <OPTION value="28">28</OPTION>
+            		                   
+            		                 
+            		             
+            		            </SELECT>
+					    	<a href="javascript:gotoPage(15)" class="btn btn-page">下一页</a>
+					    	<a href="javascript:gotoPage(28)" class="btn btn-page">尾页</a>
+					    	</div>
+		    		    </form>
+					    </div>
+					</div>
+				</div>
+			</div>
+		<!--主要内容区-->
+      
+        <!--
+        	描述：底部导航区
+        -->
+        <div class="full bottom-nav-bg mt20" id="footerNav">
+   <div class="mainBox">
+		<div class="footer-nav-div clearfix">
+			<div class="bottmNavDiv">
+				<p class="f14 fw color-main mb5">热点关注</p>
+				<ul>
+					<li><a href="../vatuu/CourseAction?setAction=queryCourseList&selectTableType=ThisTerm" target=_blank>本学期课程表</a></li>
+					<li><a href="../vatuu/CourseAction?setAction=queryCourseList&selectTableType=NextTerm" target=_blank>下学期课程表</a></li>
+					<li><a href="../vatuu/TestInfoAction?setAction=TestArrange&selectTableType=Test" target=_blank>期末考试安排</a></li>
+					<li><a href="../vatuu/TestInfoAction?setAction=TestArrange&selectTableType=Makeup" target=_blank>补考安排</a></li>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryProgram" >培养计划查询</a></li>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryMajor" >专业目录</a></li>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryCETScore" target=_blank>四六级成绩查询</a></li>
+					<li><a href="../vatuu/CourseAction?setAction=queryCourseList&selectTableType=History" target=_blank>历史课程查询</a></li>
+					<li><a href="../vatuu/CourseAction?setAction=printCourse&termSelect=this" target=_blank>班级、教室课表打印</a></li>
+				</ul>
+			</div>
+			<div class="bottmNavDiv">
+				<p class="f14 fw color-main mb5">信息服务</p>
+				<ul>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryGraduate" >学历查询</a></li>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryCollege" >学院教务信息</a></li>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryStudent" >学生信息查询</a></li>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryTeacher" >教师信息查询</a></li>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryCourse" >课程代码查询</a></li>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryClass" >班级信息查询</a></li>
+					<li><a href="../vatuu/PublicInfoQueryAction?setAction=queryClassroom" >教室信息查询</a></li>
+					<li><a href="../vatuu/CourseAction?setAction=classroomStatus">教室使用状态</a></li>
+				</ul>
+			</div>
+			<div class="bottmNavDiv">
+				<p class="f14 fw color-main mb5">办事指南</p>
+				<ul>
+					<li><a href="../web/deanPerson.html?pageLink=deanPerson" >工作人员介绍</a></li>
+					<li><a href="https://jiaowu.swjtu.edu.cn/vatuu/WebSite?setAction=index" >办事流程</a></li>
+					<li><a href="../web/deanPhone.html?pageLink=deanPhone" >教务处电话</a></li>
+					<li><a href="../vatuu/RuleAction?setAction=RuleMore&type=form" >管理规章制度</a></li>
+					<li><a href="../vatuu/WebFileAction?setAction=FileMore&type=form" >办事常用表格</a></li>
+					<li><a href="../vatuu/ClassroomBorrowInfoAction?setAction=classroomLendList" target=_blank>教室借用信息查询</a></li>
+					<li><a href="../vatuu/ClassroomBorrowInfoAction?setAction=classroomUseChart" target=_blank>教室使用图示</a></li>
+				</ul>
+			</div>
+			<div class="bottmNavDiv">
+				<p class="f14 fw color-main mb5">常用表格</p>
+				<ul>
+					<li><a href="../vatuu/WebAction?setAction=download&fileType=file&fileId=326BFA8145A2016A" target=_blank>期末试卷模板</a></li>
+					<li><a href="../vatuu/WebAction?setAction=download&fileType=file&fileId=18E00963806A89BA" target=_blank>教师调课申请表</a></li>
+					<li><a href="../vatuu/WebAction?setAction=download&fileType=file&fileId=222CA45DE8C217ED" target=_blank>学生休学申请表</a></li>
+					<li><a href="../vatuu/WebAction?setAction=download&fileType=file&fileId=C6C32E1A338AECA5" target=_blank>学生复学申请表</a></li>
+					<li><a href="../vatuu/WebAction?setAction=download&fileType=file&fileId=8490E86F02B470CB" target=_blank>学生退学申请表</a></li>
+					<li><a href="../vatuu/WebAction?setAction=download&fileType=file&fileId=D54546309E97CBDF" target=_blank>超学分选课申请表</a></li>
+					<li><a href="../vatuu/WebAction?setAction=download&fileType=file&fileId=13B3555E8E5FF4E9" target=_blank>成绩复议申请表</a></li>
+					<li><a href="../vatuu/WebAction?setAction=download&fileType=file&fileId=3FA089F9B836F454" target=_blank>本科生课程替代申请表</a></li>
+				</ul>
+			</div>
+			<div class="bottmNavDiv">
+				<p class="f15 fw color-main mb5">推荐链接</p>
+				<ul>
+					<li><a href="http://www.swjtu.edu.cn" target=_blank>西南交通大学</a></li>
+					<li><a href="http://yz.swjtu.edu.cn" target=_blank>西南交通大学研究生招生网</a></li>
+					<li><a href="http://lib.swjtu.edu.cn/" target=_blank>西南交通大学图书馆</a></li>
+					<li><a href="http://jwc.swjtu.edu.cn/vatuu/WebAction?setAction=leedsIndex" target=_blank>西南交大利兹学院教学平台</a></li>
+					<li><a href="http://www.stuvip.com" target=_blank>西南交通大学第二课堂</a></li>
+					<li><a href="http://www.icourse163.org" target=_blank>中国大学MOOC</a></li>
+					<li><a href="http://www.xuetangx.com/" target=_blank>学堂在线</a></li>
+					<li><a href="https://www.coursera.org/" target=_blank>Coursera慕课平台</a></li>
+				</ul>
+			</div>
+			<div class="bottmNavDiv2">
+				<div class="btmNavLinkBtn"><a href="http://www.chsi.cn" target=_blank>教育部学信网</a></div>
+				<div class="btmNavLinkBtn"><a href="http://www.cdgdc.edu.cn" target=_blank>学位与研究生教育信息网</a></div>
+				<div class="btmNavLinkBtn"><a href="../vatuu/SyllabusAction?setAction=publicOutLine" target=_blank>课程大纲</a></div>
+				<div class="btmNavLinkBtn"><a href="../vatuu/SyllabusAction?setAction=publicSyllabus" target=_blank>课程执行大纲</a></div>
+				<div class="btmNavLinkBtn"><a href="https://wannianli.tianqi.com" target=_blank>万年历</a></div>
+			</div>
+		</div>
+	</div></div>
+        <!--
+        	描述：底部导航区
+        -->
+        <!--
+        	描述：footer底部内容区
+        -->
+        <div class="full header-bg" id="footerInfo">
+   <div class="mainBox">
+		<div class="footer mt2082803 clearfix">
+			<div class="fl mt30"><img src="../images/web/icon/index_logo2.png" alt="VATUU为途教学信息服务平台" /></div>
+			<div class="fr">
+				<p class="mt30">电话联系学校本科生院请点击此处<a href="../vatuu/WebAction?setAction=commonList&viewType=view&infoType=detail&infoIndex=36A0F9DAB7403C19">查阅号码</a>，您也可以通过<a href="#">新浪微博</a>或关注官方微信联系我们，如您有对系统的建议，请发至：<a href="mailto:vip@vatuu.com" style="color:#ffffff;">vip@vatuu.com</a></p>
+				<p class="mt10"> © 2025  本科生院教学信息服务平台由<a href="http://jwc.swjtu.edu.cn" target=_blank>本科生院</a>提供技术支持&nbsp;&nbsp;网站备案号：<a href="http://www.miitbeian.gov.cn" target=_blank>蜀ICP备15026398号</a>&nbsp;&nbsp; <img src="../images/web/icon/baidu_icon.jpg" class="pos-relative-5"/></p>
+			</div>
+		</div>
+	</div></div>
+         <!--
+        	描述：footer底部内容区
+        -->
+        <script src="../js/jquery/1.12.4/jquery.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../js/web/load.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../js/web/baidu.js" type="text/javascript" charset="utf-8"></script>
+        <script>
+		function gotoPage(pagenum){
+			document.pageForm.jumpPage.value = pagenum;
+			document.pageForm.submit();
+			return ;
+		}
+		</script>
+	</body>
+</html>
+

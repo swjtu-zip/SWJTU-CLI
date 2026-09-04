@@ -26,7 +26,10 @@ func TestNewsAdapterRegistrationAndPageURL(t *testing.T) {
 		{name: "current jdyw first", slug: "jdyw", page: 1, totalPages: 113, want: base + "/jdyw2.htm"},
 		{name: "current jdyw second", slug: "jdyw", page: 2, totalPages: 113, want: base + "/jdyw2/112.htm"},
 		{name: "current jdyw last", slug: "jdyw2", page: 113, totalPages: 113, want: base + "/jdyw2/1.htm"},
-		{name: "media second", slug: "mtjd", page: 2, totalPages: 73, want: base + "/mtjd/72.htm"},
+		{name: "comprehensive second", slug: "zhxw", page: 2, totalPages: 39, want: base + "/zhxw/38.htm"},
+		{name: "department second", slug: "ybdt", page: 2, totalPages: 75, want: base + "/ybdt/74.htm"},
+		{name: "media second", slug: "mtjd", page: 2, totalPages: 74, want: base + "/mtjd/73.htm"},
+		{name: "science second", slug: "index/kxts", page: 2, totalPages: 10, want: base + "/index/kxts/9.htm"},
 		{name: "notice second", slug: "index/tzgg", page: 2, totalPages: 18, want: base + "/index/tzgg/17.htm"},
 		{name: "academic last", slug: "xshd", page: 50, totalPages: 50, want: base + "/index/xshd/1.htm"},
 	}
@@ -76,8 +79,8 @@ func TestNewsAcademicListDoesNotTreatEventTimeAsPublishDate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(items) != 1 {
-		t.Fatalf("got %d academic items, want 1", len(items))
+	if len(items) != 2 {
+		t.Fatalf("got %d academic items, want 2", len(items))
 	}
 	if items[0].Title != "【创源大讲堂】骨架编辑：仲胺的氮原子删除和插入" {
 		t.Fatalf("unexpected academic title: %#v", items[0])
@@ -87,6 +90,24 @@ func TestNewsAcademicListDoesNotTreatEventTimeAsPublishDate(t *testing.T) {
 	}
 	if items[0].Type != "学术活动" {
 		t.Fatalf("column type was not retained: %q", items[0].Type)
+	}
+	if items[1].Title != "【创源大讲堂】《上扬子北部中生代复合-联合构造》" {
+		t.Fatalf("valid academic title ending in a closing quote was dropped: %#v", items[1])
+	}
+}
+
+func TestNewsListParserReturnsEmptyOnlyForAnExplicitEmptyList(t *testing.T) {
+	items, err := parseAdapter_newsList(loadTestHTML("news_empty_list.html"), "https://news.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if items == nil || len(items) != 0 {
+		t.Fatalf("empty news list = %#v, want a non-nil empty result", items)
+	}
+
+	malformed := []byte(`<div class="ny-right"><div class="list2"><ul><li><a href="javascript:;">坏行</a></li></ul></div></div>`)
+	if _, err := parseAdapter_newsList(malformed, "https://news.swjtu.edu.cn"); err == nil {
+		t.Fatal("malformed article row was accepted as an empty list")
 	}
 }
 
@@ -105,8 +126,8 @@ func TestNewsArticleParserExtractsMetadataResourcesAndAttachments(t *testing.T) 
 	if article.Date != "2026-07-18" || article.PublishedAt != "2026-07-18 14:03:05" {
 		t.Fatalf("unexpected date precision: date=%q published_at=%q", article.Date, article.PublishedAt)
 	}
-	if article.Type != "" {
-		t.Fatalf("CMS pageType must not be treated as article type: %q", article.Type)
+	if article.Type != "交大要闻" {
+		t.Fatalf("unexpected article type: %q", article.Type)
 	}
 	if article.Author != "张三 李四" || article.Photographer != "王五" || article.Editor != "赵六" {
 		t.Fatalf("unexpected credits: author=%q photographer=%q editor=%q", article.Author, article.Photographer, article.Editor)
@@ -117,17 +138,20 @@ func TestNewsArticleParserExtractsMetadataResourcesAndAttachments(t *testing.T) 
 	if len(article.Images) != 1 || article.Images[0] != "https://news.swjtu.edu.cn/__local/A/BB/CC/photo.jpg" {
 		t.Fatalf("unexpected images: %#v", article.Images)
 	}
-	if len(article.Attachments) != 2 {
-		t.Fatalf("got %d attachments, want 2: %#v", len(article.Attachments), article.Attachments)
+	if len(article.Attachments) != 1 {
+		t.Fatalf("got %d attachments, want only the usable direct file: %#v", len(article.Attachments), article.Attachments)
 	}
 	if article.Attachments[0].Name != "附件1 方案.docx" || article.Attachments[0].URL != "https://news.swjtu.edu.cn/__local/F/0A/09/file.png" {
 		t.Fatalf("unexpected first attachment: %#v", article.Attachments[0])
 	}
-	if article.Attachments[1].Name != "附件2 汇总表.xlsx" || !strings.HasPrefix(article.Attachments[1].URL, "https://news.swjtu.edu.cn/system/_content/download.jsp?") {
-		t.Fatalf("unexpected second attachment: %#v", article.Attachments[1])
+	if !newsIsCaptchaDownloadURL("https://news.swjtu.edu.cn/system/_content/download.jsp?urltype=news.DownloadAttachUrl") {
+		t.Fatal("CAPTCHA download endpoint was not classified as an unusable resource")
 	}
 	if !strings.Contains(article.ContentHTML, `src="https://news.swjtu.edu.cn/__local/A/BB/CC/photo.jpg"`) || !strings.Contains(article.ContentHTML, `href="https://news.swjtu.edu.cn/__local/F/0A/09/file.png"`) {
 		t.Fatalf("content HTML did not retain resolved resources: %s", article.ContentHTML)
+	}
+	if strings.Contains(article.ContentHTML, "data:image/") || strings.Contains(strings.Join(article.Images, "\n"), "data:") {
+		t.Fatalf("pseudo image leaked into article resources: html=%s images=%#v", article.ContentHTML, article.Images)
 	}
 }
 

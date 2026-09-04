@@ -27,6 +27,10 @@ func init() {
 			"dqgz/ghzj",
 			"dqgz/xytw",
 			"dqgz/jwgz",
+			"rcpy/bkspy/pyfa",
+			"rcpy/bkspy/gzzd",
+			"rcpy/yjspy/pyfa",
+			"rcpy/yjspy/gzzd",
 			"tzgg/qb",
 			"tzgg/dzb",
 			"tzgg/yjsjx",
@@ -39,6 +43,7 @@ func init() {
 			"xsgz/xsfc",
 			"xsjl",
 			"jxhd",
+			"cyzl",
 		},
 		ParseList:    parseSicNews,
 		ParseArticle: parseSicArticle,
@@ -235,6 +240,9 @@ func sicFetchHTML(rawURL string) ([]byte, error) {
 }
 
 func sicFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	if parsed, parseErr := url.Parse(strings.TrimSpace(articleURL)); parseErr == nil && parsed.Hostname() != "" && !strings.EqualFold(parsed.Hostname(), "sic.swjtu.edu.cn") {
+		return nil, nil, fmt.Errorf("sic: external forwarded detail URL %q belongs to %s; use the owning site adapter", articleURL, parsed.Hostname())
+	}
 	body, err := sicFetchHTML(articleURL)
 	if err != nil {
 		return nil, nil, err
@@ -303,7 +311,7 @@ func parseSicNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 			return
 		}
 		fullURL := cleanURL(resolveURL(baseURL, href))
-		if isExternalURL(fullURL, baseURL) || !isValidNewsURL(fullURL) {
+		if !sicIsArticleURL(fullURL, baseURL) || !isValidNewsURL(fullURL) {
 			return
 		}
 
@@ -369,7 +377,7 @@ func parseSicHomepageItems(doc *goquery.Document, baseURL string) []model.NewsIt
 			return
 		}
 		fullURL := cleanURL(resolveURL(baseURL, strings.TrimSpace(sel.AttrOr("href", ""))))
-		if isExternalURL(fullURL, baseURL) || !isValidNewsURL(fullURL) {
+		if !sicIsArticleURL(fullURL, baseURL) || !isValidNewsURL(fullURL) {
 			return
 		}
 		title := sicTitle(sel)
@@ -513,11 +521,18 @@ func sicResponseError(doc *goquery.Document) error {
 	}
 	title := strings.ToLower(strings.Join(strings.Fields(doc.Find("title").First().Text()), " "))
 	body := strings.ToLower(strings.Join(strings.Fields(doc.Find("body").First().Text()), " "))
+	loginShell := strings.Contains(title, "统一身份认证") || strings.Contains(title, "登录") ||
+		strings.Contains(title, "login") ||
+		strings.Contains(body, "统一身份认证") || strings.Contains(body, "请登录") ||
+		(strings.Contains(body, "用户名") && strings.Contains(body, "密码"))
+	spaShell := doc.Find("#app, #root, #__next").Length() > 0 &&
+		doc.Find(`a[href*="/info/"], .n_bt li a[href]`).Length() == 0
 	if strings.Contains(title, "access denied") || strings.Contains(title, "404") || strings.Contains(title, "not found") ||
 		strings.Contains(title, "访问限制") || strings.Contains(title, "访问受限") || strings.Contains(title, "错误") ||
 		strings.Contains(body, "access denied") || strings.Contains(body, "暂无权限访问") || strings.Contains(body, "无权访问") ||
-		strings.Contains(body, "验证码") {
-		return fmt.Errorf("sic: source returned an access-denied, error, or verification shell")
+		strings.Contains(body, "验证码") || strings.Contains(body, "403 forbidden") || strings.Contains(body, "forbidden") ||
+		loginShell || spaShell {
+		return fmt.Errorf("sic: source returned an access-denied, login, SPA, error, or verification shell")
 	}
 	return nil
 }
@@ -558,7 +573,41 @@ func sicIsArticleHref(href string) bool {
 	if err != nil {
 		return false
 	}
-	return sicArticlePathRe.MatchString(ref.Path)
+	if sicArticlePathRe.MatchString(ref.Path) {
+		return true
+	}
+	// The SIC list deliberately includes a small number of forwarded notices.
+	// They are still article entries in the source total, but use the source
+	// unit's URL shape instead of /info/<column>/<id>.htm.
+	return strings.EqualFold(ref.Hostname(), "jwc.swjtu.edu.cn") &&
+		strings.EqualFold(ref.Path, "/vatuu/WebAction") &&
+		strings.EqualFold(ref.Query().Get("setAction"), "newsDetail")
+}
+
+func sicIsArticleURL(rawURL, baseURL string) bool {
+	candidate, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil || candidate.Hostname() == "" {
+		return false
+	}
+	if scheme := strings.ToLower(candidate.Scheme); scheme != "http" && scheme != "https" {
+		return false
+	}
+	base, err := url.Parse(strings.TrimSpace(baseURL))
+	if err != nil || base.Hostname() == "" {
+		return false
+	}
+	if strings.EqualFold(candidate.Hostname(), base.Hostname()) {
+		return sicArticlePathRe.MatchString(candidate.Path)
+	}
+	switch strings.ToLower(candidate.Hostname()) {
+	case "gsnews.swjtu.edu.cn":
+		return sicArticlePathRe.MatchString(candidate.Path)
+	case "jwc.swjtu.edu.cn":
+		return strings.EqualFold(candidate.Path, "/vatuu/WebAction") &&
+			strings.EqualFold(candidate.Query().Get("setAction"), "newsDetail")
+	default:
+		return false
+	}
 }
 
 // The generic nav helper treats every .swiper as non-content, but sic uses
@@ -875,8 +924,62 @@ func parseSicArticle(html []byte, baseURL string) (*model.Article, error) {
 		}
 	}
 	normalizeArticlePublishedAt(article)
+	sicAppendOutsideAttachments(article, doc, baseURL)
 	sicDeduplicateResources(article)
 	return article, nil
+}
+
+// SIC's current 博达 template renders its attachment list next to
+// .show02/.v_news_content rather than inside the body container. The shared
+// 博达 parser intentionally only handles the body and a different legacy
+// sidebar shape, so keep this fallback local to SIC.
+func sicAppendOutsideAttachments(article *model.Article, doc *goquery.Document, baseURL string) {
+	if article == nil || doc == nil {
+		return
+	}
+
+	seen := make(map[string]bool, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		seen[attachment.URL] = true
+	}
+
+	scope := doc.Find(".show").First()
+	if scope.Length() == 0 {
+		scope = doc.Find(`form[name="_newscontent_fromname"]`).First()
+	}
+	if scope.Length() == 0 {
+		return
+	}
+
+	scope.Find("a[href]").Each(func(_ int, sel *goquery.Selection) {
+		// Links in the prose body have already been processed by
+		// parseBodaArticle. The URL map below also deduplicates them, but
+		// excluding the body makes the source-layout boundary explicit.
+		if sel.Closest(".show02").Length() > 0 || !bodaLooksLikeAttachmentLink(sel, strings.TrimSpace(sel.AttrOr("href", ""))) {
+			return
+		}
+
+		href := strings.TrimSpace(sel.AttrOr("href", ""))
+		resolved := cleanURL(resolveURL(baseURL, href))
+		if resolved == "" || seen[resolved] {
+			return
+		}
+
+		name := strings.TrimSpace(sel.AttrOr("download", ""))
+		if name == "" {
+			name = strings.TrimSpace(sel.AttrOr("name", ""))
+		}
+		if name == "" {
+			name = strings.TrimSpace(sel.Text())
+		}
+		if name == "" {
+			name = href
+		}
+
+		seen[resolved] = true
+		article.Attachments = append(article.Attachments, model.Attachment{Name: name, URL: resolved})
+		sel.SetAttr("href", resolved)
+	})
 }
 
 func sicDeduplicateResources(article *model.Article) {

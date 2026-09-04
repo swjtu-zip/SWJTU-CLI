@@ -1,7 +1,12 @@
 package scraper
 
 import (
+	"bytes"
 	"fmt"
+	"html"
+	"io"
+	"mime"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -25,34 +30,31 @@ func init() {
 		ParseArticle: parseAdapter_gsnewsArticle,
 		PageURL:      gsnewsPageURL,
 		TotalPages:   gsnewsTotalPages,
+		FetchArticle: gsnewsFetchArticle,
 	})
 }
 
 // The first feeds are homepage/news modules.  The remaining entries are the
 // actual navigation leaves that expose an article list, including the
 // secondary links reachable from article sidebars and hidden notice tabs.
-// Static profile pages, external招生/研工 links, service-card pages, and the
-// two download-only pages are deliberately not feeds.  Empty article-list
-// shells remain registered when they are real navigation leaves, so an empty
-// result is distinguishable from a fetch/parser failure.
+// Static profile pages, external招生/研工 links, service-card pages, empty
+// tabs, and the two download-only pages are deliberately not feeds.  The
+// footer's 教学日历 page is a real one-page article list and is included even
+// though it is not part of the primary navigation.
 var gsnewsSubPages = []string{
 	"xwdtnew/rdxw",
 	"xwdtnew/xsdt",
-	"xwdtnew/mtbd",
 	"tzggnew/qb",
 	"tzggnew/pygz",
 	"tzggnew/xwgz",
 	"tzggnew/sxsj",
 	"tzggnew/zhxx",
 	"gzlc/pygz",
-	"gzzdnew/yzgz",
 	"gzzdnew/pygz",
 	"gzzdnew/xwgz",
 	"gzzdnew/sxsj",
 	"gzzdnew/gjjl",
-	"gzzdnew/zhsw",
 	"pygznew/pyfa",
-	"pygznew/xjxl",
 	"pygznew/jxgl",
 	"pygznew/kcsz",
 	"pygznew/sxsj",
@@ -60,8 +62,6 @@ var gsnewsSubPages = []string{
 	"pygznew/jxgg",
 	"pygznew/jcjs",
 	"pygznew/zldd",
-	"pygznew/jsfz",
-	"pygznew/qt",
 	"xwgznew/xwsy",
 	"xwgznew/xwsqd",
 	"xwgznew/dsdw",
@@ -77,6 +77,7 @@ var gsnewsSubPages = []string{
 	"zsgz/sszs",
 	"zsgz/bszs",
 	"zsgz/zsxc",
+	"jxrl",
 }
 
 // Audited live totals.  The HTML pagination is authoritative at runtime;
@@ -86,9 +87,8 @@ var gsnewsSubPages = []string{
 var gsnewsPageTotals = map[string]int{
 	"xwdtnew/rdxw":  9,
 	"xwdtnew/xsdt":  2,
-	"xwdtnew/mtbd":  1,
 	"tzggnew/qb":    60,
-	"tzggnew/pygz":  33,
+	"tzggnew/pygz":  34,
 	"tzggnew/xwgz":  5,
 	"tzggnew/sxsj":  3,
 	"tzggnew/zhxx":  19,
@@ -100,14 +100,11 @@ var gsnewsPageTotals = map[string]int{
 	"zsgz/sszs":     12,
 	"zsgz/bszs":     5,
 	"gzlc/pygz":     1,
-	"gzzdnew/yzgz":  1,
 	"gzzdnew/pygz":  1,
 	"gzzdnew/xwgz":  1,
 	"gzzdnew/sxsj":  1,
 	"gzzdnew/gjjl":  1,
-	"gzzdnew/zhsw":  1,
 	"pygznew/pyfa":  1,
-	"pygznew/xjxl":  1,
 	"pygznew/jxgl":  1,
 	"pygznew/kcsz":  1,
 	"pygznew/sxsj":  1,
@@ -115,8 +112,6 @@ var gsnewsPageTotals = map[string]int{
 	"pygznew/jxgg":  1,
 	"pygznew/jcjs":  1,
 	"pygznew/zldd":  1,
-	"pygznew/jsfz":  1,
-	"pygznew/qt":    1,
 	"xwgznew/xwsy":  1,
 	"xwgznew/xwsqd": 1,
 	"xwgznew/dsdw":  1,
@@ -125,6 +120,7 @@ var gsnewsPageTotals = map[string]int{
 	"zhxxnew/xkjs":  1,
 	"zhxxnew/cydjt": 1,
 	"zsgz/zsxc":     1,
+	"jxrl":          1,
 }
 
 var (
@@ -132,7 +128,12 @@ var (
 	gsnewsDateRE         = regexp.MustCompile(`20[0-9]{2}\s*(?:[-/.年]\s*[0-9]{1,2}\s*[-/.月]\s*[0-9]{1,2}\s*日?|年\s*[0-9]{1,2}\s*月\s*[0-9]{1,2}\s*日?)(?:\s*[Tt ]\s*[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?)?`)
 	gsnewsDayYearMonthRE = regexp.MustCompile(`([0-9]{1,2})\s*(20[0-9]{2})\s*[-/.年]\s*([0-9]{1,2})`)
 	gsnewsPageNumberRE   = regexp.MustCompile(`^[0-9]+$`)
-	gsnewsAttachmentRE   = regexp.MustCompile(`(?i)(?:download\.jsp|\.(?:pdf|docx?|xlsx?|pptx?|zip|rar|7z|txt|csv))(?:$|[?#])`)
+	gsnewsAttachmentRE   = regexp.MustCompile(`(?i)(?:download\.jsp|\.(?:pdf|docx?|xlsx?|pptx?|zip|rar|7z|txt|csv|wps|rtf|od[st]))(?:$|[?#])`)
+)
+
+const (
+	gsnewsCanonicalBaseURL = "https://gsnews.swjtu.edu.cn"
+	gsnewsMaxResourceBytes = 32 << 20
 )
 
 // gsnewsPageURL maps logical pages (1 = newest) to generated files.  The
@@ -174,7 +175,7 @@ func gsnewsTotalPages(slug string) (int, error) {
 		return 0, fmt.Errorf("gsnews: %q is not an audited article-list route", slug)
 	}
 
-	baseURL := AllSites["gsnews"].BaseURL
+	baseURL := gsnewsBaseURL()
 	var lastErr error
 	for _, extension := range []string{".htm", ".html"} {
 		body, err := fetch(gsnewsPageURL(baseURL, slug, 1, 0, extension))
@@ -213,6 +214,15 @@ func gsnewsKnownFeed(slug string) bool {
 		}
 	}
 	return false
+}
+
+func gsnewsBaseURL() string {
+	if site := AllSites["gsnews"]; site != nil {
+		if baseURL := strings.TrimRight(strings.TrimSpace(site.BaseURL), "/"); baseURL != "" {
+			return baseURL
+		}
+	}
+	return gsnewsCanonicalBaseURL
 }
 
 func gsnewsPaginationTotal(doc *goquery.Document) int {
@@ -340,15 +350,33 @@ func gsnewsAppendItem(items *[]model.NewsItem, seen map[string]int, anchor, scop
 }
 
 func gsnewsArticleURL(rawURL, baseURL string) bool {
-	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	_, ok := gsnewsArticleURLValue(rawURL, baseURL)
+	return ok
+}
+
+func gsnewsArticleURLValue(rawURL, baseURL string) (string, bool) {
+	fullURL := cleanURL(resolveURL(baseURL, html.UnescapeString(strings.TrimSpace(rawURL))))
+	parsed, err := url.Parse(fullURL)
 	if err != nil || !gsnewsArticlePathRE.MatchString(parsed.Path) {
-		return false
+		return "", false
 	}
 	base, err := url.Parse(strings.TrimSpace(baseURL))
 	if err != nil || base.Host == "" || parsed.Host == "" {
+		return "", false
+	}
+	if !gsnewsSameAuthority(parsed, base) {
+		return "", false
+	}
+	parsed.Fragment = ""
+	return parsed.String(), true
+}
+
+func gsnewsSameAuthority(left, right *url.URL) bool {
+	if left == nil || right == nil {
 		return false
 	}
-	return strings.EqualFold(parsed.Host, base.Host)
+	return strings.EqualFold(left.Hostname(), right.Hostname()) &&
+		strings.EqualFold(left.Port(), right.Port())
 }
 
 func gsnewsPageType(doc *goquery.Document) string {
@@ -396,25 +424,39 @@ func parseAdapter_gsnewsArticle(raw []byte, baseURL string) (*model.Article, err
 	if err := gsnewsResponseError(raw); err != nil {
 		return nil, err
 	}
-	if doc.Find("main.news-detail-page-main .intro-part .title, main.news-detail-page-main .v_news_content").Length() == 0 {
+	detail := doc.Find("main.news-detail-page-main").First()
+	if detail.Length() == 0 {
 		return nil, fmt.Errorf("gsnews: page has no recognized article content")
+	}
+	titleSel := detail.Find(".intro-part .title").First()
+	contentSel := detail.Find(".intro-part .desc #vsb_content .v_news_content, .intro-part .desc .v_news_content").First()
+	if titleSel.Length() == 0 || contentSel.Length() == 0 {
+		return nil, fmt.Errorf("gsnews: page has no fixed article title/body")
 	}
 
 	article, err := parseBodaArticle(raw, baseURL)
 	if err != nil {
 		return nil, err
 	}
-	if title := strings.Join(strings.Fields(doc.Find("main.news-detail-page-main .intro-part .title").First().Text()), " "); title != "" {
-		article.Title = title
+	article.Title = strings.Join(strings.Fields(titleSel.Text()), " ")
+	if article.Title == "" {
+		return nil, fmt.Errorf("gsnews: article title is empty")
 	}
-	if typ := gsnewsPageTypeFromArticle(doc); typ != "" {
-		article.Type = typ
+	article.Type = gsnewsPageTypeFromArticle(doc)
+	if article.Type == "" {
+		return nil, fmt.Errorf("gsnews: article type is empty")
 	}
-	if rawDate := strings.Join(strings.Fields(doc.Find("main.news-detail-page-main .little-tips .fbsj").First().Text()), " "); rawDate != "" {
-		if date, publishedAt := gsnewsDateFromText(rawDate); date != "" {
-			article.Date = date
-			article.PublishedAt = publishedAt
-		}
+	rawDate := strings.Join(strings.Fields(detail.Find(".intro-part .little-tips .fbsj").First().Text()), " ")
+	article.Date, article.PublishedAt = gsnewsDateFromText(rawDate)
+	if article.Date == "" {
+		return nil, fmt.Errorf("gsnews: article publication date is empty")
+	}
+	// Keep the body anchored to this site's detail container.  The shared
+	// parser remains useful for common fields, but it must not select a
+	// navigation/related-content .v_news_content if the template changes.
+	article.Content = extractBodaContentText(contentSel)
+	if bodyHTML, htmlErr := contentSel.Html(); htmlErr == nil {
+		article.ContentHTML = bodyHTML
 	}
 	appendGsnewsAttachments(article, doc, baseURL)
 	resolveGsnewsContentHTML(article, baseURL)
@@ -483,6 +525,338 @@ func appendGsnewsAttachments(article *model.Article, doc *goquery.Document, base
 		seen[resolved] = true
 		article.Attachments = append(article.Attachments, model.Attachment{Name: name, URL: resolved})
 	})
+}
+
+func gsnewsFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	baseURL := gsnewsBaseURL()
+	fullURL, ok := gsnewsArticleURLValue(articleURL, baseURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("gsnews: refusing non-local or non-detail URL %q", articleURL)
+	}
+	body, err := fetch(fullURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("gsnews: fetch article %s: %w", fullURL, err)
+	}
+	article, err := parseAdapter_gsnewsArticle(body, baseURL)
+	if err != nil {
+		return nil, body, fmt.Errorf("gsnews: parse article %s: %w", fullURL, err)
+	}
+	article.Images = gsnewsVerifyImages(article.Images, baseURL, fullURL)
+	article.Attachments = gsnewsVerifyAttachments(article.Attachments, baseURL, fullURL)
+	validImages := make(map[string]bool, len(article.Images))
+	for _, image := range article.Images {
+		validImages[image] = true
+	}
+	validAttachments := make(map[string]bool, len(article.Attachments))
+	for _, attachment := range article.Attachments {
+		validAttachments[attachment.URL] = true
+	}
+	article.ContentHTML = gsnewsSanitizeContentHTML(article.ContentHTML, baseURL, validImages, validAttachments)
+	if content := gsnewsContentTextFromHTML(article.ContentHTML); content != "" {
+		article.Content = content
+	}
+	return article, body, nil
+}
+
+func gsnewsVerifyImages(images []string, baseURL, referer string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool, len(images))
+	for _, raw := range images {
+		resolved := gsnewsResourceURL(baseURL, raw)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		if _, _, err := gsnewsFetchResource(resolved, baseURL, referer, true); err != nil {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func gsnewsVerifyAttachments(attachments []model.Attachment, baseURL, referer string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		resolved := gsnewsResourceURL(baseURL, attachment.URL)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, _, err := gsnewsFetchResource(resolved, baseURL, referer, false)
+		if err != nil {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func gsnewsResourceURL(baseURL, raw string) string {
+	raw = html.UnescapeString(strings.TrimSpace(raw))
+	if raw == "" || bodaIsPseudoResourceHref(raw) {
+		return ""
+	}
+	resolved := cleanURL(resolveURL(baseURL, raw))
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Host == "" || !gsnewsSameAuthority(parsed, mustParseGsnewsURL(baseURL)) {
+		return ""
+	}
+	if scheme := strings.ToLower(parsed.Scheme); scheme != "http" && scheme != "https" {
+		return ""
+	}
+	lowerPath := strings.ToLower(parsed.Path)
+	for _, placeholder := range []string{"/spacer.gif", "/blank.gif", "/transparent.gif"} {
+		if strings.HasSuffix(lowerPath, placeholder) {
+			return ""
+		}
+	}
+	return resolved
+}
+
+func mustParseGsnewsURL(raw string) *url.URL {
+	parsed, _ := url.Parse(strings.TrimSpace(raw))
+	return parsed
+}
+
+func gsnewsFetchResource(rawURL, baseURL, referer string, image bool) ([]byte, string, error) {
+	resolved := gsnewsResourceURL(baseURL, rawURL)
+	if resolved == "" {
+		return nil, "", fmt.Errorf("gsnews: refusing invalid resource %q", rawURL)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("gsnews: create resource request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	if image {
+		req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+	} else {
+		req.Header.Set("Accept", "application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	}
+	if strings.TrimSpace(referer) != "" {
+		req.Header.Set("Referer", referer)
+	}
+	client := http.Client{}
+	if defaultClient != nil {
+		client = *defaultClient
+	}
+	baseParsed := mustParseGsnewsURL(baseURL)
+	client.CheckRedirect = func(next *http.Request, _ []*http.Request) error {
+		if next == nil || baseParsed == nil || !gsnewsSameAuthority(next.URL, baseParsed) {
+			return http.ErrUseLastResponse
+		}
+		return nil
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("gsnews: fetch resource %s: %w", resolved, err)
+	}
+	defer response.Body.Close()
+	contentType := response.Header.Get("Content-Type")
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return nil, contentType, fmt.Errorf("gsnews: resource %s: HTTP %d", resolved, response.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, gsnewsMaxResourceBytes+1))
+	if err != nil {
+		return nil, contentType, fmt.Errorf("gsnews: read resource %s: %w", resolved, err)
+	}
+	if len(body) > gsnewsMaxResourceBytes || !gsnewsResourceBodyIsUsable(contentType, body, resolved, image) {
+		return nil, contentType, fmt.Errorf("gsnews: resource %s returned invalid Content-Type, shell, or magic signature", resolved)
+	}
+	return body, contentType, nil
+}
+
+func gsnewsResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		mediaType = strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0])
+	}
+	mediaType = strings.ToLower(strings.TrimSpace(mediaType))
+	if mediaType == "" {
+		return false
+	}
+	for _, invalid := range []string{"text/html", "application/xhtml+xml", "application/json", "text/xml", "application/xml"} {
+		if mediaType == invalid {
+			return false
+		}
+	}
+	probe := body
+	if len(probe) > 4096 {
+		probe = probe[:4096]
+	}
+	lowerProbe := bytes.ToLower(bytes.TrimSpace(probe))
+	for _, marker := range [][]byte{
+		[]byte("<!doctype html"), []byte("<html"), []byte("<head"), []byte("<body"),
+		[]byte("验证码"), []byte("安全验证"), []byte("captcha"), []byte("waf"),
+		[]byte("access denied"), []byte("just a moment"), []byte("cloudflare"),
+		[]byte("页面不存在"), []byte("404 not found"), []byte("请先登录"), []byte("请登录后"),
+		[]byte("请求已被阻断"),
+	} {
+		if bytes.Contains(lowerProbe, marker) {
+			return false
+		}
+	}
+
+	magic := gsnewsResourceMagic(body)
+	if image {
+		return gsnewsImageTypeMatchesMagic(mediaType, magic)
+	}
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf"):
+		return gsnewsBinaryContentTypeOK(mediaType, "pdf") && magic == "pdf"
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml"):
+		return gsnewsBinaryContentTypeOK(mediaType, "office-zip") && magic == "zip"
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt") || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint":
+		return gsnewsBinaryContentTypeOK(mediaType, "office-ole") && magic == "ole"
+	case strings.Contains(lowerName, ".zip") || strings.Contains(lowerName, ".rar") || strings.Contains(lowerName, ".7z") || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed":
+		return gsnewsBinaryContentTypeOK(mediaType, "archive") && (magic == "zip" || magic == "rar" || magic == "7z")
+	case strings.Contains(lowerName, ".rtf") || mediaType == "application/rtf" || mediaType == "text/rtf":
+		return gsnewsBinaryContentTypeOK(mediaType, "rtf") && magic == "rtf"
+	case strings.Contains(lowerName, ".txt") || strings.Contains(lowerName, ".csv") || strings.HasPrefix(mediaType, "text/"):
+		return true
+	default:
+		return magic != ""
+	}
+}
+
+func gsnewsBinaryContentTypeOK(mediaType, kind string) bool {
+	if mediaType == "application/octet-stream" || mediaType == "application/force-download" || mediaType == "application/download" {
+		return true
+	}
+	switch kind {
+	case "pdf":
+		return mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf")
+	case "office-zip":
+		return mediaType == "application/zip" || strings.Contains(mediaType, "officedocument") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml")
+	case "office-ole":
+		return mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint"
+	case "archive":
+		return mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed"
+	case "rtf":
+		return mediaType == "application/rtf" || mediaType == "text/rtf"
+	default:
+		return false
+	}
+}
+
+func gsnewsImageTypeMatchesMagic(mediaType, magic string) bool {
+	expected := map[string]string{
+		"image/jpeg": "jpeg", "image/jpg": "jpeg", "image/pjpeg": "jpeg",
+		"image/png": "png", "image/gif": "gif", "image/webp": "webp",
+		"image/bmp": "bmp", "image/tiff": "tiff", "image/svg+xml": "svg",
+	}[mediaType]
+	return expected != "" && magic == expected
+}
+
+func gsnewsResourceMagic(body []byte) string {
+	switch {
+	case bytes.HasPrefix(body, []byte("%PDF-")):
+		return "pdf"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x03, 0x04}) || bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x05, 0x06}) || bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x07, 0x08})):
+		return "zip"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}):
+		return "ole"
+	case len(body) >= 3 && bytes.Equal(body[:3], []byte{0xff, 0xd8, 0xff}):
+		return "jpeg"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
+		return "png"
+	case len(body) >= 6 && (bytes.Equal(body[:6], []byte("GIF87a")) || bytes.Equal(body[:6], []byte("GIF89a"))):
+		return "gif"
+	case len(body) >= 12 && bytes.Equal(body[:4], []byte("RIFF")) && bytes.Equal(body[8:12], []byte("WEBP")):
+		return "webp"
+	case len(body) >= 2 && bytes.Equal(body[:2], []byte("BM")):
+		return "bmp"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{'I', 'I', '*', 0}) || bytes.Equal(body[:4], []byte{'M', 'M', 0, '*'})):
+		return "tiff"
+	case len(body) >= 7 && bytes.Equal(body[:7], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x00}):
+		return "rar"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x01, 0x00}):
+		return "rar"
+	case len(body) >= 6 && bytes.Equal(body[:6], []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}):
+		return "7z"
+	}
+	trimmed := bytes.TrimSpace(bytes.TrimPrefix(body, []byte{0xef, 0xbb, 0xbf}))
+	if bytes.HasPrefix(trimmed, []byte("{\\rtf")) {
+		return "rtf"
+	}
+	probe := trimmed
+	if len(probe) > 4096 {
+		probe = probe[:4096]
+	}
+	lower := bytes.ToLower(probe)
+	if bytes.HasPrefix(lower, []byte("<svg")) || (bytes.HasPrefix(lower, []byte("<?xml")) && bytes.Contains(lower, []byte("<svg"))) {
+		return "svg"
+	}
+	return ""
+}
+
+func gsnewsSanitizeContentHTML(rawHTML, baseURL string, validImages, validAttachments map[string]bool) string {
+	if strings.TrimSpace(rawHTML) == "" {
+		return ""
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(`<div id="gsnews-content">` + rawHTML + `</div>`))
+	if err != nil {
+		return rawHTML
+	}
+	content := doc.Find("#gsnews-content").First()
+	content.Find("img").Each(func(_ int, image *goquery.Selection) {
+		var resolved string
+		for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			if value := gsnewsResourceURL(baseURL, image.AttrOr(attr, "")); value != "" {
+				resolved = value
+				break
+			}
+		}
+		if resolved == "" || !validImages[resolved] {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	content.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		raw := html.UnescapeString(strings.TrimSpace(link.AttrOr("href", "")))
+		if bodaIsPseudoResourceHref(raw) {
+			link.RemoveAttr("href")
+			link.RemoveAttr("download")
+			return
+		}
+		resolved := cleanURL(resolveURL(baseURL, raw))
+		if bodaLooksLikeAttachmentLink(link, raw) {
+			if !validAttachments[resolved] {
+				link.RemoveAttr("href")
+				link.RemoveAttr("download")
+				return
+			}
+		}
+		if parsed, parseErr := url.Parse(resolved); parseErr != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+			link.RemoveAttr("href")
+			return
+		}
+		link.SetAttr("href", resolved)
+	})
+	if htmlText, err := content.Html(); err == nil {
+		return htmlText
+	}
+	return rawHTML
+}
+
+func gsnewsContentTextFromHTML(rawHTML string) string {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(`<div id="gsnews-content">` + rawHTML + `</div>`))
+	if err != nil {
+		return ""
+	}
+	return extractBodaContentText(doc.Find("#gsnews-content").First())
 }
 
 func resolveGsnewsContentHTML(article *model.Article, baseURL string) {

@@ -1,8 +1,12 @@
 package scraper
 
 import (
+	"bytes"
 	"fmt"
 	stdhtml "html"
+	"io"
+	"mime"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -32,18 +36,19 @@ var dagSubPages = []string{
 	"party-branch",
 	"notices",
 	"news",
-	"links",
 	"hotline",
 	"service-guide",
 	"archives",
 	"exhibition-video",
 	"online-exhibition",
 	"downloads",
+	"lecture-appointment",
 }
 
 type dagRoute struct {
-	ID   string
-	Name string
+	ID                string
+	Name              string
+	DirectArticlePath string
 }
 
 var dagRoutes = []dagRoute{
@@ -57,13 +62,13 @@ var dagRoutes = []dagRoute{
 	{ID: "1191", Name: "支部建设"},
 	{ID: "1211", Name: "通知公告"},
 	{ID: "1221", Name: "新闻动态"},
-	{ID: "1251", Name: "友情链接"},
 	{ID: "1271", Name: "服务热线"},
 	{ID: "1281", Name: "服务指南"},
 	{ID: "1451", Name: "珍档荟萃"},
 	{ID: "1461", Name: "专题展视频"},
 	{ID: "1481", Name: "线上专题展"},
 	{ID: "1051", Name: "下载专区"},
+	{ID: "1431", Name: "校史讲座预约", DirectArticlePath: "/info/1431/4811.htm"},
 }
 
 var dagRouteAliases = map[string]string{
@@ -77,14 +82,16 @@ var dagRouteAliases = map[string]string{
 	"1191": "1191", "party-branch": "1191", "zbjs": "1191", "支部建设": "1191", "djgz/zbjs": "1191",
 	"1211": "1211", "notices": "1211", "tzgg": "1211", "通知公告": "1211",
 	"1221": "1221", "news": "1221", "xwdt": "1221", "新闻动态": "1221",
-	"1251": "1251", "links": "1251", "yqlj": "1251", "友情链接": "1251",
 	"1271": "1271", "hotline": "1271", "fwrx": "1271", "服务热线": "1271",
 	"1281": "1281", "service-guide": "1281", "fwzn": "1281", "服务指南": "1281",
 	"1451": "1451", "archives": "1451", "zdjc": "1451", "珍档荟萃": "1451", "xswh/zdjc": "1451",
 	"1461": "1461", "exhibition-video": "1461", "ztzjsp": "1461", "专题展视频": "1461", "xswh/ztzjsp": "1461",
 	"1481": "1481", "online-exhibition": "1481", "xszp": "1481", "线上专题展": "1481", "xswh/xszp": "1481",
 	"1051": "1051", "downloads": "1051", "xzzq": "1051", "下载专区": "1051",
+	"1431": "1431", "lecture-appointment": "1431", "xszjyy": "1431", "校史讲座预约": "1431",
 }
+
+const dagMaxResourceBytes int64 = 32 << 20
 
 var (
 	dagArticlePathRE = regexp.MustCompile(`(?i)^/info/\d+/\d+\.(?:html?|shtml)$`)
@@ -141,6 +148,20 @@ func dagListPage(slug string, page int) ([]model.NewsItem, int, error) {
 		}
 		items, err := parseDagNews(body, baseURL)
 		return items, 1, err
+	}
+	if route.DirectArticlePath != "" {
+		if page != 1 {
+			return nil, 1, fmt.Errorf("dag: direct article route has no page %d", page)
+		}
+		articleURL := cleanURL(resolveURL(baseURL, route.DirectArticlePath))
+		item := model.NewsItem{
+			Title:    route.Name,
+			URL:      articleURL,
+			Type:     route.Name,
+			ParsedAt: time.Now(),
+		}
+		dagRememberListItem(item)
+		return []model.NewsItem{item}, 1, nil
 	}
 
 	listURL := dagColumnURL(baseURL, route.ID)
@@ -360,6 +381,9 @@ func parseDagNews(markup []byte, baseURL string) ([]model.NewsItem, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse dag list html: %w", err)
 	}
+	if reason := dagPageErrorKind(doc); reason != "" {
+		return nil, fmt.Errorf("dag: %s", reason)
+	}
 
 	var items []model.NewsItem
 	indexes := make(map[string]int)
@@ -445,9 +469,6 @@ func parseDagNews(markup []byte, baseURL string) ([]model.NewsItem, error) {
 	if len(items) == 0 {
 		if dagExplicitEmpty(doc) {
 			return []model.NewsItem{}, nil
-		}
-		if reason := dagPageErrorKind(doc); reason != "" {
-			return nil, fmt.Errorf("dag: %s", reason)
 		}
 		return nil, fmt.Errorf("dag: no article rows found")
 	}
@@ -556,17 +577,11 @@ func parseDagArticle(markup []byte, baseURL string) (*model.Article, error) {
 		return nil, err
 	}
 	article.Title = title
-	if article.Type == "" {
-		article.Type = dagArticleType(doc)
-	}
-
-	if article.Date == "" {
-		date, publishedAt := dagArticleDateFields(doc, title)
-		article.Date = date
-		if article.PublishedAt == "" {
-			article.PublishedAt = publishedAt
-		}
-	}
+	// The detail template frequently has no publication line.  Clear the
+	// generic parser's broad guesses first: dates in the body and dates in a
+	// headline (for example, a summer-duty period) are not publication dates.
+	article.Date, article.PublishedAt = dagArticleDateFields(doc, title)
+	article.Type = dagArticleType(doc)
 	normalizeArticlePublishedAt(article)
 	dagEnrichArticleResources(article, contentSel, baseURL)
 	return article, nil
@@ -608,7 +623,312 @@ func fetchDagArticle(articleURL string) (*model.Article, []byte, error) {
 		article.Type = dagArticleTypeForURL(articleURL)
 	}
 	normalizeArticlePublishedAt(article)
+	candidateImages := append([]string(nil), article.Images...)
+	candidateAttachments := append([]model.Attachment(nil), article.Attachments...)
+	article.Images = dagVerifyImages(candidateImages, baseURL, articleURL)
+	article.Attachments = dagVerifyAttachments(candidateAttachments, baseURL, articleURL)
+	article.ContentHTML = dagSanitizeContentHTML(article.ContentHTML, baseURL, candidateImages, candidateAttachments, article.Images, article.Attachments)
 	return article, body, nil
+}
+
+func dagVerifyImages(images []string, baseURL, referer string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool, len(images))
+	for _, raw := range images {
+		resolved := dagResourceURL(baseURL, raw)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, contentType, err := dagFetchResource(resolved, baseURL, referer, true)
+		if err != nil || !dagResourceBodyIsUsable(contentType, body, resolved, true) {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func dagVerifyAttachments(attachments []model.Attachment, baseURL, referer string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		resolved := dagResourceURL(baseURL, attachment.URL)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, contentType, err := dagFetchResource(resolved, baseURL, referer, false)
+		if err != nil || !dagResourceBodyIsUsable(contentType, body, attachment.Name+" "+resolved, false) {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func dagFetchResource(rawURL, baseURL, referer string, image bool) ([]byte, string, error) {
+	resolved := dagResourceURL(baseURL, rawURL)
+	if resolved == "" {
+		return nil, "", fmt.Errorf("dag: refusing invalid resource %q", rawURL)
+	}
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return nil, "", fmt.Errorf("dag: refusing non-HTTP resource %q", resolved)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("dag: create resource request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	if image {
+		req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+	} else {
+		req.Header.Set("Accept", "application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	}
+	if strings.TrimSpace(referer) != "" {
+		req.Header.Set("Referer", referer)
+	}
+	client := *defaultClient
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if scheme := strings.ToLower(next.URL.Scheme); scheme != "http" && scheme != "https" {
+			return fmt.Errorf("dag: refusing non-HTTP resource redirect")
+		}
+		if !dagURLAuthorityEqual(parsed, next.URL) {
+			return fmt.Errorf("dag: refusing cross-site resource redirect")
+		}
+		return nil
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("dag: fetch resource %s: %w", resolved, err)
+	}
+	defer response.Body.Close()
+	contentType := response.Header.Get("Content-Type")
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return nil, contentType, fmt.Errorf("dag: resource %s: HTTP %d", resolved, response.StatusCode)
+	}
+	if response.ContentLength > dagMaxResourceBytes {
+		return nil, contentType, fmt.Errorf("dag: resource %s exceeds %d bytes", resolved, dagMaxResourceBytes)
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, dagMaxResourceBytes+1))
+	if err != nil {
+		return nil, contentType, fmt.Errorf("dag: read resource %s: %w", resolved, err)
+	}
+	if int64(len(body)) > dagMaxResourceBytes {
+		return nil, contentType, fmt.Errorf("dag: resource %s exceeds %d bytes", resolved, dagMaxResourceBytes)
+	}
+	return body, contentType, nil
+}
+
+func dagURLAuthorityEqual(left, right *url.URL) bool {
+	if left == nil || right == nil {
+		return false
+	}
+	return strings.EqualFold(left.Host, right.Host)
+}
+
+func dagResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	if parsed, _, err := mime.ParseMediaType(contentType); err == nil && parsed != "" {
+		mediaType = strings.ToLower(parsed)
+	}
+	if mediaType == "" {
+		return false
+	}
+	for _, invalid := range []string{"text/html", "application/xhtml+xml", "application/json", "text/xml", "application/xml"} {
+		if mediaType == invalid {
+			return false
+		}
+	}
+	probe := body
+	if len(probe) > 4096 {
+		probe = probe[:4096]
+	}
+	lowerProbe := strings.ToLower(strings.TrimPrefix(strings.TrimSpace(string(probe)), "\ufeff"))
+	for _, marker := range []string{
+		"<!doctype html", "<html", "<head", "<body", "附件下载", "请输入验证码", "验证码下载附件",
+		"请先登录", "请登录后", "页面不存在", "404 not found", "access denied", "cloudflare",
+		"just a moment", "安全验证", "安全威胁", "请求已被阻断",
+	} {
+		if strings.Contains(lowerProbe, marker) {
+			return false
+		}
+	}
+
+	magic := dagResourceMagic(body)
+	if image {
+		return strings.HasPrefix(mediaType, "image/") && dagImageMediaMatchesMagic(mediaType, magic)
+	}
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf"):
+		return magic == "pdf"
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml"):
+		return magic == "zip"
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt") || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint":
+		return magic == "ole"
+	case strings.Contains(lowerName, ".zip") || strings.Contains(lowerName, ".rar") || strings.Contains(lowerName, ".7z") || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed":
+		return magic == "zip" || magic == "rar" || magic == "7z"
+	case strings.Contains(lowerName, ".txt") || strings.Contains(lowerName, ".csv"):
+		return mediaType == "text/plain" || mediaType == "text/csv" || mediaType == "application/octet-stream"
+	case mediaType == "text/plain" || mediaType == "text/csv" || mediaType == "text/tab-separated-values":
+		return true
+	default:
+		return magic != ""
+	}
+}
+
+func dagImageMediaMatchesMagic(mediaType, magic string) bool {
+	switch {
+	case strings.Contains(mediaType, "jpeg"):
+		return magic == "jpeg"
+	case strings.Contains(mediaType, "png"):
+		return magic == "png"
+	case strings.Contains(mediaType, "gif"):
+		return magic == "gif"
+	case strings.Contains(mediaType, "webp"):
+		return magic == "webp"
+	case strings.Contains(mediaType, "bmp"):
+		return magic == "bmp"
+	case strings.Contains(mediaType, "tiff"):
+		return magic == "tiff"
+	case strings.Contains(mediaType, "svg"):
+		return magic == "svg"
+	default:
+		return false
+	}
+}
+
+func dagResourceMagic(body []byte) string {
+	switch {
+	case bytes.HasPrefix(body, []byte("%PDF-")):
+		return "pdf"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x03, 0x04}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x05, 0x06}):
+		return "zip"
+	case len(body) >= 4 && bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x07, 0x08}):
+		return "zip"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}):
+		return "ole"
+	case len(body) >= 3 && bytes.Equal(body[:3], []byte{0xff, 0xd8, 0xff}):
+		return "jpeg"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
+		return "png"
+	case len(body) >= 6 && (bytes.Equal(body[:6], []byte("GIF87a")) || bytes.Equal(body[:6], []byte("GIF89a"))):
+		return "gif"
+	case len(body) >= 12 && bytes.Equal(body[:4], []byte("RIFF")) && bytes.Equal(body[8:12], []byte("WEBP")):
+		return "webp"
+	case len(body) >= 2 && bytes.Equal(body[:2], []byte("BM")):
+		return "bmp"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{'I', 'I', '*', 0}) || bytes.Equal(body[:4], []byte{'M', 'M', 0, '*'})):
+		return "tiff"
+	case len(body) >= 7 && bytes.Equal(body[:7], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x00}):
+		return "rar"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x01, 0x00}):
+		return "rar"
+	case len(body) >= 6 && bytes.Equal(body[:6], []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}):
+		return "7z"
+	}
+	trimmed := bytes.TrimSpace(bytes.TrimPrefix(body, []byte{0xef, 0xbb, 0xbf}))
+	if len(trimmed) > 0 {
+		probe := trimmed
+		if len(probe) > 4096 {
+			probe = probe[:4096]
+		}
+		if bytes.Contains(bytes.ToLower(probe), []byte("<svg")) {
+			return "svg"
+		}
+	}
+	return ""
+}
+
+func dagSanitizeContentHTML(rawHTML, baseURL string, candidateImages []string, candidateAttachments []model.Attachment, validImages []string, validAttachments []model.Attachment) string {
+	if strings.TrimSpace(rawHTML) == "" {
+		return rawHTML
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader("<div id=\"dag-content-root\">" + rawHTML + "</div>"))
+	if err != nil {
+		return rawHTML
+	}
+	root := doc.Find("#dag-content-root").First()
+	root.Find("script, style, noscript").Remove()
+	candidateImageSet := make(map[string]bool, len(candidateImages))
+	for _, image := range candidateImages {
+		if resolved := dagResourceURL(baseURL, image); resolved != "" {
+			candidateImageSet[resolved] = true
+		}
+	}
+	validImageSet := make(map[string]bool, len(validImages))
+	for _, image := range validImages {
+		if resolved := dagResourceURL(baseURL, image); resolved != "" {
+			validImageSet[resolved] = true
+		}
+	}
+	candidateAttachmentSet := make(map[string]bool, len(candidateAttachments))
+	for _, attachment := range candidateAttachments {
+		if resolved := dagResourceURL(baseURL, attachment.URL); resolved != "" {
+			candidateAttachmentSet[resolved] = true
+		}
+	}
+	validAttachmentSet := make(map[string]bool, len(validAttachments))
+	for _, attachment := range validAttachments {
+		if resolved := dagResourceURL(baseURL, attachment.URL); resolved != "" {
+			validAttachmentSet[resolved] = true
+		}
+	}
+	root.Find("img").Each(func(_ int, image *goquery.Selection) {
+		var resolved string
+		for _, attr := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			if raw := strings.TrimSpace(image.AttrOr(attr, "")); raw != "" {
+				resolved = dagResourceURL(baseURL, raw)
+				if resolved != "" {
+					break
+				}
+			}
+		}
+		if resolved == "" || !candidateImageSet[resolved] || !validImageSet[resolved] {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "data-lazy-src", "orisrc", "vsbhref", "vurl"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	root.Find("a[href]").Each(func(_ int, link *goquery.Selection) {
+		href := stdhtml.UnescapeString(strings.TrimSpace(link.AttrOr("href", "")))
+		if bodaIsPseudoResourceHref(href) {
+			link.RemoveAttr("href")
+			return
+		}
+		resolved := dagResourceURL(baseURL, href)
+		if resolved == "" && dagIsAttachmentLink(link, href) {
+			link.RemoveAttr("href")
+			return
+		}
+		if resolved != "" && candidateAttachmentSet[resolved] {
+			if !validAttachmentSet[resolved] {
+				link.RemoveAttr("href")
+				return
+			}
+			link.SetAttr("href", resolved)
+			return
+		}
+		if resolved != "" {
+			link.SetAttr("href", resolved)
+		}
+	})
+	if html, err := root.Html(); err == nil {
+		return html
+	}
+	return rawHTML
 }
 
 func dagDetailTitle(doc *goquery.Document) string {
@@ -623,11 +943,8 @@ func dagDetailTitle(doc *goquery.Document) string {
 func dagArticleContent(doc *goquery.Document) *goquery.Selection {
 	for _, selector := range []string{
 		"#vsb_content_501 .v_news_content",
+		"#vsb_content .v_news_content",
 		".v_news_content",
-		"#vsb_content_501",
-		"[id^='vsb_content']",
-		".news-content-wrapper",
-		".content-main",
 	} {
 		if content := doc.Find(selector).First(); content.Length() > 0 {
 			return content
@@ -666,15 +983,13 @@ func dagArticleTypeForURL(articleURL string) string {
 	return route.Name
 }
 
-func dagArticleDateFields(doc *goquery.Document, title string) (string, string) {
+func dagArticleDateFields(doc *goquery.Document, _ string) (string, string) {
 	for _, selector := range []string{
 		`meta[name="date"]`,
 		`meta[name="publishdate"]`,
 		`meta[name="publishDate"]`,
 		`meta[name="publish_date"]`,
 		`meta[property="article:published_time"]`,
-		"time[datetime]",
-		"[data-date]",
 	} {
 		selection := doc.Find(selector).First()
 		if selection.Length() == 0 {
@@ -692,14 +1007,32 @@ func dagArticleDateFields(doc *goquery.Document, title string) (string, string) 
 		}
 	}
 
-	for _, candidate := range []string{
-		strings.TrimSpace(doc.Find(".article_title").First().Text()),
-		title,
-		doc.Find(`meta[name="pageTitle"]`).AttrOr("content", ""),
-		doc.Find("title").First().Text(),
+	// Only inspect explicit metadata containers outside the article body.  A
+	// time/date element inside .v_news_content is usually an event, deadline,
+	// or duty period and must never become the publication timestamp.
+	for _, selector := range []string{
+		".news_source", ".article-source", ".article_source", ".article-meta",
+		".article_meta", ".article-info", ".article_info", ".article-date",
+		".article_date", ".source", "time[datetime]", "[data-date]",
 	} {
-		if date := dagDateFromText(candidate); date != "" {
-			return date, ""
+		var date, publishedAt string
+		doc.Find(selector).Each(func(_ int, selection *goquery.Selection) {
+			if date != "" || selection.Closest(".v_news_content").Length() > 0 {
+				return
+			}
+			for _, value := range []string{
+				selection.AttrOr("datetime", ""),
+				selection.AttrOr("data-date", ""),
+				selection.Text(),
+			} {
+				date, publishedAt = dagDateFields(value)
+				if date != "" {
+					return
+				}
+			}
+		})
+		if date != "" {
+			return date, publishedAt
 		}
 	}
 	return "", ""
@@ -726,10 +1059,15 @@ func dagEnrichArticleResources(article *model.Article, contentSel *goquery.Selec
 		return
 	}
 
+	validImages := make([]string, 0, len(article.Images))
 	imageSeen := make(map[string]bool, len(article.Images))
 	for _, image := range article.Images {
-		imageSeen[image] = true
+		if resolved := dagResourceURL(baseURL, image); resolved != "" && !imageSeen[resolved] {
+			imageSeen[resolved] = true
+			validImages = append(validImages, resolved)
+		}
 	}
+	article.Images = validImages
 	contentSel.Find("img").Each(func(_ int, sel *goquery.Selection) {
 		src := strings.TrimSpace(sel.AttrOr("src", ""))
 		if src == "" {
@@ -741,7 +1079,13 @@ func dagEnrichArticleResources(article *model.Article, contentSel *goquery.Selec
 		if src == "" {
 			return
 		}
-		resolved := resolveURL(baseURL, src)
+		resolved := dagResourceURL(baseURL, src)
+		if resolved == "" {
+			sel.RemoveAttr("src")
+			sel.RemoveAttr("data-src")
+			sel.RemoveAttr("orisrc")
+			return
+		}
 		if !imageSeen[resolved] {
 			article.Images = append(article.Images, resolved)
 			imageSeen[resolved] = true
@@ -750,16 +1094,23 @@ func dagEnrichArticleResources(article *model.Article, contentSel *goquery.Selec
 	})
 
 	attachments := make(map[string]bool, len(article.Attachments))
+	validAttachments := make([]model.Attachment, 0, len(article.Attachments))
 	for _, attachment := range article.Attachments {
-		attachments[attachment.URL] = true
+		if resolved := dagResourceURL(baseURL, attachment.URL); resolved != "" && !attachments[resolved] {
+			attachment.URL = resolved
+			attachments[resolved] = true
+			validAttachments = append(validAttachments, attachment)
+		}
 	}
+	article.Attachments = validAttachments
 	contentSel.Find("a[href]").Each(func(_ int, sel *goquery.Selection) {
 		href := strings.TrimSpace(sel.AttrOr("href", ""))
 		if href == "" || !dagIsAttachmentLink(sel, href) {
 			return
 		}
-		resolved := resolveURL(baseURL, href)
-		if !dagSameHostURL(baseURL, resolved) {
+		resolved := dagResourceURL(baseURL, href)
+		if resolved == "" {
+			sel.RemoveAttr("href")
 			return
 		}
 		name := dagAttachmentName(sel, resolved)
@@ -780,6 +1131,31 @@ func dagEnrichArticleResources(article *model.Article, contentSel *goquery.Selec
 	if contentHTML, err := contentSel.Html(); err == nil {
 		article.ContentHTML = contentHTML
 	}
+}
+
+func dagResourceURL(baseURL, raw string) string {
+	raw = stdhtml.UnescapeString(strings.TrimSpace(raw))
+	if raw == "" || bodaIsPseudoResourceHref(raw) {
+		return ""
+	}
+	resolved := bodaResourceURL(baseURL, raw)
+	if resolved == "" || !dagSameHostURL(baseURL, resolved) {
+		return ""
+	}
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Host == "" {
+		return ""
+	}
+	lower := strings.ToLower(parsed.Path + "?" + parsed.RawQuery)
+	for _, marker := range []string{
+		"/captcha", "/verify", "/validate", "/login", "/signin", "/placeholder",
+		"/transparent", "/spacer", "/blank", "/loading", "/pixel.gif",
+	} {
+		if strings.Contains(lower, marker) {
+			return ""
+		}
+	}
+	return cleanURL(parsed.String())
 }
 
 func dagContentText(content *goquery.Selection) string {
@@ -859,11 +1235,19 @@ func dagSameHostURL(baseURL, candidate string) bool {
 func dagPageErrorKind(doc *goquery.Document) string {
 	title := strings.ToLower(strings.TrimSpace(doc.Find("title").First().Text()))
 	body := strings.ToLower(strings.Join(strings.Fields(doc.Find("body").Text()), " "))
-	if strings.Contains(title, "验证码") || strings.Contains(body, "请输入验证码") || strings.Contains(body, "captcha") {
+	if strings.Contains(title, "验证码") || strings.Contains(body, "请输入验证码") || strings.Contains(body, "captcha") || strings.Contains(body, "安全验证") {
 		return "captcha page"
 	}
-	if strings.Contains(title, "404") || strings.Contains(title, "错误") || strings.Contains(body, "页面不存在") || strings.Contains(body, "请求错误") {
+	for _, marker := range []string{"cloudflare", "just a moment", "access denied", "forbidden", "安全威胁", "请求已被阻断"} {
+		if strings.Contains(title, marker) || strings.Contains(body, marker) {
+			return "waf page"
+		}
+	}
+	if strings.Contains(title, "404") || strings.Contains(title, "错误") || strings.Contains(body, "页面不存在") || strings.Contains(body, "请求错误") || strings.Contains(body, "404 not found") {
 		return "error page"
+	}
+	if doc.Find("#app, #root").Length() > 0 && doc.Find(".v_news_content, .common-ul-right, .articlelist3_tr").Length() == 0 {
+		return "SPA shell"
 	}
 	return ""
 }

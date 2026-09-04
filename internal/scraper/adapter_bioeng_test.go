@@ -1,14 +1,23 @@
 package scraper
 
 import (
+	"os"
 	"reflect"
 	"strings"
 	"testing"
 )
 
+func loadBioengTestHTML(filename string) []byte {
+	data, err := os.ReadFile("testdata/" + filename)
+	if err != nil {
+		return nil
+	}
+	return data
+}
+
 func TestBioengAdapterRegistered(t *testing.T) {
 	site := AllSites["bioeng"]
-	if site == nil || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil {
+	if site == nil || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil {
 		t.Fatal("bioeng adapter hooks are not registered")
 	}
 	want := []string{
@@ -24,6 +33,7 @@ func TestBioengAdapterRegistered(t *testing.T) {
 		"rcpy/bkspy",
 		"rcpy/bkspy/zyjs",
 		"rcpy/bkspy/tzgg",
+		"rcpy/bkspy/gcrz",
 		"rcpy/yjspy",
 		"rcpy/zwhzbx",
 		"xsgz",
@@ -42,6 +52,24 @@ func TestBioengAdapterRegistered(t *testing.T) {
 	}
 }
 
+func TestBioengTotalPagesReadsLogicalLabelsAndRecognizesEmptyLists(t *testing.T) {
+	if got := bioengTotalPagesFromHTML(loadBioengTestHTML("bioeng_pagination.html")); got != 47 {
+		t.Fatalf("bioengTotalPagesFromHTML() = %d, want logical total 47", got)
+	}
+	if got := bioengTotalPagesFromHTML(loadBioengTestHTML("bioeng_empty_list.html")); got != 1 {
+		t.Fatalf("empty bioeng list total = %d, want 1", got)
+	}
+	if items, err := parseAdapter_bioengList(loadBioengTestHTML("bioeng_empty_list.html"), "https://bioeng.swjtu.edu.cn"); err != nil || len(items) != 0 {
+		t.Fatalf("empty bioeng list = %#v, %v; want an accepted empty list", items, err)
+	}
+	if got := bioengTotalPagesFromHTML([]byte(`<html><title>请完成验证</title><body>请输入验证码</body></html>`)); got != 0 {
+		t.Fatalf("verification page total = %d, want 0", got)
+	}
+	if got := bioengTotalPagesFromHTML([]byte(`<html><body><div class="content">学院简介</div></body></html>`)); got != 0 {
+		t.Fatalf("static page total = %d, want 0", got)
+	}
+}
+
 func TestBioengPageURLUsesReverseGeneratedPages(t *testing.T) {
 	base := "https://bioeng.swjtu.edu.cn"
 	tests := []struct {
@@ -57,6 +85,13 @@ func TestBioengPageURLUsesReverseGeneratedPages(t *testing.T) {
 		{name: "last", slug: "xydt", page: 47, totalPages: 47, want: base + "/xydt/1.htm"},
 		{name: "nested second", slug: "rcpy/bkspy/tzgg", page: 2, totalPages: 24, want: base + "/rcpy/bkspy/tzgg/23.htm"},
 		{name: "nested last", slug: "rcpy/bkspy/tzgg", page: 24, totalPages: 24, want: base + "/rcpy/bkspy/tzgg/1.htm"},
+		{name: "single-page empty tab", slug: "rcpy/bkspy/gcrz", page: 1, totalPages: 1, want: base + "/rcpy/bkspy/gcrz.htm"},
+	}
+	if got := bioengPageURL(base, "xydt", 1, 47, "htm"); got != base+"/xydt.htm" {
+		t.Fatalf("extension without dot = %q, want %q", got, base+"/xydt.htm")
+	}
+	if got := bioengPageURL(base, "xydt", 1, 47, ""); got != base+"/xydt.htm" {
+		t.Fatalf("empty extension = %q, want %q", got, base+"/xydt.htm")
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -83,7 +118,7 @@ func TestBioengPageURLUsesReverseGeneratedPages(t *testing.T) {
 }
 
 func TestBioengHomepageParsesEveryVisibleNewsPanelAndExcludesCarousel(t *testing.T) {
-	html := loadTestHTML("bioeng_home.html")
+	html := loadBioengTestHTML("bioeng_home.html")
 	items, err := parseAdapter_bioengList(html, "https://bioeng.swjtu.edu.cn")
 	if err != nil {
 		t.Fatal(err)
@@ -123,7 +158,7 @@ func TestBioengHomepageParsesEveryVisibleNewsPanelAndExcludesCarousel(t *testing
 }
 
 func TestBioengListPrefersHeadlineLinkAndKeepsType(t *testing.T) {
-	html := loadTestHTML("bioeng_list.html")
+	html := loadBioengTestHTML("bioeng_list.html")
 	items, err := parseAdapter_bioengList(html, "https://bioeng.swjtu.edu.cn")
 	if err != nil {
 		t.Fatal(err)
@@ -144,6 +179,19 @@ func TestBioengListPrefersHeadlineLinkAndKeepsType(t *testing.T) {
 		if strings.Contains(item.Title, "头部") || strings.Contains(item.Title, "相关") {
 			t.Errorf("non-row link leaked into list: %+v", item)
 		}
+	}
+}
+
+func TestBioengListUsesRowTagWhenItDiffersFromPageHeading(t *testing.T) {
+	html := []byte(`<html><body><div class="main_right"><div class="current"><h3>通知公告</h3></div>
+<div class="content"><dl><dt><a href="/info/1019/20846.htm">本科生培养通知</a></dt>
+<dd><span class="spp"><a href="bkspy.htm">[本科生培养]</a></span><em>2026-07-13</em></dd></dl></div></div></body></html>`)
+	items, err := parseAdapter_bioengList(html, "https://bioeng.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].Type != "本科生培养" {
+		t.Fatalf("row type = %#v, want 本科生培养", items)
 	}
 }
 
@@ -169,7 +217,7 @@ func TestBioengListParsesLegacyConlistCommMenus(t *testing.T) {
 }
 
 func TestBioengArticleParsesSourceBodyTypeAndExternalAttachments(t *testing.T) {
-	html := loadTestHTML("bioeng_article.html")
+	html := loadBioengTestHTML("bioeng_article.html")
 	article, err := parseAdapter_bioengArticle(html, "https://bioeng.swjtu.edu.cn")
 	if err != nil {
 		t.Fatal(err)
@@ -187,11 +235,29 @@ func TestBioengArticleParsesSourceBodyTypeAndExternalAttachments(t *testing.T) {
 	if article.Content != wantContent {
 		t.Fatalf("content = %q, want %q", article.Content, wantContent)
 	}
-	if strings.Contains(article.Content, "附件1：设备清单.xlsx") {
+	if strings.Contains(article.Content, "附件1：综合素质评价办法.pdf") {
 		t.Fatal("attachment outside body was mixed into article content")
 	}
-	if len(article.Attachments) != 1 || article.Attachments[0].Name != "附件1：设备清单.xlsx" || article.Attachments[0].URL != "https://bioeng.swjtu.edu.cn/system/_content/download.jsp?urltype=news.DownloadAttachUrl&owner=1&wbfileid=ABC123" {
+	if !strings.Contains(article.ContentHTML, "第二段正文，说明设备预约和使用要求") || strings.Contains(article.ContentHTML, "综合素质评价办法.pdf") {
+		t.Fatalf("content HTML boundary is wrong: %q", article.ContentHTML)
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].Name != "附件1：综合素质评价办法.pdf" || article.Attachments[0].URL != "https://bioeng.swjtu.edu.cn/shengmingkexueyugongchengxueyuanbenkeshengzonghesuzhipingjiabanfa_2024nian_xiuding.pdf" {
 		t.Fatalf("unexpected attachments: %#v", article.Attachments)
+	}
+}
+
+func TestBioengResourceFiltersRejectPseudoLinksAndPlaceholders(t *testing.T) {
+	if _, ok := bioengAttachmentURL("https://bioeng.swjtu.edu.cn", "/system/_content/download.jsp?urltype=news.DownloadAttachUrl&wbfileid=ABC", "附件.docx"); ok {
+		t.Fatal("unverified CMS download endpoint was accepted as a file")
+	}
+	if _, ok := bioengAttachmentURL("https://bioeng.swjtu.edu.cn", "javascript:void(0)", "附件.pdf"); ok {
+		t.Fatal("javascript attachment link was accepted")
+	}
+	if _, ok := bioengImageURL("https://bioeng.swjtu.edu.cn", "/dfiles/images/code.png"); ok {
+		t.Fatal("verification image was accepted as article media")
+	}
+	if got, ok := bioengImageURL("https://bioeng.swjtu.edu.cn", "/__local/article/figure.png"); !ok || got != "https://bioeng.swjtu.edu.cn/__local/article/figure.png" {
+		t.Fatalf("valid image URL = %q, %v", got, ok)
 	}
 }
 

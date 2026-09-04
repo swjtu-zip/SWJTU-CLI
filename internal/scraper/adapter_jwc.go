@@ -1,9 +1,11 @@
 package scraper
 
 import (
+	"bytes"
 	"fmt"
 	"html"
 	"io"
+	"mime"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -166,7 +168,7 @@ var jwcFeedRoutes = []jwcFeedRoute{
 
 var (
 	jwcPageParamNames = []string{
-		"currentPage", "pageNum", "pageNo", "page", "pagenum",
+		"jumpPage", "currentPage", "pageNum", "pageNo", "page", "pagenum",
 		"pageIndex", "pageNumber", "nowPage", "currPage", "curPage",
 	}
 	jwcPaginationRe = regexp.MustCompile(`共有记录[^0-9]{0,12}(\d+)[^0-9]{0,12}条.*?当前第[^0-9]{0,12}(\d+)[^0-9]{0,12}页.*?(\d+)[[:space:]]*条[[:space:]]*/[[:space:]]*页.*?共[^0-9]{0,12}(\d+)[^0-9]{0,12}页`)
@@ -236,7 +238,7 @@ func jwcListURL(baseURL, slug string, page int, pageParam string) (string, error
 	}
 	if page > 1 {
 		if pageParam == "" {
-			pageParam = jwcPageParamNames[0]
+			pageParam = "jumpPage"
 		}
 		query.Set(pageParam, strconv.Itoa(page))
 	}
@@ -250,15 +252,26 @@ func jwcListURL(baseURL, slug string, page int, pageParam string) (string, error
 // “当前第 N 页” equals the requested page prevents silently collecting page 1
 // repeatedly under an ignored query parameter.
 func jwcListPage(slug string, page int) ([]model.NewsItem, int, error) {
+	return jwcListPageWithFetcher(jwcCanonicalBaseURL, slug, page, jwcFetchHTML)
+}
+
+// jwcListPageWithFetcher contains the deterministic pagination checks used by
+// the production adapter and by fixture-backed tests. Keeping the fetcher
+// injectable makes it possible to exercise first/middle/last/out-of-range
+// pages without turning the unit suite into a live-site dependency.
+func jwcListPageWithFetcher(baseURL, slug string, page int, fetcher func(string) ([]byte, error)) ([]model.NewsItem, int, error) {
+	if fetcher == nil {
+		return nil, 0, fmt.Errorf("jwc: nil HTML fetcher")
+	}
 	route, ok := jwcFindRoute(slug)
 	if !ok {
 		return nil, 0, fmt.Errorf("jwc: %q is not a registered article feed", slug)
 	}
-	firstURL, err := jwcListURL(jwcCanonicalBaseURL, route.slug, 1, "")
+	firstURL, err := jwcListURL(baseURL, route.slug, 1, "")
 	if err != nil {
 		return nil, 0, err
 	}
-	firstBody, err := jwcFetchHTML(firstURL)
+	firstBody, err := fetcher(firstURL)
 	if err != nil {
 		return nil, 0, fmt.Errorf("jwc: fetch %s: %w", route.slug, err)
 	}
@@ -266,7 +279,7 @@ func jwcListPage(slug string, page int) ([]model.NewsItem, int, error) {
 	if err != nil {
 		return nil, 0, fmt.Errorf("jwc: %s first page: %w", route.slug, err)
 	}
-	firstItems, err := parseAdapter_jwcList(firstBody, jwcCanonicalBaseURL)
+	firstItems, err := parseAdapter_jwcList(firstBody, baseURL)
 	if err != nil {
 		return nil, 0, fmt.Errorf("jwc: %s first page: %w", route.slug, err)
 	}
@@ -289,12 +302,12 @@ func jwcListPage(slug string, page int) ([]model.NewsItem, int, error) {
 	}
 	var lastErr error
 	for _, pageParam := range candidates {
-		pageURL, urlErr := jwcListURL(jwcCanonicalBaseURL, route.slug, page, pageParam)
+		pageURL, urlErr := jwcListURL(baseURL, route.slug, page, pageParam)
 		if urlErr != nil {
 			lastErr = urlErr
 			continue
 		}
-		body, fetchErr := jwcFetchHTML(pageURL)
+		body, fetchErr := fetcher(pageURL)
 		if fetchErr != nil {
 			lastErr = fetchErr
 			continue
@@ -308,7 +321,7 @@ func jwcListPage(slug string, page int) ([]model.NewsItem, int, error) {
 			lastErr = fmt.Errorf("server returned logical page %d for %s=%d", info.current, pageParam, page)
 			continue
 		}
-		items, parseErr := parseAdapter_jwcList(body, jwcCanonicalBaseURL)
+		items, parseErr := parseAdapter_jwcList(body, baseURL)
 		if parseErr != nil {
 			return nil, info.totalPages, fmt.Errorf("jwc: %s page %d: %w", route.slug, page, parseErr)
 		}
@@ -367,6 +380,22 @@ func jwcPageParamFromHTML(raw []byte, page int) string {
 				found = name
 				return false
 			}
+		}
+		return true
+	})
+	if found != "" {
+		return found
+	}
+	// The live VATUU template submits the selected option from a form field;
+	// its javascript:gotoPage(N) links contain no query string to inspect.
+	doc.Find("select[name]").EachWithBreak(func(_ int, selectBox *goquery.Selection) bool {
+		name := strings.TrimSpace(selectBox.AttrOr("name", ""))
+		if !jwcContainsString(jwcPageParamNames, name) {
+			return true
+		}
+		if selectBox.Find("option[value=\""+wanted+"\"]").Length() > 0 {
+			found = name
+			return false
 		}
 		return true
 	})
@@ -473,18 +502,18 @@ func jwcListRow(anchor *goquery.Selection, baseURL string) *goquery.Selection {
 	var fallback *goquery.Selection
 	parent := anchor.Parent()
 	for depth := 0; parent != nil && parent.Length() > 0 && depth < 8; depth++ {
-		count := 0
+		articleURLs := make(map[string]bool)
 		parent.Find("a[href]").Each(func(_ int, candidate *goquery.Selection) {
-			if _, ok := jwcArticleURL(baseURL, candidate.AttrOr("href", "")); ok {
-				count++
+			if fullURL, ok := jwcArticleURL(baseURL, candidate.AttrOr("href", "")); ok {
+				articleURLs[fullURL] = true
 			}
 		})
-		if count == 1 {
+		if len(articleURLs) == 1 {
 			if fallback == nil {
 				fallback = parent
 			}
 			classes := strings.ToLower(parent.AttrOr("class", ""))
-			if parent.Is("li, article") || strings.Contains(classes, "item") || strings.Contains(classes, "news") || strings.Contains(classes, "list") || strings.Contains(classes, "row") {
+			if parent.Is("li, article") || strings.Contains(classes, "item") || strings.Contains(classes, "news") || strings.Contains(classes, "list") || strings.Contains(classes, "row") || strings.Contains(classes, "result") {
 				return parent
 			}
 		}
@@ -636,7 +665,7 @@ func parseAdapter_jwcArticle(raw []byte, baseURL string) (*model.Article, error)
 	if err != nil {
 		return nil, fmt.Errorf("jwc: parse article HTML: %w", err)
 	}
-	titleSel, title := jwcArticleTitle(doc)
+	_, title := jwcArticleTitle(doc)
 	if !jwcValidTitle(title) || strings.Contains(strings.ToLower(title), "vatuu") {
 		return nil, fmt.Errorf("jwc: article has no real title")
 	}
@@ -650,14 +679,14 @@ func parseAdapter_jwcArticle(raw []byte, baseURL string) (*model.Article, error)
 	}
 
 	article := &model.Article{Title: title, Content: contentText}
-	jwcApplyArticleMeta(doc, article, titleSel, content)
+	jwcApplyArticleMeta(doc, article)
 	jwcAppendImages(article, content, baseURL)
 	jwcAppendAttachments(article, doc, content, baseURL)
 	jwcSanitizeContentLinks(article, content, baseURL)
 	if htmlContent, htmlErr := content.Html(); htmlErr == nil {
 		article.ContentHTML = htmlContent
 	}
-	normalizeArticlePublishedAt(article)
+	jwcNormalizeArticleDate(article)
 	if article.Date == "" {
 		return nil, fmt.Errorf("jwc: article %q has no publication date", article.Title)
 	}
@@ -669,6 +698,7 @@ func parseAdapter_jwcArticle(raw []byte, baseURL string) (*model.Article, error)
 
 func jwcArticleTitle(doc *goquery.Document) (*goquery.Selection, string) {
 	for _, selector := range []string{
+		".news-content > h3.title", ".news-content h3.title", ".news-content .title",
 		"h1.news_tit", ".news_tit", ".news-title", ".deta-tt",
 		".art-tit h1", ".art-tit h2", ".cont-tit h1", ".cont-tit h2",
 		".article-title", ".detail-title", "#newsTitle", "h1",
@@ -687,16 +717,21 @@ func jwcArticleTitle(doc *goquery.Document) (*goquery.Selection, string) {
 			return doc.Find(selector).First(), value
 		}
 	}
-	value := stripSiteSuffix(jwcCleanText(doc.Find("title").First().Text()))
-	return doc.Find("title").First(), value
+	return nil, ""
 }
 
 func jwcArticleContent(doc *goquery.Document) *goquery.Selection {
 	selectors := []string{
+		// Current VATUU detail pages use the first two selectors. The vsb
+		// selectors retain compatibility with the older template used by
+		// existing article fixtures; broad .content fallbacks are omitted so
+		// navigation/footer shells cannot become an article body.
+		".news-content > .content-main", ".news-content .content-main",
+		".leftNewsCont .content-main", ".content-main",
 		"#vsb_content_501 .v_news_content", ".v_news_content", "#vsb_content_501",
 		".news-content-wrapper", ".news_content", ".news-content", ".newsContent",
 		".article-content", ".article_content", ".detail-content", ".detail_content",
-		".content-main", "#newsContent", ".newsDetail", ".detail .content", ".content",
+		"#newsContent", ".newsDetail", ".detail .content",
 	}
 	for _, selector := range selectors {
 		found := doc.Find(selector).First()
@@ -728,44 +763,60 @@ func jwcContentText(content *goquery.Selection) string {
 	return jwcCleanText(clone.Text())
 }
 
-func jwcApplyArticleMeta(doc *goquery.Document, article *model.Article, titleSel, content *goquery.Selection) {
-	metaText := make([]string, 0, 8)
-	for _, selector := range []string{".news_source", ".news-source", ".news_info", ".newsInfo", ".article-meta", ".meta", ".tips", ".deta-fun", ".breadcrumb", ".position"} {
-		doc.Find(selector).Each(func(_ int, found *goquery.Selection) {
-			if text := flattenedText(found); text != "" {
-				metaText = append(metaText, text)
-			}
-		})
+func jwcApplyArticleMeta(doc *goquery.Document, article *model.Article) {
+	if doc == nil || article == nil {
+		return
 	}
-	metadata := strings.Join(metaText, " ")
-	if metadata != "" {
-		if match := jwcSourceRe.FindStringSubmatch(metadata); match != nil {
-			article.Source = jwcTrimMetaValue(match[1])
+	// The live template puts all publication fields in one fixed bar directly
+	// below .news-content .title. Read only that bar: the body contains many
+	// activity/deadline/meeting dates which are not publication metadata.
+	var metadataSel *goquery.Selection
+	for _, selector := range []string{
+		".news-content > .news-top-bar", ".news-content .news-top-bar",
+		".news_source", ".news-source",
+	} {
+		if found := doc.Find(selector).First(); found.Length() > 0 {
+			metadataSel = found
+			break
 		}
-		if match := jwcTypeRe.FindStringSubmatch(metadata); match != nil {
-			article.Type = jwcCleanType(jwcTrimMetaValue(match[1]))
-		}
-		if date, precise := jwcDateValues(metadata); date != "" {
-			article.Date = date
+	}
+	if metadataSel == nil || metadataSel.Length() == 0 {
+		return
+	}
+	metadata := flattenedText(metadataSel)
+	if metadata == "" {
+		return
+	}
+	if match := jwcSourceRe.FindStringSubmatch(metadata); match != nil {
+		article.Source = jwcTrimMetaValue(match[1])
+	}
+	if match := jwcTypeRe.FindStringSubmatch(metadata); match != nil {
+		article.Type = jwcCleanType(jwcTrimMetaValue(match[1]))
+	}
+	if date, precise := jwcDateValues(metadata); date != "" {
+		article.Date = date
+		article.PublishedAt = precise
+	}
+}
+
+// jwcNormalizeArticleDate deliberately does not derive PublishedAt from Date.
+// A date-only source must remain date-only instead of being silently turned
+// into midnight, while a source timestamp keeps the seconds exposed by VATUU.
+func jwcNormalizeArticleDate(article *model.Article) {
+	if article == nil {
+		return
+	}
+	if article.PublishedAt != "" {
+		if precise := normalizePublishedAt(article.PublishedAt); publishedAtHasClock(precise) {
 			article.PublishedAt = precise
+		} else {
+			article.PublishedAt = ""
 		}
 	}
-	if article.Type == "" {
-		article.Type = jwcTypeFromScope(doc.Find(".news_source, .news_info, .newsInfo, .article-meta, .meta, .breadcrumb, .position").First())
-	}
-	// Keep the shared label-zone fallback for minor VATUU template variants,
-	// but never let it inspect the body as a publication-date source.
-	fillGenericMeta(doc, article, titleSel, content)
-	if article.Date == "" {
-		if date, precise := jwcDateValues(metadata); date != "" {
-			article.Date = date
-			article.PublishedAt = precise
-		}
-	}
-	if article.Type == "" {
-		if match := jwcTypeRe.FindStringSubmatch(flattenedText(doc.Find("body"))); match != nil {
-			article.Type = jwcCleanType(jwcTrimMetaValue(match[1]))
-		}
+	if date, _ := jwcDateValues(article.Date); date != "" {
+		article.Date = date
+	} else if article.Date == "" && publishedAtHasClock(article.PublishedAt) {
+		article.Date = article.PublishedAt[:10]
 	}
 }
 
@@ -782,7 +833,7 @@ func jwcAppendImages(article *model.Article, content *goquery.Selection, baseURL
 		if src == "" || strings.HasPrefix(strings.ToLower(src), "data:") {
 			return
 		}
-		resolved := cleanURL(resolveURL(baseURL, html.UnescapeString(src)))
+		resolved := jwcResourceURL(baseURL, src)
 		if resolved == "" || seen[resolved] {
 			return
 		}
@@ -826,10 +877,8 @@ func jwcAppendAttachments(article *model.Article, doc *goquery.Document, content
 }
 
 // jwcSanitizeContentLinks keeps article-local attachment links in the
-// archived HTML, while removing external links and local HTML shells. The
-// latter are often error/login pages masquerading as a file target. Their
-// visible text remains in Article.Content, but the unsafe href is never
-// exposed as part of the stored body HTML.
+// archived HTML and resolves ordinary external links. A local HTML shell is
+// not a resource, so its href is removed while its visible label is retained.
 func jwcSanitizeContentLinks(article *model.Article, content *goquery.Selection, baseURL string) {
 	if content == nil || content.Length() == 0 {
 		return
@@ -842,7 +891,11 @@ func jwcSanitizeContentLinks(article *model.Article, content *goquery.Selection,
 		href := strings.TrimSpace(html.UnescapeString(anchor.AttrOr("href", "")))
 		resolved, sameOrigin := jwcSameOriginURL(baseURL, href)
 		if !sameOrigin {
-			anchor.Remove()
+			if external := jwcResourceURL(baseURL, href); external != "" {
+				anchor.SetAttr("href", external)
+			} else {
+				anchor.RemoveAttr("href")
+			}
 			return
 		}
 		if attachments[resolved] {
@@ -850,9 +903,41 @@ func jwcSanitizeContentLinks(article *model.Article, content *goquery.Selection,
 			return
 		}
 		if jwcUnsafeContentLink(baseURL, resolved) {
-			anchor.Remove()
+			anchor.RemoveAttr("href")
 		}
 	})
+}
+
+// jwcResourceURL accepts ordinary HTTP(S) resources, including external
+// article images and links. Attachment collection still applies the stricter
+// same-origin rule before a URL can be downloaded as a file.
+func jwcResourceURL(baseURL, raw string) string {
+	raw = html.UnescapeString(strings.TrimSpace(raw))
+	if raw == "" || bodaIsPseudoResourceHref(raw) {
+		return ""
+	}
+	resolved := cleanURL(resolveURL(baseURL, raw))
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Host == "" {
+		return ""
+	}
+	scheme := strings.ToLower(parsed.Scheme)
+	if scheme != "http" && scheme != "https" {
+		return ""
+	}
+	resourceText := strings.ToLower(parsed.Path + "?" + parsed.RawQuery)
+	for _, marker := range []string{
+		"/captcha", "verifycode", "verification", "createimage", "getcode",
+		"placeholder", "transparent", "spacer", "blank.gif", "loading.gif",
+		"pixel.gif", "access-denied", "waf",
+	} {
+		if strings.Contains(resourceText, marker) {
+			return ""
+		}
+	}
+	parsed.Fragment = ""
+	parsed.RawQuery = parsed.Query().Encode()
+	return parsed.String()
 }
 
 func jwcUnsafeContentLink(baseURL, resolved string) bool {
@@ -871,6 +956,86 @@ func jwcUnsafeContentLink(baseURL, resolved string) bool {
 		return true
 	}
 	return strings.EqualFold(parsed.Query().Get("setAction"), "download")
+}
+
+// jwcSanitizeContentHTML is applied after live resource verification. Parser
+// output may know that a link looks like a file, but only the live response
+// can prove that it is not a CAPTCHA/login HTML shell. Candidate attachments
+// are kept separate so failed downloads lose their href in archived HTML.
+func jwcSanitizeContentHTML(raw, baseURL string, images []string, candidateAttachments, attachments []model.Attachment) string {
+	if strings.TrimSpace(raw) == "" {
+		return ""
+	}
+	validImages := make(map[string]bool, len(images))
+	for _, image := range images {
+		if resolved := jwcResourceURL(baseURL, image); resolved != "" {
+			validImages[resolved] = true
+		}
+	}
+	candidateFiles := make(map[string]bool, len(candidateAttachments))
+	for _, attachment := range candidateAttachments {
+		if resolved, ok := jwcSameOriginURL(baseURL, attachment.URL); ok {
+			candidateFiles[resolved] = true
+		}
+	}
+	validFiles := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		if resolved, ok := jwcSameOriginURL(baseURL, attachment.URL); ok {
+			validFiles[resolved] = true
+		}
+	}
+
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader("<div id=\"jwc-content-root\">" + raw + "</div>"))
+	if err != nil {
+		return ""
+	}
+	root := doc.Find("#jwc-content-root").First()
+	root.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := ""
+		for _, attr := range []string{"src", "data-src", "data-original", "orisrc", "data-lazy-src"} {
+			if candidate := jwcResourceURL(baseURL, image.AttrOr(attr, "")); candidate != "" && validImages[candidate] {
+				resolved = candidate
+				break
+			}
+		}
+		if resolved == "" {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "orisrc", "data-lazy-src"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	root.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
+		href := strings.TrimSpace(html.UnescapeString(anchor.AttrOr("href", "")))
+		if strings.HasPrefix(href, "#") {
+			return
+		}
+		resolved, sameOrigin := jwcSameOriginURL(baseURL, href)
+		if sameOrigin && jwcAttachmentLink(anchor, resolved) {
+			if !candidateFiles[resolved] || !validFiles[resolved] {
+				anchor.RemoveAttr("href")
+				return
+			}
+			anchor.SetAttr("href", resolved)
+			return
+		}
+		if external := jwcResourceURL(baseURL, href); external != "" {
+			if sameOrigin && jwcUnsafeContentLink(baseURL, external) {
+				anchor.RemoveAttr("href")
+				return
+			}
+			anchor.SetAttr("href", external)
+			return
+		}
+		anchor.RemoveAttr("href")
+	})
+	rendered, err := root.Html()
+	if err != nil {
+		return ""
+	}
+	return rendered
 }
 
 func jwcAttachmentLink(anchor *goquery.Selection, resolved string) bool {
@@ -925,11 +1090,21 @@ func jwcSameOriginURL(baseURL, raw string) (string, bool) {
 	if err != nil || baseErr != nil || parsed.Host == "" || base.Host == "" || parsed.Scheme == "" {
 		return "", false
 	}
-	if !strings.EqualFold(parsed.Hostname(), base.Hostname()) {
+	if (strings.ToLower(parsed.Scheme) != "http" && strings.ToLower(parsed.Scheme) != "https") || (strings.ToLower(base.Scheme) != "http" && strings.ToLower(base.Scheme) != "https") {
+		return "", false
+	}
+	if !jwcURLAuthorityEqual(base, parsed) {
 		return "", false
 	}
 	parsed.RawQuery = parsed.Query().Encode()
 	return parsed.String(), true
+}
+
+func jwcURLAuthorityEqual(left, right *url.URL) bool {
+	if left == nil || right == nil {
+		return false
+	}
+	return strings.EqualFold(left.Host, right.Host)
 }
 
 func jwcArticleURL(baseURL, raw string) (string, bool) {
@@ -969,7 +1144,8 @@ func jwcResponseError(raw []byte) error {
 	for _, marker := range []string{
 		"请输入验证码", "验证码下载附件", "请先登录", "请登录后", "页面不存在",
 		"access denied", "just a moment", "cf-chl-", "请求已被阻断", "安全威胁",
-		"没有访问当前栏目的权限", "您没有访问", "404 not found", "500 internal server error",
+		"没有访问当前栏目的权限", "您没有访问", "您目前无权限", "非校内范围", "请登陆系统",
+		"404 not found", "500 internal server error",
 	} {
 		if strings.Contains(visible, marker) {
 			return fmt.Errorf("jwc: error/login/verification response")
@@ -991,93 +1167,251 @@ func jwcFetchArticle(articleURL string) (*model.Article, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	article.Attachments = jwcVerifyAttachments(article.Attachments)
+	candidateAttachments := append([]model.Attachment(nil), article.Attachments...)
+	article.Images = jwcVerifyImages(article.Images, canonical)
+	article.Attachments = jwcVerifyAttachmentsAt(article.Attachments, canonical)
+	article.ContentHTML = jwcSanitizeContentHTML(article.ContentHTML, canonical, article.Images, candidateAttachments, article.Attachments)
 	return article, body, nil
 }
 
-// jwcVerifyAttachments is intentionally part of the live article fetch path,
-// not the HTML-only parser. A download URL is only an attachment after its
-// own response has been read and shown not to be an HTML/CAPTCHA/error shell.
-// Failed attachment GETs do not invalidate an otherwise valid article; they
-// simply do not become successful attachments.
-func jwcVerifyAttachments(attachments []model.Attachment) []model.Attachment {
-	verified := make([]model.Attachment, 0, len(attachments))
-	for _, attachment := range attachments {
-		body, err := jwcFetchAttachment(attachment.URL)
-		if err != nil {
+// jwcVerifyImages and jwcVerifyAttachmentsAt are intentionally part of the
+// live article fetch path, not the HTML-only parser. A resource is exposed
+// only after its own response has passed HTTP status, Content-Type, shell and
+// magic-signature checks. Failed resource GETs do not invalidate an otherwise
+// valid article; they are omitted from the resource fields and HTML.
+func jwcVerifyImages(images []string, referer string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool, len(images))
+	for _, raw := range images {
+		resolved := jwcResourceURL(referer, raw)
+		if resolved == "" || seen[resolved] {
 			continue
 		}
+		body, contentType, err := jwcFetchResource(resolved, referer, true)
+		if err != nil || !jwcResourceBodyIsUsable(contentType, body, resolved, true) {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+// jwcVerifyAttachments is kept as a small compatibility wrapper for callers
+// and tests that exercise the canonical download endpoint directly.
+func jwcVerifyAttachments(attachments []model.Attachment) []model.Attachment {
+	return jwcVerifyAttachmentsAt(attachments, jwcCanonicalBaseURL)
+}
+
+func jwcVerifyAttachmentsAt(attachments []model.Attachment, referer string) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		resolved, ok := jwcSameOriginURL(referer, attachment.URL)
+		if !ok || seen[resolved] {
+			continue
+		}
+		body, contentType, err := jwcFetchResource(resolved, referer, false)
+		if err != nil || !jwcResourceBodyIsUsable(contentType, body, attachment.Name+" "+resolved, false) {
+			continue
+		}
+		attachment.URL = resolved
 		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
 		verified = append(verified, attachment)
 	}
 	return verified
 }
 
 func jwcFetchAttachment(rawURL string) ([]byte, error) {
-	resolved, ok := jwcSameOriginURL(jwcCanonicalBaseURL, rawURL)
-	if !ok {
-		return nil, fmt.Errorf("jwc: refusing non-local attachment %q", rawURL)
+	body, _, err := jwcFetchResource(rawURL, jwcCanonicalBaseURL, false)
+	return body, err
+}
+
+const jwcMaxResourceBytes = 32 << 20
+
+func jwcFetchResource(rawURL, referer string, image bool) ([]byte, string, error) {
+	resolved := ""
+	if image {
+		resolved = jwcResourceURL(referer, rawURL)
+	} else {
+		var ok bool
+		resolved, ok = jwcSameOriginURL(referer, rawURL)
+		if !ok {
+			return nil, "", fmt.Errorf("jwc: refusing non-local attachment %q", rawURL)
+		}
+	}
+	if resolved == "" {
+		return nil, "", fmt.Errorf("jwc: refusing invalid resource %q", rawURL)
+	}
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return nil, "", fmt.Errorf("jwc: refusing non-HTTP resource %q", resolved)
 	}
 	req, err := http.NewRequest(http.MethodGet, resolved, nil)
 	if err != nil {
-		return nil, fmt.Errorf("jwc: create attachment request: %w", err)
+		return nil, "", fmt.Errorf("jwc: create resource request: %w", err)
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
-	req.Header.Set("Accept", "application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	if image {
+		req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+	} else {
+		req.Header.Set("Accept", "application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	}
+	if strings.TrimSpace(referer) != "" {
+		req.Header.Set("Referer", referer)
+	}
 	client := *defaultClient
 	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
-		if len(via) == 0 || strings.EqualFold(next.URL.Hostname(), via[len(via)-1].URL.Hostname()) {
-			return nil
+		if scheme := strings.ToLower(next.URL.Scheme); scheme != "http" && scheme != "https" {
+			return fmt.Errorf("jwc: refusing non-HTTP resource redirect")
 		}
-		return http.ErrUseLastResponse
+		if !jwcURLAuthorityEqual(parsed, next.URL) {
+			return fmt.Errorf("jwc: refusing cross-site resource redirect")
+		}
+		return nil
 	}
 	response, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("jwc: fetch attachment %s: %w", resolved, err)
+		return nil, "", fmt.Errorf("jwc: fetch resource %s: %w", resolved, err)
 	}
 	defer response.Body.Close()
-	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("jwc: attachment %s: HTTP %d", resolved, response.StatusCode)
+	contentType := response.Header.Get("Content-Type")
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return nil, contentType, fmt.Errorf("jwc: resource %s: HTTP %d", resolved, response.StatusCode)
 	}
-	body, err := io.ReadAll(response.Body)
+	body, err := io.ReadAll(io.LimitReader(response.Body, jwcMaxResourceBytes+1))
 	if err != nil {
-		return nil, fmt.Errorf("jwc: read attachment %s: %w", resolved, err)
+		return nil, contentType, fmt.Errorf("jwc: read resource %s: %w", resolved, err)
 	}
-	if !jwcAttachmentBodyIsUsable(response.Header.Get("Content-Type"), body) {
-		return nil, fmt.Errorf("jwc: attachment %s returned an HTML/CAPTCHA/error response", resolved)
+	if len(body) > jwcMaxResourceBytes || !jwcResourceBodyIsUsable(contentType, body, resolved, image) {
+		return nil, contentType, fmt.Errorf("jwc: resource %s returned an invalid Content-Type, shell, or magic signature", resolved)
 	}
-	return body, nil
+	return body, contentType, nil
 }
 
 func jwcAttachmentBodyIsUsable(contentType string, body []byte) bool {
+	return jwcResourceBodyIsUsable(contentType, body, "", false)
+}
+
+func jwcResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
 	if len(body) == 0 {
 		return false
 	}
-	contentType = strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	if parsed, _, err := mime.ParseMediaType(contentType); err == nil && parsed != "" {
+		mediaType = strings.ToLower(parsed)
+	}
+	if mediaType == "" {
+		return false
+	}
 	for _, invalid := range []string{"text/html", "application/xhtml+xml", "application/json", "text/xml", "application/xml"} {
-		if contentType == invalid {
+		if mediaType == invalid {
 			return false
 		}
 	}
-	probeBytes := body
-	if len(probeBytes) > 2048 {
-		probeBytes = probeBytes[:2048]
+	probe := body
+	if len(probe) > 4096 {
+		probe = probe[:4096]
 	}
-	probe := strings.TrimPrefix(strings.TrimSpace(strings.ToLower(string(probeBytes))), "\ufeff")
+	textProbe := strings.TrimPrefix(strings.TrimSpace(strings.ToLower(string(probe))), "\ufeff")
 	for _, marker := range []string{
 		"<!doctype html", "<html", "<head", "<body", "cloudflare", "just a moment",
-		"cf-chl-", "请输入验证码", "验证码下载附件", "请先登录", "请求已被阻断", "安全威胁",
+		"cf-chl-", "请输入验证码", "验证码下载附件", "请先登录", "请登录后", "请求已被阻断", "安全威胁",
 	} {
-		if strings.Contains(probe, marker) {
+		if strings.Contains(textProbe, marker) {
 			return false
 		}
 	}
-	return true
+
+	magic := jwcResourceMagic(body)
+	if image {
+		return jwcImageTypeMatchesMagic(mediaType, magic)
+	}
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".jpg") || strings.Contains(lowerName, ".jpeg") || strings.Contains(lowerName, ".png") || strings.Contains(lowerName, ".gif") || strings.Contains(lowerName, ".webp") || strings.HasPrefix(mediaType, "image/"):
+		return jwcImageTypeMatchesMagic(mediaType, magic)
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf" || strings.HasSuffix(mediaType, "+pdf"):
+		return magic == "pdf"
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(mediaType, "wordprocessingml") || strings.Contains(mediaType, "spreadsheetml") || strings.Contains(mediaType, "presentationml"):
+		return magic == "zip"
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt") || mediaType == "application/msword" || mediaType == "application/vnd.ms-excel" || mediaType == "application/vnd.ms-powerpoint":
+		return magic == "ole"
+	case strings.Contains(lowerName, ".zip") || strings.Contains(lowerName, ".rar") || strings.Contains(lowerName, ".7z") || mediaType == "application/zip" || mediaType == "application/x-rar-compressed" || mediaType == "application/x-7z-compressed":
+		return magic == "zip" || magic == "rar" || magic == "7z"
+	case mediaType == "text/plain" || mediaType == "text/csv" || mediaType == "text/tab-separated-values":
+		return true
+	default:
+		return magic != ""
+	}
+}
+
+func jwcImageTypeMatchesMagic(mediaType, magic string) bool {
+	switch mediaType {
+	case "image/jpeg", "image/jpg", "image/pjpeg":
+		return magic == "jpeg"
+	case "image/png":
+		return magic == "png"
+	case "image/gif":
+		return magic == "gif"
+	case "image/webp":
+		return magic == "webp"
+	case "image/bmp":
+		return magic == "bmp"
+	case "image/tiff":
+		return magic == "tiff"
+	case "image/svg+xml":
+		return magic == "svg"
+	default:
+		return false
+	}
+}
+
+func jwcResourceMagic(body []byte) string {
+	switch {
+	case bytes.HasPrefix(body, []byte("%PDF-")):
+		return "pdf"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x03, 0x04}) || bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x05, 0x06}) || bytes.Equal(body[:4], []byte{0x50, 0x4b, 0x07, 0x08})):
+		return "zip"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}):
+		return "ole"
+	case len(body) >= 3 && bytes.Equal(body[:3], []byte{0xff, 0xd8, 0xff}):
+		return "jpeg"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
+		return "png"
+	case len(body) >= 6 && (bytes.Equal(body[:6], []byte("GIF87a")) || bytes.Equal(body[:6], []byte("GIF89a"))):
+		return "gif"
+	case len(body) >= 12 && bytes.Equal(body[:4], []byte("RIFF")) && bytes.Equal(body[8:12], []byte("WEBP")):
+		return "webp"
+	case len(body) >= 2 && bytes.Equal(body[:2], []byte("BM")):
+		return "bmp"
+	case len(body) >= 4 && (bytes.Equal(body[:4], []byte{'I', 'I', '*', 0}) || bytes.Equal(body[:4], []byte{'M', 'M', 0, '*'})):
+		return "tiff"
+	case len(body) >= 7 && bytes.Equal(body[:7], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x00}):
+		return "rar"
+	case len(body) >= 8 && bytes.Equal(body[:8], []byte{'R', 'a', 'r', '!', 0x1a, 0x07, 0x01, 0x00}):
+		return "rar"
+	case len(body) >= 6 && bytes.Equal(body[:6], []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}):
+		return "7z"
+	}
+	trimmed := bytes.TrimSpace(bytes.TrimPrefix(body, []byte{0xef, 0xbb, 0xbf}))
+	if len(trimmed) > 0 {
+		probe := trimmed
+		if len(probe) > 4096 {
+			probe = probe[:4096]
+		}
+		lower := bytes.ToLower(probe)
+		if bytes.Contains(lower, []byte("<svg")) {
+			return "svg"
+		}
+	}
+	return ""
 }
 
 func jwcFetchHTML(rawURL string) ([]byte, error) {
 	parsed, err := url.Parse(rawURL)
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" || !strings.EqualFold(parsed.Hostname(), "jwc.swjtu.edu.cn") {
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" || (strings.ToLower(parsed.Scheme) != "http" && strings.ToLower(parsed.Scheme) != "https") || !strings.EqualFold(parsed.Host, "jwc.swjtu.edu.cn") {
 		return nil, fmt.Errorf("jwc: refusing non-local URL %q", rawURL)
 	}
 	req, err := http.NewRequest(http.MethodGet, rawURL, nil)
@@ -1089,7 +1423,10 @@ func jwcFetchHTML(rawURL string) ([]byte, error) {
 	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
 	client := *defaultClient
 	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
-		if len(via) == 0 || strings.EqualFold(next.URL.Hostname(), via[len(via)-1].URL.Hostname()) {
+		if scheme := strings.ToLower(next.URL.Scheme); scheme != "http" && scheme != "https" {
+			return fmt.Errorf("jwc: refusing non-HTTP article redirect")
+		}
+		if len(via) == 0 || jwcURLAuthorityEqual(parsed, next.URL) {
 			return nil
 		}
 		return http.ErrUseLastResponse

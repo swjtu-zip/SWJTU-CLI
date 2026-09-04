@@ -46,7 +46,6 @@ var glxySubPages = []string{
 	"yyzj/yyhd",
 	"yyzj/yyjz",
 	"sztd2/tdjs",
-	"sztd2/jzjs",
 }
 
 var (
@@ -68,6 +67,7 @@ func init() {
 		ParseArticle: parseGlxyArticle,
 		PageURL:      glxyPageURL,
 		TotalPages:   glxyTotalPages,
+		FetchArticle: glxyFetchArticle,
 	})
 }
 
@@ -85,7 +85,7 @@ func glxyPageURL(baseURL, slug string, page, totalPages int, extension string) s
 	if !strings.HasPrefix(extension, ".") {
 		extension = "." + extension
 	}
-	if page < 1 {
+	if baseURL == "" || page < 1 || totalPages < 0 {
 		return ""
 	}
 	if page == 1 {
@@ -119,15 +119,15 @@ func parseGlxyNews(raw []byte, baseURL string) ([]model.NewsItem, error) {
 	}
 
 	if list := doc.Find("ul.xw-ul").First(); list.Length() > 0 {
-		return parseGlxyListRows(list, baseURL, glxyListType(doc)), nil
+		return parseGlxyListRows(list, baseURL, glxyListType(doc))
 	}
 	if list := doc.Find("ul.dj_lb1").First(); list.Length() > 0 {
-		return parseGlxyListRows(list, baseURL, glxyListType(doc)), nil
+		return parseGlxyListRows(list, baseURL, glxyListType(doc))
 	}
 	return nil, fmt.Errorf("glxy page is not a supported homepage or article list")
 }
 
-func parseGlxyListRows(list *goquery.Selection, baseURL, typ string) []model.NewsItem {
+func parseGlxyListRows(list *goquery.Selection, baseURL, typ string) ([]model.NewsItem, error) {
 	rows := list.ChildrenFiltered("li")
 	items := make([]model.NewsItem, 0, rows.Length())
 	seen := make(map[string]bool, rows.Length())
@@ -155,7 +155,10 @@ func parseGlxyListRows(list *goquery.Selection, baseURL, typ string) []model.New
 			ParsedAt:    time.Now(),
 		})
 	})
-	return items
+	if rows.Length() > 0 && len(items) == 0 {
+		return nil, fmt.Errorf("glxy article list has %d rows but no supported local article entries", rows.Length())
+	}
+	return items, nil
 }
 
 func glxyListRowTitle(row *goquery.Selection) string {
@@ -355,7 +358,7 @@ func glxyArticleType(doc *goquery.Document) string {
 	typ := ""
 	doc.Find(".nav-b a").Each(func(_ int, link *goquery.Selection) {
 		candidate := strings.Join(strings.Fields(link.Text()), " ")
-		if candidate == "" || candidate == "首页" || candidate == "学院首页" || candidate == "新闻通知" {
+		if candidate == "" || candidate == "首页" || candidate == "学院首页" || candidate == "新闻通知" || candidate == "正文" {
 			return
 		}
 		typ = candidate
@@ -400,23 +403,52 @@ func parseGlxyArticle(raw []byte, baseURL string) (*model.Article, error) {
 	if typ := glxyArticleType(doc); typ != "" {
 		article.Type = typ
 	}
-	metaDate := ""
-	if meta := scope.Find(".article-sm").First(); meta.Length() > 0 {
-		if date, publishedAt := glxyDateValues(meta.Text()); date != "" {
-			metaDate = date
-			article.Date = date
-			article.PublishedAt = publishedAt
-		}
-	}
-	if metaDate == "" && article.Date != "" {
-		if date, publishedAt := glxyDateValues(article.Date); date != "" {
-			article.Date = date
-			article.PublishedAt = publishedAt
-		}
-	}
+	setGlxyArticleDate(article, scope)
 	appendGlxyAttachments(article, scope, baseURL)
 	resolveGlxyContentHTML(article, content, baseURL)
 	return article, nil
+}
+
+func glxyFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	canonicalURL, ok := glxyArticleURL(glxyBaseURL, articleURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("glxy: refusing non-local or non-detail URL %q", articleURL)
+	}
+	body, err := fetch(canonicalURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("glxy: fetch article %s: %w", canonicalURL, err)
+	}
+	article, err := parseGlxyArticle(body, glxyBaseURL)
+	if err != nil {
+		return nil, body, err
+	}
+	return article, body, nil
+}
+
+// setGlxyArticleDate reads only the fixed metadata blocks used by the live
+// templates. In particular, do not retain a date inferred by the shared
+// parser from a heading, related-news block, or article body: those values can
+// be event dates or deadlines rather than the publication date.
+func setGlxyArticleDate(article *model.Article, scope *goquery.Selection) {
+	if article == nil {
+		return
+	}
+	article.Date = ""
+	article.PublishedAt = ""
+	if scope == nil || scope.Length() == 0 {
+		return
+	}
+	for _, selector := range []string{".article-sm .a-three", ".article-sm", ".newxq-boxy > p", ".newxq-boxy p"} {
+		meta := scope.Find(selector).First()
+		if meta.Length() == 0 {
+			continue
+		}
+		if date, publishedAt := glxyDateValues(meta.Text()); date != "" {
+			article.Date = date
+			article.PublishedAt = publishedAt
+			return
+		}
+	}
 }
 
 func appendGlxyAttachments(article *model.Article, scope *goquery.Selection, baseURL string) {
@@ -424,15 +456,23 @@ func appendGlxyAttachments(article *model.Article, scope *goquery.Selection, bas
 		return
 	}
 	seen := make(map[string]bool, len(article.Attachments))
+	attachments := article.Attachments[:0]
 	for _, attachment := range article.Attachments {
-		seen[attachment.URL] = true
+		resolved := glxyResourceURL(baseURL, attachment.URL)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		attachment.URL = resolved
+		seen[resolved] = true
+		attachments = append(attachments, attachment)
 	}
+	article.Attachments = attachments
 	scope.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
 		href := strings.TrimSpace(anchor.AttrOr("href", ""))
 		if !glxyLooksLikeAttachmentLink(anchor, href) {
 			return
 		}
-		resolved := cleanURL(resolveURL(baseURL, href))
+		resolved := glxyResourceURL(baseURL, href)
 		if resolved == "" || seen[resolved] {
 			return
 		}
@@ -447,6 +487,9 @@ func appendGlxyAttachments(article *model.Article, scope *goquery.Selection, bas
 
 func glxyLooksLikeAttachmentLink(anchor *goquery.Selection, href string) bool {
 	if anchor == nil || anchor.Length() == 0 || href == "" {
+		return false
+	}
+	if bodaIsPseudoResourceHref(href) {
 		return false
 	}
 	lowerHref := strings.ToLower(href)
@@ -482,18 +525,53 @@ func glxyAttachmentName(anchor *goquery.Selection, resolved string) string {
 	return name
 }
 
+func glxyResourceURL(baseURL, raw string) string {
+	if strings.TrimSpace(raw) == "" {
+		return ""
+	}
+	return bodaResourceURL(baseURL, raw)
+}
+
 func resolveGlxyContentHTML(article *model.Article, content *goquery.Selection, baseURL string) {
 	if article == nil || content == nil || content.Length() == 0 {
 		return
 	}
 	clone := content.Clone()
-	clone.Find("img[src]").Each(func(_ int, image *goquery.Selection) {
-		image.SetAttr("src", cleanURL(resolveURL(baseURL, image.AttrOr("src", ""))))
+	seenImages := make(map[string]bool, len(article.Images))
+	for _, imageURL := range article.Images {
+		seenImages[imageURL] = true
+	}
+	clone.Find("img").Each(func(_ int, image *goquery.Selection) {
+		resolved := ""
+		for _, attribute := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			if candidate := glxyResourceURL(baseURL, image.AttrOr(attribute, "")); candidate != "" {
+				resolved = candidate
+				break
+			}
+		}
+		if resolved == "" {
+			image.Remove()
+			return
+		}
+		for _, attribute := range []string{"src", "data-src", "data-original", "data-lazy-src", "orisrc"} {
+			image.RemoveAttr(attribute)
+		}
+		image.SetAttr("src", resolved)
+		if !seenImages[resolved] {
+			seenImages[resolved] = true
+			article.Images = append(article.Images, resolved)
+		}
 	})
 	clone.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
-		href := anchor.AttrOr("href", "")
+		href := strings.TrimSpace(anchor.AttrOr("href", ""))
 		if glxyLooksLikeAttachmentLink(anchor, href) {
-			anchor.SetAttr("href", cleanURL(resolveURL(baseURL, href)))
+			if resolved := glxyResourceURL(baseURL, href); resolved != "" {
+				anchor.SetAttr("href", resolved)
+			} else {
+				anchor.RemoveAttr("href")
+			}
+		} else if bodaIsPseudoResourceHref(href) {
+			anchor.RemoveAttr("href")
 		}
 	})
 	if htmlText, err := clone.Html(); err == nil {

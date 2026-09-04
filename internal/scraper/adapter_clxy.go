@@ -2,6 +2,8 @@ package scraper
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -13,6 +15,8 @@ import (
 
 	"swjtu-cli/internal/model"
 )
+
+const clxyCanonicalBaseURL = "https://clxy.swjtu.edu.cn"
 
 // clxySubPages contains the article-list entry points rendered by the live
 // home page. The parent routes are real merged archives, while the nested
@@ -47,11 +51,15 @@ var (
 )
 
 func init() {
+	if site := AllSites["clxy"]; site != nil {
+		site.BaseURL = clxyCanonicalBaseURL
+	}
 	registerAdapter("clxy", SiteAdapter{
 		SubPages:     clxySubPages,
 		ParseList:    parseAdapter_clxyList,
 		ParseArticle: parseAdapter_clxyArticle,
 		PageURL:      clxyPageURL,
+		FetchArticle: clxyFetchArticle,
 	})
 }
 
@@ -94,7 +102,11 @@ func parseAdapter_clxyList(html []byte, baseURL string) ([]model.NewsItem, error
 	// deliberately checked before any home-page fallback so the mobile copy,
 	// sidebars and pagination links cannot become articles.
 	if rows := clxyListRows(doc); rows.Length() > 0 {
-		return clxyParseRows(rows, doc, baseURL), nil
+		items := clxyParseRows(rows, doc, baseURL)
+		if external := clxyExternalListRowCount(rows, baseURL); external > 0 {
+			return items, fmt.Errorf("clxy: %d list row(s) point outside the site; refusing a partial feed", external)
+		}
+		return items, nil
 	}
 	if doc.Find(".conlistComm").Length() > 0 {
 		// A real but currently empty list is a valid empty result.
@@ -179,6 +191,52 @@ func clxyArticleAnchor(row *goquery.Selection, baseURL string) *goquery.Selectio
 		return row.Find("a[href]").First()
 	}
 	return found
+}
+
+// clxyExternalListRowCount detects real content rows that point to another
+// site. Such rows are common in the live aggregates (教务 and employment).
+// Silently dropping them would make a partially collected page look complete.
+func clxyExternalListRowCount(rows *goquery.Selection, baseURL string) int {
+	count := 0
+	rows.Each(func(_ int, row *goquery.Selection) {
+		local, external := false, false
+		row.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
+			href := strings.TrimSpace(anchor.AttrOr("href", ""))
+			if _, ok := clxyArticleURL(baseURL, href); ok {
+				local = true
+				return
+			}
+			if clxyExternalListAnchor(anchor, baseURL, href) {
+				external = true
+			}
+		})
+		if external && !local {
+			count++
+		}
+	})
+	return count
+}
+
+func clxyExternalListAnchor(anchor *goquery.Selection, baseURL, href string) bool {
+	if anchor == nil || anchor.Length() == 0 || href == "" || bodaIsPseudoResourceHref(href) {
+		return false
+	}
+	// The category marker is an ordinary link inside the row, not the row's
+	// article target. Ignore it when it happens to be hosted elsewhere.
+	if anchor.Closest("dt > span").Length() > 0 {
+		return false
+	}
+	resolved := cleanURL(resolveURL(baseURL, href))
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return false
+	}
+	base, err := url.Parse(baseURL)
+	if err != nil || base.Host == "" || strings.EqualFold(parsed.Host, base.Host) {
+		return false
+	}
+	title := clxyRowTitle(anchor, anchor)
+	return title != "" && isValidNewsTitle(title)
 }
 
 func clxyRowTitle(row, anchor *goquery.Selection) string {
@@ -383,6 +441,12 @@ func parseAdapter_clxyArticle(html []byte, baseURL string) (*model.Article, erro
 	if title := strings.TrimSpace(doc.Find(".article h1").First().Text()); title != "" {
 		article.Title = title
 	}
+	clxyApplyArticleMetadata(article, doc)
+	// Clear the generic parser's broad date fallback before reading the two
+	// fixed metadata blocks used by this site. Dates in article prose are not
+	// publication dates.
+	article.Date = ""
+	article.PublishedAt = ""
 	if date, publishedAt := clxyDateValues(doc.Find(".article .source").First().Text()); date != "" {
 		article.Date = date
 		if publishedAt != "" {
@@ -398,8 +462,49 @@ func parseAdapter_clxyArticle(html []byte, baseURL string) (*model.Article, erro
 		article.Type = typ
 	}
 	appendClxyAttachments(article, doc, baseURL)
+	clxyFilterArticleResources(article, baseURL, nil)
 	normalizeArticlePublishedAt(article)
 	return article, nil
+}
+
+var clxyMetaFieldRe = regexp.MustCompile(`(?:来源|作者|审核|编辑|摄影|日期|时间|发布时间|点击数)\s*[：:]`)
+
+func clxyApplyArticleMetadata(article *model.Article, doc *goquery.Document) {
+	if article == nil || doc == nil {
+		return
+	}
+	fields := clxyMetaFields(doc.Find(".article .source").First().Text())
+	if value := fields["来源"]; value != "" {
+		article.Source = value
+	}
+	if value := fields["作者"]; value != "" {
+		article.Author = value
+	}
+	if value := fields["摄影"]; value != "" {
+		article.Photographer = value
+	}
+	if value := fields["编辑"]; value != "" {
+		article.Editor = value
+	}
+}
+
+func clxyMetaFields(raw string) map[string]string {
+	raw = strings.Join(strings.Fields(strings.TrimSpace(raw)), " ")
+	fields := make(map[string]string)
+	matches := clxyMetaFieldRe.FindAllStringIndex(raw, -1)
+	for i, match := range matches {
+		label := strings.TrimRight(strings.TrimSpace(raw[match[0]:match[1]]), "：:")
+		end := len(raw)
+		if i+1 < len(matches) {
+			end = matches[i+1][0]
+		}
+		value := strings.TrimSpace(raw[match[1]:end])
+		value = strings.Trim(value, " |")
+		if value != "" {
+			fields[label] = value
+		}
+	}
+	return fields
 }
 
 func appendClxyAttachments(article *model.Article, doc *goquery.Document, baseURL string) {
@@ -456,11 +561,222 @@ func clxyAttachmentLink(anchor *goquery.Selection, href string) bool {
 	return false
 }
 
+// clxyFilterArticleResources removes pseudo URLs from both normalized fields
+// and ContentHTML. The shared parser already filters Images, but its HTML
+// serialization intentionally retains an unresolvable src attribute.
+func clxyFilterArticleResources(article *model.Article, baseURL string, allowedImages map[string]bool) {
+	if article == nil {
+		return
+	}
+	seen := make(map[string]bool, len(article.Images))
+	images := make([]string, 0, len(article.Images))
+	for _, raw := range article.Images {
+		resolved := bodaResourceURL(baseURL, raw)
+		if resolved == "" || seen[resolved] || (allowedImages != nil && !allowedImages[resolved]) {
+			continue
+		}
+		seen[resolved] = true
+		images = append(images, resolved)
+	}
+	article.Images = images
+	article.ContentHTML = clxySanitizeContentHTML(article.ContentHTML, baseURL, allowedImages)
+}
+
+func clxySanitizeContentHTML(rawHTML, baseURL string, allowedImages map[string]bool) string {
+	if strings.TrimSpace(rawHTML) == "" {
+		return rawHTML
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(`<div id="clxy-content-root">` + rawHTML + `</div>`))
+	if err != nil {
+		return rawHTML
+	}
+	root := doc.Find("#clxy-content-root").First()
+	root.Find("img").Each(func(_ int, image *goquery.Selection) {
+		var resolved string
+		for _, attr := range []string{"src", "data-src", "data-original", "orisrc", "vurl"} {
+			if value := image.AttrOr(attr, ""); value != "" {
+				if candidate := bodaResourceURL(baseURL, value); candidate != "" {
+					resolved = candidate
+					break
+				}
+			}
+		}
+		if resolved == "" || (allowedImages != nil && !allowedImages[resolved]) {
+			image.Remove()
+			return
+		}
+		image.SetAttr("src", resolved)
+		for _, attr := range []string{"data-src", "data-original", "orisrc", "vurl", "vsbhref"} {
+			image.RemoveAttr(attr)
+		}
+	})
+	result, err := root.Html()
+	if err != nil {
+		return rawHTML
+	}
+	return result
+}
+
+func clxyFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	canonicalURL, ok := clxyArticleURL(clxyCanonicalBaseURL, articleURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("clxy: refusing non-local or non-detail URL %q", articleURL)
+	}
+	body, err := fetch(canonicalURL)
+	if err != nil {
+		return nil, nil, err
+	}
+	article, err := parseAdapter_clxyArticle(body, clxyCanonicalBaseURL)
+	if err != nil {
+		return nil, body, err
+	}
+	article.Images = clxyVerifyImages(article.Images)
+	article.Attachments = clxyVerifyAttachments(article.Attachments)
+	allowedImages := make(map[string]bool, len(article.Images))
+	for _, image := range article.Images {
+		allowedImages[image] = true
+	}
+	clxyFilterArticleResources(article, clxyCanonicalBaseURL, allowedImages)
+	return article, body, nil
+}
+
+func clxyVerifyImages(images []string) []string {
+	verified := make([]string, 0, len(images))
+	seen := make(map[string]bool, len(images))
+	for _, raw := range images {
+		resolved := bodaResourceURL(clxyCanonicalBaseURL, raw)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, contentType, err := clxyFetchResource(resolved)
+		if err != nil || !clxyResourceBodyIsUsable(contentType, body, resolved, true) {
+			continue
+		}
+		seen[resolved] = true
+		verified = append(verified, resolved)
+	}
+	return verified
+}
+
+func clxyVerifyAttachments(attachments []model.Attachment) []model.Attachment {
+	verified := make([]model.Attachment, 0, len(attachments))
+	seen := make(map[string]bool, len(attachments))
+	for _, attachment := range attachments {
+		resolved := bodaResourceURL(clxyCanonicalBaseURL, attachment.URL)
+		if resolved == "" || seen[resolved] {
+			continue
+		}
+		body, contentType, err := clxyFetchResource(resolved)
+		if err != nil || !clxyResourceBodyIsUsable(contentType, body, attachment.Name+" "+resolved, false) {
+			continue
+		}
+		attachment.URL = resolved
+		attachment.Size = strconv.Itoa(len(body))
+		seen[resolved] = true
+		verified = append(verified, attachment)
+	}
+	return verified
+}
+
+func clxyFetchResource(rawURL string) ([]byte, string, error) {
+	resolved := bodaResourceURL(clxyCanonicalBaseURL, rawURL)
+	if resolved == "" {
+		return nil, "", fmt.Errorf("clxy: refusing non-http resource %q", rawURL)
+	}
+	req, err := http.NewRequest(http.MethodGet, resolved, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("clxy: create resource request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "image/*,application/octet-stream,application/pdf,application/zip,*/*;q=0.8")
+	client := *defaultClient
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if len(via) == 0 || strings.EqualFold(next.URL.Hostname(), via[len(via)-1].URL.Hostname()) {
+			return nil
+		}
+		return http.ErrUseLastResponse
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("clxy: fetch resource %s: %w", resolved, err)
+	}
+	defer resp.Body.Close()
+	contentType := resp.Header.Get("Content-Type")
+	if resp.StatusCode != http.StatusOK {
+		return nil, contentType, fmt.Errorf("clxy: resource %s: HTTP %d", resolved, resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, contentType, fmt.Errorf("clxy: read resource %s: %w", resolved, err)
+	}
+	return body, contentType, nil
+}
+
+func clxyResourceBodyIsUsable(contentType string, body []byte, nameOrURL string, image bool) bool {
+	if len(body) == 0 {
+		return false
+	}
+	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	probe := strings.TrimPrefix(strings.TrimSpace(strings.ToLower(string(body[:minInt(len(body), 4096)]))), "\ufeff")
+	for _, marker := range []string{"<!doctype html", "<html", "<head", "<body", "请输入验证码", "验证码下载附件", "captcha", "请先登录", "请登录后", "登录页面", "页面不存在", "access denied", "just a moment", "cloudflare", "请求已被阻断", "安全威胁"} {
+		if strings.Contains(probe, marker) {
+			return false
+		}
+	}
+	if image {
+		return clxyImageBodyIsUsable(mediaType, body)
+	}
+	return clxyAttachmentBodyIsUsable(mediaType, body, nameOrURL)
+}
+
+func clxyImageBodyIsUsable(mediaType string, body []byte) bool {
+	switch mediaType {
+	case "image/png":
+		return len(body) >= 8 && string(body[:8]) == "\x89PNG\r\n\x1a\n"
+	case "image/jpeg", "image/jpg":
+		return len(body) >= 3 && string(body[:3]) == "\xff\xd8\xff"
+	case "image/gif":
+		return len(body) >= 6 && (string(body[:6]) == "GIF87a" || string(body[:6]) == "GIF89a")
+	case "image/webp":
+		return len(body) >= 12 && string(body[:4]) == "RIFF" && string(body[8:12]) == "WEBP"
+	case "image/bmp":
+		return len(body) >= 2 && string(body[:2]) == "BM"
+	case "image/svg+xml":
+		text := strings.TrimSpace(strings.ToLower(string(body[:minInt(len(body), 4096)])))
+		return strings.HasPrefix(text, "<svg") || strings.Contains(text, "<svg ")
+	default:
+		return false
+	}
+}
+
+func clxyAttachmentBodyIsUsable(mediaType string, body []byte, nameOrURL string) bool {
+	lowerName := strings.ToLower(nameOrURL)
+	switch {
+	case strings.Contains(lowerName, ".pdf") || mediaType == "application/pdf":
+		return len(body) >= 5 && string(body[:5]) == "%PDF-"
+	case strings.Contains(lowerName, ".docx") || strings.Contains(lowerName, ".xlsx") || strings.Contains(lowerName, ".pptx") || strings.Contains(lowerName, ".zip") || mediaType == "application/zip":
+		return len(body) >= 4 && string(body[:4]) == "PK\x03\x04"
+	case strings.Contains(lowerName, ".doc") || strings.Contains(lowerName, ".xls") || strings.Contains(lowerName, ".ppt"):
+		return len(body) >= 8 && string(body[:8]) == "\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
+	case strings.Contains(lowerName, ".txt") || strings.Contains(lowerName, ".csv"):
+		return mediaType == "text/plain" || mediaType == "text/csv" || mediaType == "application/octet-stream"
+	default:
+		return mediaType != "" && mediaType != "text/html" && mediaType != "application/xhtml+xml" && mediaType != "application/json" && mediaType != "text/xml" && mediaType != "application/xml"
+	}
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func clxyErrorDocument(doc *goquery.Document) bool {
 	title := strings.ToLower(strings.TrimSpace(doc.Find("title").First().Text()))
 	if strings.Contains(title, "系统提示") || strings.Contains(title, "404错误") {
 		return true
 	}
 	body := strings.Join(strings.Fields(doc.Find("body").Text()), " ")
-	return strings.Contains(body, "您没有访问当前栏目的权限") || strings.Contains(body, "404错误提示")
+	return strings.Contains(body, "您没有访问当前栏目的权限") || strings.Contains(body, "404错误提示") || strings.Contains(body, "栏目不存在")
 }

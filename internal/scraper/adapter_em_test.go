@@ -1,6 +1,9 @@
 package scraper
 
 import (
+	"bytes"
+	"io"
+	"net/http"
 	"os"
 	"reflect"
 	"strings"
@@ -34,16 +37,18 @@ func TestEmAdapterRegisteredWithAllArticleFeeds(t *testing.T) {
 		"rcpy/glgd",
 		"rcpy/wdxz",
 		"rcpy/zyjj",
+		"jypx3/pxfw",
 		"jypx3/pxdt",
-		"jypx3/tzgg",
 		"tzgg",
 		"hqbz",
-		"qt",
+		"hqbz/hqfw",
+		"hqbz/hqfw/bmfc",
+		"hqbz/hqfw/tzgg",
+		"hqbz/bwks",
 		"gzdt",
 		"xqfg",
 		"xyyd",
 		"xyyd/xyhd",
-		"xyyd/xyjy",
 	}
 	if !reflect.DeepEqual(site.SubPages, want) {
 		t.Fatalf("em feeds = %#v, want %#v", site.SubPages, want)
@@ -162,6 +167,49 @@ func TestEmListParsesDatesTypesAndLegacyContentURLs(t *testing.T) {
 	}
 }
 
+func TestEmNestedListUsesLastBreadcrumbAsType(t *testing.T) {
+	html := []byte(`<html><head><meta name="pageTitle" content="人才培养"></head><body>
+<div class="mianbao"><a href="/">首页</a><a href="/rcpy.htm">人才培养</a><a href="/rcpy/tzgg.htm">通知公告</a></div>
+<section class="TextList bgss"><div><ul>
+<li><a href="/info/1230/20756.htm" title="关于开展考试工作的通知"><div class="data"><i>31</i><b>2026.08</b></div></a></li>
+</ul><span class="p_t">共1条</span><span class="p_pages"><span class="p_no_d">1</span></span></div></section>
+</body></html>`)
+
+	items, err := parseAdapter_emList(html, emFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("got %d em list items, want 1: %#v", len(items), items)
+	}
+	if items[0].Type != "通知公告" {
+		t.Fatalf("nested em list type = %q, want 通知公告", items[0].Type)
+	}
+}
+
+func TestEmTrainingServiceListParsesItsSixItemFeedShape(t *testing.T) {
+	html := []byte(`<html><head><meta name="pageTitle" content="教育培训"></head><body>
+<div class="mianbao"><a href="/">首页</a><a href="/jypx3.htm">教育培训</a><a href="/jypx3/pxfw.htm">培训服务</a></div>
+<section class="TextList bgss"><div><ul>
+<li><a href="/info/1770/16116.htm" title="培训保障"><div class="data"><i>17</i><b>2025.07</b></div></a></li>
+<li><a href="/info/1770/16106.htm" title="就餐配餐"><div class="data"><i>17</i><b>2025.07</b></div></a></li>
+</ul><span class="p_t">共6条</span><span class="p_pages"><span class="p_no_d">1</span></span></div></section>
+</body></html>`)
+
+	items, err := parseAdapter_emList(html, emFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("got %d training-service items, want 2: %#v", len(items), items)
+	}
+	for _, item := range items {
+		if item.Type != "培训服务" || item.Date != "2025-07-17" {
+			t.Errorf("training-service item metadata = (type=%q,date=%q), want (培训服务,2025-07-17): %#v", item.Type, item.Date, item)
+		}
+	}
+}
+
 func TestEmEmptyListIsLegalButStaticPageIsNotAFeed(t *testing.T) {
 	empty := []byte(`<html><head><meta name="pageTitle" content="其他"></head><body>
 <section class="TextList bgss"><div><ul></ul><span class="p_t">共0条</span><span class="p_pages"><span class="p_no_d">1</span></span></div></section>
@@ -233,4 +281,167 @@ func TestEmArticleRejectsStaticAndVerificationPages(t *testing.T) {
 	if _, err := parseAdapter_emArticle(verification, emFixtureBaseURL); err == nil {
 		t.Fatal("verification page was accepted as an article")
 	}
+}
+
+func TestEmAuditedRoutesHaveTheObservedPageBoundaries(t *testing.T) {
+	wantPages := map[string]int{
+		"xwdt": 71, "dqgz": 13, "dqgz/djgz": 11, "dqgz/jwgz": 1,
+		"dqgz/ghgz": 2, "dqgz/ltgz": 1, "rcpy": 9, "rcpy/xwdt": 3,
+		"rcpy/zszl": 1, "rcpy/tzgg": 7, "rcpy/glgd": 1, "rcpy/wdxz": 1,
+		"rcpy/zyjj": 1, "jypx3/pxfw": 2, "jypx3/pxdt": 2, "tzgg": 56,
+		"hqbz": 1, "hqbz/hqfw": 1, "hqbz/hqfw/bmfc": 1,
+		"hqbz/hqfw/tzgg": 1, "hqbz/bwks": 1, "gzdt": 4, "xqfg": 1,
+		"xyyd": 1, "xyyd/xyhd": 1,
+	}
+	if len(emSubPages) != len(wantPages) {
+		t.Fatalf("em route count = %d, want %d", len(emSubPages), len(wantPages))
+	}
+	for _, route := range emSubPages {
+		if wantPages[route] == 0 {
+			t.Errorf("route %q has no audited page boundary", route)
+		}
+	}
+	for _, excluded := range []string{"qt", "jypx3/tzgg", "hqbz/bwks/gzzd", "hqbz/bwks/tzgg", "xyyd/xyjy"} {
+		for _, route := range emSubPages {
+			if route == excluded {
+				t.Errorf("confirmed empty route %q was registered", excluded)
+			}
+		}
+	}
+}
+
+func TestEmDateOnlyDetailNeverUsesBodyEventDate(t *testing.T) {
+	html, err := os.ReadFile("testdata/em_article_date_only.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	article, err := parseAdapter_emArticle(html, emFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Date != "2026-08-02" || article.PublishedAt != "2026-08-02" {
+		t.Fatalf("date-only metadata = date=%q published=%q", article.Date, article.PublishedAt)
+	}
+	if strings.Contains(article.Date, ":") || strings.Contains(article.PublishedAt, ":") {
+		t.Fatalf("date-only publication was given a clock: %#v", article)
+	}
+}
+
+type emTestRoundTripper func(*http.Request) (*http.Response, error)
+
+func (f emTestRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func emTestResponse(req *http.Request, status int, contentType string, body []byte) *http.Response {
+	return &http.Response{
+		StatusCode: status,
+		Status:     http.StatusText(status),
+		Header:     http.Header{"Content-Type": []string{contentType}},
+		Body:       io.NopCloser(bytes.NewReader(body)),
+		Request:    req,
+	}
+}
+
+func TestEmFetchArticleVerifiesAndSanitizesResources(t *testing.T) {
+	site := AllSites["em"]
+	oldBase, oldClient, oldNoCache := site.BaseURL, defaultClient, NoCache
+	t.Cleanup(func() {
+		site.BaseURL = oldBase
+		defaultClient = oldClient
+		NoCache = oldNoCache
+		ClearCache()
+	})
+
+	serverBase := "https://em.test"
+	site.BaseURL = serverBase
+	NoCache = true
+	validPNG := []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}
+	validPDF := []byte("%PDF-1.7\nvalid")
+	captcha := []byte("<!doctype html><html><body>请输入验证码下载附件</body></html>")
+	defaultClient = &http.Client{Transport: emTestRoundTripper(func(req *http.Request) (*http.Response, error) {
+		switch req.URL.Path {
+		case "/info/1025/9001.htm":
+			return emTestResponse(req, http.StatusOK, "text/html; charset=utf-8", mustEmFixture(t, "em_article_resources.html")), nil
+		case "/img/good.png":
+			return emTestResponse(req, http.StatusOK, "image/png", validPNG), nil
+		case "/img/bad.png":
+			return emTestResponse(req, http.StatusOK, "image/png", captcha), nil
+		case "/img/wrong.png":
+			return emTestResponse(req, http.StatusOK, "image/png", []byte("not a png")), nil
+		case "/files/good.pdf":
+			return emTestResponse(req, http.StatusOK, "application/pdf", validPDF), nil
+		case "/files/wrong.pdf":
+			return emTestResponse(req, http.StatusOK, "application/pdf", validPNG), nil
+		case "/files/captcha.pdf":
+			return emTestResponse(req, http.StatusOK, "text/html; charset=utf-8", captcha), nil
+		case "/files/missing.pdf":
+			return emTestResponse(req, http.StatusNotFound, "text/html", []byte("not found")), nil
+		case "/files/too-large.pdf":
+			body := make([]byte, emMaxResourceBytes+1)
+			copy(body, validPDF)
+			return emTestResponse(req, http.StatusOK, "application/pdf", body), nil
+		case "/system/_content/download.jsp":
+			if req.URL.Query().Get("wbfileid") == "GOOD" {
+				return emTestResponse(req, http.StatusOK, "application/octet-stream", validPDF), nil
+			}
+			return emTestResponse(req, http.StatusOK, "text/html; charset=utf-8", captcha), nil
+		default:
+			return emTestResponse(req, http.StatusNotFound, "text/html", []byte("not found")), nil
+		}
+	})}
+
+	article, body, err := emFetchArticle(serverBase + "/info/1025/9001.htm")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(body) == 0 || article.Title != "资源校验详情标题" || article.Type != "通知公告" {
+		t.Fatalf("article fetch lost fixed metadata: article=%#v body=%d", article, len(body))
+	}
+	if article.Date != "2026-08-01" || article.PublishedAt != "2026-08-01" {
+		t.Fatalf("body event date replaced source date: %#v", article)
+	}
+	if len(article.Images) != 1 || article.Images[0] != serverBase+"/img/good.png" {
+		t.Fatalf("resource image filtering = %#v", article.Images)
+	}
+	if len(article.Attachments) != 2 {
+		t.Fatalf("resource attachment filtering = %#v", article.Attachments)
+	}
+	for _, attachment := range article.Attachments {
+		if attachment.URL != serverBase+"/files/good.pdf" && !strings.Contains(attachment.URL, "wbfileid=GOOD") {
+			t.Fatalf("invalid attachment survived: %#v", article.Attachments)
+		}
+		if attachment.Size == "" {
+			t.Fatalf("verified attachment has no size: %#v", attachment)
+		}
+	}
+	for _, invalid := range []string{"bad.png", "wrong.png", "wrong.pdf", "captcha.pdf", "missing.pdf", "too-large.pdf", "wbfileid=BAD"} {
+		if strings.Contains(article.ContentHTML, invalid) {
+			t.Fatalf("invalid resource survived ContentHTML (%s): %q", invalid, article.ContentHTML)
+		}
+	}
+	if strings.Contains(article.ContentHTML, "javascript:") {
+		t.Fatalf("pseudo resource survived ContentHTML: %q", article.ContentHTML)
+	}
+}
+
+func TestEmResourceBodyRequiresContentTypeAndMagic(t *testing.T) {
+	if emResourceBodyIsUsable("", []byte("%PDF-1.7"), "a.pdf", false) {
+		t.Fatal("missing Content-Type was accepted")
+	}
+	if emResourceBodyIsUsable("application/pdf", []byte("plain text"), "a.pdf", false) {
+		t.Fatal("wrong PDF magic was accepted")
+	}
+	if emResourceBodyIsUsable("image/png", []byte("<html>验证码</html>"), "a.png", true) {
+		t.Fatal("CAPTCHA HTML was accepted as an image")
+	}
+}
+
+func mustEmFixture(t *testing.T, name string) []byte {
+	t.Helper()
+	body, err := os.ReadFile("testdata/" + name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return body
 }

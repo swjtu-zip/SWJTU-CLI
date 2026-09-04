@@ -37,8 +37,9 @@ var (
 	// These errors are intentionally returned for the checked-in SPA shell.
 	// A zero-item, nil-error result would make an unavailable dynamic feed look
 	// like a successful empty feed.
-	errSistDynamicPage = errors.New("sist: received Vue SPA shell; data is loaded by the site's POST API")
-	errSistNoArticles  = errors.New("sist: no real article links or API rows found")
+	errSistDynamicPage     = errors.New("sist: received Vue SPA shell; data is loaded by the site's POST API")
+	errSistUnavailablePage = errors.New("sist: received a login, WAF, or error page")
+	errSistNoArticles      = errors.New("sist: no real article links or API rows found")
 
 	sistDateRE = regexp.MustCompile(`(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})`)
 )
@@ -74,7 +75,8 @@ type sistAPIItem struct {
 type sistString string
 
 func (s *sistString) UnmarshalJSON(data []byte) error {
-	if string(data) == "null" || len(data) == 0 {
+	data = bytes.TrimSpace(data)
+	if bytes.Equal(data, []byte("null")) || len(data) == 0 {
 		*s = ""
 		return nil
 	}
@@ -121,7 +123,7 @@ func sistListPage(slug string, page int) ([]model.NewsItem, int, error) {
 	}
 	route := sistRouteForSlug(slug)
 	if route.navID == "" {
-		route = sistRouteForSlug("news")
+		return nil, 0, fmt.Errorf("sist: unknown feed %q", slug)
 	}
 	pageSize := sistPageSize(route.slug)
 	payload := map[string]any{
@@ -141,7 +143,7 @@ func sistListPage(slug string, page int) ([]model.NewsItem, int, error) {
 		return nil, 0, err
 	}
 	if !recognized {
-		return nil, 0, fmt.Errorf("sist: node API returned a non-JSON response")
+		return nil, 0, sistNonJSONResponseError("/dev-api/web/node", body)
 	}
 	if total == 0 && len(rows) == 0 {
 		return []model.NewsItem{}, 0, nil
@@ -170,7 +172,7 @@ func sistListPage(slug string, page int) ([]model.NewsItem, int, error) {
 // rows per request; ordinary node pages render five.
 func sistPageSize(slug string) int {
 	switch slug {
-	case "party/dynamics", "undergraduate/regulations", "undergraduate/admission", "undergraduate/recommendation", "students/notice":
+	case "party/dynamics", "undergraduate/regulations", "undergraduate/admission", "undergraduate/recommendation", "postgraduate/training", "discipline/progress", "students/notice":
 		return 10
 	default:
 		return 5
@@ -234,9 +236,13 @@ func sistPostJSON(endpoint string, payload any) ([]byte, error) {
 // POST body instead of creating pagination URLs.
 func sistPageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	base := strings.TrimRight(baseURL, "/")
+	normalized := strings.ToLower(strings.Trim(strings.TrimSpace(slug), "/"))
+	if normalized == "" || normalized == "index" {
+		return base + "/home?lang=cn"
+	}
 	section := sistSectionForSlug(slug)
 	if section.navID == "" {
-		return base + "/home?lang=cn"
+		return ""
 	}
 	if !section.nested {
 		return base + "/pc/" + section.navID + "?type=2&lang=cn"
@@ -313,7 +319,8 @@ func sistSubPages() []string {
 }
 
 func sistRouteForSlug(slug string) sistFeedRoute {
-	normalized := strings.ToLower(strings.Trim(strings.TrimSpace(slug), "/"))
+	candidate := strings.Trim(strings.TrimSpace(slug), "/")
+	normalized := strings.ToLower(candidate)
 	switch normalized {
 	case "", "index", "news-center", "新闻中心":
 		normalized = "news"
@@ -325,7 +332,7 @@ func sistRouteForSlug(slug string) sistFeedRoute {
 		normalized = "postgraduate"
 	}
 	for _, route := range sistFeedRoutes {
-		if normalized == strings.ToLower(route.slug) || slug == route.navID {
+		if normalized == strings.ToLower(route.slug) || candidate == route.navID {
 			return route
 		}
 	}
@@ -371,6 +378,9 @@ func parseSistNewsForNav(body []byte, baseURL, defaultNavID string) ([]model.New
 	}
 	if isSistShell(body) {
 		return nil, fmt.Errorf("%w: /dev-api/web/node or /dev-api/web/articlelist (sitetype %s)", errSistDynamicPage, sistSiteType)
+	}
+	if isSistUnavailablePage(body) {
+		return nil, fmt.Errorf("%w: list response did not contain article HTML", errSistUnavailablePage)
 	}
 	return nil, err
 }
@@ -565,6 +575,29 @@ func isSistShell(body []byte) bool {
 		(strings.Contains(text, "sist_web") || strings.Contains(text, "/static/js/app."))
 }
 
+func sistNonJSONResponseError(endpoint string, body []byte) error {
+	if isSistShell(body) {
+		return fmt.Errorf("%w: POST %s returned the SPA shell", errSistDynamicPage, endpoint)
+	}
+	if isSistUnavailablePage(body) {
+		return fmt.Errorf("%w: POST %s returned HTML instead of JSON", errSistUnavailablePage, endpoint)
+	}
+	return fmt.Errorf("sist: POST %s returned a non-JSON response", endpoint)
+}
+
+func isSistUnavailablePage(body []byte) bool {
+	text := strings.ToLower(string(body))
+	for _, marker := range []string{
+		"<title>登录", "<title>login", "统一身份认证", "cas/login", "验证码",
+		"安全验证", "访问被拒绝", "access denied", "cloudflare", "waf",
+	} {
+		if strings.Contains(text, marker) {
+			return true
+		}
+	}
+	return false
+}
+
 func normalizeSistDate(value string) string {
 	match := sistDateRE.FindStringSubmatch(strings.TrimSpace(value))
 	if match == nil {
@@ -599,6 +632,9 @@ func parseSistArticle(body []byte, baseURL string) (*model.Article, error) {
 	}
 	if isSistShell(body) {
 		return nil, fmt.Errorf("%w: /dev-api/web/article requires POST id", errSistDynamicPage)
+	}
+	if isSistUnavailablePage(body) {
+		return nil, fmt.Errorf("%w: article response did not contain article HTML", errSistUnavailablePage)
 	}
 	return nil, err
 }
@@ -742,6 +778,12 @@ func parseSistContentFromSelection(content *goquery.Selection, baseURL string) (
 }
 
 func isSistAttachmentReference(href, name string) bool {
+	if parsed, err := url.Parse(strings.TrimSpace(href)); err == nil {
+		if strings.EqualFold(parsed.Query().Get("urltype"), "news.DownloadAttachUrl") ||
+			strings.Contains(strings.ToLower(parsed.Path), "/_content/download") {
+			return true
+		}
+	}
 	for _, value := range []string{href, name} {
 		lower := strings.ToLower(value)
 		for _, ext := range []string{".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".pdf", ".zip", ".rar", ".7z", ".txt", ".csv"} {

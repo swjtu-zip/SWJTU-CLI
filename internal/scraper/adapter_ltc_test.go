@@ -1,6 +1,8 @@
 package scraper
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"reflect"
 	"strings"
@@ -20,7 +22,7 @@ func readLTCFixture(t *testing.T, name string) []byte {
 
 func TestLTCAdapterRegistrationAndFeeds(t *testing.T) {
 	site := AllSites["ltc"]
-	if site == nil || site.BaseURL != ltcBaseURL || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil {
+	if site == nil || site.BaseURL != ltcBaseURL || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil || site.ArticleFetchFunc == nil {
 		t.Fatalf("LTC adapter hooks are incomplete: %#v", site)
 	}
 	if !reflect.DeepEqual(site.SubPages, ltcSubPages) {
@@ -148,5 +150,59 @@ func TestLTCRejectsStaticVerificationAndExternalArticleShells(t *testing.T) {
 	malformed := []byte(`<meta name="pageType" content="2"><div class="main_right"><div class="current"><h3>晚晴动态</h3></div><div class="conlistComm"><dl><dt><a href="/info/1042/11526.htm"></a></dt><dd>时间：2026年07月03日</dd></dl></div></div>`)
 	if _, err := parseAdapter_ltcList(malformed, ltcBaseURL); err == nil {
 		t.Fatal("malformed local LTC row was silently discarded")
+	}
+}
+
+func TestLTCFetchArticleVerifiesResourcesAndSanitizesHTML(t *testing.T) {
+	var sawReferer string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/info/1042/1.htm":
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write(readLTCFixture(t, "ltc_article_resources.html"))
+		case "/good.png":
+			sawReferer = r.Header.Get("Referer")
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'})
+		case "/bad.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte("<html><body>验证码</body></html>"))
+		case "/good.pdf":
+			w.Header().Set("Content-Type", "application/pdf")
+			_, _ = w.Write([]byte("%PDF-1.7"))
+		case "/bad.pdf":
+			w.Header().Set("Content-Type", "application/pdf")
+			_, _ = w.Write([]byte("<!doctype html><title>404</title>"))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	oldClient, oldNoCache := defaultClient, NoCache
+	defaultClient, NoCache = server.Client(), true
+	t.Cleanup(func() {
+		defaultClient, NoCache = oldClient, oldNoCache
+		ClearCache()
+	})
+
+	article, raw, err := ltcFetchArticleAt(server.URL+"/info/1042/1.htm", server.URL)
+	if err != nil {
+		t.Fatalf("fetch LTC article: %v", err)
+	}
+	if len(raw) == 0 || sawReferer == "" {
+		t.Fatalf("article/resource request metadata missing: raw=%d referer=%q", len(raw), sawReferer)
+	}
+	if len(article.Images) != 1 || article.Images[0] != server.URL+"/good.png" {
+		t.Fatalf("verified images = %#v", article.Images)
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].Name != "有效附件.pdf" || article.Attachments[0].URL != server.URL+"/good.pdf" || article.Attachments[0].Size == "" {
+		t.Fatalf("verified attachments = %#v", article.Attachments)
+	}
+	if !strings.Contains(article.ContentHTML, `src="`+server.URL+`/good.png"`) || !strings.Contains(article.ContentHTML, `href="https://example.com/ordinary"`) {
+		t.Fatalf("valid image or ordinary external link was lost: %s", article.ContentHTML)
+	}
+	if strings.Contains(article.ContentHTML, "bad.png") || strings.Contains(article.ContentHTML, "data:image") || strings.Contains(article.ContentHTML, "bad.pdf") || strings.Contains(article.ContentHTML, "good.pdf") && !strings.Contains(article.ContentHTML, server.URL+"/good.pdf") {
+		t.Fatalf("invalid resource or unresolved attachment leaked: %s", article.ContentHTML)
 	}
 }

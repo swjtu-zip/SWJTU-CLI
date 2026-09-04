@@ -1,6 +1,9 @@
 package scraper
 
 import (
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"reflect"
 	"strings"
@@ -12,7 +15,10 @@ func TestCmAdapterRegistration(t *testing.T) {
 	if !ok {
 		t.Fatal("cm site is not registered")
 	}
-	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil {
+	if site.BaseURL != cmCanonicalBaseURL {
+		t.Fatalf("CM base URL = %q, want canonical HTTPS URL %q", site.BaseURL, cmCanonicalBaseURL)
+	}
+	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.ListPageFunc == nil || site.TotalPagesFunc == nil || site.ArticleFetchFunc == nil {
 		t.Fatalf("CM adapter hooks are incomplete: %+v", site)
 	}
 	if !reflect.DeepEqual(site.SubPages, cmSubPages) {
@@ -140,6 +146,16 @@ func TestCmListParsesRowsAndPreciseTime(t *testing.T) {
 	}
 }
 
+func TestCmListRejectsRecognizedEmptyShell(t *testing.T) {
+	body, err := os.ReadFile("testdata/cm_empty_list.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := parseAdapter_cmList(body, "https://cm.swjtu.edu.cn"); err == nil {
+		t.Fatal("recognized empty/static list shell was accepted")
+	}
+}
+
 func TestCmFengcaiListUsesNListTxt(t *testing.T) {
 	body, err := os.ReadFile("testdata/cm_fengcai.html")
 	if err != nil {
@@ -218,11 +234,185 @@ func TestCmArticleParsesImagesAttachmentsAndMinutePrecision(t *testing.T) {
 	}
 }
 
+func TestCmArticleDoesNotUseBodyDatesAsPublicationDate(t *testing.T) {
+	body, err := os.ReadFile("testdata/cm_article_body_dates.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	article, err := parseAdapter_cmArticle(body, "https://cm.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Date != "" || article.PublishedAt != "" {
+		t.Fatalf("body event/deadline/forwarded dates leaked into publication metadata: %+v", article)
+	}
+}
+
+func TestCmDateValuesKeepsChineseClockPrecision(t *testing.T) {
+	date, publishedAt := cmDateValues("2026年8月31日14时34分56秒")
+	if date != "2026-08-31" || publishedAt != "2026-08-31 14:34:56" {
+		t.Fatalf("cmDateValues() = %q, %q; want date and second precision", date, publishedAt)
+	}
+}
+
 func TestCmParsersRejectStaticShells(t *testing.T) {
 	if _, err := parseAdapter_cmList([]byte(`<html><body><nav><a href="/info/1000/1.htm">导航文章标题</a></nav><section class="banner"><a href="/info/1000/2.htm">轮播文章标题</a></section></body></html>`), "https://cm.swjtu.edu.cn"); err == nil {
 		t.Fatal("static page shell was accepted as a list")
 	}
 	if _, err := parseAdapter_cmArticle([]byte(`<html><body><h1>首页</h1><div class="v_news_content"><p>不是文章</p></div></body></html>`), "https://cm.swjtu.edu.cn"); err == nil {
 		t.Fatal("static page shell was accepted as an article")
+	}
+}
+
+func TestCmListPageRepairsLegacyDatesBeforeRangeFiltering(t *testing.T) {
+	var requested []string
+	articleHTML := func(title, date string) string {
+		return `<html><body><div class="ny-tit"><h4>学生风采</h4></div><div class="detail"><div class="dtl-tit"><h4>` + title + `</h4><div class="dtl-ar"><span>发布时间：` + date + `</span></div></div><div class="dtl-txt"><div class="v_news_content"><p>详情正文</p></div></div></div></body></html>`
+	}
+	responses := map[string]string{
+		"/index/ssfc/xsfc.htm":   `<html><head><meta name="pageTitle" content="学生风采"></head><body><div class="p_pages"><span class="p_no_d">1</span><span class="p_no"><a href="1.htm">2</a></span></div><div class="n_listTxt"><ul><li><a href="../../../info/1512/1.htm" title="过期学生风采"><h2>过期学生风采</h2><time>2023-04-12</time></a></li><li><a href="../../../info/1512/2.htm" title="最近一年学生风采"><h2>最近一年学生风采</h2><time>2023-04-12</time></a></li></ul></div></body></html>`,
+		"/index/ssfc/xsfc/1.htm": `<html><head><meta name="pageTitle" content="学生风采"></head><body><div class="p_pages"><span class="p_no_d">1</span></div><div class="n_listTxt"><ul><li><a href="../../../info/1512/3.htm" title="更早学生风采"><h2>更早学生风采</h2><time>2023-04-12</time></a></li></ul></div></body></html>`,
+		"/info/1512/1.htm":       articleHTML("过期学生风采", "2024-05-07"),
+		"/info/1512/2.htm":       articleHTML("最近一年学生风采", "2025-11-17"),
+		"/info/1512/3.htm":       articleHTML("更早学生风采", "2024-01-01"),
+	}
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requested = append(requested, r.URL.Path)
+		if body, ok := responses[r.URL.Path]; ok {
+			_, _ = w.Write([]byte(body))
+			return
+		}
+		http.NotFound(w, r)
+	})
+	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := &http.Server{Handler: handler}
+	go func() { _ = server.Serve(listener) }()
+	defer server.Close()
+
+	site := AllSites["cm"]
+	oldBaseURL, oldNoCache := site.BaseURL, NoCache
+	site.BaseURL = "http://" + listener.Addr().String()
+	NoCache = true
+	defer func() {
+		site.BaseURL = oldBaseURL
+		NoCache = oldNoCache
+	}()
+
+	items, err := site.ListNewsRange("index/ssfc/xsfc", "2025-09-03", "2026-09-03", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("got %d items, want only the one detail dated in the last year: %#v", len(items), items)
+	}
+	if items[0].Title != "最近一年学生风采" || items[0].Date != "2025-11-17" || items[0].Type != "学生风采" {
+		t.Fatalf("list metadata was not repaired from detail: %+v", items[0])
+	}
+	seenSecondPage := false
+	for _, path := range requested {
+		if path == "/index/ssfc/xsfc/1.htm" {
+			seenSecondPage = true
+			break
+		}
+	}
+	if !seenSecondPage {
+		t.Fatalf("range walk never reached reverse-numbered second page; requests=%v", requested)
+	}
+}
+
+func TestCmArticleKeepsTableTextAndUsableResources(t *testing.T) {
+	body := []byte(`<html><body><div class="ny-tit"><h4>通知公告</h4></div><div class="detail"><div class="dtl-tit"><h4>表格与资源通知</h4><div class="dtl-ar"><span>发布时间：2026-08-31 14:34</span></div></div><div class="dtl-txt"><div class="v_news_content"><p>正文段落</p><table><tr><th>字段</th><td>值</td></tr></table><img src="/blank.gif" data-original="/__local/real.png"><img src="javascript:void(0)" data-src="/__local/real-2.png"><img src="data:image/gif;base64,placeholder" data-lazy-src="/__local/real-3.png"></div></div><div class="attachment"><a href="javascript:download('bad.pdf')" download="伪造.pdf">伪造.pdf</a><a href="/__local/real.pdf">真实.pdf</a></div></div></body></html>`)
+	article, err := parseAdapter_cmArticle(body, "https://cm.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(article.Content, "字段") || !strings.Contains(article.Content, "值") {
+		t.Fatalf("table cells were lost from article content: %q", article.Content)
+	}
+	if article.Date != "2026-08-31" || article.PublishedAt != "2026-08-31 14:34:00" || article.Type != "通知公告" {
+		t.Fatalf("unexpected article metadata: %+v", article)
+	}
+	wantImages := map[string]bool{
+		"https://cm.swjtu.edu.cn/__local/real.png":   true,
+		"https://cm.swjtu.edu.cn/__local/real-2.png": true,
+		"https://cm.swjtu.edu.cn/__local/real-3.png": true,
+	}
+	if len(article.Images) != len(wantImages) {
+		t.Fatalf("got images %#v, want all lazy images and no placeholder", article.Images)
+	}
+	for _, image := range article.Images {
+		if !wantImages[image] {
+			t.Errorf("unexpected image resource %q", image)
+		}
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].Name != "真实.pdf" || article.Attachments[0].URL != "https://cm.swjtu.edu.cn/__local/real.pdf" {
+		t.Fatalf("pseudo attachment was not filtered: %#v", article.Attachments)
+	}
+	if !strings.Contains(article.ContentHTML, `src="https://cm.swjtu.edu.cn/__local/real.png"`) {
+		t.Fatal("content HTML did not retain a resolved image URL")
+	}
+}
+
+func TestCmListSurfacesExternalOnlyRows(t *testing.T) {
+	body := []byte(`<div class="n_list"><ul><li><a href="https://mp.weixin.qq.com/s/example" title="微信招聘信息">微信招聘信息</a></li></ul></div>`)
+	if got := cmExternalListRowCount(body, "https://cm.swjtu.edu.cn"); got != 1 {
+		t.Fatalf("cmExternalListRowCount() = %d, want 1", got)
+	}
+}
+
+func TestCmLiveArticleFiltersHTMLResourcesByTypeAndMagic(t *testing.T) {
+	articleHTML := `<html><body><div class="ny-tit"><h4>通知公告</h4></div><div class="detail"><div class="dtl-tit"><h4>资源验证通知</h4><div class="dtl-ar"><span>发布时间：2026-08-31</span></div></div><div class="dtl-txt"><div class="v_news_content"><p>正文内容</p><img src="/good.png"><img src="/bad.png"><a href="/good.pdf">有效附件.pdf</a><a href="/system/_content/download.jsp?urltype=news.DownloadAttachUrl&amp;wbfileid=BAD">验证码附件.rar</a></div></div></div></body></html>`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/info/1000/1.htm":
+			_, _ = w.Write([]byte(articleHTML))
+		case "/good.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'})
+		case "/bad.png":
+			w.Header().Set("Content-Type", "text/html; charset=UTF-8")
+			_, _ = w.Write([]byte(`<!doctype html><html><body>请输入验证码</body></html>`))
+		case "/good.pdf":
+			w.Header().Set("Content-Type", "application/pdf")
+			_, _ = w.Write([]byte("%PDF-1.7\n"))
+		case "/system/_content/download.jsp":
+			w.Header().Set("Content-Type", "text/html; charset=UTF-8")
+			_, _ = w.Write([]byte(`<!doctype html><html><body>验证码下载附件</body></html>`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	site := AllSites["cm"]
+	oldBaseURL, oldNoCache := site.BaseURL, NoCache
+	site.BaseURL = server.URL
+	NoCache = true
+	defer func() {
+		site.BaseURL = oldBaseURL
+		NoCache = oldNoCache
+	}()
+
+	article, body, err := site.GetArticleSnapshot(server.URL + "/info/1000/1.htm")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(body) == 0 || article.Title != "资源验证通知" || article.Date != "2026-08-31" {
+		t.Fatalf("unexpected live article result: article=%+v body=%d", article, len(body))
+	}
+	if len(article.Images) != 1 || article.Images[0] != server.URL+"/good.png" {
+		t.Fatalf("HTML image resource was not rejected: %#v", article.Images)
+	}
+	if len(article.Attachments) != 1 || article.Attachments[0].Name != "有效附件.pdf" || article.Attachments[0].URL != server.URL+"/good.pdf" {
+		t.Fatalf("HTML/CAPTCHA attachment was not rejected: %#v", article.Attachments)
+	}
+	if strings.Contains(article.ContentHTML, "/bad.png") || strings.Contains(article.ContentHTML, "BAD") {
+		t.Fatalf("rejected image or attachment leaked into ContentHTML: %q", article.ContentHTML)
+	}
+	if !strings.Contains(article.ContentHTML, server.URL+"/good.png") || !strings.Contains(article.ContentHTML, server.URL+"/good.pdf") {
+		t.Fatalf("verified resources were not retained in ContentHTML: %q", article.ContentHTML)
 	}
 }
