@@ -6,8 +6,8 @@ import "testing"
 // share low-level helpers, but no site is allowed to silently fall back to a
 // document-wide generic parser with no site-level extension point.
 func TestEveryRegisteredSiteHasAdapter(t *testing.T) {
-	if len(AllSites) != 70 {
-		t.Fatalf("site registry has %d sites, want 70", len(AllSites))
+	if len(AllSites) != 71 {
+		t.Fatalf("site registry has %d sites, want 71", len(AllSites))
 	}
 	for id, site := range AllSites {
 		if site.ParseFunc == nil {

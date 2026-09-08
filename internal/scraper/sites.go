@@ -136,6 +136,7 @@ var AllSites = map[string]*BodaSite{
 	"bwc":    {Name: "党委保卫部", BaseURL: "https://bwc.swjtu.edu.cn", Category: "party"},
 	"xgh":    {Name: "校工会", BaseURL: "https://xgh.swjtu.edu.cn", Category: "party"},
 	"jgdw":   {Name: "机关与直属单位党委", BaseURL: "https://jgdw.swjtu.edu.cn", Category: "party"},
+	"youth":  {Name: "校团委", BaseURL: "https://youth.swjtu.edu.cn", Category: "party"},
 
 	// === 行政部门 ===
 	"xb":     {Name: "校长办公室", BaseURL: "https://xb.swjtu.edu.cn", Category: "admin"},

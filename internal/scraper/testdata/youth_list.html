@@ -1,0 +1,783 @@
+﻿<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>通知公告-新青年素质网</title><meta name="pageType" content="2">
+<meta name="pageTitle" content="通知公告">
+<META Name="keywords" Content="新青年素质网,通知公告" />
+
+    
+    <meta name="description" content="共青团西南交通大学">
+    <meta name="viewport" content="width=device-width,minimum-scale=1,maximum-scale=1,user-scalable=1">
+    <link rel="stylesheet" href="templates/youth/style/base.css">
+    <link rel="stylesheet" href="templates/youth/style/common.css">
+    <link rel="stylesheet" href="templates/youth/style/smkj_common.css">
+     <link rel="stylesheet" href="templates/youth/style/media.css">
+   <script src="templates/youth/js/jquery-3.4.0.min.js" type="text/javascript"></script>
+    <script src="templates/youth/js/slider.js" type="text/javascript"></script>
+    <script src="templates/youth/js/jquery.easing-1.3.js" type="text/javascript"></script>
+    <script src="templates/youth/js/jquery.iosslider.js" type="text/javascript"></script>
+    <script src="templates/youth/js/common.js" type="text/javascript"></script>
+    <script src="templates/youth/js/swiper.min.js" type="text/javascript"></script>
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="newsList.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1191,'/newsList.jsp',-1,2128761871)</script>
+</head>
+
+<body>
+    <!--Header-->
+    <div class="header_top">
+        <div class="w1200">
+            <p class="fl" id="currentTime"></p>
+            <ul class="header_top_nav fr">  <li><a href="https://cas.swjtu.edu.cn/authserver/login?service=https://youth.swjtu.edu.cn/cas_login.aspx" target="_blank">我要投稿</a></li>
+<li><a href="https://xtw-youth.swjtu.edu.cn/" target="_blank">管理登录</a></li>
+<li><a target="_blank">联系我们</a></li></ul>
+        </div>
+    </div>
+    <div class="header">
+        <div class="w1200 header_box">
+         <img class="mobile-logo" src="templates/youth/images/phlogo.png" alt="新青年素质网">
+            <div class="menu-toggle" id="menuToggle" aria-label="菜单">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <div class="search fr"><!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu1 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+        margin-top: -15px;
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu1 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu1"></div>
+<script type="text/html" id="htmlu1">
+    <div id="appu1">
+        <div v-if="!isError">
+            
+            
+             <input type="text" placeholder="输入回车搜索" class="search-input" id="keywords" name="keywords" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+                <input type="submit" value=""  v-on:click="onSubmit()">
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu1").html($("#htmlu1").text());
+</script>
+<script>
+    var appOwner = "2128761871";
+    var token = 'tourist';
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu1",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu1 = document.querySelector("#appu1");
+   if (appElementu1 && appElementu1.__vue__) {
+
+   } else {
+      $("#divu1").html($("#htmlu1").text());
+      var appOwner = "2128761871";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou1 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu1(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu1();
+        }
+      };
+
+      function onSubmitu1(e) {
+        queryInfou1.query.keyWord= $("#appu1  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou1.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script></div>
+            <ul class="header_nav clearfloat">
+            <div class="mobile-search">
+               <div class="search fr">
+                <!-- 3.1.3版本 -->
+
+
+
+<style>
+    #appu2 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+        margin-top: -15px;
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu2 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu2"></div>
+<script type="text/html" id="htmlu2">
+    <div id="appu2">
+        <div v-if="!isError">
+            
+            
+             <input type="text" placeholder="输入回车搜索" class="search-input" id="keywords" name="keywords" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+                <input type="submit" value=""  v-on:click="onSubmit()">
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu2").html($("#htmlu2").text());
+</script>
+<script>
+    var appOwner = "2128761871";
+    var token = 'tourist';
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu2",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu2 = document.querySelector("#appu2");
+   if (appElementu2 && appElementu2.__vue__) {
+
+   } else {
+      $("#divu2").html($("#htmlu2").text());
+      var appOwner = "2128761871";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou2 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu2(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu2();
+        }
+      };
+
+      function onSubmitu2(e) {
+        queryInfou2.query.keyWord= $("#appu2  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou2.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+                </div>
+            </div>
+            <li><a href="index.htm" target="_blank">首页</a></li>
+<li><a href="twgk/twjj.htm" target="_blank">团委概况</a></li>
+<li><a href="tqkx1.htm" target="_blank">团情快讯</a></li>
+<li><a href="tzgg.htm" target="_blank">通知公告</a></li>
+<li><a href="twfw.htm" target="_blank">团委发文</a></li>
+<li><a href="jctj.htm" target="_blank">基层团建</a></li>
+<li><a href="https://ocw.swjtu.edu.cn/yethan/YouthIndex" target="_blank">第二课堂</a></li>
+<li><a href="xszz.htm" target="_blank">学生组织</a></li>
+<li><a href="qncm.htm" target="_blank">青年传媒</a></li>
+<li><a href="https://xtw-youth.swjtu.edu.cn/ytrweb-home" target="_blank">网上团日</a></li>
+<li><a href="https://zhtj.youth.cn/zhtj/" target="_blank">智慧团建</a></li>
+<li><a href="https://xtw-youth.swjtu.edu.cn/dashboard" target="_blank">社会实践</a></li>
+</ul>
+        </div>
+    </div>
+    <!--/Header-->
+    <!--内容-->
+    <!--banner-->
+    <div class="pagebanner">
+        <div class="pagebanner_con"></div>
+    </div>
+    <!--banner End-->
+
+    <!--内容-->
+    <div class="pagecontainer w1200">
+        <!--PageLeft-->
+        <div class="main_left">
+           <div class="menu">    <h3>通知公告</h3>
+</div>
+        </div>
+
+        <!--PageLeft-->
+        <div class="main_right">
+            <div class="current">
+                <h3>
+通知公告</h3>
+               <div style="display: inline-block;"> 
+        
+                首页
+                        &nbsp; 
+
+ 
+              &gt;
+              &nbsp;
+        
+                通知公告
+                        &nbsp; 
+
+</div>
+
+            </div>
+
+
+            <div class="content">
+
+
+<script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script>    <dl id="line_u7_0">
+        <dt>
+            <a href="info/1191/179491.htm" class="news-link" data-end-date="">
+                    <img src="templates/youth/images/news-moren.png">
+            </a>
+        </dt>
+        <dd>
+            <h4>
+                <a href="info/1191/179491.htm" class="news-link" data-end-date="">
+                    <div class="line1">关于四川省青年马克思主义者培养工程第九届高校班学员拟推荐名单的公示</div>
+                </a>
+            </h4>
+            <em>2026-09-04</em>
+            <p class="line3">各二级团组织：根据《关于开展四川省青年马克思主义者培养工程第九届高校班学员申报工作的通知》相关要求，我校严格按照推荐条件，经个人申请、组织推荐、政治审查、学校党委研究同意，拟推荐屈姝含、周夏冰、周璇参加四川省青年马克思主义者培养工程第九届高校班学员选拔。屈姝含，女，汉族，中共党员，设计艺术学院2025级硕士研究生。周夏冰，男，汉族，中共预备党员，利兹学院2024级本科生。周璇，女，汉族，中共预备党员，马克思主义学院2026级博士研究生。...</p>
+        </dd>
+    </dl>
+
+    <span id="section_u7_0" style="display:none;">
+        <hr style="height:1px;border:none;border-top:1px dashed #CCCCCC;">
+    </span>
+    <div style="display:none">活动结束时间：</div>
+    <dl id="line_u7_1">
+        <dt>
+            <a href="info/1191/179461.htm" class="news-link" data-end-date="">
+                    <img src="templates/youth/images/news-moren.png">
+            </a>
+        </dt>
+        <dd>
+            <h4>
+                <a href="info/1191/179461.htm" class="news-link" data-end-date="">
+                    <div class="line1">关于组建中国青年志愿者第29届研究生支教团（2027—2028年度）的通知</div>
+                </a>
+            </h4>
+            <em>2026-09-04</em>
+            <p class="line3">各学院（中心、实验室）：按照全国项目办《关于组建第29届中国青年志愿者研究生支教团（2027-2028年度）有关工作的通知》相关要求，结合我校实际情况，经研究决定从2027届应届本科毕业生、在读研究生中选拔优秀青年志愿者组建西南交通大学第29届研究生支教团。现将有关事宜通知如下：一、工作内容按照“公开招募、自愿报名、择优选拔”的方式，在我校公开招募具备推荐免试硕士研究生资格的应届本科毕业生和在读研究生，到对口帮扶地区中小学校开展为期一年的支教工作（...</p>
+        </dd>
+    </dl>
+
+    <span id="section_u7_1" style="display:none;">
+        <hr style="height:1px;border:none;border-top:1px dashed #CCCCCC;">
+    </span>
+    <div style="display:none">活动结束时间：</div>
+    <dl id="line_u7_2">
+        <dt>
+            <a href="info/1191/179111.htm" class="news-link" data-end-date="">
+                    <img src="templates/youth/images/news-moren.png">
+            </a>
+        </dt>
+        <dd>
+            <h4>
+                <a href="info/1191/179111.htm" class="news-link" data-end-date="">
+                    <div class="line1">关于开展优化营商环境主题宣传短视频征集活动的通知</div>
+                </a>
+            </h4>
+            <em>2026-08-03</em>
+            <p class="line3">为引导我校青年学子走出校园、感知社会发展，直观了解四川省营商环境建设成果，挖掘政务服务暖心瞬间、记录基层实干担当风采，以青年视角讲述营商发展故事，用镜头笔触赋能城市高质量发展，丰富学生课余实践、提升青年社会实践能力与社会观察能力，由西南交通大学团委、四川省营商环境研究院主办，西南交通大学公共管理学院团委、西南交通大学经济管理学院团委承办，中国四川网作为媒体支持单位，面向全校学生开展优化营商环境主题宣传短视频征集活动。...</p>
+        </dd>
+    </dl>
+
+    <span id="section_u7_2" style="display:none;">
+        <hr style="height:1px;border:none;border-top:1px dashed #CCCCCC;">
+    </span>
+    <div style="display:none">活动结束时间：</div>
+    <dl id="line_u7_3">
+        <dt>
+            <a href="info/1191/179041.htm" class="news-link" data-end-date="">
+                    <img src="templates/youth/images/news-moren.png">
+            </a>
+        </dt>
+        <dd>
+            <h4>
+                <a href="info/1191/179041.htm" class="news-link" data-end-date="">
+                    <div class="line1">西南交通大学中国国际大学生创新大赛（2026）校赛获奖名单</div>
+                </a>
+            </h4>
+            <em>2026-07-27</em>
+            <p class="line3">各参赛团队：2026年5月21日下午，西南交通大学中国国际大学生创新大赛（2026）校赛线下答辩顺利举行。本次校赛邀请了校内外专家作为评委，通过网评及线下答辩等赛事环节，决胜出了我校的优秀项目。现将校赛获奖情况公布如下，详见附件。2026年国赛通知已下发，请各项目按照参赛要求，认真准备。待2026年省赛通知下发后，本科生院将组织校级金奖和银奖项目进行排位赛，综合考虑各项目的校赛答辩成绩、排位赛成绩、材料打磨情况和省赛入围指标等因素后，...</p>
+        </dd>
+    </dl>
+
+    <span id="section_u7_3" style="display:none;">
+        <hr style="height:1px;border:none;border-top:1px dashed #CCCCCC;">
+    </span>
+    <div style="display:none">活动结束时间：</div>
+    <dl id="line_u7_4">
+        <dt>
+            <a href="info/1191/178851.htm" class="news-link" data-end-date="">
+                    <img src="templates/youth/images/news-moren.png">
+            </a>
+        </dt>
+        <dd>
+            <h4>
+                <a href="info/1191/178851.htm" class="news-link" data-end-date="">
+                    <div class="line1">关于开展西南交通大学“交通强国 青年实干”青年实干家项目第十一批招募的通知</div>
+                </a>
+            </h4>
+            <em>2026-07-20</em>
+            <p class="line3">为深入学习贯彻党的二十大和二十届历次全会精神，全面贯彻落实习近平总书记关于青年工作的重要思想，统筹抓好引才育才用才各项工作，根据共青团中央《关于实施新时代新征程高校学生“青年实干家计划”的意见》（中青发〔2024〕8号）以及共青团四川省委等3部门关于印发《四川省新时代新征程高校学生“青年实干家计划”实施方案》的通知（川青联发〔2024〕32号）文件要求，西南交通大学拟向绵竹市、攀枝花市推荐全日制在校本科生、研究生参加“...</p>
+        </dd>
+    </dl>
+
+    <span id="section_u7_4" style="display:none;">
+        <hr style="height:1px;border:none;border-top:1px dashed #CCCCCC;">
+    </span>
+    <div style="display:none">活动结束时间：</div>
+    <dl id="line_u7_5">
+        <dt>
+            <a href="info/1191/178781.htm" class="news-link" data-end-date="">
+                    <img src="templates/youth/images/news-moren.png">
+            </a>
+        </dt>
+        <dd>
+            <h4>
+                <a href="info/1191/178781.htm" class="news-link" data-end-date="">
+                    <div class="line1">关于公开招募西南交通大学2026年迎新志愿者的通知</div>
+                </a>
+            </h4>
+            <em>2026-07-17</em>
+            <p class="line3">为落实学校相关部署，切实做好2026年迎新工作，积极营造热情、周到、安全、有序的迎新工作氛围，展现全校师生的良好风貌，弘扬奉献、友爱、互助、进步的志愿精神，现面向全校招募志愿者负责迎新的相关志愿服务工作，具体如下：一、招募对象全校全日制本科生、研究生，共计290人，其中犀浦校区150人（其中校园宣讲志愿者50人），九里校区70人（其中校园宣讲志愿者20人），东部（国际）校区40人，峨眉校区30人，本次迎新志愿服务将设立志愿服务岗、...</p>
+        </dd>
+    </dl>
+
+    <span id="section_u7_5" style="display:none;">
+        <hr style="height:1px;border:none;border-top:1px dashed #CCCCCC;">
+    </span>
+    <div style="display:none">活动结束时间：</div>
+    <dl id="line_u7_6">
+        <dt>
+            <a href="info/1191/172491.htm" class="news-link" data-end-date="">
+                    <img src="templates/youth/images/news-moren.png">
+            </a>
+        </dt>
+        <dd>
+            <h4>
+                <a href="info/1191/172491.htm" class="news-link" data-end-date="">
+                    <div class="line1">西南交通大学关于举办2026年暑期“三下乡”社会实践出征仪式暨行前培训会的通知</div>
+                </a>
+            </h4>
+            <em>2026-07-08</em>
+            <p class="line3">为深入学习贯彻习近平新时代中国特色社会主义思想，实施新时代立德树人工程，引领广大青年学生在实践中受教育、长才干、作贡献，按照上级团组织相关工作要求，推进2026年暑期“三下乡”社会实践活动顺利开展，学校拟定于7月9日（星期四）举行2026年大学生暑期“三下乡”社会实践出征仪式暨行前培训会，相关事宜通知如下：一、活动主题建功“十五五”·青春为中国式现代化挺膺担当二、活动时间2026年7月9日（星期四）14：30——16：30三、...</p>
+        </dd>
+    </dl>
+
+    <span id="section_u7_6" style="display:none;">
+        <hr style="height:1px;border:none;border-top:1px dashed #CCCCCC;">
+    </span>
+    <div style="display:none">活动结束时间：</div>
+    <dl id="line_u7_7">
+        <dt>
+            <a href="info/1191/172251.htm" class="news-link" data-end-date="">
+                    <img src="templates/youth/images/news-moren.png">
+            </a>
+        </dt>
+        <dd>
+            <h4>
+                <a href="info/1191/172251.htm" class="news-link" data-end-date="">
+                    <div class="line1">西南交通大学2026年大学生暑期“三下乡”社会实践队伍立项公示</div>
+                </a>
+            </h4>
+            <em>2026-06-24</em>
+            <p class="line3">各二级团组织、全体师生：为深入学习贯彻习近平新时代中国特色社会主义思想，贯彻落实党中央有关决策部署，实施新时代立德树人工程，按照上级团组织相关工作要求，着力打造新时代伟大变革实践育人大课堂，引领广大青年学生在实践中受教育、长才干、作贡献，2026年学校继续组织开展大学生暑期“三下乡”社会实践活动。一、立项情况经师生自行组队申报，各学院、机关部处推荐，主管单位审批,立项暑期社会实践团队983支，其中校级主题团队444支（...</p>
+        </dd>
+    </dl>
+
+    <span id="section_u7_7" style="display:none;">
+        <hr style="height:1px;border:none;border-top:1px dashed #CCCCCC;">
+    </span>
+    <div style="display:none">活动结束时间：</div>
+    <dl id="line_u7_8">
+        <dt>
+            <a href="info/1191/172241.htm" class="news-link" data-end-date="">
+                    <img src="templates/youth/images/news-moren.png">
+            </a>
+        </dt>
+        <dd>
+            <h4>
+                <a href="info/1191/172241.htm" class="news-link" data-end-date="">
+                    <div class="line1">2026年春季学期四川省大学生“综合素质A级证书” 认证相关通知</div>
+                </a>
+            </h4>
+            <em>2026-06-24</em>
+            <p class="line3">四川省大学生“综合素质A级证书”由共青团四川省委、四川省学生联合会共同设立。四川省大学生“综合素质A级证书”认证制度旨在对大学生的综合素质进行有效评价，在青年学生中树立先进典型， 建立正确的激励导向机制，引导广大青年学生向上向善、自立自强、奋发成才，同时向社会推荐优秀人才，为祖国建设和发展做出积极贡献。一、组织机构四川省大学生“综合素质A级证书”认证组织机构为共青团四川省委和四川省学生联合会。共青团四川省委学校部、...</p>
+        </dd>
+    </dl>
+
+    <span id="section_u7_8" style="display:none;">
+        <hr style="height:1px;border:none;border-top:1px dashed #CCCCCC;">
+    </span>
+    <div style="display:none">活动结束时间：</div>
+    <dl id="line_u7_9">
+        <dt>
+            <a href="info/1191/172231.htm" class="news-link" data-end-date="">
+                    <img src="templates/youth/images/news-moren.png">
+            </a>
+        </dt>
+        <dd>
+            <h4>
+                <a href="info/1191/172231.htm" class="news-link" data-end-date="">
+                    <div class="line1">关于开展西南交通大学“交通强国 青年实干”青年实干家项目第十批招募的通知</div>
+                </a>
+            </h4>
+            <em>2026-06-24</em>
+            <p class="line3">为深入学习贯彻党的二十大和二十届历次全会精神，全面贯彻落实习近平总书记关于青年工作的重要思想，统筹抓好引才育才用才各项工作，根据共青团中央《关于实施新时代新征程高校学生“青年实干家计划”的意见》（中青发〔2024〕8号）以及共青团四川省委等3部门关于印发《四川省新时代新征程高校学生“青年实干家计划”实施方案》的通知（川青联发〔2024〕32号）文件要求，西南交通大学拟向乐山市推荐全日制在校本科生、研究生参加乐山市“...</p>
+        </dd>
+    </dl>
+
+    <span id="section_u7_9" style="display:none;">
+        <hr style="height:1px;border:none;border-top:1px dashed #CCCCCC;">
+    </span>
+    <div style="display:none">活动结束时间：</div>
+
+<link rel="stylesheet" Content-type="text/css" href="/system/resource/css/pagedown/sys.css">
+<div class="pb_sys_common pb_sys_normal pb_sys_style1 fyt" style="margin:30px;text-align:center;"><span class="p_pages"><span class="p_first_d p_fun_d">首页</span><span class="p_prev_d p_fun_d">上页</span><span class="p_no_d">1</span><span class="p_no"><a href="tzgg/131.htm">2</a></span><span class="p_no"><a href="tzgg/130.htm">3</a></span><span class="p_no"><a href="tzgg/129.htm">4</a></span><span class="p_no"><a href="tzgg/128.htm">5</a></span><span class="p_dot">...</span><span class="p_no"><a href="tzgg/1.htm">132</a></span><span class="p_next p_fun"><a href="tzgg/131.htm">下页</a></span><span class="p_last p_fun"><a href="tzgg/1.htm">尾页</a></span></span></div>
+<script>_showDynClickBatch(['dynclicks_u7_179491','dynclicks_u7_179461','dynclicks_u7_179111','dynclicks_u7_179041','dynclicks_u7_178851','dynclicks_u7_178781','dynclicks_u7_172491','dynclicks_u7_172251','dynclicks_u7_172241','dynclicks_u7_172231'],[179491,179461,179111,179041,178851,178781,172491,172251,172241,172231],"wbnews", 2128761871)</script></div>
+            <div class="clear10"> </div>
+
+            <div class="clear10"> </div>
+        </div>
+        <div class="clear"></div>
+    </div>
+    <!--footer-->
+    <div class="clear"></div>
+    <!--footer-->
+    <div class="links">
+        <div class="w1200"><ul class="clearfloat">
+
+                <li><a target="_blank" href="http://www.moe.gov.cn/">教育部</a></li>
+
+                <li><a target="_blank" href="http://www.ccyl.org.cn/">共青团中央</a></li>
+
+                <li><a target="_blank" href="http://www.sizhengwang.cn/">高校思政网</a></li>
+
+                <li><a target="_blank" href="http://www.scedu.net/">四川省教育厅</a></li>
+
+                <li><a target="_blank" href="https://www.scyol.com/#/home">四川共青团</a></li>
+
+                <li><a target="_blank" href="https://www.cdcyl.org.cn/">成都共青团</a></li>
+
+                <li><a target="_blank" href="https://www.swjtu.edu.cn/">西南交通大学</a></li>
+
+                <li><a target="_blank" href="https://xg.swjtu.edu.cn/web">扬华素质网</a></li>
+
+            </ul></div>
+    </div>
+
+    <div class="footer white">   <div class="box fat">
+            <ul class="footer__links">
+                <li class="footer__links__item"><a href="fwzn/gywm.htm" target="_blank">关于我们</a></li>
+                <li class="footer__links__item"><a href="fwzn/tgxz.htm" target="_blank">投稿须知</a></li>
+                <li class="footer__links__item"><a href="fwzn/lxwm.htm" target="_blank">联系我们</a></li>
+                <li class="footer__links__item"><a href="fwzn/bqsm.htm" target="_blank">版权说明</a></li>
+                <li class="footer__links__item"><a href="mailto:zhuwei@swjtu.cn">电子邮箱</a></li>
+                <li class="footer__links__item"><a href="https://youth.swjtu.edu.cn/user/oauth_login.shtml" target="_blank">我要投稿</a></li>
+                <li class="footer__links__item last"><a href="https://youth.swjtu.edu.cn/user/oauth_login.shtml" target="_blank">管理登陆</a></li>
+            </ul>
+            <p>copyright @ 2019-2023 西南交通大学团委 youth.swjtu.edu.cn. All Rrights Reserved</p>
+            <p>地址：中国四川省成都市郫都区犀安路 999 号</p>
+            <p>蜀ICP备05026985号 访问量：10000000</p>
+            <div class="son qr">
+                <img class="qr__img" src="/templates/youth/images/qr_wechat.png">
+                <img class="qr__img" src="/templates/youth/images/qr_weibo.png">
+            </div>
+        </div></div>
+    <!--/footer-->
+     <script>
+        // 移动端汉堡菜单
+        $(function () {
+            $('#menuToggle').on('click', function () {
+                $(this).toggleClass('open');
+                $('.header_nav').toggleClass('nav-open');
+            });
+            // 点击导航项后关闭菜单
+            $('.header_nav li a').on('click', function () {
+                $('#menuToggle').removeClass('open');
+                $('.header_nav').removeClass('nav-open');
+            });
+        });
+    </script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const now = new Date();
+
+    document.querySelectorAll('a.news-link').forEach(link => {
+        const endDateStr = link.getAttribute('data-end-date');
+        if (!endDateStr || endDateStr === 'null' || endDateStr === '(空)') {
+            console.log('无结束时间，跳过:', link);
+            return;
+        }
+
+        // 解析时间
+        let endDate = new Date(endDateStr);
+        if (isNaN(endDate.getTime())) {
+            // 尝试常见格式
+            endDate = new Date(endDateStr.replace(/-/g, '/')); // 替换 - 为 /
+        }
+
+        if (isNaN(endDate.getTime())) {
+            console.warn('时间解析失败:', endDateStr);
+            return;
+        }
+
+        // 如果活动已结束（endDate <= now），禁止跳转
+        if (endDate <= now) {
+            link.href = '#';
+            link.title = '活动已结束';
+            link.style.color = 'gray';
+            link.onclick = function(e) {
+                e.preventDefault();
+                alert('公示期已结束');
+            };
+        }
+    });
+});
+</script>
+
+</body>
+</html>
+
+</html>

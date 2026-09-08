@@ -1,0 +1,1114 @@
+﻿<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>新青年素质网</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="新青年素质网">
+<META Name="keywords" Content="新青年素质网" />
+
+    
+    <meta name="description" content="共青团西南交通大学">
+    <meta name="viewport" content="width=device-width,minimum-scale=1,maximum-scale=1,user-scalable=1">
+    <link rel="stylesheet" href="templates/youth/style/base.css">
+   <link rel="stylesheet" href="templates/youth/style/common.css?v=20260831173200">
+    <link rel="stylesheet" href="templates/youth/style/slider.css">
+    <link rel="stylesheet" href="templates/youth/style/swiper.min.css">
+    <link rel="stylesheet" href="templates/youth/style/media.css">
+    <script src="templates/youth/js/jquery-3.4.0.min.js" type="text/javascript"></script>
+    <script src="templates/youth/js/slider.js" type="text/javascript"></script>
+    <script src="templates/youth/js/jquery.easing-1.3.js" type="text/javascript"></script>
+    <script src="templates/youth/js/jquery.iosslider.js" type="text/javascript"></script>
+    <script src="templates/youth/js/common.js" type="text/javascript"></script>
+    <script src="templates/youth/js/swiper.min.js" type="text/javascript"></script>
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1001,'/index.jsp',-1,2128761871)</script>
+</head>
+
+<body>
+    <!--Header-->
+    <div class="header_top">
+        <div class="w1200">
+            <p class="fl" id="currentTime"></p>
+            <ul class="header_top_nav fr">
+                  <li><a href="https://cas.swjtu.edu.cn/authserver/login?service=https://youth.swjtu.edu.cn/cas_login.aspx" target="_blank">我要投稿</a></li>
+<li><a href="https://xtw-youth.swjtu.edu.cn/" target="_blank">管理登录</a></li>
+<li><a target="_blank">联系我们</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="header">
+        <div class="w1200 header_box">
+            <img class="mobile-logo" src="templates/youth/images/phlogo.png" alt="新青年素质网">
+          
+            <div class="menu-toggle" id="menuToggle" aria-label="菜单">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <div class="search fr">
+                <!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu1 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+        margin-top: -15px;
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu1 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu1"></div>
+<script type="text/html" id="htmlu1">
+    <div id="appu1">
+        <div v-if="!isError">
+            
+            
+             <input type="text" placeholder="输入回车搜索" class="search-input" id="keywords" name="keywords" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+                <input type="submit" value=""  v-on:click="onSubmit()">
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu1").html($("#htmlu1").text());
+</script>
+<script>
+    var appOwner = "2128761871";
+    var token = 'tourist';
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu1",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu1 = document.querySelector("#appu1");
+   if (appElementu1 && appElementu1.__vue__) {
+
+   } else {
+      $("#divu1").html($("#htmlu1").text());
+      var appOwner = "2128761871";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou1 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu1(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu1();
+        }
+      };
+
+      function onSubmitu1(e) {
+        queryInfou1.query.keyWord= $("#appu1  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou1.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+            </div>
+       <ul class="header_nav clearfloat">
+         <div class="mobile-search">
+               <div class="search fr">
+                <!-- 3.1.3版本 -->
+
+
+
+<style>
+    #appu2 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+        margin-top: -15px;
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu2 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu2"></div>
+<script type="text/html" id="htmlu2">
+    <div id="appu2">
+        <div v-if="!isError">
+            
+            
+             <input type="text" placeholder="输入回车搜索" class="search-input" id="keywords" name="keywords" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+                <input type="submit" value=""  v-on:click="onSubmit()">
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu2").html($("#htmlu2").text());
+</script>
+<script>
+    var appOwner = "2128761871";
+    var token = 'tourist';
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu2",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu2 = document.querySelector("#appu2");
+   if (appElementu2 && appElementu2.__vue__) {
+
+   } else {
+      $("#divu2").html($("#htmlu2").text());
+      var appOwner = "2128761871";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou2 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu2(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu2();
+        }
+      };
+
+      function onSubmitu2(e) {
+        queryInfou2.query.keyWord= $("#appu2  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou2.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+                </div>
+            </div>
+                <li><a href="index.htm" target="_blank">首页</a></li>
+<li><a href="twgk/twjj.htm" target="_blank">团委概况</a></li>
+<li><a href="tqkx1.htm" target="_blank">团情快讯</a></li>
+<li><a href="tzgg.htm" target="_blank">通知公告</a></li>
+<li><a href="twfw.htm" target="_blank">团委发文</a></li>
+<li><a href="jctj.htm" target="_blank">基层团建</a></li>
+<li><a href="https://ocw.swjtu.edu.cn/yethan/YouthIndex" target="_blank">第二课堂</a></li>
+<li><a href="xszz.htm" target="_blank">学生组织</a></li>
+<li><a href="qncm.htm" target="_blank">青年传媒</a></li>
+<li><a href="https://xtw-youth.swjtu.edu.cn/ytrweb-home" target="_blank">网上团日</a></li>
+<li><a href="https://zhtj.youth.cn/zhtj/" target="_blank">智慧团建</a></li>
+<li><a href="https://xtw-youth.swjtu.edu.cn/dashboard" target="_blank">社会实践</a></li>
+
+            </ul>
+            
+        </div>
+    </div>
+    <!--/Header-->
+
+
+    <!-- 轮播图 -->
+
+    <!--banner-->
+    <div class="banner pore">
+        <div class="swiper-container main-banner" style="height: 365px;">
+            
+
+<script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script><div class="swiper-wrapper">
+                
+<div class="swiper-slide">
+                    <a href="info/1271/170371.htm" style="display: block;height: 100%;width: 100%;"><img src="/__local/3/7D/BB/A25CAA8757DE08CA8A10B38FA9D_F5E3DBD1_179F6.jpg" alt="" class=" baimg" style="width: 100%;height: 100%;"></a>
+                </div>
+                
+<div class="swiper-slide">
+                    <a href="info/1271/171381.htm" style="display: block;height: 100%;width: 100%;"><img src="/__local/6/E8/9B/4A4D0F4325B2C75F54BF265C3F5_2BB5E059_507BB.jpg" alt="" class=" baimg" style="width: 100%;height: 100%;"></a>
+                </div>
+                
+<div class="swiper-slide">
+                    <a href="info/1271/1021.htm" style="display: block;height: 100%;width: 100%;"><img src="/__local/F/9C/AF/D715C9712DAB82379F85110BC83_3C6D0C7D_33506.jpg" alt="" class=" baimg" style="width: 100%;height: 100%;"></a>
+                </div>
+                
+<div class="swiper-slide">
+                    <a href="info/1271/166731.htm" style="display: block;height: 100%;width: 100%;"><img src="/__local/B/34/FD/D4C25E13792C60D6068E56543B0_75859DCE_27897.jpg" alt="" class=" baimg" style="width: 100%;height: 100%;"></a>
+                </div>
+                
+<div class="swiper-slide">
+                    <a href="info/1271/166691.htm" style="display: block;height: 100%;width: 100%;"><img src="/__local/8/5C/5E/E80826A0B21030EA05860D28EEB_60CE2492_1B28F.jpg" alt="" class=" baimg" style="width: 100%;height: 100%;"></a>
+                </div>
+                
+<div class="swiper-slide">
+                    <a href="info/1271/1011.htm" style="display: block;height: 100%;width: 100%;"><img src="/__local/3/EC/42/9AA77D0C0DF930BA997854880DA_2EC4162D_2CFD4.jpg" alt="" class=" baimg" style="width: 100%;height: 100%;"></a>
+                </div>
+                
+<div class="swiper-slide">
+                    <a href="info/1271/1001.htm" style="display: block;height: 100%;width: 100%;"><img src="/__local/3/E5/5B/B008DBF8FE8B87E3B673E3AAAA8_5209EFF1_1F882.jpg" alt="" class=" baimg" style="width: 100%;height: 100%;"></a>
+                </div>
+                
+</div>
+            <div class="swiper-button-next trans">
+                <i class="iconfont iconarrr"></i>
+            </div>
+            <div class="swiper-button-prev trans">
+                <i class="iconfont iconarrl"></i>
+            </div>
+            <div class="swiper-pagination"></div>
+             <div class="leftbg"></div>
+                <div class="rightbg"></div><script>_showDynClickBatch(['dynclicks_u4_170371','dynclicks_u4_171381','dynclicks_u4_1021','dynclicks_u4_166731','dynclicks_u4_166691','dynclicks_u4_1011','dynclicks_u4_1001'],[170371,171381,1021,166731,166691,1011,1001],"wbnews", 2128761871)</script>
+
+        </div>
+    </div>
+
+    <div class="container w1200">
+        <!-- 团情快讯 通知公告 二三课堂-->
+        <div class="clearfloat part">
+            <div class="page_box fl">
+                <div class="title clearfloat">
+                    <h1 class="fl tqkx">团情快讯</h1>
+                    <a class="more fr" href="tqkx1.htm">更多&gt;</a>
+                </div>
+
+                <ul class="list">
+                    
+
+<li>
+<a href="info/1281/179421.htm" target="_blank">
+    <p class="line1">《中国共青团》杂志报道学校共青团的工作经验</p>
+</a>
+<span>09-02</span>
+</li>
+
+                    
+<li>
+<a href="info/1281/179411.htm" target="_blank">
+    <p class="line1">西南交大荣获成都世运会集体、个人表彰</p>
+</a>
+<span>09-01</span>
+</li>
+
+                    
+<li>
+<a href="info/1281/179431.htm" target="_blank">
+    <p class="line1">我校学子及科创团体获评“中国大学生自强之星”</p>
+</a>
+<span>08-22</span>
+</li>
+
+                    
+<li>
+<a href="info/1281/179241.htm" target="_blank">
+    <p class="line1">擎旗寻星火，井冈悟初心——西南交通大学国旗班赴江西井冈山开展暑期社会实践</p>
+</a>
+<span>08-19</span>
+</li>
+
+                    
+<li>
+<a href="info/1281/172591.htm" target="_blank">
+    <p class="line1">我校10个社团入选中国科协2026年青少年科技社团支持计划</p>
+</a>
+<span>07-14</span>
+</li>
+
+                    
+<li>
+<a href="info/1281/172581.htm" target="_blank">
+    <p class="line1">上海交通大学学生联合会师生一行来校交流座谈</p>
+</a>
+<span>07-13</span>
+</li>
+
+                    
+<li>
+<a href="info/1281/172571.htm" target="_blank">
+    <p class="line1">“重走长征路 奋进新征程” 西南交大举办2026年团学干部履职能力提升培训班暨“青马工程”青年教师培训班</p>
+</a>
+<span>07-13</span>
+</li>
+
+                    
+<script>_showDynClickBatch(['dynclicks_u5_179421','dynclicks_u5_179411','dynclicks_u5_179431','dynclicks_u5_179241','dynclicks_u5_172591','dynclicks_u5_172581','dynclicks_u5_172571'],[179421,179411,179431,179241,172591,172581,172571],"wbnews", 2128761871)</script>
+
+                </ul>
+            </div>
+
+            <div class="page_box fl middle" style="margin:0 40px">
+                <div class="title clearfloat">
+                    <h1 class="fl tzgg">通知公告</h1>
+                    <a class="more fr" href="tzgg.htm">更多&gt;</a>
+                </div>
+
+                <ul class="list">
+                    
+
+<li>
+    <a href="info/1191/179491.htm" target="_blank">
+        <p class="line1">关于四川省青年马克思主义者培养工程第九届高校班学员拟推荐名单的公示</p>
+    </a>
+    <span>09-04</span>
+</li>
+
+      <div style="display:none">活动结束时间：</div>              
+<li>
+    <a href="info/1191/179461.htm" target="_blank">
+        <p class="line1">关于组建中国青年志愿者第29届研究生支教团（2027—2028年度）的通知</p>
+    </a>
+    <span>09-04</span>
+</li>
+
+      <div style="display:none">活动结束时间：</div>              
+<li>
+    <a href="info/1191/179111.htm" target="_blank">
+        <p class="line1">关于开展优化营商环境主题宣传短视频征集活动的通知</p>
+    </a>
+    <span>08-03</span>
+</li>
+
+      <div style="display:none">活动结束时间：</div>              
+<li>
+    <a href="info/1191/179041.htm" target="_blank">
+        <p class="line1">西南交通大学中国国际大学生创新大赛（2026）校赛获奖名单</p>
+    </a>
+    <span>07-27</span>
+</li>
+
+      <div style="display:none">活动结束时间：</div>              
+<li>
+    <a href="info/1191/178851.htm" target="_blank">
+        <p class="line1">关于开展西南交通大学“交通强国 青年实干”青年实干家项目第十一批招募的通知</p>
+    </a>
+    <span>07-20</span>
+</li>
+
+      <div style="display:none">活动结束时间：</div>              
+<li>
+    <a href="info/1191/178781.htm" target="_blank">
+        <p class="line1">关于公开招募西南交通大学2026年迎新志愿者的通知</p>
+    </a>
+    <span>07-17</span>
+</li>
+
+      <div style="display:none">活动结束时间：</div>              
+<li>
+    <a href="info/1191/172491.htm" target="_blank">
+        <p class="line1">西南交通大学关于举办2026年暑期“三下乡”社会实践出征仪式暨行前培训会的通知</p>
+    </a>
+    <span>07-08</span>
+</li>
+
+      <div style="display:none">活动结束时间：</div>              
+<script>_showDynClickBatch(['dynclicks_u6_179491','dynclicks_u6_179461','dynclicks_u6_179111','dynclicks_u6_179041','dynclicks_u6_178851','dynclicks_u6_178781','dynclicks_u6_172491'],[179491,179461,179111,179041,178851,178781,172491],"wbnews", 2128761871)</script>
+
+                </ul>
+            </div>
+
+            <div class="page_box fr elsebox">
+                <div class="title clearfloat">
+                    <h1 class="fl rskt">第二课堂</h1>
+                    <a class="more fr" href="http://jwc.swjtu.edu.cn/vatuu/YouthIndexAction">更多&gt;</a>
+                </div>
+
+                <ul class="list">
+                    
+
+<li>
+    <a href="https://ocw.swjtu.edu.cn/yethan/YouthIndex?setAction=courseInfo&courseid=1F4F0333E9D9ABE8" target="_blank">
+        <p class="line1">[实践服务]春运志愿红，温暖回家路</p>
+    </a>
+    <span>06-21</span>
+</li>
+
+                    
+<li>
+    <a href="https://ocw.swjtu.edu.cn/yethan/YouthIndex?setAction=courseInfo&courseid=FB8005BEA1C45088" target="_blank">
+        <p class="line1">[实践服务]“救在身边 校园守护”应急救护志愿者</p>
+    </a>
+    <span>06-21</span>
+</li>
+
+                    
+<li>
+    <a href="https://ocw.swjtu.edu.cn/yethan/YouthIndex?setAction=courseInfo&courseid=105EE9ED1B02436C" target="_blank">
+        <p class="line1">[实践服务]“文明校园 共建共享”专项志愿服务</p>
+    </a>
+    <span>06-21</span>
+</li>
+
+                    
+<li>
+    <a href="https://ocw.swjtu.edu.cn/yethan/YouthIndex?setAction=courseInfo&courseid=479FE96E7896808F" target="_blank">
+        <p class="line1">[实践服务]2024-2025学年地球科学与工程学院文明宿舍评选</p>
+    </a>
+    <span>06-21</span>
+</li>
+
+                    
+<li>
+    <a href="https://ocw.swjtu.edu.cn/yethan/YouthIndex?setAction=courseInfo&courseid=E05CF3875F3F38AD" target="_blank">
+        <p class="line1">[实践服务]红砖城集市</p>
+    </a>
+    <span>06-21</span>
+</li>
+
+                    
+<li>
+    <a href="https://ocw.swjtu.edu.cn/yethan/YouthIndex?setAction=courseInfo&courseid=5EB28745D29BE088" target="_blank">
+        <p class="line1">[实践服务]童心筑梦，志愿同行</p>
+    </a>
+    <span>06-21</span>
+</li>
+
+                    
+<li>
+    <a href="https://ocw.swjtu.edu.cn/yethan/YouthIndex?setAction=courseInfo&courseid=3D15C49165F64BB2" target="_blank">
+        <p class="line1">[艺术审美]“夏至音浪乐燃盛夏”利兹学院2025夏季音乐节</p>
+    </a>
+    <span>06-21</span>
+</li>
+
+                    
+<script>_showDynClickBatch(['dynclicks_u7_162881','dynclicks_u7_162871','dynclicks_u7_162861','dynclicks_u7_162851','dynclicks_u7_162841','dynclicks_u7_162831','dynclicks_u7_162821'],[162881,162871,162861,162851,162841,162831,162821],"wbnews", 2128761871)</script>
+
+                </ul>
+            </div>
+        </div>
+
+        <!-- gg-->
+
+        <a href="#">
+            <img src="templates/youth/images/url_img.jpg" alt="青年大学习" style="width:100%;margin-bottom:24px">
+        </a>
+
+
+        <!-- 基层团建 青年传媒 | 青年榜样-->
+        <div class="clearfloat part2  part">
+            <div class="fl">
+                <div class="title title1 bl clearfloat">
+                    <h1 class="fl"><b>基层团建</b> </h1>
+                    <a class="more fr" href="jctj.htm">更多&gt;</a>
+                </div>
+
+                <div class="clearfloat">
+                    
+
+<ul class="imagelist">
+</ul><script>_showDynClickBatch(['dynclicks_u8_179471','dynclicks_u8_179351','dynclicks_u8_179341','dynclicks_u8_179331'],[179471,179351,179341,179331],"wbnews", 2128761871)</script>
+
+                </div>
+                <div class="page_box fl">
+                    
+
+<ul class="list">      
+<li><a target="_blank" href="info/1211/179471.htm">
+    <p class="line1">【机械】机械践知行，实践砺担当｜机械工程学院2026年暑期社会实践风采展示（一）</p>
+</a><span>09-02</span></li>
+<li><a target="_blank" href="info/1211/179351.htm">
+    <p class="line1">【材料】百炼成材·青年当燃|材料学院2026年暑期“三下乡”社会实践活动纪实（三）</p>
+</a><span>08-25</span></li>
+<li><a target="_blank" href="info/1211/179341.htm">
+    <p class="line1">【材料】百炼成材·青年当燃|材料学院2026年暑期“三下乡”社会实践活动纪实（二）</p>
+</a><span>08-25</span></li>
+<li><a target="_blank" href="info/1211/179331.htm">
+    <p class="line1">【材料】百炼成材·青年当燃|材料学院2026年暑期“三下乡”社会实践活动纪实（一）</p>
+</a><span>08-25</span></li>
+<li><a target="_blank" href="info/1211/179321.htm">
+    <p class="line1">【人文】青衿赴乡野  实干谱新篇——人文学院2026年暑期“三下乡”社会实践风采展</p>
+</a><span>08-24</span></li>
+<li><a target="_blank" href="info/1211/179481.htm">
+    <p class="line1">【机械】机械践知行，实践砺担当｜机械工程学院2026年暑期社会实践风采展示（二）</p>
+</a><span>08-19</span></li>
+</ul><script>_showDynClickBatch(['dynclicks_u9_179471','dynclicks_u9_179351','dynclicks_u9_179341','dynclicks_u9_179331','dynclicks_u9_179321','dynclicks_u9_179481','dynclicks_u9_179101','dynclicks_u9_179051','dynclicks_u9_179091','dynclicks_u9_179021','dynclicks_u9_178991'],[179471,179351,179341,179331,179321,179481,179101,179051,179091,179021,178991],"wbnews", 2128761871)</script>
+
+                </div>
+                <div class="page_box fr" style="margin-left: 40px;">
+                    
+
+<ul class="list">
+
+                        
+<li><a target="_blank" href="info/1211/179101.htm">
+    <p class="line1">【数学】数说交大源流，寻根竢实扬华——数学学院赴唐山市开展暑期“三下乡”社会实践活动</p>
+</a><span>08-01</span></li>
+<li><a target="_blank" href="info/1211/179051.htm">
+    <p class="line1">【信息】三下乡 “芯”力量｜信息科学与技术学院2026年暑期三下乡社会实践活动风采展示（一）</p>
+</a><span>07-29</span></li>
+<li><a target="_blank" href="info/1211/179091.htm">
+    <p class="line1">【心理】群山不语，心声可闻｜心理中心“心晖润苗，昭启成长”社会实践队赴凉山三河村开展支教活动</p>
+</a><span>07-25</span></li>
+<li><a target="_blank" href="info/1211/179021.htm">
+    <p class="line1">【材料】“材聚丝路”践知行，“绿润陇原”绘新卷 ——西南交通大学“材聚丝路，绿润陇原”实践队赴甘肃开展“绿色中国”主题社会实践纪实</p>
+</a><span>07-25</span></li>
+<li><a target="_blank" href="info/1211/178991.htm">
+    <p class="line1">【化学】时序承韵·访蔬知节——化学学院实践队开展二十四节气农耕文化调研实践</p>
+</a><span>07-23</span></li>
+<li><a target="_blank" href="info/1211/178971.htm">
+    <p class="line1">【利兹】​栗子校园｜短学期：循文脉溯源，以匠心笃行</p>
+</a><span>07-22</span></li>
+</ul><script>_showDynClickBatch(['dynclicks_u10_179471','dynclicks_u10_179351','dynclicks_u10_179341','dynclicks_u10_179331','dynclicks_u10_179321','dynclicks_u10_179481','dynclicks_u10_179101','dynclicks_u10_179051','dynclicks_u10_179091','dynclicks_u10_179021','dynclicks_u10_178991','dynclicks_u10_178971','dynclicks_u10_179001','dynclicks_u10_178961','dynclicks_u10_178951','dynclicks_u10_178931','dynclicks_u10_178921'],[179471,179351,179341,179331,179321,179481,179101,179051,179091,179021,178991,178971,179001,178961,178951,178931,178921],"wbnews", 2128761871)</script>
+
+                </div>
+            </div>
+
+            <div class="partm">
+                <div class="fr partc" style="width: 372px;">
+                    <div class="title title1 clearfloat">
+                        <ul class="fl titleDb titleDba">
+                            <li class="on" data-url="showlist-199.shtml"><a href="javascript:void(0);">团干加油站</a> </li>
+                            <li data-url="showlist-109.shtml"><a href="javascript:void(0);">青年传媒</a> </li>
+
+                        </ul>
+                        <a id="more-btn" class="more fr" href="tgjyz.htm">更多&gt;</a>
+                    </div>
+                    <div class="boxDb boxDba box1 box1a boxOn">
+                        <ul class="list">
+                            
+
+
+<li><a href="info/1291/172381.htm" target="_blank">
+    <p class="line1">校党委副书记高平平为学生工作干部讲授专题党课</p>
+</a><span>07-02</span></li>
+
+                
+
+<li><a href="info/1291/172341.htm" target="_blank">
+    <p class="line1">校团委党支部开展集体学习</p>
+</a><span>06-25</span></li>
+
+                
+<script>_showDynClickBatch(['dynclicks_u11_172381','dynclicks_u11_172341'],[172381,172341],"wbnews", 2128761871)</script>
+
+                        </ul>
+
+                    </div>
+                    <div class="boxDb boxDba box2 box2a">
+
+                        <ul class="list">
+                            
+
+
+<li><a href="info/1241/41731.htm">
+                                <p class="line1">《交大青年》报第170期</p>
+                            </a><span>12-18</span></li>
+                   
+
+<li><a href="info/1241/44951.htm">
+                                <p class="line1">建团百年中的团史故事（四）：新时代青年为实现中华民族伟大复兴的中国梦而奋斗</p>
+                            </a><span>05-30</span></li>
+                   
+<script>_showDynClickBatch(['dynclicks_u12_41731','dynclicks_u12_44951'],[41731,44951],"wbnews", 2128761871)</script>
+
+                        </ul>
+
+
+                    </div>
+                </div>
+                <div class="fr partc" style="width: 372px;">
+                    <div class="title title1 clearfloat">
+                        <ul class="fl titleDb">
+                            <li class="on"><a href="javascript:void(0);">西部计划</a> </li>
+                            <li class="on"><a href="javascript:void(0);">研究生支教团</a> </li>
+
+                        </ul>
+                        <a id="more-btn" class="more fr" href="xbjh.htm">更多&gt;</a>
+                    </div>
+                    <div class="boxD box1 boxOn">
+
+                        <ul class="list">
+                            <li>
+
+
+<li><a href="info/1381/170741.htm" target="_blank">
+    <p class="line1">西南交通大学第28届研究生支教团赴交大附属中学开展支教岗前实习实训</p>
+</a><span>04-21</span></li>
+
+<li><a href="info/1381/170751.htm" target="_blank">
+    <p class="line1">2026年四川省大学生志愿服务西部计划宣讲会西南交通大学站顺利举行</p>
+</a><span>04-13</span></li>
+
+<li><a href="info/1381/169731.htm" target="_blank">
+    <p class="line1">校团委赴马尔康市、阿坝县开展“暖冬行动”</p>
+</a><span>03-17</span></li>
+<script>_showDynClickBatch(['dynclicks_u13_170741','dynclicks_u13_170751','dynclicks_u13_169731'],[170741,170751,169731],"wbnews", 2128761871)</script>
+
+                            </li>
+                        </ul>
+
+                    </div>
+                    <div class="boxD box2">
+
+                        <ul class="list">
+                            <li>
+                            <li>
+
+
+
+                            </li>
+
+                        </ul>
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- 学生组织 专题推荐-->
+        <div class="clearfloat part elsebox">
+            <div class="fl">
+                <div class="title title1 bl clearfloat xszz-more">
+                    <h1 class="fl"><b>学生组织</b> </h1>
+                    <a class="more fr" href="xszz.htm">更多&gt;</a>
+                </div>
+
+
+                <div class="clearfloat">
+                    
+
+<ul class="imagelist"> 
+             
+             
+             
+             
+</ul><script>_showDynClickBatch(['dynclicks_u15_179141','dynclicks_u15_179121','dynclicks_u15_178941','dynclicks_u15_178911'],[179141,179121,178941,178911],"wbnews", 2128761871)</script>
+
+                </div>
+                <div class="page_box fl bb xszz-box">
+                    
+
+<ul class="list">      
+<li><a target="_blank" href="info/1231/179141.htm">
+    <p class="line1">【外语】追寻红岩足迹 传承红色基因——外国语学院赴重庆市沙坪坝区开展暑期“三下乡”实践活动</p>
+</a><span>08-04</span></li>
+<li><a target="_blank" href="info/1231/179121.htm">
+    <p class="line1">【经管】西南交通大学经管学院“彝汉同心语，推普强国行”社会实践活动顺利开展</p>
+</a><span>08-03</span></li>
+<li><a target="_blank" href="info/1231/178941.htm">
+    <p class="line1">【利兹】栗子实践｜利兹学院2026年暑期“三下乡”社会实践活动风采展示（三）</p>
+</a><span>07-22</span></li>
+<li><a target="_blank" href="info/1231/178911.htm">
+    <p class="line1">【外语】E伴什邡 青芽筑梦——外国语学院实践队赴什邡市开展实践活动</p>
+</a><span>07-22</span></li>
+<li><a target="_blank" href="info/1231/178821.htm">
+    <p class="line1">【外语】乡村振兴视域下非遗竹编的传承与产业创新——外国语学院赴崇州道明竹艺村开展“三下乡”社会实践</p>
+</a><span>07-18</span></li>
+<li><a target="_blank" href="info/1231/178891.htm">
+    <p class="line1">【外语】非遗手工乐 青春伴夕阳——外国语学院实践队赴成都市第一社会福利院开展暑期敬老志愿服务社会实践活动</p>
+</a><span>07-18</span></li>
+</ul><script>_showDynClickBatch(['dynclicks_u16_179141','dynclicks_u16_179121','dynclicks_u16_178941','dynclicks_u16_178911','dynclicks_u16_178821','dynclicks_u16_178891','dynclicks_u16_178881','dynclicks_u16_172531','dynclicks_u16_172521','dynclicks_u16_172511','dynclicks_u16_178831'],[179141,179121,178941,178911,178821,178891,178881,172531,172521,172511,178831],"wbnews", 2128761871)</script>
+
+                </div>
+                <div class="page_box fr xszz-box" style="margin-left: 40px;">
+                    
+
+<ul class="list">
+
+                        
+<li><a target="_blank" href="info/1231/178881.htm">
+    <p class="line1">【外语】语拓​金川振兴路 声扬嘉绒交大情——外国语学院实践队赴金川县开展暑期“三下乡”实践活动</p>
+</a><span>07-17</span></li>
+<li><a target="_blank" href="info/1231/172531.htm">
+    <p class="line1">【科创中心】关于公开选拔2026-2027学年西南交通大学大学生科创与实践中心部门负责人的通知</p>
+</a><span>07-08</span></li>
+<li><a target="_blank" href="info/1231/172521.htm">
+    <p class="line1">【青年传媒】关于公开选拔2026-2027学年西南交通大学青年传媒融媒体中心部门负责人的通知</p>
+</a><span>07-08</span></li>
+<li><a target="_blank" href="info/1231/172511.htm">
+    <p class="line1">【青志联】关于公开选拔2026-2027学年西南交通大学青年志愿者联合会部门负责人的通知</p>
+</a><span>07-08</span></li>
+<li><a target="_blank" href="info/1231/178831.htm">
+    <p class="line1">【外语】“七一”寻红迹 译传长征魂——外国语学院研究生会赴石棉安顺场开展主题实践</p>
+</a><span>07-04</span></li>
+<li><a target="_blank" href="info/1231/172201.htm">
+    <p class="line1">【经管】护航端午出行，传递客运温度：成都东客站交通公益活动圆满开展</p>
+</a><span>06-23</span></li>
+</ul><script>_showDynClickBatch(['dynclicks_u17_179141','dynclicks_u17_179121','dynclicks_u17_178941','dynclicks_u17_178911','dynclicks_u17_178821','dynclicks_u17_178891','dynclicks_u17_178881','dynclicks_u17_172531','dynclicks_u17_172521','dynclicks_u17_172511','dynclicks_u17_178831','dynclicks_u17_172201','dynclicks_u17_172181','dynclicks_u17_172171','dynclicks_u17_172151','dynclicks_u17_172121','dynclicks_u17_172091'],[179141,179121,178941,178911,178821,178891,178881,172531,172521,172511,178831,172201,172181,172171,172151,172121,172091],"wbnews", 2128761871)</script>
+
+                </div>
+
+            </div>
+
+            <div class="fr zttj-box" style="width:390px;">
+                <div class="title title1 clearfloat">
+                    <h1 class="fl">专题推荐</h1>
+                    <!--<a class="more fr" href="">更多></a>-->
+                </div>
+                <div class="zhuantiimg">
+
+                    <a href="https://qnzz.youth.cn/kszt/xjpydxsm/"><img src="templates/youth/images/zttj1.png" width="390" alt="习近平与大学生朋友们"></a>
+
+                    <a href="https://qnzz.youth.cn/zhuanti/xyesd/"><img src="templates/youth/images/zttj2.png" width="390" alt="学习二十大 永远跟党走"></a>
+
+                    <a href="http://xibu.youth.cn"><img src="templates/youth/images/zttj3.jpg" width="390" alt="支援西部"></a>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 底部-->
+    <!-- footer -->
+    <div class="links">
+        <div class="w1200">
+            <ul class="clearfloat">
+
+                <li><a target="_blank" href="http://www.moe.gov.cn/">教育部</a></li>
+
+                <li><a target="_blank" href="http://www.ccyl.org.cn/">共青团中央</a></li>
+
+                <li><a target="_blank" href="http://www.sizhengwang.cn/">高校思政网</a></li>
+
+                <li><a target="_blank" href="http://www.scedu.net/">四川省教育厅</a></li>
+
+                <li><a target="_blank" href="https://www.scyol.com/#/home">四川共青团</a></li>
+
+                <li><a target="_blank" href="https://www.cdcyl.org.cn/">成都共青团</a></li>
+
+                <li><a target="_blank" href="https://www.swjtu.edu.cn/">西南交通大学</a></li>
+
+                <li><a target="_blank" href="https://xg.swjtu.edu.cn/web">扬华素质网</a></li>
+
+            </ul>
+        </div>
+    </div>
+
+    <div class="footer white">
+           <div class="box fat">
+            <ul class="footer__links">
+                <li class="footer__links__item"><a href="fwzn/gywm.htm" target="_blank">关于我们</a></li>
+                <li class="footer__links__item"><a href="fwzn/tgxz.htm" target="_blank">投稿须知</a></li>
+                <li class="footer__links__item"><a href="fwzn/lxwm.htm" target="_blank">联系我们</a></li>
+                <li class="footer__links__item"><a href="fwzn/bqsm.htm" target="_blank">版权说明</a></li>
+                <li class="footer__links__item"><a href="mailto:zhuwei@swjtu.cn">电子邮箱</a></li>
+                <li class="footer__links__item"><a href="https://youth.swjtu.edu.cn/user/oauth_login.shtml" target="_blank">我要投稿</a></li>
+                <li class="footer__links__item last"><a href="https://youth.swjtu.edu.cn/user/oauth_login.shtml" target="_blank">管理登陆</a></li>
+            </ul>
+            <p>copyright @ 2019-2023 西南交通大学团委 youth.swjtu.edu.cn. All Rrights Reserved</p>
+            <p>地址：中国四川省成都市郫都区犀安路 999 号</p>
+            <p>蜀ICP备05026985号 访问量：10000000</p>
+            <div class="son qr">
+                <img class="qr__img" src="/templates/youth/images/qr_wechat.png">
+                <img class="qr__img" src="/templates/youth/images/qr_weibo.png">
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        $(function () {
+            $('#menuToggle').on('click', function () {
+                $(this).toggleClass('open');
+                $('.header_nav').toggleClass('nav-open');
+            });
+            // 点击导航项后关闭菜单
+            $('.header_nav li a').on('click', function () {
+                $('#menuToggle').removeClass('open');
+                $('.header_nav').removeClass('nav-open');
+            });
+        });
+        $(function () {
+            $('.titleDba li:first-child a').click(function () {
+                $('.titleDba li a').removeClass('on');
+                $(this).addClass('on');
+                $('.boxDba').fadeOut(0);
+                $('.box1a').fadeIn(0);
+
+                //传参
+                var data = $(this).data("url");
+                $("#more-btn").prop("href", data);
+
+            })
+            $('.titleDba li:last-child a').click(function () {
+                $('.titleDba li a').removeClass('on');
+                $(this).addClass('on');
+                $('.boxDba').fadeOut(0);
+                $('.box2a').fadeIn(0);
+                //传参
+                var data = $(this).data("url");
+                $("#more-btn").prop("href", data);
+            })
+        })
+        var swiperBanner = new Swiper('.main-banner', {
+            navigation: {
+                nextEl: '.main-banner .swiper-button-next',
+                prevEl: '.main-banner .swiper-button-prev',
+            },
+            pagination: {
+                el: '.main-banner .swiper-pagination',
+                clickable: true
+            },
+            loop: true,
+            speed: 800,
+           autoplay: {
+                delay: 5000,
+                stopOnLastSlide: false,
+                disableOnInteraction: false,
+            },
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const now = new Date();
+
+            document.querySelectorAll('a.news-link').forEach(link => {
+                const endDateStr = link.getAttribute('data-end-date');
+                if (!endDateStr || endDateStr === 'null' || endDateStr === '(空)') {
+                    console.log('无结束时间，跳过:', link);
+                    return;
+                }
+
+                // 解析时间
+                let endDate = new Date(endDateStr);
+                if (isNaN(endDate.getTime())) {
+                    // 尝试常见格式
+                    endDate = new Date(endDateStr.replace(/-/g, '/')); // 替换 - 为 /
+                }
+
+                if (isNaN(endDate.getTime())) {
+                    console.warn('时间解析失败:', endDateStr);
+                    return;
+                }
+
+                // 如果活动已结束（endDate <= now），禁止跳转
+                if (endDate <= now) {
+                    link.href = '#';
+                    link.title = '活动已结束';
+                    link.style.color = 'gray';
+                    link.onclick = function (e) {
+                        e.preventDefault();
+                        alert('公示期已结束');
+                    };
+                }
+            });
+        });
+    </script>
+
+
+</body>
+
+</html>

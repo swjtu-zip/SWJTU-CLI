@@ -1,0 +1,699 @@
+﻿<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>青年传媒-新青年素质网</title><meta name="pageType" content="2">
+<meta name="pageTitle" content="青年传媒">
+<META Name="keywords" Content="新青年素质网,青年传媒" />
+
+    
+    <meta name="description" content="共青团西南交通大学">
+    <meta name="viewport" content="width=device-width,minimum-scale=1,maximum-scale=1,user-scalable=1">
+    <link rel="stylesheet" href="templates/youth/style/base.css">
+    <link rel="stylesheet" href="templates/youth/style/common.css">
+    <link rel="stylesheet" href="templates/youth/style/smkj_common.css">
+     <link rel="stylesheet" href="templates/youth/style/media.css">
+   <script src="templates/youth/js/jquery-3.4.0.min.js" type="text/javascript"></script>
+    <script src="templates/youth/js/slider.js" type="text/javascript"></script>
+    <script src="templates/youth/js/jquery.easing-1.3.js" type="text/javascript"></script>
+    <script src="templates/youth/js/jquery.iosslider.js" type="text/javascript"></script>
+    <script src="templates/youth/js/common.js" type="text/javascript"></script>
+    <script src="templates/youth/js/swiper.min.js" type="text/javascript"></script>
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="newsList.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1241,'/newsList.jsp',-1,2128761871)</script>
+</head>
+
+<body>
+    <!--Header-->
+    <div class="header_top">
+        <div class="w1200">
+            <p class="fl" id="currentTime"></p>
+            <ul class="header_top_nav fr">  <li><a href="https://cas.swjtu.edu.cn/authserver/login?service=https://youth.swjtu.edu.cn/cas_login.aspx" target="_blank">我要投稿</a></li>
+<li><a href="https://xtw-youth.swjtu.edu.cn/" target="_blank">管理登录</a></li>
+<li><a target="_blank">联系我们</a></li></ul>
+        </div>
+    </div>
+    <div class="header">
+        <div class="w1200 header_box">
+         <img class="mobile-logo" src="templates/youth/images/phlogo.png" alt="新青年素质网">
+            <div class="menu-toggle" id="menuToggle" aria-label="菜单">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <div class="search fr"><!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu1 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+        margin-top: -15px;
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu1 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu1"></div>
+<script type="text/html" id="htmlu1">
+    <div id="appu1">
+        <div v-if="!isError">
+            
+            
+             <input type="text" placeholder="输入回车搜索" class="search-input" id="keywords" name="keywords" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+                <input type="submit" value=""  v-on:click="onSubmit()">
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu1").html($("#htmlu1").text());
+</script>
+<script>
+    var appOwner = "2128761871";
+    var token = 'tourist';
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu1",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu1 = document.querySelector("#appu1");
+   if (appElementu1 && appElementu1.__vue__) {
+
+   } else {
+      $("#divu1").html($("#htmlu1").text());
+      var appOwner = "2128761871";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou1 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu1(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu1();
+        }
+      };
+
+      function onSubmitu1(e) {
+        queryInfou1.query.keyWord= $("#appu1  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou1.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script></div>
+            <ul class="header_nav clearfloat">
+            <div class="mobile-search">
+               <div class="search fr">
+                <!-- 3.1.3版本 -->
+
+
+
+<style>
+    #appu2 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+        margin-top: -15px;
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu2 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu2"></div>
+<script type="text/html" id="htmlu2">
+    <div id="appu2">
+        <div v-if="!isError">
+            
+            
+             <input type="text" placeholder="输入回车搜索" class="search-input" id="keywords" name="keywords" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+                <input type="submit" value=""  v-on:click="onSubmit()">
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu2").html($("#htmlu2").text());
+</script>
+<script>
+    var appOwner = "2128761871";
+    var token = 'tourist';
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu2",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu2 = document.querySelector("#appu2");
+   if (appElementu2 && appElementu2.__vue__) {
+
+   } else {
+      $("#divu2").html($("#htmlu2").text());
+      var appOwner = "2128761871";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou2 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu2(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu2();
+        }
+      };
+
+      function onSubmitu2(e) {
+        queryInfou2.query.keyWord= $("#appu2  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou2.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+                </div>
+            </div>
+            <li><a href="index.htm" target="_blank">首页</a></li>
+<li><a href="twgk/twjj.htm" target="_blank">团委概况</a></li>
+<li><a href="tqkx1.htm" target="_blank">团情快讯</a></li>
+<li><a href="tzgg.htm" target="_blank">通知公告</a></li>
+<li><a href="twfw.htm" target="_blank">团委发文</a></li>
+<li><a href="jctj.htm" target="_blank">基层团建</a></li>
+<li><a href="https://ocw.swjtu.edu.cn/yethan/YouthIndex" target="_blank">第二课堂</a></li>
+<li><a href="xszz.htm" target="_blank">学生组织</a></li>
+<li><a href="qncm.htm" target="_blank">青年传媒</a></li>
+<li><a href="https://xtw-youth.swjtu.edu.cn/ytrweb-home" target="_blank">网上团日</a></li>
+<li><a href="https://zhtj.youth.cn/zhtj/" target="_blank">智慧团建</a></li>
+<li><a href="https://xtw-youth.swjtu.edu.cn/dashboard" target="_blank">社会实践</a></li>
+</ul>
+        </div>
+    </div>
+    <!--/Header-->
+    <!--内容-->
+    <!--banner-->
+    <div class="pagebanner">
+        <div class="pagebanner_con"></div>
+    </div>
+    <!--banner End-->
+
+    <!--内容-->
+    <div class="pagecontainer w1200">
+        <!--PageLeft-->
+        <div class="main_left">
+           <div class="menu">    <h3>青年传媒</h3>
+</div>
+        </div>
+
+        <!--PageLeft-->
+        <div class="main_right">
+            <div class="current">
+                <h3>
+青年传媒</h3>
+               <div style="display: inline-block;"> 
+        
+                首页
+                        &nbsp; 
+
+ 
+              &gt;
+              &nbsp;
+        
+                青年传媒
+                        &nbsp; 
+
+</div>
+
+            </div>
+
+
+            <div class="content">
+
+
+<script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script>    <dl id="line_u7_0">
+        <dt>
+            <a href="info/1241/41731.htm" class="news-link" data-end-date="">
+                    <img src="http://127.0.0.1:59404/templates/youth/images/qncm.jpg">
+            </a>
+        </dt>
+        <dd>
+            <h4>
+                <a href="info/1241/41731.htm" class="news-link" data-end-date="">
+                    <div class="line1">《交大青年》报第170期</div>
+                </a>
+            </h4>
+            <em>2019-12-18</em>
+            <p class="line3">本期导读1954年，北戴河前，毛主席与人游于海，风雨呼作，怀古而发：“萧瑟秋风今又是，换了人间。”今天，时值中华人民共和国成立七十周年，华夏子女勇为弄潮儿，亦让人心生赞叹：七十年家国，七十年的华夏长歌。智慧为笔，汗泪为墨，时间的轴卷记载着中华赤子的深情，历史的篇章上书写的是中国腾飞：山峡工程旷空出世、港珠澳大桥横跨两岸、墨子卫星遨游太空、神州飞船太空穿梭……七十年的筚路蓝缕换来今日的繁荣昌盛；七十年的风雨兼程换来今日的万世瞩目。...</p>
+        </dd>
+    </dl>
+
+    <span id="section_u7_0" style="display:none;">
+        <hr style="height:1px;border:none;border-top:1px dashed #CCCCCC;">
+    </span>
+    <div style="display:none">活动结束时间：</div>
+    <dl id="line_u7_1">
+        <dt>
+            <a href="info/1241/44951.htm" class="news-link" data-end-date="">
+                    <img src="https://youth.swjtu.edu.cn/templates/youth/images/News4.jpg">
+            </a>
+        </dt>
+        <dd>
+            <h4>
+                <a href="info/1241/44951.htm" class="news-link" data-end-date="">
+                    <div class="line1">建团百年中的团史故事（四）：新时代青年为实现中华民族伟大复兴的中国梦而奋斗</div>
+                </a>
+            </h4>
+            <em>2022-05-30</em>
+            <p class="line3">今年是中国共青团成立100周年，共青团西南交通大学委员会策划开展“喜迎党代会、献礼二十大、奋进新征程”系列主题活动。交大有思新媒体现推出“建团百年中的团史故事”栏目，进一步深化党史学习教育，引领广大团员青年深入学习党领导中国青年运动的光辉历程，树牢“四个意识”、坚定“四个自信”、坚决做到“两个维护”、深刻领悟“两个确立”的决定性意义。本期思思带你学习新时代青年为实现中华民族伟大复兴的中国梦而奋斗的团史故事~...</p>
+        </dd>
+    </dl>
+
+    <span id="section_u7_1" style="display:none;">
+        <hr style="height:1px;border:none;border-top:1px dashed #CCCCCC;">
+    </span>
+    <div style="display:none">活动结束时间：</div>
+    <dl id="line_u7_2">
+        <dt>
+            <a href="info/1241/44361.htm" class="news-link" data-end-date="">
+                    <img src="https://youth.swjtu.edu.cn/templates/youth/images/News5.jpg">
+            </a>
+        </dt>
+        <dd>
+            <h4>
+                <a href="info/1241/44361.htm" class="news-link" data-end-date="">
+                    <div class="line1">建团百年中的团史故事（三）：在探索中当好党的助手，在改革大潮中开创工作新局面</div>
+                </a>
+            </h4>
+            <em>2022-05-30</em>
+            <p class="line3">今年是中国共青团成立100周年，共青团西南交通大学委员会策划开展“喜迎党代会、献礼二十大、奋进新征程”系列主题活动。交大有思新媒体现推出“建团百年中的团史故事”栏目，进一步深化党史学习教育，引领广大团员青年深入学习党领导中国青年运动的光辉历程，树牢“四个意识”、坚定“四个自信”、坚决做到“两个维护”、深刻领悟“两个确立”的决定性意义。本期思思带你学习在探索中当好党的助手，在改革大潮中开创工作新局面的团史故事~...</p>
+        </dd>
+    </dl>
+
+    <span id="section_u7_2" style="display:none;">
+        <hr style="height:1px;border:none;border-top:1px dashed #CCCCCC;">
+    </span>
+    <div style="display:none">活动结束时间：</div>
+    <dl id="line_u7_3">
+        <dt>
+            <a href="info/1241/43831.htm" class="news-link" data-end-date="">
+                    <img src="https://youth.swjtu.edu.cn/templates/youth/images/News6.jpg">
+            </a>
+        </dt>
+        <dd>
+            <h4>
+                <a href="info/1241/43831.htm" class="news-link" data-end-date="">
+                    <div class="line1">建团百年中的团史故事（二）：新民主主义革命中的青年力量</div>
+                </a>
+            </h4>
+            <em>2022-05-30</em>
+            <p class="line3">今年是中国共青团成立100周年，共青团西南交通大学委员会策划开展“喜迎党代会、献礼二十大、奋进新征程”系列主题活动。交大有思新媒体现推出“建团百年中的团史故事”栏目，进一步深化党史学习教育，引领广大团员青年深入学习党领导中国青年运动的光辉历程，树牢“四个意识”、坚定“四个自信”、坚决做到“两个维护”、深刻领悟“两个确立”的决定性意义。本期思思带你学习新民主主义革命中的青年力量~1927年5月10日，中国共产主义青年团第四次全国代表大会召开1927年4月，...</p>
+        </dd>
+    </dl>
+
+    <span id="section_u7_3" style="display:none;">
+        <hr style="height:1px;border:none;border-top:1px dashed #CCCCCC;">
+    </span>
+    <div style="display:none">活动结束时间：</div>
+    <dl id="line_u7_4">
+        <dt>
+            <a href="info/1241/42571.htm" class="news-link" data-end-date="">
+                    <img src="https://youth.swjtu.edu.cn/templates/youth/images/News7.jpg">
+            </a>
+        </dt>
+        <dd>
+            <h4>
+                <a href="info/1241/42571.htm" class="news-link" data-end-date="">
+                    <div class="line1">建设百年中的团史故事（一）：中国共青团的创建</div>
+                </a>
+            </h4>
+            <em>2022-05-30</em>
+            <p class="line3">今年是中国共青团成立100周年，共青团西南交通大学委员会策划开展“喜迎党代会、献礼二十大、奋进新征程”系列主题活动。交大有思新媒体现推出“建团百年中的团史故事”栏目，进一步深化党史学习教育，引领广大团员青年深入学习党领导中国青年运动的光辉历程，树牢“四个意识”、坚定“四个自信”、坚决做到“两个维护”、深刻领悟“两个确立”的决定性意义。本期思思带你学习中国共青团的创建~1915年9月15日，《青年杂志》创立，前期理论准备1919年，...</p>
+        </dd>
+    </dl>
+
+    <span id="section_u7_4" style="display:none;">
+        <hr style="height:1px;border:none;border-top:1px dashed #CCCCCC;">
+    </span>
+    <div style="display:none">活动结束时间：</div>
+    <dl id="line_u7_5">
+        <dt>
+            <a href="info/1241/41741.htm" class="news-link" data-end-date="">
+                    <img src="https://youth.swjtu.edu.cn/templates/youth/images/News8.jpg">
+            </a>
+        </dt>
+        <dd>
+            <h4>
+                <a href="info/1241/41741.htm" class="news-link" data-end-date="">
+                    <div class="line1">这盛世，由你们创造</div>
+                </a>
+            </h4>
+            <em>2019-12-15</em>
+            <p class="line3">谁把国家民族扛在肩上，人民就会把谁装进心里，共和国就会把谁记在功劳簿上。共和国不会忘记，一代代人民英雄、人民公仆、国家栋梁、民族栋梁矢志报国、以身相许；共和国不会忘记，在不同历史时期为党和国家事业、为民族复兴伟业立下汗马功劳、奉献燃烧一生的“最闪亮的星”；这万千繁华，皆由你们创造，共和国不会忘记，我们亦不能忘记。 袁隆平：万里无饥有这么一位老人，他让中国十几亿人免于饥饿之苦。他一生追求的两大梦想一个是禾下乘凉梦，...</p>
+        </dd>
+    </dl>
+
+    <span id="section_u7_5" style="display:none;">
+        <hr style="height:1px;border:none;border-top:1px dashed #CCCCCC;">
+    </span>
+    <div style="display:none">活动结束时间：</div>
+
+<link rel="stylesheet" Content-type="text/css" href="/system/resource/css/pagedown/sys.css">
+<div class="pb_sys_common pb_sys_normal pb_sys_style1 fyt" style="margin:30px;text-align:center;"><span class="p_pages"><span class="p_first_d p_fun_d">首页</span><span class="p_prev_d p_fun_d">上页</span><span class="p_no_d">1</span><span class="p_next_d p_fun_d">下页</span><span class="p_last_d p_fun_d">尾页</span></span></div>
+<script>_showDynClickBatch(['dynclicks_u7_41731','dynclicks_u7_44951','dynclicks_u7_44361','dynclicks_u7_43831','dynclicks_u7_42571','dynclicks_u7_41741'],[41731,44951,44361,43831,42571,41741],"wbnews", 2128761871)</script></div>
+            <div class="clear10"> </div>
+
+            <div class="clear10"> </div>
+        </div>
+        <div class="clear"></div>
+    </div>
+    <!--footer-->
+    <div class="clear"></div>
+    <!--footer-->
+    <div class="links">
+        <div class="w1200"><ul class="clearfloat">
+
+                <li><a target="_blank" href="http://www.moe.gov.cn/">教育部</a></li>
+
+                <li><a target="_blank" href="http://www.ccyl.org.cn/">共青团中央</a></li>
+
+                <li><a target="_blank" href="http://www.sizhengwang.cn/">高校思政网</a></li>
+
+                <li><a target="_blank" href="http://www.scedu.net/">四川省教育厅</a></li>
+
+                <li><a target="_blank" href="https://www.scyol.com/#/home">四川共青团</a></li>
+
+                <li><a target="_blank" href="https://www.cdcyl.org.cn/">成都共青团</a></li>
+
+                <li><a target="_blank" href="https://www.swjtu.edu.cn/">西南交通大学</a></li>
+
+                <li><a target="_blank" href="https://xg.swjtu.edu.cn/web">扬华素质网</a></li>
+
+            </ul></div>
+    </div>
+
+    <div class="footer white">   <div class="box fat">
+            <ul class="footer__links">
+                <li class="footer__links__item"><a href="fwzn/gywm.htm" target="_blank">关于我们</a></li>
+                <li class="footer__links__item"><a href="fwzn/tgxz.htm" target="_blank">投稿须知</a></li>
+                <li class="footer__links__item"><a href="fwzn/lxwm.htm" target="_blank">联系我们</a></li>
+                <li class="footer__links__item"><a href="fwzn/bqsm.htm" target="_blank">版权说明</a></li>
+                <li class="footer__links__item"><a href="mailto:zhuwei@swjtu.cn">电子邮箱</a></li>
+                <li class="footer__links__item"><a href="https://youth.swjtu.edu.cn/user/oauth_login.shtml" target="_blank">我要投稿</a></li>
+                <li class="footer__links__item last"><a href="https://youth.swjtu.edu.cn/user/oauth_login.shtml" target="_blank">管理登陆</a></li>
+            </ul>
+            <p>copyright @ 2019-2023 西南交通大学团委 youth.swjtu.edu.cn. All Rrights Reserved</p>
+            <p>地址：中国四川省成都市郫都区犀安路 999 号</p>
+            <p>蜀ICP备05026985号 访问量：10000000</p>
+            <div class="son qr">
+                <img class="qr__img" src="/templates/youth/images/qr_wechat.png">
+                <img class="qr__img" src="/templates/youth/images/qr_weibo.png">
+            </div>
+        </div></div>
+    <!--/footer-->
+     <script>
+        // 移动端汉堡菜单
+        $(function () {
+            $('#menuToggle').on('click', function () {
+                $(this).toggleClass('open');
+                $('.header_nav').toggleClass('nav-open');
+            });
+            // 点击导航项后关闭菜单
+            $('.header_nav li a').on('click', function () {
+                $('#menuToggle').removeClass('open');
+                $('.header_nav').removeClass('nav-open');
+            });
+        });
+    </script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const now = new Date();
+
+    document.querySelectorAll('a.news-link').forEach(link => {
+        const endDateStr = link.getAttribute('data-end-date');
+        if (!endDateStr || endDateStr === 'null' || endDateStr === '(空)') {
+            console.log('无结束时间，跳过:', link);
+            return;
+        }
+
+        // 解析时间
+        let endDate = new Date(endDateStr);
+        if (isNaN(endDate.getTime())) {
+            // 尝试常见格式
+            endDate = new Date(endDateStr.replace(/-/g, '/')); // 替换 - 为 /
+        }
+
+        if (isNaN(endDate.getTime())) {
+            console.warn('时间解析失败:', endDateStr);
+            return;
+        }
+
+        // 如果活动已结束（endDate <= now），禁止跳转
+        if (endDate <= now) {
+            link.href = '#';
+            link.title = '活动已结束';
+            link.style.color = 'gray';
+            link.onclick = function(e) {
+                e.preventDefault();
+                alert('公示期已结束');
+            };
+        }
+    });
+});
+</script>
+
+</body>
+</html>
+
+</html>
