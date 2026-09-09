@@ -218,6 +218,21 @@ func (c *Client) FetchArticle(ctx context.Context, articleURL string) (*Article,
 	return art, nil
 }
 
+// ParseRawArticle re-parses a retained raw detail page without any network
+// access, using the adapter that owns the page's site. Archive maintenance
+// tools use it to re-extract fields after an adapter fix.
+func ParseRawArticle(articleURL string, raw []byte) (*Article, error) {
+	site := siteForURL(articleURL)
+	if site.ParseArticleFunc == nil {
+		return nil, fmt.Errorf("no article parser registered for %q", articleURL)
+	}
+	art, err := site.ParseArticleFunc(raw, site.BaseURL)
+	if err != nil {
+		return nil, err
+	}
+	return convertArticle(art), nil
+}
+
 // FetchArticleSnapshot parses an article and returns the exact response body.
 func (c *Client) FetchArticleSnapshot(ctx context.Context, articleURL string) (*Article, []byte, error) {
 	if err := contextErr(ctx); err != nil {

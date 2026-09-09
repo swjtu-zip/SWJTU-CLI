@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -146,5 +147,19 @@ func TestListFeedRangeReturnsPartialItemsWithError(t *testing.T) {
 	}
 	if len(items) != 1 || items[0].Title != "第一页文章标题" {
 		t.Fatalf("SDK partial items = %#v, err=%v", items, err)
+	}
+}
+
+func TestParseRawArticle(t *testing.T) {
+	raw, err := os.ReadFile("../../internal/scraper/testdata/youth_article.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	article, err := ParseRawArticle("https://youth.swjtu.edu.cn/info/1191/179491.htm", raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title == "" || article.Content == "" || article.Date != "2026-09-04" {
+		t.Fatalf("unexpected parse result: title=%q date=%q content=%d", article.Title, article.Date, len(article.Content))
 	}
 }
