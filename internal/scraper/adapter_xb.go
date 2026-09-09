@@ -298,7 +298,7 @@ func parseAdapter_xbArticle(raw []byte, baseURL string) (*model.Article, error) 
 		return nil, fmt.Errorf("xb: response has no fixed article type")
 	}
 	content := xbDetailContent(doc)
-	if content.Length() == 0 {
+	if content == nil || content.Length() == 0 {
 		return nil, fmt.Errorf("xb: response has no fixed article body")
 	}
 	article, err := parseBodaArticle(raw, baseURL)

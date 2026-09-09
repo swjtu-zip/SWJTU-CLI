@@ -379,3 +379,13 @@ func TestXBResourceValidationChecksHTTPStatusContentTypeMagicAndCAPTCHA(t *testi
 		t.Fatal("HTML CAPTCHA shell was accepted as a file")
 	}
 }
+
+func TestXBArticleWithoutFixedBodyReturnsErrorNotPanic(t *testing.T) {
+	raw := []byte(`<html><head><meta name="pageTitle" content="通知公告"></head><body>
+<form name="_newscontent_fromname"><div class="left-top"><div class="news-title">测试标题</div></div></form>
+</body></html>`)
+	article, err := parseAdapter_xbArticle(raw, "https://xb.swjtu.edu.cn")
+	if err == nil || article != nil {
+		t.Fatalf("parseAdapter_xbArticle() = article=%v err=%v, want a body-missing error", article, err)
+	}
+}
