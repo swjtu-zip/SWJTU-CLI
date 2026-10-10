@@ -1,0 +1,723 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0,minimal-ui:ios">
+    <title>教师招聘-西南交通大学-医学院</title><meta name="pageType" content="2">
+<meta name="pageTitle" content="教师招聘">
+<META Name="keywords" Content="西南交通大学-医学院,教师招聘" />
+
+
+    <link rel="stylesheet" href="../style/swiper.min.css">
+    <link rel="stylesheet" href="../style/public.css">
+    <link rel="stylesheet" href="../style/ny.css">
+    <script src="../js/jquery.js"></script>
+    <script src="../js/jquery-migrate.min.js"></script>
+
+    <script src="../js/swiper.min.js"></script>
+    <script src="../js/set.js"></script>
+    <script src="../js/public.js"></script>
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="../_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="../list.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/vsbscreen.min.js" id="_vsbscreen" devices="pc|mobile|pad"></script>
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1064,'/list.jsp',-1,1995628034)</script>
+</head>
+<body>
+
+<!--wap-->
+<section class="wap-head ar_wap">
+    <div class="logo flex-v-center">
+<a href="../index.htm"><img src="../images/baisetoumingbeijing.png" alt=""></a></div>
+    <a href="javascript:;" class="navbtnm">
+        <i></i>
+    </a>
+</section>
+<section class="big-nav">
+    <script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/openlink.js"></script><div class="list_box0">
+<div class="li"><a href="#" title="" onclick="_addDynClicks(&#34;wburl&#34;, 1995628034, 94514)">中文</a></div>
+<div class="li"><a href="#" title="" onclick="_addDynClicks(&#34;wburl&#34;, 1995628034, 94515)">英文</a></div>
+</div>
+    <div class="wap_search">
+        <!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu2 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+        margin-top: -15px;
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu2 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu2"></div>
+<script type="text/html" id="htmlu2">
+    <div id="appu2">
+        <div v-if="!isError" class="header-search">
+            <input type="text" class="input" placeholder="请输入搜索关键词" name="keyword" autocomplete="off" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+            <button type="submit" class="btn_blue" value="" v-on:click="onSubmit()"></button>        
+
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu2").html($("#htmlu2").text());
+</script>
+<script>
+    var appOwner = "1995628034";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu2",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu2 = document.querySelector("#appu2");
+   if (appElementu2 && appElementu2.__vue__) {
+
+   } else {
+      $("#divu2").html($("#htmlu2").text());
+      var appOwner = "1995628034";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou2 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu2(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu2();
+        }
+      };
+
+      function onSubmitu2(e) {
+        queryInfou2.query.keyWord= $("#appu2  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou2.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+    </div>
+    <ul class="list_box_nav_mobile">
+        <li>
+            <div class="con">
+                <a class="a" href="../index.htm" title="首页">首页</a>
+            </div>
+</li>
+        <li>
+            <div class="con">
+                <a class="a" href="../xygk/xyjs.htm" title="学院概况">学院概况</a>
+<i></i>
+            </div>
+            <div class="list">
+                <a href="../xygk/xyjs.htm" title="学院介绍">学院介绍</a>
+                <a href="../xygk/xrld.htm" title="现任领导">现任领导</a>
+                <a href="../xygk/zzjg.htm" title="组织机构">组织机构</a>
+                <a href="../xygk/fsyx1/cdsdsrmyy.htm" title="附属医院">附属医院</a>
+            </div>
+        </li>
+        <li>
+            <div class="con">
+                <a class="a" href="../dqgz/djdt.htm" title="党群工作">党群工作</a>
+<i></i>
+            </div>
+            <div class="list">
+                <a href="../dqgz/djdt.htm" title="党建动态">党建动态</a>
+                <a href="../dqgz/ljyx.htm" title="廉洁医学">廉洁医学</a>
+            </div>
+        </li>
+        <li>
+            <div class="con">
+                <a class="a" href="../rcpy/bkspy.htm" title="人才培养">人才培养</a>
+<i></i>
+            </div>
+            <div class="list">
+                <a href="../rcpy/bkspy.htm" title="本科生培养">本科生培养</a>
+                <a href="../rcpy/yjspy.htm" title="研究生培养">研究生培养</a>
+            </div>
+        </li>
+        <li>
+            <div class="con">
+                <a class="a" href="../kxyj/kypt.htm" title="科学研究">科学研究</a>
+<i></i>
+            </div>
+            <div class="list">
+                <a href="../kxyj/kypt.htm" title="科研平台">科研平台</a>
+                <a href="../kxyj/kytd.htm" title="科研团队">科研团队</a>
+            </div>
+        </li>
+        <li>
+            <div class="con">
+                <a class="a" href="https://cm.swjtu.edu.cn/xszc/xyjz.htm" title="学生支持">学生支持</a>
+<i></i>
+            </div>
+            <div class="list">
+                <a href="../xszc/xyjz.htm" title="学院讲座">学院讲座</a>
+            </div>
+        </li>
+        <li>
+            <div class="con">
+                <a class="a" href="../szdw/swyxgc.htm" title="师资队伍">师资队伍</a>
+<i></i>
+            </div>
+            <div class="list">
+                <a href="../szdw/swyxgc.htm" title="生物医学工程">生物医学工程</a>
+                <a href="../szdw/swyxgcyjy.htm" title="生物医学工程研究院">生物医学工程研究院</a>
+                <a href="../info/1722/26031.htm" title="临床医学">临床医学</a>
+            </div>
+        </li>
+        <li>
+            <div class="con">
+                <a class="a" href="../hzjl1/jsfw.htm" title="合作交流">合作交流</a>
+<i></i>
+            </div>
+            <div class="list">
+                <a href="../hzjl1/jsfw.htm" title="技术服务">技术服务</a>
+                <a href="../hzjl1/cgzh.htm" title="成果转化">成果转化</a>
+                <a href="../hzjl1/jnpx.htm" title="技能培训">技能培训</a>
+            </div>
+        </li>
+        <li class="on">
+            <div class="con">
+                <a class="a" href="rczp.htm" title="诚聘英才">诚聘英才</a>
+<i></i>
+            </div>
+            <div class="list">
+                <a href="rczp.htm" title="人才招聘">人才招聘</a>
+                <a href="jszp.htm" title="教师招聘">教师招聘</a>
+                <a href="bsh.htm" title="博士后">博士后</a>
+            </div>
+        </li>
+        <li>
+            <div class="con">
+                <a class="a" href="../xygz.htm" title="校友工作">校友工作</a>
+            </div>
+        </li>
+        <li>
+            <div class="con">
+                <a class="a" href="../cyxx.htm" title="常用信息">常用信息</a>
+            </div>
+        </li>
+</ul>
+
+</section>
+<!--wap-->
+
+<header class="head ar_web">
+    <div class="wp">
+        <div class="logo">
+<a href="../index.htm">
+                <img src="../images/baisetoumingbeijing.png" alt="">
+            </a></div>
+        <div class="header_right">
+            <div class="ll">
+                <div class="list_box0"><div class="li"><a href="#" title="" onclick="_addDynClicks(&#34;wburl&#34;, 1995628034, 94514)">中文</a></div>
+ <div class="li">|</div>
+<div class="li"><a href="#" title="" onclick="_addDynClicks(&#34;wburl&#34;, 1995628034, 94515)">英文</a></div>
+
+</div>
+<!-- 3.1.3版本 -->
+
+
+
+<style>
+    #appu6 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+        margin-top: -15px;
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu6 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu6"></div>
+<script type="text/html" id="htmlu6">
+    <div id="appu6">
+        <div v-if="!isError">
+                <div class="search">
+                    <input type="text" placeholder="请输入检索关键字" class="inpt" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+                    <input type="image" src="../images/search.png" class="subm" v-on:click="onSubmit()">
+                </div>        
+
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu6").html($("#htmlu6").text());
+</script>
+<script>
+    var appOwner = "1995628034";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu6",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu6 = document.querySelector("#appu6");
+   if (appElementu6 && appElementu6.__vue__) {
+
+   } else {
+      $("#divu6").html($("#htmlu6").text());
+      var appOwner = "1995628034";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou6 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu6(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu6();
+        }
+      };
+
+      function onSubmitu6(e) {
+        queryInfou6.query.keyWord= $("#appu6  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou6.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+            </div>
+        
+            <div class="rr">
+                <img src="../images/ewm.jpg" alt="">
+                <p>扫码关注学院公众号</p>
+            </div>
+
+        </div>
+    </div>
+</header>
+<nav id="nav" class="ar_web">
+    <div class="wp"><ul class="flex">
+            <li>
+                <h2><a href="../index.htm" title="首页">首页</a></h2>
+</li>
+            <li>
+                <h2><a href="../xygk/xyjs.htm" title="学院概况">学院概况</a></h2>
+                <div class="sub">
+                    <div class="box">
+                         <a href="../xygk/xyjs.htm" title="学院介绍">学院介绍</a>
+                         <a href="../xygk/xrld.htm" title="现任领导">现任领导</a>
+                         <a href="../xygk/zzjg.htm" title="组织机构">组织机构</a>
+                         <a href="../xygk/fsyx1/cdsdsrmyy.htm" title="附属医院">附属医院</a>
+                    </div>
+                </div>
+            </li>
+            <li>
+                <h2><a href="../dqgz/djdt.htm" title="党群工作">党群工作</a></h2>
+                <div class="sub">
+                    <div class="box">
+                         <a href="../dqgz/djdt.htm" title="党建动态">党建动态</a>
+                         <a href="../dqgz/ljyx.htm" title="廉洁医学">廉洁医学</a>
+                    </div>
+                </div>
+            </li>
+            <li>
+                <h2><a href="../rcpy/bkspy.htm" title="人才培养">人才培养</a></h2>
+                <div class="sub">
+                    <div class="box">
+                         <a href="../rcpy/bkspy.htm" title="本科生培养">本科生培养</a>
+                         <a href="../rcpy/yjspy.htm" title="研究生培养">研究生培养</a>
+                    </div>
+                </div>
+            </li>
+            <li>
+                <h2><a href="../kxyj/kypt.htm" title="科学研究">科学研究</a></h2>
+                <div class="sub">
+                    <div class="box">
+                         <a href="../kxyj/kypt.htm" title="科研平台">科研平台</a>
+                         <a href="../kxyj/kytd.htm" title="科研团队">科研团队</a>
+                    </div>
+                </div>
+            </li>
+            <li>
+                <h2><a href="https://cm.swjtu.edu.cn/xszc/xyjz.htm" title="学生支持">学生支持</a></h2>
+                <div class="sub">
+                    <div class="box">
+                         <a href="../xszc/xyjz.htm" title="学院讲座">学院讲座</a>
+                    </div>
+                </div>
+            </li>
+            <li>
+                <h2><a href="../szdw/swyxgc.htm" title="师资队伍">师资队伍</a></h2>
+                <div class="sub">
+                    <div class="box">
+                         <a href="../szdw/swyxgc.htm" title="生物医学工程">生物医学工程</a>
+                         <a href="../szdw/swyxgcyjy.htm" title="生物医学工程研究院">生物医学工程研究院</a>
+                         <a href="../info/1722/26031.htm" title="临床医学">临床医学</a>
+                    </div>
+                </div>
+            </li>
+            <li>
+                <h2><a href="../hzjl1/jsfw.htm" title="合作交流">合作交流</a></h2>
+                <div class="sub">
+                    <div class="box">
+                         <a href="../hzjl1/jsfw.htm" title="技术服务">技术服务</a>
+                         <a href="../hzjl1/cgzh.htm" title="成果转化">成果转化</a>
+                         <a href="../hzjl1/jnpx.htm" title="技能培训">技能培训</a>
+                    </div>
+                </div>
+            </li>
+            <li>
+                <h2><a href="rczp.htm" title="诚聘英才">诚聘英才</a></h2>
+                <div class="sub">
+                    <div class="box">
+                         <a href="rczp.htm" title="人才招聘">人才招聘</a>
+                         <a href="jszp.htm" title="教师招聘">教师招聘</a>
+                         <a href="bsh.htm" title="博士后">博士后</a>
+                    </div>
+                </div>
+            </li>
+            <li>
+                <h2><a href="../xygz.htm" title="校友工作">校友工作</a></h2>
+            </li>
+            <li>
+                <h2><a href="../cyxx.htm" title="常用信息">常用信息</a></h2>
+            </li>
+ </ul></div>
+</nav>
+    <section class="banner">    
+<img src="../images/neiyetu.jpg" alt="">
+
+</section>
+
+
+<!--手机端 内页菜单-->
+<div id="m_n_nav">
+  <div id="n_n_title">
+    <a id="bnt_back" href="javascript:history.go(-1)" class="iconfont"><img src="../images/m_n_nav_left.png" alt=""></a>
+    
+<h1>诚聘英才</h1>
+    <div id="bnt_sub_nav" class="iconfont"><img src="../images/m_n_nav_right.png" alt=""></div>
+  </div>
+  <div id="sub_nav_content">
+    <dl>
+      <dt class="">
+        <a href="rczp.htm" title="人才招聘">人才招聘</a>
+      </dt>
+      <dt class="on">
+        <a href="jszp.htm" title="教师招聘">教师招聘</a>
+      </dt>
+      <dt class="">
+        <a href="bsh.htm" title="博士后">博士后</a>
+      </dt>
+</dl>
+  </div>
+</div>
+<!--手机端 内页菜单-->
+<div class="n_container">
+  <div class="wp flex">
+    <div class="aleft">
+      <div class="leftNav ">
+        <div class="nav_tit">
+<h2>诚聘英才</h2></div>
+        <ul class="lv1">
+              <li>
+            <h2><a href="rczp.htm" title="人才招聘">人才招聘</a> </h2>
+          </li>
+          <li class="active">
+            <h2><a href="jszp.htm" title="教师招聘">教师招聘</a> </h2>
+          </li>
+          <li>
+            <h2><a href="bsh.htm" title="博士后">博士后</a> </h2>
+          </li>
+</ul>
+      </div>
+    </div>
+    <div class="rightBox">
+      <div class="ny-tit">
+        
+<h4>教师招聘</h4>
+        <div class="position f0">
+          <span>当前位置:</span>
+                        <a href="../index.htm">首页</a>
+               <span>-></span>
+                <a href="rczp.htm">诚聘英才</a>
+               <span>-></span>
+                <a href="jszp.htm">教师招聘</a>
+</div>
+      </div>
+            <div class="n_list">
+
+
+<script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script>    <UL>
+     <li><a href="https://mp.weixin.qq.com/s/QE5rVQksl44ItmIR-r7CFQ" target="_blank" title="求贤榜丨西南交通大学2026年全球人才引聘 ！" class="eclip">求贤榜丨西南交通大学2026年全球人才引聘 ！</a><time>2026-01-12</time></li>
+ <li><a href="../info/1064/14421.htm" target="_blank" title="西南交通大学医学院求贤榜： 心怀“国之大者”，逐梦“西南交大”" class="eclip">西南交通大学医学院求贤榜： 心怀“国之大者”，逐梦“西南交大”</a><time>2023-01-13</time></li>
+    </UL>
+    <link rel="stylesheet" Content-type="text/css" href="/system/resource/css/pagedown/sys.css"><div class="pb_sys_common pb_sys_normal pb_sys_style1" style="margin-top:10px;text-align:center;"><span class="p_t">共2条</span> <span class="p_pages"><span class="p_first_d p_fun_d">首页</span><span class="p_prev_d p_fun_d">上页</span><span class="p_no_d">1</span><span class="p_next_d p_fun_d">下页</span><span class="p_last_d p_fun_d">尾页</span></span></div><script>_showDynClickBatch(['dynclicks_u16_29541','dynclicks_u16_14421'],[29541,14421],"wbnews", 1995628034)</script></div>
+
+        </div>
+
+    </div>
+</div>
+<footer class="foot">
+    <div class="wp">
+        <div class="ftlogo">
+                    
+<img src="../images/baisetoumingbeijing.png" alt="">
+
+
+        </div>
+        <div class="bq"><!-- 版权内容请在本组件"内容配置-版权"处填写 -->
+<p>版权所有 西南交通大学医学院</p><p>办公地址:四川省成都市金牛区交大路144号科技工业园A座205室</p><p>邮编: 610031  联系邮箱: medicine@swjtu.edu.cn</p></div>
+    </div>
+</footer>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -490,3 +490,74 @@ func TestESEParsersRejectShellsAndKeepLegalEmptyLists(t *testing.T) {
 		t.Fatal("ESE WAF page was accepted as an article")
 	}
 }
+
+// The live homepage (fetched 2026-10-09) renders the scoped home sections
+// (#s1/#s2/#s3/#s6/#s7) with real /info/... article links, so the implicit
+// "index" feed is a scoped homepage parse reporting exactly one page.
+func TestESELiveHomepageServesScopedIndexFeed(t *testing.T) {
+	data := loadESEFixture(t, "ese_live_home.html")
+	items, err := parseAdapter_eseList(data, eseTestBaseURL)
+	if err != nil {
+		t.Fatalf("parse live ESE homepage: %v", err)
+	}
+	if len(items) == 0 {
+		t.Fatal("live ESE homepage yielded no feed items")
+	}
+	for _, item := range items {
+		if !strings.HasPrefix(item.URL, eseTestBaseURL+"/info/") {
+			t.Errorf("homepage item is not a local article: %#v", item)
+		}
+	}
+}
+
+func TestESEIndexTotalPagesAndRangeUseScopedHomepage(t *testing.T) {
+	oldClient, oldNoCache := defaultClient, NoCache
+	defaultClient = &http.Client{Transport: eseRoundTripper(func(request *http.Request) (*http.Response, error) {
+		status, contentType, body := http.StatusOK, "text/html; charset=utf-8", loadESEFixture(t, "ese_live_home.html")
+		if request.URL.Host != "ese.swjtu.edu.cn" || request.URL.Path != "/index.htm" {
+			status, contentType, body = http.StatusNotFound, "text/html; charset=utf-8", []byte("not found")
+		}
+		return &http.Response{
+			StatusCode: status,
+			Status:     http.StatusText(status),
+			Header:     http.Header{"Content-Type": []string{contentType}},
+			Body:       io.NopCloser(strings.NewReader(string(body))),
+			Request:    request,
+		}, nil
+	})}
+	NoCache = true
+	ClearCache()
+	t.Cleanup(func() { defaultClient, NoCache = oldClient, oldNoCache; ClearCache() })
+	total, err := eseTotalPages("index")
+	if err != nil || total != 1 {
+		t.Fatalf("eseTotalPages(index) = %d, %v; want 1, nil", total, err)
+	}
+	items, err := AllSites["ese"].ListNewsRange("index", "2020-01-01", "2030-12-31", 0)
+	if err != nil || len(items) == 0 {
+		t.Fatalf("ListNewsRange(index) = items=%d err=%v", len(items), err)
+	}
+	for _, item := range items {
+		if !strings.HasPrefix(item.URL, eseTestBaseURL+"/info/") {
+			t.Errorf("index feed item is not a local article: %#v", item)
+		}
+	}
+
+	// A WAF shell in place of the homepage must not collapse into a fake
+	// one-page feed.
+	defaultClient = &http.Client{Transport: eseRoundTripper(func(request *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     http.StatusText(http.StatusOK),
+			Header:     http.Header{"Content-Type": []string{"text/html; charset=utf-8"}},
+			Body:       io.NopCloser(strings.NewReader(string(loadESEFixture(t, "ese_adapter_waf.html")))),
+			Request:    request,
+		}, nil
+	})}
+	ClearCache()
+	if _, err := eseTotalPages("index"); err == nil {
+		t.Fatal("eseTotalPages(index) accepted a WAF shell as the homepage")
+	}
+	if _, err := AllSites["ese"].ListNewsRange("index", "2020-01-01", "2030-12-31", 0); err == nil {
+		t.Fatal("ListNewsRange(index) accepted a WAF shell as the homepage")
+	}
+}

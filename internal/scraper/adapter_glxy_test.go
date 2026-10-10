@@ -1,6 +1,8 @@
 package scraper
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -36,7 +38,6 @@ func TestGlxyAdapterRegistrationAndPageURL(t *testing.T) {
 	}
 	for _, want := range []string{
 		"gjhz/gjjl",
-		"gjhz/hzxm",
 		"mkslj/cyxz",
 		"xsgz/btkx",
 		"xsgz/txzz",
@@ -53,6 +54,11 @@ func TestGlxyAdapterRegistrationAndPageURL(t *testing.T) {
 		}
 		if !found {
 			t.Errorf("confirmed live list route %q is not registered", want)
+		}
+	}
+	for _, slug := range site.SubPages {
+		if slug == "gjhz/hzxm" {
+			t.Fatal("external-only gjhz/hzxm page must not be registered as an article list")
 		}
 	}
 
@@ -230,6 +236,63 @@ func TestGlxyArticleRejectsStaticCaptchaAndErrorPages(t *testing.T) {
 	}
 	if _, err := parseGlxyArticle([]byte(`<html><head><title>404 页面不存在</title></head><body>404</body></html>`), glxyBaseURL); err == nil {
 		t.Fatal("error page was accepted as an article")
+	}
+}
+
+func TestGlxyExternalOnlyHzxmLiveListStaysRejected(t *testing.T) {
+	// The live gjhz/hzxm page lists 12 rows, every one of them a 转发 notice
+	// pointing at fad.swjtu.edu.cn. The feed is no longer registered; this
+	// canary must keep rejecting such external-only lists if they are ever
+	// parsed again, instead of silently archiving nothing.
+	items, err := parseGlxyNews(loadGlxyFixture(t, "glxy_live_hzxm.html"), glxyBaseURL)
+	if err == nil {
+		t.Fatalf("external-only hzxm list was silently accepted: %#v", items)
+	}
+	if !strings.Contains(err.Error(), "no supported local article entries") {
+		t.Fatalf("hzxm rejection reason changed: %v", err)
+	}
+}
+
+func TestGlxyIndexFeedTotalPagesAcceptsAuditedHomepage(t *testing.T) {
+	homePage := loadGlxyFixture(t, "glxy_live_home.html")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/index.htm" || r.URL.Path == "/index.html" {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write(homePage)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+
+	site := AllSites["glxy"]
+	oldBase, oldNoCache := site.BaseURL, NoCache
+	site.BaseURL, NoCache = server.URL, true
+	t.Cleanup(func() {
+		site.BaseURL, NoCache = oldBase, oldNoCache
+		ClearCache()
+	})
+
+	total, err := site.GetTotalPages("index")
+	if err != nil || total != 1 {
+		t.Fatalf("glxy index total pages = %d, %v; want 1", total, err)
+	}
+	items, err := site.ListNewsRange("index", "2000-01-01", "2099-12-31", 0)
+	if err != nil {
+		t.Fatalf("glxy index range feed failed: %v", err)
+	}
+	if len(items) == 0 {
+		t.Fatal("glxy index range feed returned no homepage articles")
+	}
+
+	shellServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(`<html><head><title>glxy</title></head><body><div id="app"></div></body></html>`))
+	}))
+	defer shellServer.Close()
+	site.BaseURL = shellServer.URL
+	if _, err := site.GetTotalPages("index"); err == nil {
+		t.Fatal("glxy index total pages accepted a homepage without an article digest")
 	}
 }
 

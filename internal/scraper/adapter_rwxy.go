@@ -365,7 +365,12 @@ func rwxyFetchArticle(articleURL string) (*model.Article, []byte, error) {
 }
 
 var rwxyDateRe = regexp.MustCompile(`20\d{2}\s*(?:[-/.年]\s*\d{1,2}\s*[-/.月]\s*\d{1,2}日?)(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?`)
-var rwxyPageIndicatorRe = regexp.MustCompile(`\b1\s*/\s*(\d+)\b`)
+
+// A "1/N" page indicator is text such as "页次:1/6" or "共1175条 1/59".  It
+// must never match inside a URL path: carousel images on this site live under
+// /__local/1/99/DB/..., and that false positive once inflated a list total to
+// 99, making page-2 fetches of a nonexistent index/98.html fail hard.
+var rwxyPageIndicatorRe = regexp.MustCompile(`(?:^|[^0-9A-Za-z/._-])1\s*/\s*(\d+)(?:[^0-9A-Za-z/._-]|$)`)
 
 const rwxyLegacyPlaceholderDate = "2013-01-01"
 
@@ -684,6 +689,22 @@ func rwxyTotalPages(slug string) (int, error) {
 	}
 	if rwxyBlockedListResponse(doc) {
 		return 0, fmt.Errorf("rwxy: list page %q is a login, WAF, or error page", slug)
+	}
+	if strings.EqualFold(strings.Trim(slug, "/"), "index") {
+		// The homepage is a preview page with scoped home-section parsing, not
+		// a reverse-numbered archive.  It ships no archive pagination (the only
+		// "1/N"-looking strings are carousel image paths such as
+		// /__local/1/99/DB/...), so a positive total must come from a real
+		// pagination container; otherwise the feed is a single page.
+		if doc.Find(".p_pages, .pagination").Length() > 0 {
+			if total := rwxyTotalPagesFromHTML(body); total > 0 {
+				return total, nil
+			}
+		}
+		if rwxyListContainerExists(doc) || rwxyHomeSectionsExist(doc) || rwxyHasArticleRows(body) {
+			return 1, nil
+		}
+		return 0, fmt.Errorf("rwxy: homepage has no list sections or article rows")
 	}
 	if total := rwxyTotalPagesFromHTML(body); total > 0 {
 		return total, nil

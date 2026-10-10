@@ -105,7 +105,9 @@ func emPageURL(baseURL, slug string, page, totalPages int, extension string) str
 
 // emTotalPages reads the first page and uses the displayed logical page
 // numbers. The shared parser cannot be used because em's hrefs contain the
-// reverse generated filename rather than the logical page number.
+// reverse generated filename rather than the logical page number. The
+// homepage portal (the implicit "index" feed) has no pagination controls at
+// all; it is a single page once its scoped module parse yields real entries.
 func emTotalPages(slug string) (int, error) {
 	site, ok := AllSites["em"]
 	if !ok || site == nil {
@@ -118,6 +120,13 @@ func emTotalPages(slug string) (int, error) {
 		if err != nil {
 			lastErr = err
 			continue
+		}
+		if doc, docErr := goquery.NewDocumentFromReader(strings.NewReader(string(body))); docErr == nil && emHasHomeLayout(doc) {
+			if len(parseEmHome(doc, site.BaseURL)) == 0 {
+				lastErr = fmt.Errorf("em home %q has no article entries", slug)
+				continue
+			}
+			return 1, nil
 		}
 		if total := emPageCountFromHTML(body); total > 0 {
 			return total, nil

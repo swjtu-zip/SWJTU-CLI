@@ -1,0 +1,1772 @@
+﻿<!DOCTYPE html>
+  <html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>西南交大建筑学院</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="西南交大建筑学院">
+<META Name="keywords" Content="西南交大建筑学院,首页" />
+
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="favicon.ico" mce_href="favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="dfiles/9873/css/style.css?v=1.7">
+    <link rel="stylesheet" href="dfiles/9873/css/swiper.css">
+    <!--页面样式-->
+    <link rel="stylesheet" href="dfiles/9873/css/bootstrap.min.css">
+    <!--页面样式-->
+    <link rel="stylesheet" href="dfiles/9873/css/bootstrap-theme.min.css">
+    <!--页面样式-->
+    <link rel="stylesheet" href="dfiles/9873/css/animate.min.css">
+    <!--CSS3动画库-->
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1001,'/index.jsp',-1,1447715772)</script>
+</head>
+
+<body>
+    <div class="head hidden-sm hidden-xs">
+        <div class="wid">
+            <div class="cont">
+                <div class="intr">
+                    <div class="logo fl">
+                        <img src="dfiles/9873/img/8443e5_336x52.png" alt="">
+                    </div>
+                    <div class="search fr">
+                        <div class="links fl">
+                            <a href="en.htm" target="">EN</a>
+                            <a href="https://www.swjtu.edu.cn/">交大首页</a>
+                        </div>
+                       
+                            <!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu0 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+        margin-top: -15px;
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu0 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu0" class="input fr"></div>
+<script type="text/html" id="htmlu0">
+    <div id="appu0">
+        <div v-if="!isError" >
+        
+
+ <input type="text" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit"  placeholder="">
+                    <input type="submit" value=""  v-on:click="onSubmit()">
+  
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu0").html($("#htmlu0").text());
+</script>
+<script>
+    var appOwner = "1447715772";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu0",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu0 = document.querySelector("#appu0");
+   if (appElementu0 && appElementu0.__vue__) {
+
+   } else {
+      $("#divu0").html($("#htmlu0").text());
+      var appOwner = "1447715772";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou0 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu0(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu0();
+        }
+      };
+
+      function onSubmitu0(e) {
+        queryInfou0.query.keyWord= $("#appu0  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou0.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+                        
+                    </div>
+                </div>
+                       <div class="nav">
+            <ul>
+                            <li>
+                    <h4>
+                        <a href="index.htm">首页</a>
+                    </h4>
+                </li>
+                <li>
+                    <h4>
+                        <a href="xygk.htm">学院概况</a>
+                    </h4>
+                    <div class="slide">
+                        <div class="imgs fl"><img src="dfiles/9873/img/604a2c_214x142.jpg" alt=""></div>
+                        <div class="list fr">
+                        <a href="xygk/xyjj.htm">学院简介</a>
+                        <a href="xygk/ldbz/xrld.htm">领导班子</a>
+                        <a href="xygk/zzjg/gljg.htm">组织机构</a>
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <h4>
+                        <a href="szdw.htm">师资队伍</a>
+                    </h4>
+                    <div class="slide">
+                        <div class="imgs fl"><img src="dfiles/9873/img/604a2c_214x142.jpg" alt=""></div>
+                        <div class="list fr">
+                        <a href="szdw/jzx.htm">建筑系</a>
+                        <a href="szdw/cxghx.htm">城乡规划系</a>
+                        <a href="szdw/fjylx.htm">风景园林系</a>
+                        <a href="szdw/msx.htm">美术系</a>
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <h4>
+                        <a href="jyjx.htm">教育教学</a>
+                    </h4>
+                    <div class="slide">
+                        <div class="imgs fl"><img src="dfiles/9873/img/604a2c_214x142.jpg" alt=""></div>
+                        <div class="list fr">
+                        <a href="jyjx/yjxkjj1.htm">一级学科简介</a>
+                        <a href="jyjx/bsxwd1.htm">博士学位点</a>
+                        <a href="jyjx/ssxwd1.htm">硕士学位点</a>
+                        <a href="jyjx/bkzy1.htm">本科专业</a>
+                        <a href="jyjx/bshldz1.htm">博士后流动站</a>
+                        <a href="jyjx/zygcsjypyjh.htm">卓越工程师教育培养计划</a>
+                        <a href="jyjx/jpkc1.htm">精品课程</a>
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <h4>
+                        <a href="kxyj.htm">科学研究</a>
+                    </h4>
+                    <div class="slide">
+                        <div class="imgs fl"><img src="dfiles/9873/img/604a2c_214x142.jpg" alt=""></div>
+                        <div class="list fr">
+                        <a href="kxyj/tskyly.htm">特色科研领域</a>
+                        <a href="kxyj/zdkyxm.htm">重点科研项目</a>
+                        <a href="kxyj/kxyjtd.htm">科学研究团队</a>
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <h4>
+                        <a href="hzjl.htm">合作交流</a>
+                    </h4>
+                    <div class="slide">
+                        <div class="imgs fl"><img src="dfiles/9873/img/604a2c_214x142.jpg" alt=""></div>
+                        <div class="list fr">
+                        <a href="hzjl/hzxm.htm">合作项目</a>
+                        <a href="hzjl/jldt.htm">交流动态</a>
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <h4>
+                        <a href="djgz.htm">党建工作</a>
+                    </h4>
+                    <div class="slide">
+                        <div class="imgs fl"><img src="dfiles/9873/img/604a2c_214x142.jpg" alt=""></div>
+                        <div class="list fr">
+                        <a href="djgz/zzjg.htm">组织机构</a>
+                        <a href="djgz/djtz.htm">党建通知</a>
+                        <a href="djgz/djxw.htm">党建新闻</a>
+                        <a href="djgz/jwgz.htm">纪委工作</a>
+                        <a href="djgz/xxyd.htm">学习园地</a>
+                        <a href="djgz/xgxz.htm">相关下载</a>
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <h4>
+                        <a href="xsgz.htm">学生工作</a>
+                    </h4>
+                    <div class="slide">
+                        <div class="imgs fl"><img src="dfiles/9873/img/604a2c_214x142.jpg" alt=""></div>
+                        <div class="list fr">
+                        <a href="xsgz/xggk/xsgzfg.htm">学工概况</a>
+                        <a href="info/1095/4462.htm">团学组织</a>
+                        <a href="xsgz/xsgzzd.htm">学生工作制度</a>
+                        <a href="xsgz/bgxz.htm">表格下载</a>
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <h4>
+                        <a href="xygz.htm">校友工作</a>
+                    </h4>
+                    <div class="slide">
+                        <div class="imgs fl"><img src="dfiles/9873/img/604a2c_214x142.jpg" alt=""></div>
+                        <div class="list fr">
+                        <a href="#">杰出校友</a>
+                        <a href="xygz/byly.htm">毕业留影</a>
+                        <a href="xygz/xyhd.htm">校友活动</a>
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <h4>
+                        <a href="cpyc.htm">诚聘英才</a>
+                    </h4>
+                </li>
+                <li>
+                    <h4>
+                        <a href="zskj.htm">展示空间</a>
+                    </h4>
+                </li>
+            </ul>
+        </div>
+
+
+            </div>
+        </div>
+    </div>
+    <div class="head-wap visible-xs visible-sm">
+        <div class="logo fl">
+            <img src="dfiles/9873/img/48f5ae_336x52.png" alt="">
+        </div>
+        <div class="menu fr">
+            <i></i>
+        </div>
+    </div>
+
+    <div class="banner  hidden-sm hidden-xs">
+       
+
+<script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script>
+
+<div class="swiper-container list">
+            <ul class="swiper-wrapper">
+                                <li class="swiper-slide">
+                    <div class="imgs">
+                        <a href="https://mp.weixin.qq.com/s/nwwx-YLAp3kn6aXxtpx-DQ"><img src="/__local/4/5D/34/39056A4A9337D110C727A8AE5E9_473335A9_2C045.jpg" alt="习近平给四所交通大学全体师生回信">
+                    </div>
+                    <div class="text">
+                        <div class="tit">
+                            <a href="">习近平给四所交通大学全体师生回信</a>
+                        </div>
+                        <div class="txt">
+                            <a href=""></a>
+                        </div>
+                    </div>
+                </li>
+                <li class="swiper-slide">
+                    <div class="imgs">
+                        <a href="https://jzxy.swjtu.edu.cn/info/1032/22901.htm"><img src="/__local/3/08/71/492C07D8073ACD687AD8B02DC89_2E7D3593_29A21.jpg" alt="“筑境・叙情・共赴建校130周年” 西南交通大学建筑学院校友座谈会圆满举行">
+                    </div>
+                    <div class="text">
+                        <div class="tit">
+                            <a href="">“筑境・叙情・共赴建校130周年” 西南交通大学建筑学院校友座谈会圆满举行</a>
+                        </div>
+                        <div class="txt">
+                            <a href=""></a>
+                        </div>
+                    </div>
+                </li>
+                <li class="swiper-slide">
+                    <div class="imgs">
+                        <a href="https://jzxy.swjtu.edu.cn/info/1032/23751.htm"><img src="/__local/2/BC/32/12601E7FEEDF53E5FE19D97DB39_5C672441_28455.jpg" alt="百卅纪年筑拾光驿站 匠心建造展青年风采——西南交通大学第十二届“天府建造节”盛大开幕">
+                    </div>
+                    <div class="text">
+                        <div class="tit">
+                            <a href="">百卅纪年筑拾光驿站 匠心建造展青年风采——西南交通大学第十二届“天府建造节”盛大开幕</a>
+                        </div>
+                        <div class="txt">
+                            <a href=""></a>
+                        </div>
+                    </div>
+                </li>
+                <li class="swiper-slide">
+                    <div class="imgs">
+                        <a href="info/1241/17951.htm"><img src="/__local/A/AD/9C/BA3A939B1C1EDC34738CD06CCE4_73264F4E_3B531.jpg" alt="欢迎海内外英才依托建筑学院申报国家优秀青年科学基金项目（海外）">
+                    </div>
+                    <div class="text">
+                        <div class="tit">
+                            <a href="">欢迎海内外英才依托建筑学院申报国家优秀青年科学基金项目（海外）</a>
+                        </div>
+                        <div class="txt">
+                            <a href=""></a>
+                        </div>
+                    </div>
+                </li>
+                <li class="swiper-slide">
+                    <div class="imgs">
+                        <a href="https://jzxy.swjtu.edu.cn/info/1032/16071.htm"><img src="/__local/B/F9/34/D06BE04EF11E0455FA97F79F8D9_9E938293_4034F.jpg" alt="建筑策划助力“好房子、好小区、好社区、好城区”建设学术论坛在西南交通大学隆重召开">
+                    </div>
+                    <div class="text">
+                        <div class="tit">
+                            <a href="">建筑策划助力“好房子、好小区、好社区、好城区”建设学术论坛在西南交通大学隆重召开</a>
+                        </div>
+                        <div class="txt">
+                            <a href=""></a>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+            <div class="swiper-pagination"></div>
+        </div>
+
+<script>_showDynClickBatch(['dynclicks_u2_23451','dynclicks_u2_22931','dynclicks_u2_9736','dynclicks_u2_17951','dynclicks_u2_11401'],[23451,22931,9736,17951,11401],"wbnews", 1447715772)</script>
+
+    </div>
+    <div class="swiper-container wap-bann visible-xs visible-sm">
+       
+
+
+
+ <ul class="swiper-wrapper">
+             <li class="swiper-slide">
+                <div class="imgs">
+                    <a href="https://jzxy.swjtu.edu.cn/info/1032/6519.htm"> <img src="/__local/1/F3/10/C2295A946500DA97897726370A1_3C0CC1FB_CA14.jpg" alt="建筑未来·设计明天·云上精彩"></a>
+                </div>
+            </li>
+            
+        </ul>
+        <div class="swiper-pagination"></div>
+
+<script>_showDynClickBatch(['dynclicks_u3_7285'],[7285],"wbnews", 1447715772)</script>
+
+    </div>
+
+    <div class="news">
+       
+
+<div class="wid">
+            <div class="title">
+                <span>
+                    新 闻
+                </span>
+            </div>
+            <div class="cont">
+                <div class="col-lg-7 col-md-7">
+                    <div class="intr fl">
+                        <div class="content">
+                            <div class="text fr">
+                                <div class="more">
+                                    <a href="xxzx/xyxw.htm">更多新闻+</a>
+                                </div>
+                                <div class="imgs fl">
+                                    <div class="box">
+                                         <a href="info/1032/25161.htm"><img src="/__local/1/63/60/3365EE153A5136E7DA3C68F2581_6CE3F45B_8CF00.png" alt="" width="420" height="280"></a>
+                                    </div>
+                                </div>
+                                <div class="labels fr">
+                                    <div class="tit">
+                                        <a href="info/1032/25161.htm">2026清华大学-同济大学-西南交通大学风景园林研究生联合设计工作营纪...</a>
+                                    </div>
+                                    <div class="txt">
+                                       <a href="info/1032/25161.htm">9月14日至18日，清华大学、同济大学、西南交通大学风景园林研究生联合设计工作营在成都举行。本次工作营由西南交通大学国家卓越工程师学院、建筑学...</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-5 col-md-5">
+                    <div class="side fr">
+                        <div class="item fl">
+                            <div class="imgs">
+                                <a href="info/1032/25171.htm"> <img src="/__local/A/15/1E/F2999347D2DCAB410F7AE562B0C_9BFE00FC_1C745.jpeg" alt="西南交通大学建筑学院2026级新生开学典礼圆满举行" width="268" height="160"></a>
+                               
+                            </div>
+                            <div class="text">
+                                <div class="tit">
+                                     <a href="info/1032/25171.htm">西南交通大学建筑学院2026级新生开学典礼圆满举行</a>
+                                </div>
+                                <div class="txt">
+                                     <a href="info/1032/25171.htm">金秋九月，青春相聚。9月17日，建筑学院2026级新生开学典礼在图书馆一号报告厅隆重举行。建筑学院原院长、教授委员会主任沈中伟，党委书记胡伟，院...</a>
+                                </div>
+                                <div class="more">
+                                    <a href="info/1032/25171.htm">2026-09-21</a>
+                                </div>
+                            </div>
+                        </div>
+                      
+                      
+                        <div class="item fl">
+                            <div class="imgs">
+                                 <a href="info/1251/25391.htm"> <img src="/dfiles/9873/img/jzxy_news.jpg" alt="镌刻弦歌忆来路，笃行奋进向未来 ——建筑系党支部开展校史专题学习主题党日活动" width="268" height="160"></a>
+                            </div>
+                            <div class="text">
+                                <div class="tit">
+                                     <a href="info/1251/25391.htm">镌刻弦歌忆来路，笃行奋进向未来 ——建筑系党支部开展校史专...</a>
+                                </div>
+                                <div class="txt">
+                                     <a href="info/1251/25391.htm">为深化校史学习教育，重温交大播迁奋斗历程，感悟校史承载的精神力量，厚植爱国荣校、立德树人的初心情怀，2026年9月24日下午建筑系党支部组织全体...</a>
+                                </div>
+                                <div class="more">
+                                    <a href="info/1251/25391.htm">2026-10-08</a>
+                                </div>
+                            </div>
+                        </div>
+                      
+                    </div>
+                </div>
+            </div>
+            <div class="list">
+                <div class="col-lg-4 col-md-4">
+                    <div class="item">
+                        <div class="time fl">
+                            <div class="day">
+                                14
+                            </div>
+                            <div class="month">
+                               2026.09
+                            </div>
+                        </div>
+                        <div class="text fr">
+                            <div class="tit">
+                                <a href="info/1032/25071.htm">2026年中国风景园林学会两专业委员会年会暨“时代遗产——风...</a>
+                            </div>
+                            <div class="txt">
+                                <a href="info/1032/25071.htm">9月11日至13日，由中国风景园林学会理论与历史专业委员会、传统园林保护和发展专业委员会共同主办，西南交通大学承办的2026年年会暨“时代遗产——...</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+               
+                <div class="col-lg-4 col-md-4">
+                    <div class="item">
+                        <div class="time fl">
+                            <div class="day">
+                                7
+                            </div>
+                            <div class="month">
+                               2026.09
+                            </div>
+                        </div>
+                        <div class="text fr">
+                            <div class="tit">
+                                <a href="info/1032/25051.htm">建筑学院开展新学期首日课堂走访工作</a>
+                            </div>
+                            <div class="txt">
+                                <a href="info/1032/25051.htm">为全面保障新学期教学工作平稳有序开展，夯实学风建设根基，精准掌握师生返校开课状态，9月7日清晨，建筑学院党委书记胡伟、院长崔叙带领学院班子...</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+               
+                <div class="col-lg-4 col-md-4">
+                    <div class="item">
+                        <div class="time fl">
+                            <div class="day">
+                                10
+                            </div>
+                            <div class="month">
+                               2026.07
+                            </div>
+                        </div>
+                        <div class="text fr">
+                            <div class="tit">
+                                <a href="info/1032/24701.htm">建筑学院召开2025-2026学年第二学期第二次全院教职工大会</a>
+                            </div>
+                            <div class="txt">
+                                <a href="info/1032/24701.htm">7月9日，建筑学院召开2025-2026学年第二学期第二次全院教职工大会。会议由学院党委书记胡伟主持，全院教职工参会。会议伊始，新入职教师李晓明介绍...</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+               
+            </div>
+        </div><script>_showDynClickBatch(['dynclicks_u4_25161','dynclicks_u4_25171','dynclicks_u4_25071','dynclicks_u4_25051','dynclicks_u4_24701','dynclicks_u4_24681','dynclicks_u4_24551','dynclicks_u4_24471','dynclicks_u4_24131','dynclicks_u4_23971','dynclicks_u4_23811','dynclicks_u4_23751','dynclicks_u4_23661','dynclicks_u4_25391','dynclicks_u4_25221','dynclicks_u4_25341','dynclicks_u4_25201','dynclicks_u4_25191','dynclicks_u4_25041','dynclicks_u4_24781','dynclicks_u4_24771','dynclicks_u4_24761','dynclicks_u4_24751','dynclicks_u4_24601','dynclicks_u4_24381','dynclicks_u4_24421','dynclicks_u4_24201','dynclicks_u4_24191','dynclicks_u4_24431','dynclicks_u4_24411','dynclicks_u4_24531','dynclicks_u4_24521','dynclicks_u4_24321','dynclicks_u4_24161','dynclicks_u4_24331','dynclicks_u4_24021','dynclicks_u4_24011','dynclicks_u4_24001','dynclicks_u4_23981','dynclicks_u4_23951','dynclicks_u4_24391','dynclicks_u4_23821','dynclicks_u4_23801','dynclicks_u4_23741','dynclicks_u4_23651','dynclicks_u4_23631','dynclicks_u4_23621','dynclicks_u4_23581','dynclicks_u4_23571','dynclicks_u4_23531','dynclicks_u4_23481','dynclicks_u4_23461','dynclicks_u4_23441','dynclicks_u4_23421','dynclicks_u4_23381','dynclicks_u4_23361','dynclicks_u4_23281','dynclicks_u4_23271','dynclicks_u4_23081','dynclicks_u4_23071','dynclicks_u4_23051','dynclicks_u4_23021','dynclicks_u4_23011','dynclicks_u4_24141','dynclicks_u4_22991','dynclicks_u4_22961','dynclicks_u4_22941','dynclicks_u4_22971','dynclicks_u4_22901','dynclicks_u4_22881','dynclicks_u4_22871','dynclicks_u4_22861','dynclicks_u4_22811','dynclicks_u4_22771','dynclicks_u4_22761','dynclicks_u4_22691','dynclicks_u4_22661','dynclicks_u4_22651','dynclicks_u4_22631','dynclicks_u4_22611','dynclicks_u4_22571','dynclicks_u4_22521','dynclicks_u4_22501','dynclicks_u4_22491','dynclicks_u4_22271','dynclicks_u4_22131','dynclicks_u4_22081','dynclicks_u4_22031','dynclicks_u4_22621','dynclicks_u4_22061','dynclicks_u4_22071','dynclicks_u4_21991','dynclicks_u4_22021','dynclicks_u4_22011','dynclicks_u4_21931','dynclicks_u4_21911','dynclicks_u4_21941','dynclicks_u4_21921','dynclicks_u4_22041','dynclicks_u4_21761'],[25161,25171,25071,25051,24701,24681,24551,24471,24131,23971,23811,23751,23661,25391,25221,25341,25201,25191,25041,24781,24771,24761,24751,24601,24381,24421,24201,24191,24431,24411,24531,24521,24321,24161,24331,24021,24011,24001,23981,23951,24391,23821,23801,23741,23651,23631,23621,23581,23571,23531,23481,23461,23441,23421,23381,23361,23281,23271,23081,23071,23051,23021,23011,24141,22991,22961,22941,22971,22901,22881,22871,22861,22811,22771,22761,22691,22661,22651,22631,22611,22571,22521,22501,22491,22271,22131,22081,22031,22621,22061,22071,21991,22021,22011,21931,21911,21941,21921,22041,21761],"wbnews", 1447715772)</script>
+
+    </div>
+    <div class="notice">
+        <div class="wid">
+            <div class="title">
+                <span>通知公告</span>
+            </div>
+            <div class="cont">
+                <div class="tabs">
+                    <ul>
+                        <li class="acti">学院公告</li>
+                        <li>本科生通知</li>
+                        <li>研究生通知</li>
+                    </ul>
+                </div>
+                <div class="content">
+                    <div class="list show">
+                        
+
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                        
+                            <div class="item">
+                                <div class="time fl">
+                                    <div class="box">
+                                        <div class="day">
+                                            26
+                                        </div>
+                                        <div class="month">
+                                           2026.01
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text fr">
+                                    <a href="https://mp.weixin.qq.com/s/vHBCGB7ALuqQzcny7AFMOw">  <p>2026年寒假温馨提示</p></a>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                        
+                            <div class="item">
+                                <div class="time fl">
+                                    <div class="box">
+                                        <div class="day">
+                                            08
+                                        </div>
+                                        <div class="month">
+                                           2026.10
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text fr">
+                                    <a href="info/1029/25401.htm">  <p>西南交通大学关于举办四川省注册建筑师第十四注册期（202...</p></a>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                        
+                            <div class="item">
+                                <div class="time fl">
+                                    <div class="box">
+                                        <div class="day">
+                                            19
+                                        </div>
+                                        <div class="month">
+                                           2025.11
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text fr">
+                                    <a href="info/1029/21651.htm">  <p>关于召开共青团西南交通大学建筑学院第一次代表大会的通知</p></a>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                        
+                            <div class="item">
+                                <div class="time fl">
+                                    <div class="box">
+                                        <div class="day">
+                                            04
+                                        </div>
+                                        <div class="month">
+                                           2025.09
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text fr">
+                                    <a href="info/1029/20121.htm">  <p>西南交通大学关于举办四川省注册建筑师第十四注册期（202...</p></a>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                        
+                            <div class="item">
+                                <div class="time fl">
+                                    <div class="box">
+                                        <div class="day">
+                                            11
+                                        </div>
+                                        <div class="month">
+                                           2025.07
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text fr">
+                                    <a href="info/1029/20041.htm">  <p>【人事】西南交通大学关于启动 2025年专业技术职务评聘工...</p></a>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                        
+                            <div class="item">
+                                <div class="time fl">
+                                    <div class="box">
+                                        <div class="day">
+                                            11
+                                        </div>
+                                        <div class="month">
+                                           2025.07
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text fr">
+                                    <a href="https://mp.weixin.qq.com/s/YZTJE9SHUUtPEdh_qIex7Q">  <p>2025年暑假温馨提示</p></a>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="more">
+                            <a href="xxzx/xygg.htm">+MORE</a>
+                        </div>
+
+<script>_showDynClickBatch(['dynclicks_u5_22921','dynclicks_u5_25401','dynclicks_u5_21651','dynclicks_u5_20121','dynclicks_u5_20041','dynclicks_u5_20031'],[22921,25401,21651,20121,20041,20031],"wbnews", 1447715772)</script>
+
+                    </div>
+                    <div class="list">
+                       
+
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                        
+                            <div class="item">
+                                <div class="time fl">
+                                    <div class="box">
+                                        <div class="day">
+                                            03
+                                            
+                                        </div>
+                                        <div class="month">
+                                           2026.09
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text fr">
+                                    <a href="info/1030/24791.htm">  <p>推免工作专栏（2027）</p></a>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                        
+                            <div class="item">
+                                <div class="time fl">
+                                    <div class="box">
+                                        <div class="day">
+                                            09
+                                            
+                                        </div>
+                                        <div class="month">
+                                           2026.10
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text fr">
+                                    <a href="info/1030/25431.htm">  <p>【资助工作】建筑学院2026-2027学年家庭经济困难学生学院...</p></a>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                        
+                            <div class="item">
+                                <div class="time fl">
+                                    <div class="box">
+                                        <div class="day">
+                                            09
+                                            
+                                        </div>
+                                        <div class="month">
+                                           2026.10
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text fr">
+                                    <a href="info/1030/25421.htm">  <p>【评奖通知】建筑学院关于开展2026年度詹天佑奖学金评选...</p></a>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                        
+                            <div class="item">
+                                <div class="time fl">
+                                    <div class="box">
+                                        <div class="day">
+                                            29
+                                            
+                                        </div>
+                                        <div class="month">
+                                           2026.09
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text fr">
+                                    <a href="info/1030/25351.htm">  <p>【评奖公示】关于建筑学院2025-2026学年国家奖学金和国家...</p></a>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                        
+                            <div class="item">
+                                <div class="time fl">
+                                    <div class="box">
+                                        <div class="day">
+                                            29
+                                            
+                                        </div>
+                                        <div class="month">
+                                           2026.09
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text fr">
+                                    <a href="info/1030/25361.htm">  <p>【评奖公示】建筑学院关于推荐至校级评选第九届感恩中国...</p></a>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                        
+                            <div class="item">
+                                <div class="time fl">
+                                    <div class="box">
+                                        <div class="day">
+                                            24
+                                            
+                                        </div>
+                                        <div class="month">
+                                           2026.09
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text fr">
+                                    <a href="info/1030/25321.htm">  <p>【答辩通知】建筑学院关于召开2025-2026学年本科生国家奖...</p></a>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="more">
+                            <a href="xxzx/bkstz.htm">+MORE</a>
+                        </div>
+
+<script>_showDynClickBatch(['dynclicks_u6_24791','dynclicks_u6_25431','dynclicks_u6_25421','dynclicks_u6_25351','dynclicks_u6_25361','dynclicks_u6_25321'],[24791,25431,25421,25351,25361,25321],"wbnews", 1447715772)</script>
+
+                    </div>
+                    <div class="list">
+                    
+
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                        
+                            <div class="item">
+                                <div class="time fl">
+                                    <div class="box">
+                                        <div class="day">
+                                            07
+                                        </div>
+                                        <div class="month">
+                                           2026.09
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text fr">
+                                    <a href="info/1031/24871.htm">  <p>西南交通大学建筑学院2027年​接收推荐免试攻读研究生（...</p></a>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                        
+                            <div class="item">
+                                <div class="time fl">
+                                    <div class="box">
+                                        <div class="day">
+                                            24
+                                        </div>
+                                        <div class="month">
+                                           2026.09
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text fr">
+                                    <a href="info/1031/25291.htm">  <p>【评优通知】建筑学院关于组织开展2025-2026学年研究生荣...</p></a>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                        
+                            <div class="item">
+                                <div class="time fl">
+                                    <div class="box">
+                                        <div class="day">
+                                            24
+                                        </div>
+                                        <div class="month">
+                                           2026.09
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text fr">
+                                    <a href="info/1031/25281.htm">  <p>【评奖通知】建筑学院关于开展研究生2026年学业奖学金评...</p></a>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                        
+                            <div class="item">
+                                <div class="time fl">
+                                    <div class="box">
+                                        <div class="day">
+                                            24
+                                        </div>
+                                        <div class="month">
+                                           2026.09
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text fr">
+                                    <a href="info/1031/25271.htm">  <p>【评奖通知】建筑学院关于开展2026年研究生国家奖学金评...</p></a>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                        
+                            <div class="item">
+                                <div class="time fl">
+                                    <div class="box">
+                                        <div class="day">
+                                            24
+                                        </div>
+                                        <div class="month">
+                                           2026.09
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text fr">
+                                    <a href="info/1031/25261.htm">  <p>【评奖通知】建筑学院关于开展2026年博士新生扬华新秀奖...</p></a>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="col-lg-4 col-md-4 col-sm-4">
+                        
+                            <div class="item">
+                                <div class="time fl">
+                                    <div class="box">
+                                        <div class="day">
+                                            23
+                                        </div>
+                                        <div class="month">
+                                           2026.09
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text fr">
+                                    <a href="info/1031/25231.htm">  <p>建筑学院2027年推免研究生复试名单（第一批）</p></a>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="more">
+                            <a href="xxzx/yjstz.htm">+MORE</a>
+                        </div>
+
+<script>_showDynClickBatch(['dynclicks_u7_24871','dynclicks_u7_25291','dynclicks_u7_25281','dynclicks_u7_25271','dynclicks_u7_25261','dynclicks_u7_25231'],[24871,25291,25281,25271,25261,25231],"wbnews", 1447715772)</script>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="activity">
+        
+
+<div class="wid">
+            <div class="title">
+                <span>学术活动</span>
+            </div>
+            <div class="cont">
+                <div class="prev"></div>
+                <div class="next"></div>
+                <div class="swiper-container imgs fl">
+                    <ul class="swiper-wrapper">
+                                                <li class="swiper-slide">
+                            <div class="img">
+                                <img src="/__local/F/06/18/ADFC70C37E3439E390D2988C3C7_D030DB5D_73E2D.jpg" alt="建筑数字化设计课程群虚拟教研室建设研讨会暨第四届建筑设计教育数字化（国际）论坛">
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                <div class="swiper-container intr fr">
+                    <ul class="swiper-wrapper">
+                        <li class="swiper-slide">
+                            <div class="content">
+                                <div class="labels">
+                                    <span>学术活动</span>
+                                    <a href="xxzx/xshdyg.htm">+更多学术活动</a>
+                                </div>
+                                <div class="tit">
+                                    <a href="info/1036/23591.htm"> 建筑数字化设计课程群虚拟教研室建设研讨会暨第四届建筑设计教育数字化（国际）论坛</a>
+                                </div>
+                            </div>
+                            <div class="inform">
+                                <div class="item">
+                                    <div class="ico fl">
+                                        <img src="/dfiles/9873/img/eaf22b_16x16.png" alt="">
+                                    </div>
+                                    <div class="txt fr">
+                                         2026.04.24-25
+                                    </div>
+                                </div>
+                                <div class="item">
+                                    <div class="ico fl">
+                                        <img src="/dfiles/9873/img/dfa521_21x20.png" alt="">
+                                    </div>
+                                    <div class="txt fr">
+                                        西南交通大学建筑学院
+                                    </div>
+                                </div>
+                                <div class="item">
+                                    <div class="ico fl">
+                                        <img src="/dfiles/9873/img/40fe27_19x17.png" alt="">
+                                    </div>
+                                    <div class="txt fr">
+                                        会邀嘉宾
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div><script>_showDynClickBatch(['dynclicks_u8_23591'],[23591],"wbnews", 1447715772)</script>
+
+    </div>
+
+    <div class="type">
+        <div class="wid">
+            <div class="cont">
+                <div class="list">
+                    <div class="col-lg-2 col-md-2 col-sm-4 col-xs-4">
+                        <div class="item">
+                            <div class="imgs">
+                           <a href="szdw/jzx.htm">
+                                <img src="dfiles/9873/img/301f0f_80x83.png" alt=""></a>
+                            </div>
+                            <div class="text">
+                                <a href="szdw/jzx.htm">建筑系</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-2 col-sm-4 col-xs-4">
+                        <div class="item">
+                            <div class="imgs">
+                            <a href="szdw/cxghx.htm">
+                                <img src="dfiles/9873/img/bd2608_77x100.png" alt=""></a>
+                            </div>
+                            <div class="text">
+                                <a href="szdw/cxghx.htm">城乡规划系</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-2 col-sm-4 col-xs-4">
+                        <div class="item">
+                            <div class="imgs">
+                            <a href="szdw/fjylx.htm">
+                                <img src="dfiles/9873/img/9b3367_93x84.png" alt=""></a>
+                            </div>
+                            <div class="text">
+                                <a href="szdw/fjylx.htm">风景园林系</a>
+                            </div>
+                        </div>
+                    </div>
+                    <!--
+                    <div class="col-lg-2 col-md-2 col-sm-4 col-xs-4">
+                        <div class="item">
+                            <div class="imgs">
+                            <a href="/szdw/yssjx.htm">
+                                <img src="/dfiles/9873/img/b2bd48_79x78.png" alt=""></a>
+                            </div>
+                            <div class="text">
+                                <a href="/szdw/yssjx.htm">艺术设计系</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-2 col-sm-4 col-xs-4">
+                        <div class="item">
+                            <div class="imgs">
+                            <a href="/szdw/gysjx.htm">
+                                <img src="/dfiles/9873/img/b53a16_79x80.png" alt=""></a>
+                            </div>
+                            <div class="text">
+                                <a href="/szdw/gysjx.htm">工业设计系</a>
+                            </div>
+                        </div>
+                    </div>-->
+                    <div class="col-lg-2 col-md-2 col-sm-4 col-xs-4">
+                        <div class="item">
+                            <div class="imgs">
+                            <a href="szdw/msx.htm">
+                                <img src="dfiles/9873/img/e3895f_86x86.png" alt=""></a>
+                            </div>
+                            <div class="text">
+                                <a href="szdw/msx.htm">美术系</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="wid">
+            <div class="col-lg-4 col-md-4">
+                <div class="address">
+                    <div class="logo">
+                        <img src="dfiles/9873/img/dc68f5_287x43.png" alt="">
+                    </div>
+                    <div class="text">
+                        <div class="item">
+                            <div class="tit fl">
+                                学院地址：
+                            </div>
+                            <div class="txt fl">
+                                中国四川省成都市郫都区犀安路999号西南交通大学犀浦校区8号教学楼
+                            </div>
+                        </div>
+                        <div class="item">
+                            <div class="tit fl">
+                                邮政编码：
+                            </div>
+                            <div class="txt fl">
+                                611756
+                            </div>
+                        </div>
+                        <div class="item">
+                            <div class="tit fl">
+                                办公电话：
+                            </div>
+                            <div class="txt fl">
+                                (028)66366683
+                            </div>
+                        </div>
+                    </div>
+                    <div class="copyright">
+                        西南交通大学建筑学院 2020 ©Copyright
+                    </div>
+                    <div class="wx">
+                        <img src="dfiles/9873/img/1f4aeb_110x102.png" alt="">
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-8 col-md-8">
+                <div class="links">
+    <div class="col-lg-4 col-md-4 col-sm-4">
+        <div class="item">
+            <div class="tit fl">
+                学院概况
+            </div>
+            <div class="txt fr">
+            
+                <p>
+                    <a href="xygk/xyjj.htm">学院简介</a>
+                </p>
+            
+                <p>
+                    <a href="xygk/ldbz/xrld.htm">领导班子</a>
+                </p>
+            
+                <p>
+                    <a href="xygk/zzjg/gljg.htm">组织机构</a>
+                </p>
+                
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-4 col-sm-4">
+        <div class="item">
+            <div class="tit fl">
+                师资队伍
+            </div>
+            <div class="txt fr">
+            
+                <p>
+                    <a href="szdw/jzx.htm">建筑系</a>
+                </p>
+            
+                <p>
+                    <a href="szdw/cxghx.htm">城乡规划系</a>
+                </p>
+            
+                <p>
+                    <a href="szdw/fjylx.htm">风景园林系</a>
+                </p>
+            
+                <p>
+                    <a href="szdw/msx.htm">美术系</a>
+                </p>
+                
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-4 col-sm-4">
+        <div class="item">
+            <div class="tit fl">
+                教育教学
+            </div>
+            <div class="txt fr">
+            
+                <p>
+                    <a href="jyjx/yjxkjj1.htm">一级学科简介</a>
+                </p>
+            
+                <p>
+                    <a href="jyjx/bsxwd1.htm">博士学位点</a>
+                </p>
+            
+                <p>
+                    <a href="jyjx/ssxwd1.htm">硕士学位点</a>
+                </p>
+            
+                <p>
+                    <a href="jyjx/bkzy1.htm">本科专业</a>
+                </p>
+            
+                <p>
+                    <a href="jyjx/bshldz1.htm">博士后流动站</a>
+                </p>
+            
+                <p>
+                    <a href="jyjx/zygcsjypyjh.htm">卓越工程师教育培养计划</a>
+                </p>
+            
+                <p>
+                    <a href="jyjx/jpkc1.htm">精品课程</a>
+                </p>
+                
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-4 col-sm-4">
+        <div class="item">
+            <div class="tit fl">
+                科学研究
+            </div>
+            <div class="txt fr">
+            
+                <p>
+                    <a href="kxyj/tskyly.htm">特色科研领域</a>
+                </p>
+            
+                <p>
+                    <a href="kxyj/zdkyxm.htm">重点科研项目</a>
+                </p>
+            
+                <p>
+                    <a href="kxyj/kxyjtd.htm">科学研究团队</a>
+                </p>
+                
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-4 col-sm-4">
+        <div class="item">
+            <div class="tit fl">
+                合作交流
+            </div>
+            <div class="txt fr">
+            
+                <p>
+                    <a href="hzjl/hzxm.htm">合作项目</a>
+                </p>
+            
+                <p>
+                    <a href="hzjl/jldt.htm">交流动态</a>
+                </p>
+                
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-4 col-sm-4">
+        <div class="item">
+            <div class="tit fl">
+                党建工作
+            </div>
+            <div class="txt fr">
+            
+                <p>
+                    <a href="djgz/zzjg.htm">组织机构</a>
+                </p>
+            
+                <p>
+                    <a href="djgz/djtz.htm">党建通知</a>
+                </p>
+            
+                <p>
+                    <a href="djgz/djxw.htm">党建新闻</a>
+                </p>
+            
+                <p>
+                    <a href="djgz/jwgz.htm">纪委工作</a>
+                </p>
+            
+                <p>
+                    <a href="djgz/xxyd.htm">学习园地</a>
+                </p>
+            
+                <p>
+                    <a href="djgz/xgxz.htm">相关下载</a>
+                </p>
+                
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-4 col-sm-4">
+        <div class="item">
+            <div class="tit fl">
+                学生工作
+            </div>
+            <div class="txt fr">
+            
+                <p>
+                    <a href="xsgz/xggk/xsgzfg.htm">学工概况</a>
+                </p>
+            
+                <p>
+                    <a href="info/1095/4462.htm">团学组织</a>
+                </p>
+            
+                <p>
+                    <a href="xsgz/xsgzzd.htm">学生工作制度</a>
+                </p>
+            
+                <p>
+                    <a href="xsgz/bgxz.htm">表格下载</a>
+                </p>
+                
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-4 col-sm-4">
+        <div class="item">
+            <div class="tit fl">
+                校友工作
+            </div>
+            <div class="txt fr">
+            
+                <p>
+                    <a href="#">杰出校友</a>
+                </p>
+            
+                <p>
+                    <a href="xygz/byly.htm">毕业留影</a>
+                </p>
+            
+                <p>
+                    <a href="xygz/xyhd.htm">校友活动</a>
+                </p>
+                
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-4 col-sm-4">
+        <div class="item">
+            <div class="tit fl">
+                诚聘英才
+            </div>
+            <div class="txt fr">
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-4 col-sm-4">
+        <div class="item">
+            <div class="tit fl">
+                展示空间
+            </div>
+            <div class="txt fr">
+            </div>
+        </div>
+    </div>
+</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="alerts">
+        <div class="cont">
+            <div class="menu">
+                
+
+<div class="list">
+                    <ul>
+                                            <li>
+                            <h4>
+                                <a href="index.htm">首页</a>
+                            </h4>
+                        </li>
+                        <li>
+                            <h4>
+                                <a href="xygk.htm">学院概况</a>
+                            </h4>
+                        </li>
+                        <li>
+                            <h4>
+                                <a href="szdw.htm">师资队伍</a>
+                            </h4>
+                        </li>
+                        <li>
+                            <h4>
+                                <a href="jyjx.htm">教育教学</a>
+                            </h4>
+                        </li>
+                        <li>
+                            <h4>
+                                <a href="kxyj.htm">科学研究</a>
+                            </h4>
+                        </li>
+                        <li>
+                            <h4>
+                                <a href="hzjl.htm">合作交流</a>
+                            </h4>
+                        </li>
+                        <li>
+                            <h4>
+                                <a href="djgz.htm">党建工作</a>
+                            </h4>
+                        </li>
+                        <li>
+                            <h4>
+                                <a href="xsgz.htm">学生工作</a>
+                            </h4>
+                        </li>
+                        <li>
+                            <h4>
+                                <a href="xygz.htm">校友工作</a>
+                            </h4>
+                        </li>
+                        <li>
+                            <h4>
+                                <a href="cpyc.htm">诚聘英才</a>
+                            </h4>
+                        </li>
+                        <li>
+                            <h4>
+                                <a href="zskj.htm">展示空间</a>
+                            </h4>
+                        </li>
+                       
+                    </ul>
+                </div>
+
+            </div>
+            <div class="search">
+                
+                   <!-- 3.1.3版本 -->
+
+
+
+<style>
+    #appu11 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+        margin-top: -15px;
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu11 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu11"></div>
+<script type="text/html" id="htmlu11">
+    <div id="appu11">
+        <div v-if="!isError">
+            <input type="text" class="qwss" placeholder="全文搜索" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+            <input class="tj" name="submit_button" type="button" value="提交" v-on:click="onSubmit()"/>
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu11").html($("#htmlu11").text());
+</script>
+<script>
+    var appOwner = "1447715772";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu11",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu11 = document.querySelector("#appu11");
+   if (appElementu11 && appElementu11.__vue__) {
+
+   } else {
+      $("#divu11").html($("#htmlu11").text());
+      var appOwner = "1447715772";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou11 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu11(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu11();
+        }
+      };
+
+      function onSubmitu11(e) {
+        queryInfou11.query.keyWord= $("#appu11  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou11.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+            </div>
+        </div>
+    </div>
+
+    <script src="dfiles/9873/js/jquery.min.js"></script>
+    <!--jQuery库-->
+    <script src="dfiles/9873/js/wow.min.js"></script>
+    <!--动画效果库-->
+    <script src="dfiles/9873/js/swiper.min.js"></script>
+    <!-- swiper -->
+    <script src="dfiles/9873/js/epp.min.js"></script>
+    <!--Epp插件库-->
+
+    <script>
+        var swiper = new Swiper('.banner .list', {
+            pagination: {
+                el: '.banner .list .swiper-pagination',
+                clickable: true,
+            },
+            autoplay: {
+                delay: 3000,
+                disableOnInteraction: false,
+            },
+        });
+
+        var swiper = new Swiper('.wap-bann', {
+            pagination: {
+                el: '.wap-bann .swiper-pagination',
+                clickable: true,
+            },
+            autoplay: {
+                delay: 3000,
+                disableOnInteraction: false,
+            },
+        });
+        var i = 0;
+        var swiper1 = new Swiper('.activity .cont .imgs', {
+            navigation: {
+                nextEl: '.activity .cont .next',
+                prevEl: '.activity .cont .prev',
+            },
+            on: {
+                slideChangeTransitionStart: function() {
+                    i = this.activeIndex;
+                    swiper2.slideTo(i);
+                },
+            },
+        });
+
+        var swiper2 = new Swiper('.activity .cont .intr', {
+            navigation: {
+                nextEl: '.activity .cont .next',
+                prevEl: '.activity .cont .prev',
+            },
+            on: {
+                slideChangeTransitionStart: function() {
+                    i = this.activeIndex;
+                    swiper1.slideTo(i);
+                },
+            },
+        });
+        $('.notice .cont .tabs ul li').click(function() {
+            var y = $(this).index();
+            $(this).addClass('acti').siblings().removeClass('acti');
+            $('.notice .cont .content .list').eq(y).addClass('show').siblings().removeClass('show');
+        })
+        $('.head-wap .menu').attr('att', '1');
+        $('.head-wap .menu').click(function() {
+            if ($(this).attr('att') == 1) {
+                $(this).addClass('acti')
+                $('.alerts').fadeIn();
+                $('.alerts .cont').slideDown();
+                $(this).attr('att', '0');
+            } else if ($(this).attr('att') == 0) {
+                $(this).removeClass('acti')
+                $('.alerts').fadeOut();
+                $('.alerts .cont').slideUp
+                $(this).attr('att', '1');
+            }
+        })
+    </script>
+
+
+
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -125,10 +125,12 @@ func Feeds() []Feed {
 	sort.Strings(ids)
 	for _, id := range ids {
 		site := scraper.AllSites[id]
-		feeds = append(feeds, Feed{
-			ID: id + ":index", SiteID: id, SiteName: site.Name, Category: site.Category,
-			Slug: "index", Name: "首页新闻", BaseURL: site.BaseURL,
-		})
+		if !site.NoIndexFeed {
+			feeds = append(feeds, Feed{
+				ID: id + ":index", SiteID: id, SiteName: site.Name, Category: site.Category,
+				Slug: "index", Name: "首页新闻", BaseURL: site.BaseURL,
+			})
+		}
 		for _, slug := range site.SubPages {
 			feeds = append(feeds, Feed{
 				ID: id + ":" + slug, SiteID: id, SiteName: site.Name, Category: site.Category,

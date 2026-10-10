@@ -234,8 +234,8 @@ func leedsHomepageItems(doc *goquery.Document, raw []byte, baseURL string) []mod
 		if row == nil || row.Length() == 0 {
 			return
 		}
-		anchor := row.Find("a[href*='info/']").First()
-		if anchor.Length() == 0 {
+		anchor := leedsRowArticleAnchor(row)
+		if anchor == nil || anchor.Length() == 0 {
 			return
 		}
 		title := strings.TrimSpace(anchor.AttrOr("title", ""))
@@ -289,6 +289,37 @@ func leedsHomepageItems(doc *goquery.Document, raw []byte, baseURL string) []mod
 		add(row, "活动预告", date)
 	})
 	return items
+}
+
+// leedsRowArticleAnchor picks the anchor that carries the row's article
+// link. Current home-page rows lead with a textless picture-card anchor;
+// choosing it by DOM order alone would discard the row because no title can
+// be recovered from it.
+func leedsRowArticleAnchor(row *goquery.Selection) *goquery.Selection {
+	if row == nil || row.Length() == 0 {
+		return nil
+	}
+	anchors := row.Find("a[href*='info/']")
+	if anchors.Length() == 0 {
+		return nil
+	}
+	chosen := anchors.First()
+	anchors.Each(func(_ int, candidate *goquery.Selection) {
+		if chosen != candidate && leedsAnchorLabel(chosen) == "" && leedsAnchorLabel(candidate) != "" {
+			chosen = candidate
+		}
+	})
+	return chosen
+}
+
+func leedsAnchorLabel(anchor *goquery.Selection) string {
+	if anchor == nil || anchor.Length() == 0 {
+		return ""
+	}
+	if title := strings.TrimSpace(anchor.AttrOr("title", "")); title != "" {
+		return title
+	}
+	return strings.Join(strings.Fields(anchor.Text()), " ")
 }
 
 func leedsRowDate(row *goquery.Selection) string {
@@ -464,6 +495,11 @@ func leedsNormalizeDate(raw string) (string, string) {
 
 func leedsTotalPages(slug string) (int, error) {
 	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if slug == "" || slug == "index" {
+		// The homepage is a single preview page: reverseBodaPageURL maps
+		// page 1 to /index.htm and parseLeedsNews parses its news modules.
+		return 1, nil
+	}
 	if !leedsKnownFeed(slug) {
 		return 0, fmt.Errorf("leeds: %q is not an article-list route", slug)
 	}
@@ -499,7 +535,10 @@ func leedsKnownFeed(slug string) bool {
 }
 
 func leedsTotalPagesFromHTML(raw []byte, slug string) (int, error) {
-	if !leedsKnownFeed(strings.Trim(strings.TrimSpace(slug), "/")) {
+	if slug = strings.Trim(strings.TrimSpace(slug), "/"); slug == "" || slug == "index" {
+		return 1, nil
+	}
+	if !leedsKnownFeed(slug) {
 		return 0, fmt.Errorf("leeds: %q is not an article-list route", slug)
 	}
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(raw)))

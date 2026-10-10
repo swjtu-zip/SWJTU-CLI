@@ -1,0 +1,552 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+  <title>新闻中心-西南交通大学东部（国际）校区</title><meta name="pageType" content="2">
+<meta name="pageTitle" content="新闻中心">
+<META Name="keywords" Content="西南交通大学东部（国际）校区" />
+
+  <link rel="stylesheet" href="js/swiper-bundle.min.css">
+  <link href="css/main.css?ver=1.11" rel="stylesheet" />
+  <script src="js/jquery.min.js"></script>
+  <script type="text/javascript" src="js/swiper-bundle.min.js"></script>
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="news_center.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1121,'/news_center.jsp',-1,2033820380)</script>
+</head>
+
+<body>
+  <div class="app">
+    <header>
+      <div class="head"> <a class="logo" href="index.htm"> <span class="photo"><img src="images/logo.png" /><img src="images/logo3.png" /></span></a>
+        <div class="nav">
+                    <ul>
+            <li><a href="index.htm">首页</a></li>
+            <li><a href="gywm.htm">关于我们</a></li>
+            <li><a href="wlxy.htm">未来校园</a></li>
+            <li><a href="xwzx.htm" class="active">新闻中心</a></li>
+          </ul>
+
+        </div>
+        <div class="search">
+            <!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu1 .qwss{}
+    #appu1 .tj{}
+</style>
+<div id="divu1"></div>
+<script type="text/html" id="htmlu1">
+    <div id="appu1">
+        <div v-if="!isError">
+            <div class="searchbox"> <span class="input">
+              <input type="text" class="qwss sea-int" placeholder="请输入搜索内容" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit" name="wd" />
+            </span> <span class="btn" name="submit_button" value="" v-on:click="onSubmit()"></span> </div>            
+            </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu1").html($("#htmlu1").text());
+</script>
+<script>
+    var appOwner = "2033820380";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu1",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu1 = document.querySelector("#appu1");
+   if (appElementu1 && appElementu1.__vue__) {
+
+   } else {
+      $("#divu1").html($("#htmlu1").text());
+      var appOwner = "2033820380";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou1 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu1(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu1();
+        }
+      };
+
+      function onSubmitu1(e) {
+        queryInfou1.query.keyWord= $("#appu1  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou1.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+        </div>
+        <div class="mt">
+          <div class="lang"><a href="#">EN</a></div>
+          <div class="menubtn">
+            <div class="navbar-icons"><span></span><span></span><span></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!--移动端菜单-->
+      <div class="menu-mc">
+        <div class="list">
+                    <ul>
+            <li><a href="index.htm">首页</a></li>
+            <li><a href="gywm.htm">关于我们</a></li>
+            <li><a href="wlxy.htm">未来校园</a></li>
+            <li><a href="xwzx.htm">新闻中心</a></li>
+          </ul>
+        </div>
+      </div>
+    </header>
+    <main>
+
+      <!--banner-->
+      <div class="about_banner"> <img src="images/gushi_01.jpg" class="pic">
+        <div class="about_js no5 container">
+          <div class="cont no1">
+            <div class="tit">新闻中心</div>
+            <div class="infor">NEWS</div>
+          </div>
+        </div>
+
+      </div>
+      <!--二级菜单-->
+      <div class="nav_class">
+        <ul class="container">
+          <li class="active"><a href="xwzx.htm">新闻中心</a></li>
+          <li><a href="xwzx/xwjj.htm">新闻聚焦</a></li>
+          <li><a href="xwzx/ssdt.htm">师生动态</a></li>
+          <li><a href="xwzx/tzgg.htm">通知公告</a></li>
+          <li><a href="xwzx/xygy.htm">校园光影</a></li>
+        </ul>
+      </div>
+
+      <!--内容-->
+      <div class="cen_m container">
+        <div class="main_bt">
+          <span class="txt">新闻聚焦</span><a href="xwzx/xwjj.htm" class="more tomore">更 多 <div class="arrow"><span class="box"><img src="images/news1_132.png" alt=""><img src="images/news1_13.jpg" alt=""></span></div></a>
+        </div>
+        <div class="story_2">
+          <div class="s_right">
+            
+
+<script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script>            <div class="arrow_bt"></div>
+            <div class="swiper mcSwiper">
+              <ul class="swiper-wrapper">
+                <li class="swiper-slide"><a href="info/1061/3681.htm"><img src="/__local/0/B2/07/D3B4D0BDE635EBB7A85A709E79B_4E63BBD5_A8520.png">
+                    <div class="xfk">四川省教育考试院调研东部（国际）校区标准化考场建设</div>
+                  </a></li>
+                <li class="swiper-slide"><a href="info/1061/3631.htm"><img src="/__local/2/2F/E1/E5FAA831BE5D2946DBA3042E420_B27157D1_64F8E.png">
+                    <div class="xfk">东启新章丨东部（国际）校区举行迎新工作专题会议</div>
+                  </a></li>
+                <li class="swiper-slide"><a href="info/1061/3621.htm"><img src="/__local/7/A9/93/C6122FC091B7B23200E236F3C39_CD18E980_DD5D4.png">
+                    <div class="xfk">东部（国际）校区新学期第一课顺利开讲</div>
+                  </a></li>
+                <li class="swiper-slide"><a href="info/1061/2901.htm"><img src="/__local/A/A8/24/97AE1655755C4E53740E030F0AA_EDCCAF44_1227E.jpg">
+                    <div class="xfk">平安东部丨崔凯检查东部（国际）校区暑期建设和安全工作</div>
+                  </a></li>
+              </ul>
+</div>
+<script>_showDynClickBatch(['dynclicks_u3_3681','dynclicks_u3_3631','dynclicks_u3_3621','dynclicks_u3_2901'],[3681,3631,3621,2901],"wbnews", 2033820380)</script>
+
+          </div>
+          <div class="s_left">
+
+            <ul>
+              <li>
+                <div class="info">
+                  <div class="title"><a href="info/1061/3681.htm" title="四川省教育考试院调研东部（国际）校区标准化考场建设">四川省教育考试院调研东部（国际）校区标准化考场建设</a></div>
+                  <div class="date"><span>2026-09-20</span>
+                  </div>
+                </div>
+              </li>
+              <li>
+                <div class="info">
+                  <div class="title"><a href="info/1061/3631.htm" title="东启新章丨东部（国际）校区举行迎新工作专题会议">东启新章丨东部（国际）校区举行迎新工作专题会议</a></div>
+                  <div class="date"><span>2026-09-08</span>
+                  </div>
+                </div>
+              </li>
+              <li>
+                <div class="info">
+                  <div class="title"><a href="info/1061/3621.htm" title="东部（国际）校区新学期第一课顺利开讲">东部（国际）校区新学期第一课顺利开讲</a></div>
+                  <div class="date"><span>2026-09-08</span>
+                  </div>
+                </div>
+              </li>
+              <li>
+                <div class="info">
+                  <div class="title"><a href="info/1061/2901.htm" title="平安东部丨崔凯检查东部（国际）校区暑期建设和安全工作">平安东部丨崔凯检查东部（国际）校区暑期建设和安全工作</a></div>
+                  <div class="date"><span>2026-08-06</span>
+                  </div>
+                </div>
+              </li>
+              <li>
+                <div class="info">
+                  <div class="title"><a href="info/1061/2891.htm" title="西南交通大学东部（国际）校区迎新及开学专题工作会举行">西南交通大学东部（国际）校区迎新及开学专题工作会举行</a></div>
+                  <div class="date"><span>2026-07-24</span>
+                  </div>
+                </div>
+              </li>
+            </ul>
+<script>_showDynClickBatch(['dynclicks_u4_3681','dynclicks_u4_3631','dynclicks_u4_3621','dynclicks_u4_2901','dynclicks_u4_2891'],[3681,3631,3621,2901,2891],"wbnews", 2033820380)</script>
+</div>
+
+        </div>
+        <div class="main_bt no1">
+          <span class="txt">学子风采</span><a href="xwzx/ssdt.htm" class="more tomore">更 多 <div class="arrow"><span class="box"><img src="images/news1_132.png" alt=""><img src="images/news1_13.jpg" alt=""></span>
+            </div></a>
+          <div class="switch_2">
+            <span class="pre news-prev"></span>
+            <span class="next news-next"></span>
+          </div>
+        </div>
+        <div class="news_1 swiper newsSwiper">
+
+          <ul class="swiper-wrapper">
+            <li class="swiper-slide">
+              <div class="photo"> <a href="info/1071/3571.htm"><img src="/__local/E/DA/36/4795356386E009E1921EAAB663D_D163E88D_C7B4A.png" /></a> </div>
+              <div class="info">
+                <div class="title"><a href="info/1071/3571.htm">智慧学子在第二十八届中国机器人及人工智能大赛—百度Apollo智能驾驶专项赛斩获全国二等奖</a></div>
+                <div class="date"><span>2026-08-25</span>
+
+                </div>
+              </div>
+            </li>
+            <li class="swiper-slide">
+              <div class="photo"> <a href="info/1071/3491.htm"><img src="/__local/E/39/4D/864B765ED777ED090481B2E49BA_47726BCA_B48D4.png" /></a> </div>
+              <div class="info">
+                <div class="title"><a href="info/1071/3491.htm">利兹学院2026年暑期“三下乡”社会实践活动风采展示（六）</a></div>
+                <div class="date"><span>2026-08-25</span>
+
+                </div>
+              </div>
+            </li>
+            <li class="swiper-slide">
+              <div class="photo"> <a href="info/1071/3561.htm"><img src="/__local/A/49/19/FAB683840F3DB795584E33FC2BB_7143A8B0_E1240.png" /></a> </div>
+              <div class="info">
+                <div class="title"><a href="info/1071/3561.htm">志愿护童心·实践悟担当 ——智慧学院赴阿坝州马尔康市开展“团团带娃”暑期公益实践</a></div>
+                <div class="date"><span>2026-08-21</span>
+
+                </div>
+              </div>
+            </li>
+            <li class="swiper-slide">
+              <div class="photo"> <a href="info/1071/3541.htm"><img src="/__local/7/44/21/A680B3A4F7D583945233B01AF00_AEB26E29_E099B.png" /></a> </div>
+              <div class="info">
+                <div class="title"><a href="info/1071/3541.htm">智慧学院2026年暑期“三下乡”社会实践纪实（三）</a></div>
+                <div class="date"><span>2026-08-20</span>
+
+                </div>
+              </div>
+            </li>
+            <li class="swiper-slide">
+              <div class="photo"> <a href="info/1071/3551.htm"><img src="/__local/E/A1/F8/C294CCF21B5F659A5CAC88AA7C3_F1670A0E_E093.jpg" /></a> </div>
+              <div class="info">
+                <div class="title"><a href="info/1071/3551.htm">+1！智慧学院本科生以第一作者在SCI双一区期刊发表研究论文</a></div>
+                <div class="date"><span>2026-08-17</span>
+
+                </div>
+              </div>
+            </li>
+            <li class="swiper-slide">
+              <div class="photo"> <a href="info/1071/3531.htm"><img src="/__local/E/B9/B9/E519BFEE15E47AB95DF98E74878_FDE7CF0F_E099B.png" /></a> </div>
+              <div class="info">
+                <div class="title"><a href="info/1071/3531.htm">智慧学院2026年暑期“三下乡”社会实践纪实（二）</a></div>
+                <div class="date"><span>2026-08-12</span>
+
+                </div>
+              </div>
+            </li>
+            <li class="swiper-slide">
+              <div class="photo"> <a href="info/1071/3481.htm"><img src="/__local/4/DE/C6/28FB65C6E20D1CD7EF068627252_9A2D08C9_A05D7.png" /></a> </div>
+              <div class="info">
+                <div class="title"><a href="info/1071/3481.htm">利兹学院2026年暑期“三下乡”社会实践活动风采展示（五）</a></div>
+                <div class="date"><span>2026-08-09</span>
+
+                </div>
+              </div>
+            </li>
+            <li class="swiper-slide">
+              <div class="photo"> <a href="info/1071/3471.htm"><img src="/__local/3/F4/B0/ED3DB38FAE90673A4441E6B57C3_A8C83C7C_E099B.png" /></a> </div>
+              <div class="info">
+                <div class="title"><a href="info/1071/3471.htm">利兹学院2026年暑期“三下乡”社会实践活动风采展示（四）</a></div>
+                <div class="date"><span>2026-08-08</span>
+
+                </div>
+              </div>
+            </li>
+          </ul>
+<script>_showDynClickBatch(['dynclicks_u5_3571','dynclicks_u5_3491','dynclicks_u5_3561','dynclicks_u5_3541','dynclicks_u5_3551','dynclicks_u5_3531','dynclicks_u5_3481','dynclicks_u5_3471'],[3571,3491,3561,3541,3551,3531,3481,3471],"wbnews", 2033820380)</script>
+</div>
+        <!--通知公告-->
+        <div class="main_bt no1">
+          <span class="txt">通知公告</span><a href="xwzx/tzgg.htm" class="more tomore">更 多 <div class="arrow"><span class="box"><img src="images/news1_132.png" alt=""><img src="images/news1_13.jpg" alt=""></span>
+            </div></a>
+
+        </div>
+        <div class="notice_1">
+
+          <ul>
+            <li>
+              <div class="date">2026-09-29</div>
+              <div class="title"><a href="info/1091/3711.htm" title="西南交通大学东部（国际）校区求实餐厅档口（饮品）技术合作项目成交公告">西南交通大学东部（国际）校区求实餐厅档口（饮品）技术合作项目成交公告</a></div>
+            </li>
+            <li>
+              <div class="date">2026-09-29</div>
+              <div class="title"><a href="info/1091/3701.htm" title="西南交通大学东部（国际）校区求实餐厅档口（风味餐）技术合作项目成交公告">西南交通大学东部（国际）校区求实餐厅档口（风味餐）技术合作项目成交公告</a></div>
+            </li>
+            <li>
+              <div class="date">2026-09-29</div>
+              <div class="title"><a href="info/1091/3691.htm" title="西南交通大学东部（国际）校区求实餐厅档口（湘菜）技术合作项目成交公告">西南交通大学东部（国际）校区求实餐厅档口（湘菜）技术合作项目成交公告</a></div>
+            </li>
+            <li>
+              <div class="date">2026-09-04</div>
+              <div class="title"><a href="info/1091/3611.htm" title="关于东部（国际）校区跨校区校车开通运行的通知">关于东部（国际）校区跨校区校车开通运行的通知</a></div>
+            </li>
+            <li>
+              <div class="date">2026-09-04</div>
+              <div class="title"><a href="info/1091/3601.htm" title="关于东部（国际）校区校园服务门户“灵栖东部”上线运行的通知">关于东部（国际）校区校园服务门户“灵栖东部”上线运行的通知</a></div>
+            </li>
+            <li>
+              <div class="date">2026-08-24</div>
+              <div class="title"><a href="info/1091/3591.htm" title="收藏！利兹学院2026级本科新生入学报到指南">收藏！利兹学院2026级本科新生入学报到指南</a></div>
+            </li>
+          </ul>
+<script>_showDynClickBatch(['dynclicks_u6_3711','dynclicks_u6_3701','dynclicks_u6_3691','dynclicks_u6_3611','dynclicks_u6_3601','dynclicks_u6_3591'],[3711,3701,3691,3611,3601,3591],"wbnews", 2033820380)</script>
+</div>
+        <!--校园光影-->
+        <div class="main_bt no1">
+          <span class="txt">校园光影</span><a href="lslm/xygy1.htm" class="more tomore">更 多 <div class="arrow"><span class="box"><img src="images/news1_132.png" alt=""><img src="images/news1_13.jpg" alt=""></span></div></a>
+        </div>
+        <div class="school">
+          <ul>
+            <li>
+              <div class="photo"><img src="images/newpic_03.jpg"></div>
+            </li>
+            <li>
+              <div class="photo"><img src="images/newpic_05.jpg"></div>
+            </li>
+            <li>
+              <div class="photo"><img src="images/newpic_07.jpg"></div>
+            </li>
+            <li>
+              <div class="photo"><img src="images/newpic_09.jpg"></div>
+            </li>
+            <li>
+              <div class="photo"><img src="images/newpic_11.jpg"></div>
+            </li>
+            <li>
+              <div class="photo"><img src="images/newpic_18.jpg"></div>
+            </li>
+            <li>
+              <div class="photo"><img src="images/newpic_19.jpg"></div>
+            </li>
+            <li>
+              <div class="photo"><img src="images/newpic_20.jpg"></div>
+            </li>
+            <li>
+              <div class="photo"><img src="images/newpic_21.jpg"></div>
+            </li>
+            <li>
+              <div class="photo"><img src="images/newpic_22.jpg"></div>
+            </li>
+            <li>
+              <div class="photo"><img src="images/newpic_26.jpg"></div>
+            </li>
+            <li>
+              <div class="photo"><img src="images/newpic_27.jpg"></div>
+            </li>
+            <li>
+              <div class="photo"><img src="images/newpic_28.jpg"></div>
+            </li>
+
+          </ul>
+        </div>
+      </div>
+
+
+    </main>
+    <footer>
+      <div class="foot">
+        <div class="logo"> <span class="photo"><img src="images/logo.png" /></span></div>
+        <div class="copyright">Copyright&copy;2023 Southwest Jiaotong University</div>
+      </div>
+    </footer>
+  </div>
+  <script src="js/main.js"></script>
+  <script>
+    new Swiper('.mcSwiper', {
+      loop: true,
+      autoplay: {
+        delay: 3000,
+        stopOnLastSlide: false,
+        disableOnInteraction: false,
+      },
+      pagination: {
+        el: ".arrow_bt",
+        clickable: !0,
+        bulletActiveClass: "active",
+      },
+    });
+
+    new Swiper('.newsSwiper', {
+      loop: true,
+      slidesPerView: 2,
+      spaceBetween: "1%",
+      autoplay: {
+        delay: 3000,
+        stopOnLastSlide: false,
+        disableOnInteraction: false,
+      },
+      navigation: {
+        nextEl: '.news-next',
+        prevEl: '.news-prev',
+      },
+      breakpoints: {
+        640: {
+          slidesPerView: 3
+        },
+        768: {
+          slidesPerView: 4
+        }
+      }
+    });
+
+    new Swiper('.newsSwiper2', {
+      loop: true,
+      slidesPerView: 2,
+      spaceBetween: "1%",
+      autoplay: {
+        delay: 3000,
+        stopOnLastSlide: false,
+        disableOnInteraction: false,
+      },
+      navigation: {
+        nextEl: '.news2-next',
+        prevEl: '.news2-prev',
+      },
+      breakpoints: {
+        640: {
+          slidesPerView: 3
+        },
+        768: {
+          slidesPerView: 4
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

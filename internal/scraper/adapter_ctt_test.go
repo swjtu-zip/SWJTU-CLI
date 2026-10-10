@@ -18,6 +18,9 @@ func TestCttAdapterRegistration(t *testing.T) {
 	if site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil {
 		t.Fatalf("CTT adapter hooks are incomplete: %+v", site)
 	}
+	if site.NoIndexFeed {
+		t.Fatal("CTT home page exposes a real news list; the index feed must stay enabled")
+	}
 	wantSubPages := []string{
 		"xyywlist/jyyw", "xyywlist/dcjy", "xyywlist/xzfc", "xyywlist/kycx", "xyywlist/tsdj", "xyywlist/jwgz", "xyywlist/mtgz", "xyywlist/wjxz", "xyywlist/gzzd",
 		"tzgg/xytz", "tzgg/rsxg", "tzgg/tzzf", "tzgg/wjxz",
@@ -172,13 +175,89 @@ func TestCttListParserReadsClassificationAndTotalPages(t *testing.T) {
 	}
 }
 
-func TestCttEmptyListIsAnExplicitError(t *testing.T) {
+func TestCttEmptyListIsALegitimateEmptyFeed(t *testing.T) {
 	body := readCttFixture(t, "ctt_empty.html")
-	if _, err := parseCttNews(body, cttBaseURL); err == nil || !strings.Contains(err.Error(), "recognized list is empty") {
-		t.Fatalf("empty CTT list error = %v, want explicit empty-list error", err)
+	items, err := parseCttNews(body, cttBaseURL)
+	if err != nil {
+		t.Fatalf("empty CTT list returned error: %v", err)
+	}
+	if len(items) != 0 {
+		t.Fatalf("empty CTT list returned %d items: %#v", len(items), items)
 	}
 	if got := cttTotalPagesFromHTML(body); got != 1 {
 		t.Fatalf("empty CTT list total pages = %d, want 1", got)
+	}
+}
+
+func TestCttLiveEmptyColumnsAreLegitimateEmptyFeeds(t *testing.T) {
+	// xyywlist/mtgz (媒体关注) and xyywlist/xzfc (学子风采) are still served
+	// with their breadcrumb/pagination shell but currently hold no articles.
+	for _, fixture := range []string{"ctt_live_mtgz.html", "ctt_live_xzfc.html"} {
+		t.Run(fixture, func(t *testing.T) {
+			body := readCttFixture(t, fixture)
+			items, err := parseCttNews(body, cttBaseURL)
+			if err != nil {
+				t.Fatalf("live empty column returned error: %v", err)
+			}
+			if len(items) != 0 {
+				t.Fatalf("live empty column returned %d items: %#v", len(items), items)
+			}
+			if got := cttTotalPagesFromHTML(body); got != 1 {
+				t.Fatalf("live empty column total pages = %d, want 1", got)
+			}
+		})
+	}
+}
+
+func TestCttIndexFeedIsSupported(t *testing.T) {
+	if got := cttPageURL(cttBaseURL, "index", 1, 0, ".htm"); got != cttBaseURL+"/" {
+		t.Fatalf("index page 1 URL = %q, want %q", got, cttBaseURL+"/")
+	}
+	if got := cttPageURL(cttBaseURL, "index", 2, 1, ".htm"); got != "" {
+		t.Fatalf("index page 2 URL = %q, want empty", got)
+	}
+	pages, err := cttTotalPages("index")
+	if err != nil || pages != 1 {
+		t.Fatalf("index total pages = (%d, %v), want (1, nil)", pages, err)
+	}
+
+	body := readCttFixture(t, "ctt_live_index.html")
+	items, err := parseCttNews(body, cttBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 30 {
+		t.Fatalf("got %d CTT index articles, want 30: %#v", len(items), items)
+	}
+	wantTypes := map[string]int{
+		"交运要闻":  4,
+		"院务公告":  6,
+		"本科教学":  6,
+		"研究生教育": 8,
+		"学生工作":  6,
+	}
+	gotTypes := make(map[string]int)
+	for _, item := range items {
+		gotTypes[item.Type]++
+		if !strings.HasPrefix(item.URL, cttBaseURL+"/info/") {
+			t.Errorf("unexpected index URL: %q", item.URL)
+		}
+		if strings.Contains(item.URL, "/3001/") || strings.Contains(item.URL, "/5591/") {
+			t.Errorf("banner/platform link leaked into index feed: %#v", item)
+		}
+	}
+	if !reflect.DeepEqual(gotTypes, wantTypes) {
+		t.Fatalf("index item types = %#v, want %#v", gotTypes, wantTypes)
+	}
+}
+
+func TestCttNotFoundResponseIsAnExplicitError(t *testing.T) {
+	notFound := []byte(`<html><head><title>404错误提示</title></head><body>
+	<div class="prompt_up"><strong>系统提示</strong></div>
+	<div class="pd_text">您访问的页面未找到， 5秒后自动跳转到首页</div>
+	</body></html>`)
+	if _, err := parseCttNews(notFound, cttBaseURL); err == nil {
+		t.Fatal("404 response was accepted as a list page")
 	}
 }
 

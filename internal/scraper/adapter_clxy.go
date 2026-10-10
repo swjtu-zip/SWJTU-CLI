@@ -59,6 +59,7 @@ func init() {
 		ParseList:    parseAdapter_clxyList,
 		ParseArticle: parseAdapter_clxyArticle,
 		PageURL:      clxyPageURL,
+		TotalPages:   clxyTotalPages,
 		FetchArticle: clxyFetchArticle,
 	})
 }
@@ -89,6 +90,67 @@ func clxyPageURL(baseURL, slug string, page, totalPages int, extension string) s
 	return fmt.Sprintf("%s/%s/%d%s", baseURL, slug, filePage, extension)
 }
 
+// clxyTotalPages reports the source page count for an archive. Ordinary clxy
+// lists expose the 博达 "共N页" counter, which the shared parser reads. The
+// exception is an archive whose rows all link off-site (currently only
+// 就业招聘): every generated page is an external-link list with nothing local
+// to archive, and reporting the real multi-page count would make the shared
+// range walker flag the empty later pages as failures. Such an archive is
+// reported as a single legitimate empty page.
+func clxyTotalPages(slug string) (int, error) {
+	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if slug == "" || slug == "index" || slug == "home" {
+		// The homepage feed is a single-page aggregation. The ListNewsRange
+		// index shortcut assumes no TotalPages hook is registered, so this
+		// case must short-circuit here to avoid a needless homepage fetch.
+		return 1, nil
+	}
+	var lastErr error
+	for _, extension := range []string{".htm", ".html"} {
+		listURL := clxyPageURL(clxyCanonicalBaseURL, slug, 1, 0, extension)
+		if listURL == "" {
+			continue
+		}
+		body, err := fetch(listURL)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		pages, err := clxyTotalPagesFromHTML(body)
+		if err == nil {
+			return pages, nil
+		}
+		lastErr = err
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("clxy: no page-count response for %q", slug)
+	}
+	return 0, lastErr
+}
+
+func clxyTotalPagesFromHTML(raw []byte) (int, error) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(raw)))
+	if err != nil {
+		return 0, fmt.Errorf("clxy: parse pagination HTML: %w", err)
+	}
+	if clxyErrorDocument(doc) {
+		return 0, fmt.Errorf("clxy: response is an error or permission page")
+	}
+	if rows := clxyListRows(doc); rows.Length() > 0 {
+		if items := clxyParseRows(rows, doc, clxyCanonicalBaseURL); len(items) == 0 && clxyExternalListRowCount(rows, clxyCanonicalBaseURL) > 0 {
+			// Externally-linked archive (就业招聘 → jiuye.swjtu.edu.cn): one
+			// legitimate empty page, nothing to paginate.
+			return 1, nil
+		}
+		return parseTotalPages(raw), nil
+	}
+	if doc.Find(".conlistComm").Length() > 0 {
+		// A real but currently empty list keeps the shared counter semantics.
+		return parseTotalPages(raw), nil
+	}
+	return 0, fmt.Errorf("clxy: response is not a recognized article list")
+}
+
 func parseAdapter_clxyList(html []byte, baseURL string) ([]model.NewsItem, error) {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
 	if err != nil {
@@ -103,10 +165,23 @@ func parseAdapter_clxyList(html []byte, baseURL string) ([]model.NewsItem, error
 	// sidebars and pagination links cannot become articles.
 	if rows := clxyListRows(doc); rows.Length() > 0 {
 		items := clxyParseRows(rows, doc, baseURL)
-		if external := clxyExternalListRowCount(rows, baseURL); external > 0 {
-			return items, fmt.Errorf("clxy: %d list row(s) point outside the site; refusing a partial feed", external)
+		if len(items) > 0 {
+			// Some rows link off-site (转发通知 to 教务处, employment posts to
+			// 就业网, reports mirrored by the news site) and are skipped by
+			// clxyParseRows. The retained rows pass the same validation as
+			// always, so a page with at least one local row stays trustworthy.
+			// clxyExternalListRowCount below remains in use for the
+			// all-external case and by the total-pages hook.
+			return items, nil
 		}
-		return items, nil
+		if clxyExternalListRowCount(rows, baseURL) > 0 {
+			// Every content row points off-site (currently 就业招聘, whose
+			// posts all live on jiuye.swjtu.edu.cn). This archive has no local
+			// articles at all; it is a legitimate empty feed, not a failure.
+			return []model.NewsItem{}, nil
+		}
+		// Rows without any usable local or external anchor fall through to
+		// the empty-container check below.
 	}
 	if doc.Find(".conlistComm").Length() > 0 {
 		// A real but currently empty list is a valid empty result.
@@ -195,7 +270,9 @@ func clxyArticleAnchor(row *goquery.Selection, baseURL string) *goquery.Selectio
 
 // clxyExternalListRowCount detects real content rows that point to another
 // site. Such rows are common in the live aggregates (教务 and employment).
-// Silently dropping them would make a partially collected page look complete.
+// The list parser skips them while local rows remain (see
+// parseAdapter_clxyList); this count is what marks an all-external archive as
+// a legitimate empty feed instead of a page whose local rows all went missing.
 func clxyExternalListRowCount(rows *goquery.Selection, baseURL string) int {
 	count := 0
 	rows.Each(func(_ int, row *goquery.Selection) {

@@ -79,4 +79,7 @@ func TestCwcAdapterRegistered(t *testing.T) {
 	if len(site.SubPages) != 0 {
 		t.Fatalf("CWC has no currently reachable public list routes; got guessed sub-pages %#v", site.SubPages)
 	}
+	if !site.NoIndexFeed {
+		t.Fatal("CWC homepage redirects to the webexp login gateway; the SDK must not generate an index feed")
+	}
 }

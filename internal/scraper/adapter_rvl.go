@@ -417,9 +417,21 @@ func parseAdapter_rvlArticle(raw []byte, baseURL string) (*model.Article, error)
 	if contentSel.Length() == 0 {
 		contentSel = articleRoot.Find(".v_news_content").First()
 	}
+	// Pre-2019 articles follow an older template that keeps the body
+	// paragraphs in .content14 and ships an empty .v_news_content.  Fall
+	// back to the wrapper only when the fixed node carries no text and no
+	// resources; an empty legacy body must not mask a missing article.
+	if contentSel.Length() == 0 || rvlSelectionHasNoContent(contentSel) {
+		if legacy := articleRoot.Find(".content14").First(); legacy.Length() > 0 && !rvlSelectionHasNoContent(legacy) {
+			contentSel = legacy
+		}
+	}
 	if contentSel.Length() == 0 {
 		return nil, fmt.Errorf("rvl: fixed article content node is missing")
 	}
+	contentSel = contentSel.Clone()
+	contentSel.Find("script, style, noscript").Remove()
+	contentSel.Find("#vsb_content, #div_vote_id").Remove()
 
 	title := cleanTitle(titleSel.Text())
 	if !isValidNewsTitle(title) {
@@ -483,6 +495,18 @@ func parseAdapter_rvlArticle(raw []byte, baseURL string) (*model.Article, error)
 		article.ContentHTML = rendered
 	}
 	return article, nil
+}
+
+// rvlSelectionHasNoContent reports whether a candidate content node carries
+// neither visible prose nor resources (images, links, tables) after
+// scripts/styles are removed.
+func rvlSelectionHasNoContent(sel *goquery.Selection) bool {
+	if sel == nil || sel.Length() == 0 {
+		return true
+	}
+	clone := sel.Clone()
+	clone.Find("script, style, noscript").Remove()
+	return strings.TrimSpace(clone.Text()) == "" && clone.Find("img, a, table").Length() == 0
 }
 
 func rvlArticleType(doc *goquery.Document) string {
@@ -968,6 +992,10 @@ func rvlTotalPages(slug string) (int, error) {
 	if site == nil {
 		return 0, fmt.Errorf("rvl: site registration is missing")
 	}
+	slug = strings.Trim(slug, "/")
+	if slug == "index" {
+		return rvlHomepageTotalPages(site.BaseURL)
+	}
 	if !rvlIsKnownFeed(slug) {
 		return 0, fmt.Errorf("rvl: refusing unconfirmed/non-article feed %q", slug)
 	}
@@ -986,6 +1014,31 @@ func rvlTotalPages(slug string) (int, error) {
 		return 1, nil
 	}
 	return 0, fmt.Errorf("rvl: list page %q has no total-page marker or article rows", slug)
+}
+
+// rvlHomepageTotalPages confirms the implicit homepage feed still exposes a
+// public article list before reporting its single page.  The homepage is a
+// preview page, not a reverse-numbered archive, so a confirmed portal always
+// has exactly one page.
+func rvlHomepageTotalPages(baseURL string) (int, error) {
+	body, err := fetch(rvlPageURL(baseURL, "index", 1, 0, ".htm"))
+	if err != nil {
+		return 0, fmt.Errorf("rvl: fetch homepage: %w", err)
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
+	if err != nil {
+		return 0, fmt.Errorf("rvl: parse homepage: %w", err)
+	}
+	if reason := rvlBlockedReason(doc); reason != "" {
+		return 0, fmt.Errorf("rvl: homepage is blocked or is an error page (%s)", reason)
+	}
+	if !rvlIsHomepage(doc) {
+		return 0, fmt.Errorf("rvl: index route no longer serves the article portal")
+	}
+	if items := rvlHomepageItems(doc, baseURL); len(items) == 0 {
+		return 0, fmt.Errorf("rvl: homepage contains no local article modules")
+	}
+	return 1, nil
 }
 
 func rvlTotalPagesFromHTML(raw []byte) int {

@@ -174,22 +174,28 @@ func TestRvlAdapterParsesEveryHomepageModule(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse homepage: %v", err)
 	}
-	if len(items) != 10 {
-		t.Fatalf("parsed %d homepage items, want 10 local rows", len(items))
+	// 2026-10-09 capture: five rows in each of the seven notice tabs plus
+	// three academic-event rows.
+	if len(items) != 38 {
+		t.Fatalf("parsed %d homepage items, want 38 local rows", len(items))
 	}
 	byURL := make(map[string]model.NewsItem, len(items))
 	for _, item := range items {
 		byURL[item.URL] = item
 	}
-	if byURL["http://rvl.swjtu.edu.cn/info/1021/20408.htm"].Type != "行政公告" {
-		t.Fatalf("hidden administrative tab type = %#v", byURL["http://rvl.swjtu.edu.cn/info/1021/20408.htm"])
+	if byURL["http://rvl.swjtu.edu.cn/info/1071/20958.htm"].Type != "行政公告" || byURL["http://rvl.swjtu.edu.cn/info/1071/20958.htm"].Date != "2026-10-02" {
+		t.Fatalf("administrative tab row = %#v", byURL["http://rvl.swjtu.edu.cn/info/1071/20958.htm"])
 	}
-	if byURL["http://rvl.swjtu.edu.cn/info/1046/20468.htm"].Type != "研究生教育" {
-		t.Fatalf("hidden graduate tab type = %#v", byURL["http://rvl.swjtu.edu.cn/info/1046/20468.htm"])
+	if byURL["http://rvl.swjtu.edu.cn/info/1046/20998.htm"].Type != "研究生教育" {
+		t.Fatalf("hidden graduate tab type = %#v", byURL["http://rvl.swjtu.edu.cn/info/1046/20998.htm"])
 	}
-	event := byURL["http://rvl.swjtu.edu.cn/info/1066/20438.htm"]
+	event := byURL["http://rvl.swjtu.edu.cn/info/1066/20568.htm"]
 	if event.Type != "学术活动" || event.Date != "" || event.PublishedAt != "" {
 		t.Fatalf("event row metadata = %#v; event schedule must not become publication date", event)
+	}
+	news := byURL["http://rvl.swjtu.edu.cn/info/1073/20448.htm"]
+	if news.Type != "新闻动态" || news.Date != "07-08" {
+		t.Fatalf("news carousel row = %#v; partial homepage dates are expected", news)
 	}
 	for _, item := range items {
 		if strings.Contains(item.URL, "news.swjtu.edu.cn") || strings.Contains(item.URL, "9999") {
@@ -351,5 +357,90 @@ func TestRvlResourceValidationRequiresTypeAndMagic(t *testing.T) {
 	}
 	if _, ok := rvlArticleURL("http://rvl.swjtu.edu.cn", "https://news.swjtu.edu.cn/info/1012/110885.htm"); ok {
 		t.Fatal("external detail URL was accepted")
+	}
+}
+
+func TestRvlIndexFeedHasSingleVerifiedPage(t *testing.T) {
+	base := "http://rvl.swjtu.edu.cn"
+	if got := rvlPageURL(base, "index", 1, 0, ".htm"); got != base+"/index.htm" {
+		t.Fatalf("index first page = %q, want %s/index.htm", got, base)
+	}
+	if got := rvlPageURL(base, "index", 2, 1, ".htm"); got != "" {
+		t.Fatalf("index page 2 = %q, want empty (homepage is a single preview page)", got)
+	}
+
+	oldClient, oldNoCache, oldBase := defaultClient, NoCache, AllSites["rvl"].BaseURL
+	NoCache = true
+	AllSites["rvl"].BaseURL = base
+	defer func() {
+		defaultClient, NoCache, AllSites["rvl"].BaseURL = oldClient, oldNoCache, oldBase
+		ClearCache()
+	}()
+
+	serve := func(fixture string) {
+		defaultClient = &http.Client{Transport: rvlTestRoundTripper(func(r *http.Request) (*http.Response, error) {
+			if r.URL.Path == "/index.htm" {
+				return rvlTestResponse(r, http.StatusOK, "text/html; charset=utf-8", rvlFixture(t, fixture)), nil
+			}
+			return rvlTestResponse(r, http.StatusNotFound, "text/html; charset=utf-8", []byte("not found")), nil
+		})}
+	}
+
+	serve("rvl_home_live.html")
+	ClearCache()
+	if total, err := rvlTotalPages("index"); err != nil || total != 1 {
+		t.Fatalf("index total = %d, %v; want 1 confirmed page", total, err)
+	}
+
+	// A portal that lost its article modules, an SPA/WAF shell, or a plain
+	// column list must not be reported as a healthy single-page feed.
+	for _, fixture := range []string{"rvl_spa.html", "rvl_waf.html", "rvl_list_live.html"} {
+		serve(fixture)
+		ClearCache()
+		if total, err := rvlTotalPages("index"); err == nil || total != 0 {
+			t.Errorf("index over %s = %d, %v; want refusal", fixture, total, err)
+		}
+	}
+}
+
+func TestRvlLegacyTemplateArticleUsesContent14Body(t *testing.T) {
+	// info/1066/2298.htm (2018) follows the pre-2019 template: the body
+	// paragraphs sit directly in .content14 and .v_news_content is empty.
+	// The fallback must recover the announcement instead of syncing an empty
+	// article, and must not leak the empty vsb/vote containers into the HTML.
+	article, err := parseAdapter_rvlArticle(rvlFixture(t, "rvl_live_article_2298.html"), "http://rvl.swjtu.edu.cn")
+	if err != nil {
+		t.Fatalf("parse legacy article: %v", err)
+	}
+	if article.Title != "大国速度——中国高铁崛起之路" || article.Type != "学术活动" {
+		t.Fatalf("legacy article title/type = %q/%q", article.Title, article.Type)
+	}
+	if article.Date != "2018-02-01" || article.PublishedAt != "2018-02-01 09:11:50" {
+		t.Fatalf("legacy article date = %q/%q", article.Date, article.PublishedAt)
+	}
+	for _, want := range []string{"时间：2018-02-01 16:30--2018-02-01 17:30", "地点：牵引动力国家重点实验室红楼218会议室", "报告人：徐厚广（高铁见闻）"} {
+		if !strings.Contains(article.Content, want) {
+			t.Fatalf("legacy content lost %q: %q", want, article.Content)
+		}
+	}
+	if len(article.Images) != 0 || len(article.Attachments) != 0 {
+		t.Fatalf("legacy article resources = %#v/%#v, want none", article.Images, article.Attachments)
+	}
+	for _, junk := range []string{"vsb_content", "div_vote_id"} {
+		if strings.Contains(article.ContentHTML, junk) {
+			t.Fatalf("legacy ContentHTML leaked %s: %q", junk, article.ContentHTML)
+		}
+	}
+
+	// A genuinely empty body on the old template must still parse (the
+	// syncer skips empties); the template fallback must not resurrect the
+	// empty vsb_content node as content.
+	empty := []byte(`<html><head><title>空旧文</title></head><body><form name="_newscontent_fromname"><div class="article"><h1>空旧文</h1><div class="source">日期：2018/02/01 09:11:50</div><div class="art_con"><div class="content14"><div id="vsb_content"><div class="v_news_content"></div></div><div id="div_vote_id"></div></div></div></div></form></body></html>`)
+	parsed, err := parseAdapter_rvlArticle(empty, "http://rvl.swjtu.edu.cn")
+	if err != nil {
+		t.Fatalf("empty legacy article returned an error: %v", err)
+	}
+	if strings.TrimSpace(parsed.Content) != "" || len(parsed.Images) != 0 || strings.Contains(parsed.ContentHTML, "vsb_content") {
+		t.Fatalf("empty legacy article = %#v", parsed)
 	}
 }

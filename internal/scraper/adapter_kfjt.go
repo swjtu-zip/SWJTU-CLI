@@ -102,6 +102,11 @@ func kfjtKnownFeed(slug string) bool {
 
 func kfjtTotalPages(slug string) (int, error) {
 	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if slug == "" || slug == "index" || slug == "home" {
+		// The homepage is a single preview page: kfjtPageURL maps it to
+		// /index.htm and parseAdapter_kfjtList parses its tab modules.
+		return 1, nil
+	}
 	if !kfjtKnownFeed(slug) {
 		return 0, fmt.Errorf("kfjt: %q is not an article-list route", slug)
 	}

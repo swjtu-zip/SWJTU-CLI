@@ -128,6 +128,51 @@ func TestPhysTotalPagesFromHTMLRejectsNonList(t *testing.T) {
 	}
 }
 
+// The live homepage renders five news modules (.home1/.home3/.home4) of real
+// local articles, so "index" is an audited single-page feed: the adapter must
+// scope extraction to those modules and report exactly one page for it.
+func TestPhysLiveHomepageFeedIsAuditedAndSinglePage(t *testing.T) {
+	body := readPhysFixture(t, "phys_live_home.html")
+	items, err := parseAdapter_physList(body, physFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 34 {
+		t.Fatalf("phys live homepage returned %d items, want 34: %#v", len(items), items)
+	}
+	if items[0].Title != "喜报！我院应用物理系教师党支部荣获“四川省高校先进基层党组织”称号" || items[0].URL != physFixtureBaseURL+"/info/1022/58241.htm" || items[0].Date != "2026-07-01" || items[0].Type != "学院动态" {
+		t.Fatalf("unexpected first homepage item: %#v", items[0])
+	}
+	if items[len(items)-1].URL != physFixtureBaseURL+"/info/1038/58341.htm" || items[len(items)-1].Type != "学术动态" {
+		t.Fatalf("unexpected last homepage item: %#v", items[len(items)-1])
+	}
+	for _, item := range items {
+		if !strings.HasPrefix(item.URL, physFixtureBaseURL+"/info/") {
+			t.Fatalf("non-local article URL leaked into homepage feed: %#v", item)
+		}
+		if item.Type == "" || item.Date == "" {
+			t.Fatalf("homepage item lost module type or date: %#v", item)
+		}
+	}
+	if total, err := physTotalPagesFromHTML(body, "index"); err != nil || total != 1 {
+		t.Fatalf("phys homepage total = %d/%v, want 1", total, err)
+	}
+	if !physKnownFeed("index") {
+		t.Fatal("physKnownFeed does not admit the audited index feed")
+	}
+	if physKnownFeed("not-a-feed") {
+		t.Fatal("physKnownFeed admitted an unknown route")
+	}
+	// The index feed is only the audited homepage: archive shells and error
+	// pages must stay rejected for that route.
+	if _, err := physTotalPagesFromHTML(readPhysFixture(t, "phys_list_live.html"), "index"); err == nil {
+		t.Fatal("phys archive list was accepted as the index homepage")
+	}
+	if _, err := physTotalPagesFromHTML(readPhysFixture(t, "phys_error.html"), "index"); err == nil {
+		t.Fatal("phys error page was accepted as the index homepage")
+	}
+}
+
 func TestPhysListKeepsHeadingTypeAndDatePrecision(t *testing.T) {
 	html := []byte(`<html><body>
 <div class="loaction"><a>首页</a><a>新闻公告</a><a>学院动态</a></div>

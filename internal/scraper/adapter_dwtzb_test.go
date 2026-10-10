@@ -244,6 +244,39 @@ func TestDwtzbLiveArticlesUseFixedMetadataAndExactBody(t *testing.T) {
 	}
 }
 
+func TestDwtzbLiveArticlesWithVaryingVsbContentIDs(t *testing.T) {
+	// The CMS emits the article body wrapper with a varying numeric suffix
+	// (vsb_content_4 here, vsb_content_501 below), so the parser must match
+	// the id prefix instead of one hard-coded suffix.
+	article, err := parseAdapter_dwtzbArticle(readDwtzbFixture(t, "dwtzb_live_article_9684.html"), dwtzbFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title != "蓉城同心人物志：把科研做在祖国的大地上，这位农工党专家用生态科研书写绿色同心故事" || article.Type != "党派工作" || article.Author != "蓉城同心" || article.Date != "2026-08-07" || article.PublishedAt != "" {
+		t.Fatalf("vsb_content_4 article metadata = %#v", article)
+	}
+	if len(article.Images) != 6 || len(article.Attachments) != 0 {
+		t.Fatalf("vsb_content_4 article resources = images:%#v attachments:%#v", article.Images, article.Attachments)
+	}
+	if !strings.Contains(article.Content, "当前正值“十五五”规划推进的关键时期") {
+		t.Fatalf("vsb_content_4 article body = %q", article.Content)
+	}
+
+	notice, err := parseAdapter_dwtzbArticle(readDwtzbFixture(t, "dwtzb_live_article_8734.html"), dwtzbFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if notice.Title != "西南交通大学举行党外知识分子联谊会换届大会" || notice.Type != "无党派" || notice.Author != "夏小童" || notice.Date != "2025-07-10" || notice.PublishedAt != "" {
+		t.Fatalf("vsb_content_501 article metadata = %#v", notice)
+	}
+	if len(notice.Images) != 2 || len(notice.Attachments) != 0 {
+		t.Fatalf("vsb_content_501 article resources = images:%#v attachments:%#v", notice.Images, notice.Attachments)
+	}
+	if !strings.Contains(notice.Content, "7月8日，西南交通大学党外知识分子联谊会换届大会在犀浦校区269会议室举行") {
+		t.Fatalf("vsb_content_501 article body = %q", notice.Content)
+	}
+}
+
 func TestDwtzbRejectsErrorAndSPAShells(t *testing.T) {
 	if _, err := parseAdapter_dwtzbList(readDwtzbFixture(t, "dwtzb_error_live.html"), dwtzbFixtureBaseURL); err == nil {
 		t.Fatal("live 404 shell was accepted as a list")

@@ -719,6 +719,9 @@ func aiSiteBaseURL() string {
 
 func aiTotalPages(slug string) (int, error) {
 	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if slug == "index" {
+		return aiHomepageTotalPages()
+	}
 	if !aiKnownSubPage(slug) {
 		return 0, fmt.Errorf("ai: %q is not an audited article-list route", slug)
 	}
@@ -742,6 +745,45 @@ func aiTotalPages(slug string) (int, error) {
 		lastErr = fmt.Errorf("ai: unable to read page count for %s", slug)
 	}
 	return 0, lastErr
+}
+
+// aiHomepageTotalPages audits the implicit "index" feed. The homepage renders
+// the four article modules parsed by parseAIHomeRows plus the 精彩瞬间
+// marquee and carries no pagination control, so a verified homepage is a
+// one-page feed. Anything else (archive, static page, error/WAF response)
+// must be rejected instead of silently counted.
+func aiHomepageTotalPages() (int, error) {
+	site := AllSites["ai"]
+	if site == nil {
+		return 0, fmt.Errorf("ai: site registration is missing")
+	}
+	var lastErr error
+	for _, extension := range []string{".htm", ".html"} {
+		body, err := fetch(site.listPageURL("index", 1, 0, extension))
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if aiHomepageTotalPagesFromHTML(body) {
+			return 1, nil
+		}
+		lastErr = fmt.Errorf("ai: index response is not the audited homepage")
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("ai: unable to read the homepage")
+	}
+	return 0, lastErr
+}
+
+func aiHomepageTotalPagesFromHTML(raw []byte) bool {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(raw)))
+	if err != nil || aiLooksLikeErrorPage(doc) {
+		return false
+	}
+	if pageType := aiMetaPageType(doc); pageType != "" && pageType != "1" {
+		return false
+	}
+	return len(parseAIHomeRows(doc, aiSiteBaseURL())) > 0
 }
 
 func aiKnownSubPage(slug string) bool {

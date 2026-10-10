@@ -1,0 +1,621 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN" class="home">
+<head>
+    <meta name="format-detection" content="telephone=no" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,minimum-scale=1,maximum-scale=1,initial-scale=1,user-scalable=no" />
+    <title>合作项目-西南交通大学经济管理学院官网</title><meta name="pageType" content="2">
+<meta name="pageTitle" content="合作项目">
+<META Name="keywords" Content="西南交大经济管理学院,合作项目" />
+
+    <link href="../css/animate.min.css" rel="stylesheet">
+    <link href="../css/bootstrap.css" rel="stylesheet" type="text/css" />
+    <link href="../css/slick.css" rel="stylesheet" type="text/css" />
+    <link href="../css/style.css" rel="stylesheet" type="text/css" />
+    <link href="../css/my-second.css" rel="stylesheet">
+
+    <style>
+    html {
+        font-size: 5.2083vw;}
+    </style>
+
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="../_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="../2026_btlist.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1276,'/2026_btlist.jsp',-1,1447721748)</script>
+</head>
+<body>
+  <div class="modal-box">
+    <div class="modal-back"></div>
+    <div>
+        <!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script>
+<style>
+    #appu0 .qwss{}
+    #appu0 .tj{
+        background: #1567b1 url(../images/search.png) center no-repeat;}
+</style>
+<div id="divu0"></div>
+<script type="text/html" id="htmlu0">
+    <div id="appu0">
+        <div v-if="!isError" class="search-box-c">
+            <input type="text" class="qwss form-control" placeholder="搜索" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+            <input class="tj btn btn-search-c" name="submit_button" type="button" value="" v-on:click="onSubmit()"/>
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu0").html($("#htmlu0").text());
+</script>
+<script>
+    var appOwner = "1447721748";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu0",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+
+<script>
+   var appElementu0 = document.querySelector("#appu0");
+   if (appElementu0 && appElementu0.__vue__) {
+
+   } else {
+      $("#divu0").html($("#htmlu0").text());
+      var appOwner = "1447721748";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="false";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou0 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu0(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu0();
+        }
+      };
+
+      function onSubmitu0(e) {
+        queryInfou0.query.keyWord= $("#appu0  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou0.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+    </div>
+  </div>       
+
+  <div class="header clearfix">
+    <div class="logo pull-left"><a href="https://www.swjtu.edu.cn"><img src="../images/logo.png"></a></div>
+    <div class="pull-right header-right">
+      <div class="header-top text-right">
+          <a role="button" class="search-a"><img src="../images/search.png"></a><a href="../English.htm" class="langer">EN</a>
+      </div>
+      <div class="nav-list-box">
+                  <ul class="nav-list clearfix">
+          <li>
+                <a href="../index.htm">首页</a>
+          </li>
+          <li>
+            <a class="down" href="../xygk/xyjj.htm">学院概况</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="../xygk/xyjj.htm"> <img src="../images/menu/001.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="../xygk/xyjj.htm">学院简介</a>
+                          <a href="../xygk/xrld.htm">现任领导</a>
+                          <a href="../xygk/zzjg.htm">组织架构</a>
+                          <a href="../xygk/xkjs.htm">学科建设</a>
+                          <a href="../xygk/lxwm.htm">联系我们</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <a class="down" href="../sztd2.htm">师资团队</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="../sztd2.htm"> <img src="../images/menu/002.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="../sztd2/jsml.htm">教师名录</a>
+                          <a href="../sztd2/jzjs.htm">兼职教授</a>
+                          <a href="../sztd2/tdjs.htm">团队建设</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <a class="down" href="../kxyj2.htm">科学研究</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="../kxyj2.htm"> <img src="../images/menu/003.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="../kxyj2/kytj.htm">科研统计</a>
+                          <a href="../kxyj2/kyjg.htm">科研机构</a>
+                          <a href="../kxyj2/kycg.htm">科研成果</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <a class="down" href="../rcpy.htm">人才培养</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="../rcpy.htm"> <img src="../images/menu/004.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="../rcpy/bksjy.htm">本科生教育</a>
+                          <a href="../rcpy/sssjy.htm">硕士生教育</a>
+                          <a href="../rcpy/bssjy.htm">博士生教育</a>
+                          <a href="../rcpy/MEMjy.htm">MEM教育</a>
+                          <a href="../rcpy/MBAjy.htm">MBA教育</a>
+                          <a href="../rcpy/EMBAjy.htm">EMBA教育</a>
+                          <a href="../rcpy/EDP.htm">EDP</a>
+                          <a href="../rcpy/MPAcc.htm">MPAcc</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <a class="down" href="../gjhz.htm">国际合作</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="../gjhz.htm"> <img src="../images/menu/005.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="gjjl.htm">国际交流</a>
+                          <a href="hzxm.htm">合作项目</a>
+                          <a href="lhpyxm/xnjtdx_dldxlhpyxm.htm">联合培养项目</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <a class="down" href="../dqgz.htm">党群工作</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="../dqgz.htm"> <img src="../images/menu/006.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="../dqgz/djgz/dwzc.htm">党建工作</a>
+                          <a href="../dqgz/jwgz/jwzc.htm">纪委工作</a>
+                          <a href="../dqgz/tzgz.htm">统战工作</a>
+                          <a href="../dqgz/ghgz.htm">工会工作</a>
+                          <a href="../dqgz/ltgz.htm">离退工作</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <a class="down" href="../xsgz.htm">学生工作</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="../xsgz.htm"> <img src="../images/menu/007.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="../xsgz/xgdw.htm">学工队伍</a>
+                          <a href="../xsgz/txzz.htm">团学组织</a>
+                          <a href="../xsgz/btkx.htm">班团快讯</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <a class="down" href="../yyzj.htm">院友之家</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="../yyzj.htm"> <img src="../images/menu/008.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="../yyzj/yyhd.htm">院友活动</a>
+                          <a href="../yyzj/yyfc.htm">院友风采</a>
+                          <a href="../yyzj/yyjz.htm">院友捐赠</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <a class="down" href="../cpyc/zpxx.htm">诚聘英才</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="../cpyc/zpxx.htm"> <img src="../images/menu/001.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="../cpyc/rctx.htm">人才体系</a>
+                          <a href="../cpyc/zpxx.htm">招聘信息</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <a class="down" href="../mkslj/cyxz.htm">快速链接</a><span class="nav-click"><span class="caret"></span></span>
+            <div class="sub-nav sub-nav2 trans">
+              <div class="sub-nav-wp flex">
+                <div class="nav-pic">
+                   <a href="../mkslj/cyxz.htm"> <img src="../images/menu/008.jpg" alt=""><p>精勤求学 敦笃励志 果毅力行 忠恕任事</p></a>
+                </div>
+                  <div class="sub-nav-a v-center">
+                     <div>
+                          <a href="../mkslj/cyxz.htm">常用下载</a>
+                          <a href="https://thesis.swjtu.edu.cn/teacher/login">论文管理系统(教师)</a>
+                          <a href="https://thesis.swjtu.edu.cn/student/login">论文管理系统(学生)</a>
+                     </div>
+                  </div>
+              </div>
+            </div>
+          </li>
+        </ul>        
+          <div class="header-top text-center">
+            <a href="../English.htm" class="langer">EN</a>
+          </div>
+      </div>
+    </div>
+    <div class="menu-button">
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+    </div>
+  </div>
+  <div class="banner-list" style="background: url(../images/banner02.png) center no-repeat; background-size: cover;">
+    <div class="banner-tt">
+      <div class="container"></div>
+    </div>
+    <div class="banner-right">
+      <div class="container clearfix">
+        <div class="nav-b pull-right">您现在的位置： 
+        <a href="../index.htm">首页</a>  >
+        <a href="../gjhz.htm">国际合作</a>  >
+        合作项目
+</div>
+      </div>
+    </div>
+  </div>
+  <div class="list-box">
+    <div class="container clearfix">
+      <div class="pull-left list-left">
+                <div class="list-top text-center"><span>国际合作</span><br></div>
+        <ul class="nav-left">
+                <li>
+                <a href="gjjl.htm">国际交流</a>
+            </li>
+                <li class="active">
+                <a href="hzxm.htm">合作项目</a>
+            </li>
+                <li>
+                <a href="lhpyxm/xnjtdx_dldxlhpyxm.htm">联合培养项目</a>
+            </li>
+        </ul>
+
+      </div>
+      <div class="pull-right list-right">
+        <div class="xw-title">
+合作项目</div>
+            <div class="over-cont">
+
+
+<script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script>                    <div>
+                        <ul class="dj_lb1">
+                        <li id="line_u5_0">
+                            <a href="https://fad.swjtu.edu.cn/info/1024/6675.htm">【国家公派项目】转发国际处-2022年度匈牙利互换奖学金遴选通知</a>
+                            <span class="sj">2021年12月01日</span>
+                        </li>
+                        <li id="line_u5_1">
+                            <a href="https://fad.swjtu.edu.cn/info/1035/6622.htm">【国家公派项目】转发国际处-第十三届国际研究生奖学金信息说明会（IGSF）即将开启</a>
+                            <span class="sj">2021年11月10日</span>
+                        </li>
+                        <li id="line_u5_2">
+                            <a href="https://fad.swjtu.edu.cn/info/1060/6614.htm">【国家公派项目】转发国际处-2021年博士生国际招生面试线上交流会报名通知</a>
+                            <span class="sj">2021年11月08日</span>
+                        </li>
+                        <li id="line_u5_3">
+                            <a href="https://fad.swjtu.edu.cn/info/1024/6612.htm">【国家公派项目】转发国际处-2022年中俄政府奖学金遴选通知</a>
+                            <span class="sj">2021年11月08日</span>
+                        </li>
+                        <li id="line_u5_4">
+                            <a href="https://fad.swjtu.edu.cn/info/1027/6605.htm">【游学访学项目】转发国际处-2022年寒假新加坡国立大学在线项目报名通知</a>
+                            <span class="sj">2021年11月03日</span>
+                        </li>
+                        <li id="line_u5_5">
+                            <a href="https://fad.swjtu.edu.cn/info/1024/6594.htm">【国家公派项目】转发国际处-2022年中德（CSC-DAAD）博士后奖学金项目遴选通知</a>
+                            <span class="sj">2021年10月27日</span>
+                        </li>
+                        <li id="line_u5_6">
+                            <a href="https://fad.swjtu.edu.cn/info/1027/6546.htm">【游学访学项目】转发国际处-2022年寒假新加坡南洋理工大学在线项目报名通知</a>
+                            <span class="sj">2021年10月15日</span>
+                        </li>
+                        <li id="line_u5_7">
+                            <a href="https://fad.swjtu.edu.cn/info/1027/6545.htm">【游学访学项目】转发国际处-2022年寒假联合国国际组织人才培养在线项目报名通知</a>
+                            <span class="sj">2021年10月15日</span>
+                        </li>
+                        <li id="line_u5_8">
+                            <a href="https://fad.swjtu.edu.cn/info/1026/6559.htm">【短期交流项目】转发国际处-2022年德国慕尼黑工业大学交流项目选拔通知</a>
+                            <span class="sj">2021年10月15日</span>
+                        </li>
+                        <li id="line_u5_9">
+                            <a href="https://fad.swjtu.edu.cn/info/1027/6544.htm">【游学访学项目】转发国际处-美国德州大学奥斯汀分校2022年寒假国际学术课程报名通知</a>
+                            <span class="sj">2021年10月14日</span>
+                        </li>
+                        <li id="line_u5_10">
+                            <a href="https://fad.swjtu.edu.cn/info/1027/6534.htm">【游学访学项目】转发国际处-俄罗斯奔萨国立大学俄语和俄罗斯传统文化大师课（线上）报名通知</a>
+                            <span class="sj">2021年10月11日</span>
+                        </li>
+                        <li id="line_u5_11">
+                            <a href="https://fad.swjtu.edu.cn/info/1024/6532.htm">【国家公派项目】转发国际处-2022年香港博士研究生奖学金计划</a>
+                            <span class="sj">2021年10月08日</span>
+                        </li>
+                        </ul>
+                    </div>
+                    <div class="page">
+                       <link rel="stylesheet" Content-type="text/css" href="/system/resource/css/pagedown/sys.css"><div class="pb_sys_common pb_sys_normal pb_sys_style1" style="margin-top:10px;text-align:center;"><span class="p_pages"><span class="p_first_d p_fun_d">首页</span><span class="p_prev_d p_fun_d">上页</span><span class="p_no_d">1</span><span class="p_no"><a href="hzxm/2.htm">2</a></span><span class="p_no"><a href="hzxm/1.htm">3</a></span><span class="p_next p_fun"><a href="hzxm/2.htm">下页</a></span><span class="p_last p_fun"><a href="hzxm/1.htm">尾页</a></span></span> <span class="p_t">到第</span><span class="p_goto"><script language="javascript" src="/system/resource/js/gotopage.js"></script><input type="text" class="p_goto_input" maxlength="10" id="u5_goto" onkeydown="if(event.keyCode==13){_simple_list_gotopage_fun(3,&quot;u5_goto&quot;,2)}" spellcheck="false"></span><span class="p_t">页</span> <span class="p_goto"><a href="javascript:;" onclick="_simple_list_gotopage_fun(3,&quot;u5_goto&quot;,2)">跳转</a></span></div>
+                    </div>
+<script>_showDynClickBatch(['dynclicks_u5_17394','dynclicks_u5_17387','dynclicks_u5_17389','dynclicks_u5_17376','dynclicks_u5_17384','dynclicks_u5_17386','dynclicks_u5_17375','dynclicks_u5_17373','dynclicks_u5_17393','dynclicks_u5_17385','dynclicks_u5_17383','dynclicks_u5_17391'],[17394,17387,17389,17376,17384,17386,17375,17373,17393,17385,17383,17391],"wbnews", 1447721748)</script></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="container">
+      <div class="logo-b">
+
+
+<a href=""><img src="https://glxy.swjtu.edu.cn/images/logo-b.png"></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://glxy.swjtu.edu.cn/images/xueyuangongzhonghaoerweima.png">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://glxy.swjtu.edu.cn/images/MBAgongzhonghao.png"></div>
+      <div class="clearfix">
+        <div class="pull-left footer-left">
+          <div class="footer-lj">友情链接：</div>
+          <div class="footer-link">
+            <script language="javascript" src="/system/resource/js/openlink.js"></script>    <a href="http://www.swjtu.edu.cn" target="_blank">西南交通大学</a>
+        <span>｜</span>
+    <a href="http://news.swjtu.edu.cn" target="_blank">交大新闻网</a>
+        <span>｜</span>
+    <a href="http://xg.swjtu.edu.cn" target="_blank">扬华素质网</a>
+        <span>｜</span>
+    <a href="http://xinli.swjtu.edu.cn" target="_blank">交大心力网</a>
+        <span>｜</span>
+    <a href="http://youth.swjtu.edu.cn/" target="_blank">团委在线</a>
+        <span>｜</span>
+    <a href="http://dean.swjtu.edu.cn/" target="_blank">教务网</a>
+        <span>｜</span>
+    <a href="https://gsnews.swjtu.edu.cn/" target="_blank">研究生院</a>
+
+          </div>
+        </div>
+        <div class="footer-right pull-right">
+          <div class="footer-dz"><!-- 版权内容请在本组件"内容配置-版权"处填写 -->
+<p>办公地址：四川省成都市二环路北一段111号西南交通大学（九里校区）零号教学楼0616&nbsp;&nbsp; &nbsp;<br /></p><p><br /></p><p>办公电话：028-87600822/87601403&nbsp; &nbsp;邮编：610031 &nbsp;<br /></p><p><br /></p><p>专硕招生：028-87601267/87634601（MBA/EMBA/MEM/MPAcc） &nbsp;<br /></p><p><br /></p><p>诚聘英才：028-87600543&nbsp; &nbsp;<br /></p><p><br /></p>
+            </div>
+        </div>
+      </div>
+      <div class="footer-p text-center">
+        <p>Copyright © 2025 经济管理学院 All rights reserved</p>
+        <p>本站内容未经我院授权，任何单位及个人可下载但不得转载</p>
+      </div>
+    </div>
+
+  </div>
+<script src="../js/jquery.min3.6.0.js"></script>
+<script src="../js/bootstrap.min.js"></script>
+<script src="../js/slick.js"></script>
+<script src="../js/wow.min.js"></script>
+<script src="../js/common.js"></script>
+<script src="../js/my_js.js"></script>
+<script type="text/javascript">
+if (!(/msie [6|7|8|9]/i.test(navigator.userAgent))){
+  new WOW().init();
+};
+
+
+     $('.banner').slick({
+        infinite: true,
+        slidesToShow: 1,
+        slidesToScroll: 1,
+        autoplay: true,
+        centerMode: false,
+        arrows:true,
+        dots:true,  
+    });
+     $('.img-slick').slick({
+        infinite: true,
+        slidesToShow: 1,
+        slidesToScroll: 1,
+        autoplay: true,
+        centerMode: false,
+        arrows:true,
+        dots:false,  
+    });
+     $('.five-slick').slick({
+        infinite: true,
+        slidesToShow: 3,
+        slidesToScroll: 1,
+        autoplay: false,
+        centerMode: true,
+        arrows:true,
+        dots:true,   responsive: [
+
+    {
+      breakpoint: 991,
+      settings: {
+
+
+          slidesToShow: 1,
+          slidesToScroll: 1,
+      }
+    },
+  ]
+    });
+
+     $('.rc-right-slick').slick({
+        infinite: true,
+        slidesToShow: 3,
+        slidesToScroll: 1,
+        autoplay: false,
+        centerMode: false,
+        arrows:true,
+        dots:true, 
+ responsive: [
+
+    {
+      breakpoint: 767,
+      settings: {
+
+
+          slidesToShow: 2,
+          slidesToScroll: 1,
+      }
+    },
+  ]
+    });
+
+
+$(function(){
+var whdef = 100/1920;// 表示1920的设计图,使用100PX的默认值
+var wH = window.innerHeight;// 当前窗口的高度
+var wW = window.innerWidth;// 当前窗口的宽度
+var rem = wW * whdef;// 以默认比例值乘以当前窗口宽度,得到该宽度下的相应FONT-SIZE值
+$('html').css('font-size', rem + "px");
+});
+$(window).resize(function (){// 绑定到窗口的这个事件中
+var whdef = 100/1920;// 表示1920的设计图,使用100PX的默认值
+var wH = window.innerHeight;// 当前窗口的高度
+var wW = window.innerWidth;// 当前窗口的宽度
+var rem = wW * whdef;// 以默认比例值乘以当前窗口宽度,得到该宽度下的相应FONT-SIZE值
+$('html').css('font-size', rem + "px");
+});
+</script>
+
+
+</body>
+</html>

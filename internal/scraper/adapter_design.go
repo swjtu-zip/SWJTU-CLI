@@ -18,8 +18,10 @@ import (
 
 // designSubPages contains every same-site navigation entry that exposes real
 // /info/<channel>/<id>.htm detail links. Some are one-item introduction pages
-// (for example 教学成果 and 组织建设), while the profile/download/gallery
-// pages have no article list and are intentionally not registered as feeds.
+// (for example 组织建设), while the profile/download/gallery pages have no
+// article list and are intentionally not registered as feeds. 教学成果
+// (jyjx/jxcg) and 科研成果 (kysj/kycg) were removed after the live columns
+// started returning HTTP 404 on both .htm and .html (checked 2026-10-09).
 var designSubPages = []string{
 	"xydt",
 	"xshd",
@@ -32,10 +34,8 @@ var designSubPages = []string{
 	"tzgg/bkjx",
 	"tzgg/yjsjx",
 	"jyjx",
-	"jyjx/jxcg",
 	"jyjx/bsxwd",
 	"jyjx/sjjd",
-	"kysj/kycg",
 	"djgz",
 	"djgz/zzjs",
 	"djgz/xwgg",
@@ -110,6 +110,16 @@ func designTotalPages(slug string) (int, error) {
 	}
 	if designDocumentBlocked(doc) {
 		return 0, fmt.Errorf("design: list %s is an error, WAF, login, or CAPTCHA response", pageURL)
+	}
+	if designIsHomepage(doc) {
+		// The implicit "index" feed renders the homepage portal, whose
+		// article modules publish no pagination of their own. Accept it only
+		// when the scoped module parse finds real entries; a home-shaped
+		// shell must keep failing instead of being crawled as one empty page.
+		if len(designHomepageItems(doc, baseURL)) == 0 {
+			return 0, fmt.Errorf("design: homepage %s has no article modules", pageURL)
+		}
+		return 1, nil
 	}
 	if designListContainer(doc).Length() == 0 {
 		return 0, fmt.Errorf("design: list %s has no article-list container", pageURL)

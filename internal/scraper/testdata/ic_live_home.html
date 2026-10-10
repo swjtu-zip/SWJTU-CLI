@@ -1,0 +1,528 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+  <title>西南交通大学东部（国际）校区</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="西南交通大学东部（国际）校区">
+<META Name="keywords" Content="西南交通大学东部（国际）校区,西南交通大学,东部新区" />
+
+  <link rel="stylesheet" href="js/swiper-bundle.min.css">
+  <link href="js/animate.css" rel="stylesheet" type="text/css">
+  <link href="css/main.css" rel="stylesheet" />
+  <script src="js/jquery.min.js"></script>
+  <script type="text/javascript" src="js/swiper-bundle.min.js"></script>
+  <script type="text/javascript" src="js/wow.js"></script>
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1001,'/index.jsp',-1,2033820380)</script>
+</head>
+
+<body>
+<div></div>
+<p />
+<div></div>
+<p />
+
+  <div class="app">
+    <header>
+      <div class="head"> <a class="logo" href="index.htm"> <span class="photo"><img src="images/logo.png" /><img src="images/logo3.png" /></span></a>
+        <div class="nav">
+                      <ul>
+            <li><a href="index.htm" class="active">首页</a></li>
+            <li><a href="gywm.htm">关于我们</a></li>
+            <li><a href="wlxy.htm">未来校园</a></li>
+            <li><a href="xwzx.htm">新闻中心</a></li>
+          </ul>
+        
+        </div>
+        <div class="search">
+            <!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu1 .qwss{}
+    #appu1 .tj{}
+</style>
+<div id="divu1"></div>
+<script type="text/html" id="htmlu1">
+    <div id="appu1">
+        <div v-if="!isError">
+            <div class="searchbox"> <span class="input">
+              <input type="text" class="qwss sea-int" placeholder="请输入搜索内容" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit" name="wd" />
+            </span> <span class="btn" name="submit_button" value="" v-on:click="onSubmit()"></span> </div>            
+            </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu1").html($("#htmlu1").text());
+</script>
+<script>
+    var appOwner = "2033820380";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu1",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu1 = document.querySelector("#appu1");
+   if (appElementu1 && appElementu1.__vue__) {
+
+   } else {
+      $("#divu1").html($("#htmlu1").text());
+      var appOwner = "2033820380";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou1 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu1(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu1();
+        }
+      };
+
+      function onSubmitu1(e) {
+        queryInfou1.query.keyWord= $("#appu1  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou1.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+        </div>
+        <div class="mt">
+          <div class="lang"><a href="#">EN</a></div>
+          <div class="menubtn">
+            <div class="navbar-icons"><span></span><span></span><span></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!--移动端菜单-->
+      <div class="menu-mc">
+        <div class="list">
+                      <ul>
+            <li><a href="index.htm">首页</a></li>
+            <li><a href="gywm.htm">关于我们</a></li>
+            <li><a href="wlxy.htm">未来校园</a></li>
+            <li><a href="xwzx.htm">新闻中心</a></li>
+          </ul>
+        </div>
+      </div>
+    </header>
+    <main>
+      <div class="banner">
+        <!--PC端banner-->
+        <div class="banner-pc">
+<script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/image/imagescroll.js"></script>          <div class="swiper" id="gallery">
+            <ul class="swiper-wrapper">
+              <li class="swiper-slide"> <a href="#"><img src="images/1.jpg" /></a>
+                <div class="layer">
+                  <div class="text">
+                    <div class="tit"><br> </div>
+                  </div>
+                </div>
+              </li>
+              <li class="swiper-slide"> <a href="#"><img src="images/weixintupian_20260902143656_8700_60.jpg" /></a>
+                <div class="layer">
+                  <div class="text">
+                    <div class="tit"><br> </div>
+                  </div>
+                </div>
+              </li>
+              <li class="swiper-slide"> <a href="#"><img src="images/weixintupian_20260902143721_8704_60.png" /></a>
+                <div class="layer">
+                  <div class="text">
+                    <div class="tit"><br> </div>
+                  </div>
+                </div>
+              </li>
+              <li class="swiper-slide"> <a href="#"><img src="images/shiwuwu.jpg" /></a>
+                <div class="layer">
+                  <div class="text">
+                    <div class="tit"><br> </div>
+                  </div>
+                </div>
+              </li>
+              <li class="swiper-slide"> <a href="#"><img src="images/shijiezhichuang.jpg" /></a>
+                <div class="layer">
+                  <div class="text">
+                    <div class="tit"><br> </div>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div class="container">
+            <div class="thumbsbox">
+              <div class="thumbs" id="thumbs">
+                <ul class="swiper-wrapper">
+                  <li class="swiper-slide"> <a href="#"><img src="images/_thumb/1.jpg" /></a> </li>
+                  <li class="swiper-slide"> <a href="#"><img src="images/_thumb/weixintupian_20260902143656_8700_60.jpg" /></a> </li>
+                  <li class="swiper-slide"> <a href="#"><img src="images/_thumb/weixintupian_20260902143721_8704_60.png" /></a> </li>
+                  <li class="swiper-slide"> <a href="#"><img src="images/_thumb/shiwuwu.jpg" /></a> </li>
+                  <li class="swiper-slide"> <a href="#"><img src="images/_thumb/shijiezhichuang.jpg" /></a> </li>
+                </ul>
+                <div class="swiper-pagination"></div>
+              </div>
+              <div class="next"> NEXT <span class="line1"></span> <span class="line2"></span> <span class="line3"></span> <span class="line4"></span> <span class="line5"></span> </div>
+            </div>
+          </div>
+        </div>
+
+        <!--移动端banner-->
+        <div class="banner-mc">
+          <div class="mcSwiper">
+            <ul class="swiper-wrapper">
+              <li class="swiper-slide"><a href="#"><img src="images/yidongduan-datu.png" /></a></li>
+            </ul>
+          </div>
+        
+        </div>
+      </div>
+      <script language="javascript">
+        var thumbsSwiper = new Swiper('#thumbs', {
+          effect: "fade",
+          speed: 1000,
+          autoplay: false,
+          allowTouchMove: false,
+          watchSlidesVisibility: true,
+          navigation: {
+            nextEl: '.swiper-btn1-next',
+            prevEl: '.swiper-btn1-prev',
+          },
+          pagination: {
+            el: ".swiper-pagination",
+            clickable: true
+          }
+        });
+
+        var gallerySwiper = new Swiper('#gallery', {
+          effect: "fade",
+          autoplay: false,
+          speed: 1000,
+          allowTouchMove: false,
+          navigation: {
+            nextEl: '.swiper-btn-next',
+            prevEl: '.swiper-btn-prev',
+          },
+        });
+
+        var mSwiper = new Swiper('.mcSwiper', {
+          autoplay: {
+            delay: 3000,
+            stopOnLastSlide: false,
+            disableOnInteraction: false,
+          },
+        });
+
+        $(function () {
+          let timer = null;
+          var count = 0;
+          $(".next").addClass("active");
+          timer = setInterval(function () {
+            next();
+          }, 6410);
+          $(".next").on("click", function () {
+            if (timer) { clearInterval(timer); }
+            next();
+            timer = setInterval(function () {
+              next();
+            }, 6410);
+          });
+          function next() {
+            count++;
+            if (count > gallerySwiper.slides.length - 1) {
+              count = 0;
+            }
+            $(".next").removeClass("active");
+            thumbsSwiper.slideTo(count);
+            gallerySwiper.slideTo(count);
+            setTimeout(() => {
+              $(".next").addClass("active");
+            }, 5);
+          }
+        });
+      </script>
+
+
+      <!--首页新闻-->
+
+      <div class="container dance">
+        <a href="xwzx.htm" class="index_title fadeInUp wow"><span class="eng">NEWS</span><span class="txt">新闻动态</span>
+          <div class="tomore" style="color:#a8a8a8 ;margin-left: 20px;display: flex;align-items: center;"><span style="margin-right: 5px;">更多</span> <div class="arrow"><span class="box"><img src="images/more1.png" alt=""><img src="images/more.png" alt=""></span></div></div>
+        </a>
+        <div class="index_new">
+
+<script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script>          <ul>
+            <li class="fadeInUp wow">
+              <div class="photo"> <a href="info/1061/3681.htm"><img src="/__local/0/B2/07/D3B4D0BDE635EBB7A85A709E79B_4E63BBD5_A8520.png" /></a> </div>
+              <div class="info">
+                <div class="title"><a href="info/1061/3681.htm" title="四川省教育考试院调研东部（国际）校区标准化考场建设">四川省教育考试院调研东部（国际）校区标准化考场建设</a></div>
+                <div class="date"><span>2026-09-20</span>
+                  <a href="info/1061/3681.htm" class="more"></a>
+                </div>
+              </div>
+            </li>
+            <li class="fadeInUp wow">
+              <div class="photo"> <a href="info/1061/3631.htm"><img src="/__local/2/2F/E1/E5FAA831BE5D2946DBA3042E420_B27157D1_64F8E.png" /></a> </div>
+              <div class="info">
+                <div class="title"><a href="info/1061/3631.htm" title="东启新章丨东部（国际）校区举行迎新工作专题会议">东启新章丨东部（国际）校区举行迎新工作专题会议</a></div>
+                <div class="date"><span>2026-09-08</span>
+                  <a href="info/1061/3631.htm" class="more"></a>
+                </div>
+              </div>
+            </li>
+            <li class="fadeInUp wow">
+              <div class="photo"> <a href="info/1061/3621.htm"><img src="/__local/7/A9/93/C6122FC091B7B23200E236F3C39_CD18E980_DD5D4.png" /></a> </div>
+              <div class="info">
+                <div class="title"><a href="info/1061/3621.htm" title="东部（国际）校区新学期第一课顺利开讲">东部（国际）校区新学期第一课顺利开讲</a></div>
+                <div class="date"><span>2026-09-08</span>
+                  <a href="info/1061/3621.htm" class="more"></a>
+                </div>
+              </div>
+            </li>
+            <li class="fadeInUp wow">
+              <div class="photo"> <a href="info/1061/2901.htm"><img src="/__local/A/A8/24/97AE1655755C4E53740E030F0AA_EDCCAF44_1227E.jpg" /></a> </div>
+              <div class="info">
+                <div class="title"><a href="info/1061/2901.htm" title="平安东部丨崔凯检查东部（国际）校区暑期建设和安全工作">平安东部丨崔凯检查东部（国际）校区暑期建设和安全工作</a></div>
+                <div class="date"><span>2026-08-06</span>
+                  <a href="info/1061/2901.htm" class="more"></a>
+                </div>
+              </div>
+            </li>
+            <li class="fadeInUp wow">
+              <div class="photo"> <a href="info/1061/2891.htm"><img src="/__local/C/1C/15/A2DDBA0D6ED1467AF3C92BCEB28_E27A7B5F_43697.jpg" /></a> </div>
+              <div class="info">
+                <div class="title"><a href="info/1061/2891.htm" title="西南交通大学东部（国际）校区迎新及开学专题工作会举行">西南交通大学东部（国际）校区迎新及开学专题工作会举行</a></div>
+                <div class="date"><span>2026-07-24</span>
+                  <a href="info/1061/2891.htm" class="more"></a>
+                </div>
+              </div>
+            </li>
+            <li class="fadeInUp wow">
+              <div class="photo"> <a href="info/1061/2851.htm"><img src="/__local/D/22/84/A4C5DC180A637D10A1BA8F28D18_86710DCF_574EF.jpg" /></a> </div>
+              <div class="info">
+                <div class="title"><a href="info/1061/2851.htm" title="王平调研东部（国际）校区首批学生搬迁入驻情况">王平调研东部（国际）校区首批学生搬迁入驻情况</a></div>
+                <div class="date"><span>2026-07-20</span>
+                  <a href="info/1061/2851.htm" class="more"></a>
+                </div>
+              </div>
+            </li>
+          </ul><script>_showDynClickBatch(['dynclicks_u5_3681','dynclicks_u5_3631','dynclicks_u5_3621','dynclicks_u5_2901','dynclicks_u5_2891','dynclicks_u5_2851'],[3681,3631,3621,2901,2891,2851],"wbnews", 2033820380)</script>
+</div>
+      </div>        
+      <div class="dancebg">
+          <div class="container dancea">
+            <a href="xwzx/tzgg.htm" class="index_title fadeInDown wow"><span class="eng">Notice</span><span class="txt">通知公告</span>
+              <div class="tomore" style="color:#a8a8a8 ;margin-left: 20px;display: flex;align-items: center;"><span style="margin-right: 5px;">更多</span> <div class="arrow"><span class="box"><img src="images/more1.png" alt=""><img src="images/more.png" alt=""></span></div></div>
+            </a>
+            <div class="index_notice fadeInLeft wow">
+
+    
+
+          <ul>
+            <li>
+              <div class="date">
+                <div class="moth">09-29</div>
+                <div class="year">2026</div>
+              </div>
+              <div class="title"><a href="info/1091/3711.htm" title="西南交通大学东部（国际）校区求实餐厅档口（饮品）技术合作项目成交公告">西南交通大学东部（国际）校区求实餐厅档口（饮品）技术合作...</a></div>
+              <a href="info/1091/3711.htm" class="more"></a>
+            </li>
+            <li>
+              <div class="date">
+                <div class="moth">09-29</div>
+                <div class="year">2026</div>
+              </div>
+              <div class="title"><a href="info/1091/3701.htm" title="西南交通大学东部（国际）校区求实餐厅档口（风味餐）技术合作项目成交公告">西南交通大学东部（国际）校区求实餐厅档口（风味餐）技术合...</a></div>
+              <a href="info/1091/3701.htm" class="more"></a>
+            </li>
+            <li>
+              <div class="date">
+                <div class="moth">09-29</div>
+                <div class="year">2026</div>
+              </div>
+              <div class="title"><a href="info/1091/3691.htm" title="西南交通大学东部（国际）校区求实餐厅档口（湘菜）技术合作项目成交公告">西南交通大学东部（国际）校区求实餐厅档口（湘菜）技术合作...</a></div>
+              <a href="info/1091/3691.htm" class="more"></a>
+            </li>
+            <li>
+              <div class="date">
+                <div class="moth">09-04</div>
+                <div class="year">2026</div>
+              </div>
+              <div class="title"><a href="info/1091/3611.htm" title="关于东部（国际）校区跨校区校车开通运行的通知">关于东部（国际）校区跨校区校车开通运行的通知</a></div>
+              <a href="info/1091/3611.htm" class="more"></a>
+            </li>
+          </ul><script>_showDynClickBatch(['dynclicks_u6_3711','dynclicks_u6_3701','dynclicks_u6_3691','dynclicks_u6_3611'],[3711,3701,3691,3611],"wbnews", 2033820380)</script>
+</div>
+          </div>
+      </div>
+      <div class="part_2">
+        <div class="container">
+          <div class="index_guid">
+            <ul>
+              <li class="fadeInUp wow" data-wow-delay="0.2s" style="visibility: visible; animation-delay: 0.2s; animation-name: fadeInUp;"><a href="#">
+                  <div class="photo">
+                    <img src="images/index_23.jpg">
+                  </div>
+                  <div class="content">
+                    <img src="images/icon_07.png">
+                    <span>信息公开</span>
+                  </div>
+                </a></li>
+              <li class="fadeInUp wow" data-wow-delay="0.4s" style="visibility: visible; animation-delay: 0.4s; animation-name: fadeInUp;"><a href="#">
+                  <div class="photo">
+                    <img src="images/index_25.jpg">
+                  </div>
+                  <div class="content">
+                    <img src="images/icon_09.png">
+                    <span>服务指南</span>
+                  </div>
+                </a></li>
+              <li class="fadeInUp wow" data-wow-delay="0.6s" style="visibility: visible; animation-delay: 0.6s; animation-name: fadeInUp;"><a href="lslm/xygy1.htm">
+                  <div class="photo">
+                    <img src="images/index_27.jpg">
+                  </div>
+                  <div class="content">
+                    <img src="images/icon_11.png">
+                    <span>校园光影</span>
+                  </div>
+                </a></li>
+              <li class="fadeInUp wow" data-wow-delay="0.8s" style="visibility: visible; animation-delay: 0.8s; animation-name: fadeInUp;"><a href="xwzx/jcsp.htm">
+                  <div class="photo">
+                    <img src="images/index_20.jpg">
+                  </div>
+                  <div class="content">
+                    <img src="images/icon_13.png">
+                    <span>精彩视频</span>
+                  </div>
+                </a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="right-bj">
+          <img src="images/notice-bj-02.png" alt="">
+        </div>        
+      </div>
+    </main>
+    <footer>
+      <div class="foot">
+        <div class="logo"> <span class="photo"><img src="images/logo.png" /></span></div>
+        <div class="copyright">Copyright&copy;2023 Southwest Jiaotong University</div>
+      </div>
+    </footer>
+  </div>
+  <script src="js/main.js"></script>
+
+
+
+</body>
+
+</html>

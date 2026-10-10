@@ -251,6 +251,54 @@ func TestFdcDateValuesPreserveMinutePrecision(t *testing.T) {
 	}
 }
 
+func TestFdcExplicitEmptyListAcceptsAnyPageAndStopsRangeWalk(t *testing.T) {
+	oldClient, oldNoCache := defaultClient, NoCache
+	oldBase := AllSites["fdc"].BaseURL
+	requested := make([]string, 0, 8)
+	defaultClient = &http.Client{Transport: fdcTestRoundTripper(func(req *http.Request) (*http.Response, error) {
+		requested = append(requested, req.URL.Path)
+		switch req.URL.Path {
+		case "/sdby.htm", "/sdby/yrgs.htm":
+			return fdcTestResponse(req, http.StatusOK, "text/html; charset=utf-8", readFdcFixture(t, "fdc_live_sdby.html")), nil
+		default:
+			return fdcTestResponse(req, http.StatusNotFound, "text/html; charset=utf-8", []byte("not found")), nil
+		}
+	})}
+	AllSites["fdc"].BaseURL = fdcFixtureBaseURL
+	NoCache = true
+	ClearCache()
+	t.Cleanup(func() {
+		defaultClient, NoCache = oldClient, oldNoCache
+		AllSites["fdc"].BaseURL = oldBase
+		ClearCache()
+	})
+
+	for _, slug := range []string{"sdby", "sdby/yrgs"} {
+		items, err := AllSites["fdc"].ListNewsPage(slug, 2)
+		if err != nil || len(items) != 0 {
+			t.Fatalf("%s page 2 = items=%#v err=%v; want empty/nil", slug, items, err)
+		}
+		total, err := AllSites["fdc"].GetTotalPages(slug)
+		if err != nil || total != 0 {
+			t.Fatalf("%s total pages = %d, err = %v; want 0/nil", slug, total, err)
+		}
+		walked, err := AllSites["fdc"].ListNewsRange(slug, "2026-01-01", "2026-12-31", 0)
+		if err != nil {
+			t.Fatalf("%s ListNewsRange: %v", slug, err)
+		}
+		if len(walked) != 0 {
+			t.Fatalf("%s range walk returned items for an empty list: %#v", slug, walked)
+		}
+	}
+	for _, path := range requested {
+		// A generated archive page is numeric (/sdby/2.htm); the slug first
+		// page /sdby/yrgs.htm is expected traffic and must not trip the guard.
+		if strings.HasPrefix(path, "/sdby/") && trailingPageNumber(path) > 0 {
+			t.Fatalf("generated archive page was requested for an empty list: %#v", requested)
+		}
+	}
+}
+
 func TestFdcListPageUsesReverseMappingAndRejectsOutOfRange(t *testing.T) {
 	oldClient, oldNoCache := defaultClient, NoCache
 	oldBase := AllSites["fdc"].BaseURL
@@ -291,6 +339,20 @@ func TestFdcListPageUsesReverseMappingAndRejectsOutOfRange(t *testing.T) {
 		if path == "/tzgg/0.htm" || path == "/tzgg/4.htm" {
 			t.Fatalf("out-of-range physical page was requested: %#v", requested)
 		}
+	}
+}
+
+func TestFdcEmptyListPaginatesQuietly(t *testing.T) {
+	data := readFdcFixture(t, "fdc_live_sdby.html")
+	items, err := parseAdapter_fdcList(data, fdcFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if items == nil || len(items) != 0 {
+		t.Fatalf("measured empty list = %#v, want non-nil empty slice", items)
+	}
+	if totalItems, currentPage, totalPages, ok := fdcPaginationFromHTML(data); !ok || totalItems != 0 || currentPage != 0 || totalPages != 0 {
+		t.Fatalf("measured empty list pagination = %d/%d/%d/%v, want explicit 0/0", totalItems, currentPage, totalPages, ok)
 	}
 }
 

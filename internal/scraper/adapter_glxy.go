@@ -20,7 +20,9 @@ const glxyBaseURL = "https://glxy.swjtu.edu.cn"
 
 // glxySubPages is the complete set of article-list entry points exposed by
 // the live home page. Static information pages under 学院概况、人才培养、党群
-// 工作等 are deliberately not included.
+// 工作等 are deliberately not included. gjhz/hzxm is also deliberately absent:
+// every row on that live page forwards to fad.swjtu.edu.cn (国际处), so the
+// list is external-only and has no local articles to archive.
 var glxySubPages = []string{
 	"xwtz/xyxw",
 	"xwtz/xyxw/zh",
@@ -39,7 +41,6 @@ var glxySubPages = []string{
 	"kxyj2/kycg", "kxyj2/kytj",
 	"zthd",
 	"gjhz/gjjl",
-	"gjhz/hzxm",
 	"mkslj/cyxz",
 	"xsgz/btkx",
 	"xsgz/txzz",
@@ -637,6 +638,12 @@ func glxyTotalPages(slug string) (int, error) {
 	doc, parseErr := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
 	if parseErr != nil || glxyLooksLikeErrorPage(doc) {
 		return 0, fmt.Errorf("glxy: %s is not a valid list page", slug)
+	}
+	// The audited home page is a real single-page article digest (pageType=1
+	// with module lists), so the implicit "index" feed is valid and has
+	// exactly one page. parseGlxyNews scopes and validates its entries.
+	if glxyIsHomepage(doc) {
+		return 1, nil
 	}
 	if !glxyListShape(doc) {
 		return 0, fmt.Errorf("glxy: %s is not an article list", slug)

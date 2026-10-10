@@ -29,6 +29,9 @@ func TestJWCAdapterRegistersAllArticleFeeds(t *testing.T) {
 	if site == nil || site.BaseURL != jwcCanonicalBaseURL || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.ListPageFunc == nil || site.ArticleFetchFunc == nil {
 		t.Fatalf("jwc adapter is incomplete: %#v", site)
 	}
+	if !site.NoIndexFeed {
+		t.Fatal("jwc homepage is a portal shell and must not publish an implicit index feed")
+	}
 	if len(jwcSubPages) != 55 {
 		t.Fatalf("got %d jwc feeds, want 55", len(jwcSubPages))
 	}
@@ -54,6 +57,31 @@ func containsJWCFeed(feeds []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func TestJWCIndexFeedIsRefusedAsUnregisteredRoute(t *testing.T) {
+	if _, err := jwcListURL(jwcCanonicalBaseURL, "index", 1, ""); err == nil {
+		t.Fatal("index slug unexpectedly has a VATUU list URL")
+	}
+	fetcher := func(rawURL string) ([]byte, error) {
+		t.Fatalf("index route must be refused before any fetch, got %s", rawURL)
+		return nil, fmt.Errorf("unexpected fetch %s", rawURL)
+	}
+	if items, _, err := jwcListPageWithFetcher(jwcCanonicalBaseURL, "index", 1, fetcher); err == nil || items != nil {
+		t.Fatalf("index list page = items=%#v err=%v; want refusal", items, err)
+	}
+	// The refreshed live homepage fixture is still a portal shell: category
+	// links and system functions, but no article rows of its own.
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(jwcFixture(t, "jwc_live_home.html"))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if doc.Find("a[href*='setAction=newsDetail']").Length() != 0 {
+		t.Fatal("live homepage exposes article rows; NoIndexFeed needs re-evaluation")
+	}
+	if doc.Find("a[href*='setAction=newsList']").Length() == 0 {
+		t.Fatal("live homepage lost its category navigation links")
+	}
 }
 
 func TestJWCListURLUsesTheObservedVATUURouteKinds(t *testing.T) {

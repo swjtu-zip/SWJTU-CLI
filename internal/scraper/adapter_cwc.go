@@ -7,18 +7,22 @@ import (
 	"swjtu-cli/internal/model"
 )
 
+// The live cwc host currently protects every route — homepage, historical
+// /info articles, column pages, and the search endpoint — behind a 302 to the
+// webexp login gateway, so the origin exposes no public list slug that can be
+// registered safely and SubPages stays empty. Mark NoIndexFeed so the SDK does
+// not synthesise an index feed for the login shell. Keep this adapter strict:
+// a 200 response containing the login SPA or another unrecognised page must
+// not turn into a successful empty feed.
 func init() {
+	if site := AllSites["cwc"]; site != nil {
+		site.NoIndexFeed = true
+	}
 	registerAdapter("cwc", SiteAdapter{
 		ParseList:    parseCwcNewsList,
 		ParseArticle: parseCwcArticle,
 	})
 }
-
-// The live cwc host currently protects its homepage and historical /info and
-// ShowList routes with the webexp login gateway.  It exposes no public list
-// slug that can be registered safely, so SubPages is intentionally empty.
-// Keep this adapter strict: a 200 response containing the login SPA or another
-// unrecognised page must not turn into a successful empty feed.
 func parseCwcNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 	if isCwcLoginShell(html) {
 		return nil, fmt.Errorf("cwc: received login SPA shell instead of a news list")

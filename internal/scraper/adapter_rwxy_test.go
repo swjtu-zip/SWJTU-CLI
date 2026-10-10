@@ -1,6 +1,8 @@
 package scraper
 
 import (
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -224,5 +226,90 @@ func TestRwxyAttachmentValidationChecksShellAndMagic(t *testing.T) {
 	}
 	if !rwxyAttachmentBodyIsUsable("application/vnd.openxmlformats-officedocument.wordprocessingml.document", []byte("PK\x03\x04docx"), "材料.docx") {
 		t.Fatal("valid OOXML magic was rejected")
+	}
+}
+
+func TestRwxyLiveHomeFixtureParsesHomeFeed(t *testing.T) {
+	data := rwxyFixture(t, "rwxy_live_home.html")
+	items, err := parseAdapter_rwxyList(data, rwxyCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) < 5 {
+		t.Fatalf("live homepage items = %d, want at least 5: %#v", len(items), items)
+	}
+	seenTypes := make(map[string]bool)
+	for _, item := range items {
+		if !strings.Contains(item.URL, "rwxy.swjtu.edu.cn/info/") {
+			t.Errorf("homepage item is not a local article link: %#v", item)
+		}
+		seenTypes[item.Type] = true
+	}
+	if !seenTypes["学院新闻"] || !seenTypes["党建动态"] {
+		t.Fatalf("homepage section types were not detected: %#v", seenTypes)
+	}
+}
+
+func TestRwxyLiveHomeImagePathIsNotAPageIndicator(t *testing.T) {
+	// The live homepage carries carousel image paths such as
+	// /__local/1/99/DB/....jpg; that "1/99" must not be promoted into a
+	// total page count, or ListNewsRange walks a nonexistent index/98.html.
+	data := rwxyFixture(t, "rwxy_live_home.html")
+	if got := rwxyTotalPagesFromHTML(data); got != 0 {
+		t.Fatalf("homepage total pages = %d, want 0 (no archive pagination)", got)
+	}
+}
+
+func TestRwxyIndexFeedIsASingleScopedHomepage(t *testing.T) {
+	oldClient, oldNoCache := defaultClient, NoCache
+	oldBase := AllSites["rwxy"].BaseURL
+	requested := make([]string, 0, 4)
+	defaultClient = &http.Client{Transport: rwxyTestRoundTripper(func(req *http.Request) (*http.Response, error) {
+		requested = append(requested, req.URL.Path)
+		if req.URL.Path == "/index.htm" {
+			return rwxyTestResponse(req, http.StatusOK, "text/html; charset=utf-8", rwxyFixture(t, "rwxy_live_home.html")), nil
+		}
+		return rwxyTestResponse(req, http.StatusNotFound, "text/html; charset=utf-8", []byte("not found")), nil
+	})}
+	AllSites["rwxy"].BaseURL = rwxyCanonicalBaseURL
+	NoCache = true
+	ClearCache()
+	t.Cleanup(func() {
+		defaultClient, NoCache = oldClient, oldNoCache
+		AllSites["rwxy"].BaseURL = oldBase
+		ClearCache()
+	})
+
+	total, err := AllSites["rwxy"].GetTotalPages("index")
+	if err != nil || total != 1 {
+		t.Fatalf("index total pages = %d, err = %v; want 1/nil", total, err)
+	}
+	items, err := AllSites["rwxy"].ListNewsRange("index", "2026-01-01", "2026-12-31", 0)
+	if err != nil {
+		t.Fatalf("index ListNewsRange: %v", err)
+	}
+	if len(items) == 0 {
+		t.Fatal("index feed returned no homepage items")
+	}
+	for _, path := range requested {
+		if strings.HasPrefix(path, "/index/") {
+			t.Fatalf("paginated archive path was requested for the homepage: %#v", requested)
+		}
+	}
+}
+
+type rwxyTestRoundTripper func(*http.Request) (*http.Response, error)
+
+func (f rwxyTestRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func rwxyTestResponse(req *http.Request, status int, contentType string, body []byte) *http.Response {
+	return &http.Response{
+		StatusCode: status,
+		Status:     http.StatusText(status),
+		Header:     http.Header{"Content-Type": []string{contentType}},
+		Body:       io.NopCloser(strings.NewReader(string(body))),
+		Request:    req,
 	}
 }

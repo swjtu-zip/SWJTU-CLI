@@ -27,6 +27,10 @@ type BodaSite struct {
 	Category  string        // "college", "party", "admin", "unit", "institute"
 	SubPages  []string      // known sub-page slugs (e.g. "tzgg", "xyxw")
 	ParseFunc ParseListFunc // optional site-specific parser
+	// NoIndexFeed marks sites whose homepage exposes no public article list.
+	// The SDK then skips the implicit "index" feed for them instead of
+	// letting every sync run record a refused-route failure.
+	NoIndexFeed bool
 	// ParseArticleFunc optionally overrides article parsing for this site.
 	// Even sites on the same CMS ship different HTML, so each site can
 	// provide its own adapter instead of relying on the generic parser.

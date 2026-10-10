@@ -27,7 +27,7 @@ func TestDesignAdapterRegistrationAndPageURL(t *testing.T) {
 			t.Errorf("design sub-page[%d] = %q, want %q", i, site.SubPages[i], want)
 		}
 	}
-	for _, excluded := range []string{"xygk", "jyjx/bkzy", "jyjx/ssxwd", "jyjx/cybgxz", "kysj", "cpyc", "xszt"} {
+	for _, excluded := range []string{"xygk", "jyjx/bkzy", "jyjx/ssxwd", "jyjx/cybgxz", "kysj", "cpyc", "xszt", "jyjx/jxcg", "kysj/kycg"} {
 		for _, slug := range site.SubPages {
 			if slug == excluded {
 				t.Errorf("static/resource/empty route %q was registered as a news feed", excluded)
@@ -72,6 +72,114 @@ func TestDesignTotalPagesRequiresSourcePagination(t *testing.T) {
 	}
 	if total, err := designTotalPages("xshd"); err == nil || total != 0 {
 		t.Fatalf("missing source pagination was accepted: total=%d err=%v", total, err)
+	}
+}
+
+func TestDesignLiveHomepageFixtureParsesEveryModule(t *testing.T) {
+	items, err := parseAdapter_designList(readDesignFixture(t, "design_live_home.html"), designFixtureBase)
+	if err != nil {
+		t.Fatalf("parse live design homepage: %v", err)
+	}
+	wantTypes := map[string]int{
+		"学院动态":  5,
+		"讲座":    5,
+		"展览":    5,
+		"论坛":    5,
+		"活动":    5,
+		"通知公告":  7,
+		"本科生通知": 7,
+		"研究生通知": 7,
+	}
+	gotTypes := make(map[string]int)
+	for _, item := range items {
+		gotTypes[item.Type]++
+		if !strings.HasPrefix(item.URL, designFixtureBase+"/info/") {
+			t.Errorf("non-article URL leaked into live homepage items: %#v", item)
+		}
+	}
+	if len(items) != 46 {
+		t.Fatalf("live homepage returned %d items, want 46: %#v", len(items), gotTypes)
+	}
+	for typ, want := range wantTypes {
+		if gotTypes[typ] != want {
+			t.Errorf("live homepage type %q count = %d, want %d", typ, gotTypes[typ], want)
+		}
+	}
+
+	var foundDynamic, foundNotice bool
+	for _, item := range items {
+		if item.URL == designFixtureBase+"/info/1016/16249.htm" {
+			foundDynamic = item.Type == "学院动态" && item.Date == "2026-10-08"
+		}
+		if item.URL == designFixtureBase+"/info/1039/16239.htm" {
+			foundNotice = item.Type == "研究生通知" && item.Date == "2026-10-08"
+		}
+	}
+	if !foundDynamic || !foundNotice {
+		t.Fatalf("live homepage spot checks missing (dynamic=%v notice=%v)", foundDynamic, foundNotice)
+	}
+}
+
+func TestDesignIndexFeedCountsAsSingleHomepage(t *testing.T) {
+	oldClient, oldNoCache := defaultClient, NoCache
+	defaultClient = &http.Client{Transport: designTestRoundTripper(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Path != "/index.htm" {
+			return &http.Response{StatusCode: http.StatusNotFound, Status: "404 Not Found", Header: make(http.Header), Body: io.NopCloser(strings.NewReader("not found")), Request: r}, nil
+		}
+		return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Header: http.Header{"Content-Type": []string{"text/html"}}, Body: io.NopCloser(strings.NewReader(string(readDesignFixture(t, "design_live_home.html")))), Request: r}, nil
+	})}
+	NoCache = true
+	t.Cleanup(func() { defaultClient, NoCache = oldClient, oldNoCache; ClearCache() })
+
+	total, err := designTotalPages("index")
+	if err != nil || total != 1 {
+		t.Fatalf("design index total = %d, err=%v; want a single homepage page", total, err)
+	}
+}
+
+func TestDesignIndexFeedListsHomepageThroughSitePath(t *testing.T) {
+	site := AllSites["design"]
+	oldClient, oldNoCache := defaultClient, NoCache
+	defaultClient = &http.Client{Transport: designTestRoundTripper(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Path != "/index.htm" {
+			return &http.Response{StatusCode: http.StatusNotFound, Status: "404 Not Found", Header: make(http.Header), Body: io.NopCloser(strings.NewReader("not found")), Request: r}, nil
+		}
+		return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Header: http.Header{"Content-Type": []string{"text/html"}}, Body: io.NopCloser(strings.NewReader(string(readDesignFixture(t, "design_live_home.html")))), Request: r}, nil
+	})}
+	NoCache = true
+	t.Cleanup(func() { defaultClient, NoCache = oldClient, oldNoCache; ClearCache() })
+
+	items, err := site.ListNewsPage("index", 1)
+	if err != nil {
+		t.Fatalf("design index feed through ListNewsPage: %v", err)
+	}
+	if len(items) != 46 {
+		t.Fatalf("design index feed returned %d items, want 46", len(items))
+	}
+	total, err := site.GetTotalPages("index")
+	if err != nil || total != 1 {
+		t.Fatalf("design index GetTotalPages = %d, err=%v; want 1", total, err)
+	}
+}
+
+func TestDesignIndexFeedRejectsHomeShapedShells(t *testing.T) {
+	cases := map[string]string{
+		"static app shell":   `<html><body><div id="app"></div></body></html>`,
+		"empty home modules": `<html><body><div class="dynamic"><div class="list"><ul></ul></div></div></body></html>`,
+	}
+	for name, body := range cases {
+		t.Run(name, func(t *testing.T) {
+			oldClient, oldNoCache := defaultClient, NoCache
+			defaultClient = &http.Client{Transport: designTestRoundTripper(func(r *http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Header: http.Header{"Content-Type": []string{"text/html"}}, Body: io.NopCloser(strings.NewReader(body)), Request: r}, nil
+			})}
+			NoCache = true
+			t.Cleanup(func() { defaultClient, NoCache = oldClient, oldNoCache; ClearCache() })
+
+			if total, err := designTotalPages("index"); err == nil || total != 0 {
+				t.Fatalf("design index total = %d, err=%v; want refusal for %s", total, err, name)
+			}
+		})
 	}
 }
 

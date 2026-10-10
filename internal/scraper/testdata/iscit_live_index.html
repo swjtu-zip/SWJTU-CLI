@@ -1,0 +1,1137 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+        <title>智慧城市与交通学院/城市轨道交通学院官网</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="智慧城市与交通学院/城市轨道交通学院官网">
+<META Name="keywords" Content="智慧城市与交通学院,城市轨道交通学院,西南交通大学,城市轨道交通学院" />
+
+        <link href="css/bootstrap.min.css" rel="stylesheet">
+        <link href="css/calendar.css" rel="stylesheet">
+        <link href="css/style.css?ver=1.26" rel="stylesheet">
+        <link href="css/iconfont.css" rel="stylesheet">
+        <link href="css/aos.css" rel="stylesheet">
+        <!--[if lt IE 9]>
+      <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+    <![endif]-->
+    <!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1002,'/index.jsp',-1,1722204083)</script>
+</head>
+    <body>
+        <!--头部-->
+        <header>
+            <div class="header">
+                <div class="container">
+                    <div class="p14 col-md-6 top-right">
+                    <script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/openlink.js"></script>                        <a href="https://one.swjtu.edu.cn/" class="ywtb" target="target=_blank" onclick="_addDynClicks(&#34;wburl&#34;, 1722204083, 69369)">一网通办</a>
+                        <a href="" class="return-sy" target="" onclick="_addDynClicks(&#34;wburl&#34;, 1722204083, 69370)">HOME</a>
+                        <a href="English.htm" class="english" target="" onclick="_addDynClicks(&#34;wburl&#34;, 1722204083, 69371)">English</a>
+
+                        <div class="rigsea"><!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu1 .qwss{}
+    #appu1 .tj{}
+</style>
+<div id="divu1"></div>
+<script type="text/html" id="htmlu1">
+    <div id="appu1">
+        <div v-if="!isError">
+            <input type="text" class="qwss sea-int" placeholder="请输入搜索内容" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+            <input class="tj sea-btn" name="submit_button" type="button" value="" v-on:click="onSubmit()"/>
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu1").html($("#htmlu1").text());
+</script>
+<script>
+    var appOwner = "1722204083";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu1",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu1 = document.querySelector("#appu1");
+   if (appElementu1 && appElementu1.__vue__) {
+
+   } else {
+      $("#divu1").html($("#htmlu1").text());
+      var appOwner = "1722204083";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou1 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu1(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu1();
+        }
+      };
+
+      function onSubmitu1(e) {
+        queryInfou1.query.keyWord= $("#appu1  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou1.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script></div>
+                    </div>
+                </div>
+            </div>
+            <div class="container cen-logo">
+                <a class="navbar-brand logo">
+<!-- 网站logo图片地址请在本组件"内容配置-网站logo"处填写 -->
+<img src="images/logo.png" width="499" height="71" border="0" alt="智慧城市与交通学院官网" title="智慧城市与交通学院官网"></a>
+            </div>
+            <nav class="nav_top">
+                <div class="container">
+                    <div class="navbar-header">
+                        <button class="navbar-toggle collapsed mean" data-toggle="collapse" data-target="#mynavbar">
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                        </button>
+                    </div>
+                    <div id="mynavbar" class="collapse navbar-collapse">                        <ul class="nav navbar-nav nav_li navbar-right">
+                            <li>
+                                <a href="index.htm">首页 </a>
+                            </li>
+                            <li class="" _t_nav="product">
+                                <a href="xygk/xyjj.htm">学院概况</a>
+                            </li>    
+                            <li class="" _t_nav="product">
+                                <a href="dqgz/dqxw.htm">党群工作</a>
+                            </li>    
+                            <li class="" _t_nav="product">
+                                <a href="szdw/xrcyj.htm">师资队伍</a>
+                            </li>    
+                            <li class="" _t_nav="product">
+                                <a href="rcpy/zysz.htm">人才培养</a>
+                            </li>    
+                            <li class="" _t_nav="product">
+                                <a href="xsgz/xgjj.htm">学生工作</a>
+                            </li>    
+                            <li class="" _t_nav="product">
+                                <a href="hzjl/hzjg.htm">合作交流</a>
+                            </li>    
+                            <li class="" _t_nav="product">
+                                <a href="cxxy/dbxqgk.htm">创新校园</a>
+                            </li>    
+                            <li class="" _t_nav="product">
+                                <a href="zt/b_s_bqgzs.htm">加入我们</a>
+                            </li>    
+                        </ul>
+
+</div>
+                </div>
+            </nav>
+            <div class="navigation-down">
+                <div id="product" class="nav-down-menu menu-1" _t_nav="product" style="display: none;">                    <div class="navigation-down-inner">
+                        <img src="/images/dhimg1.jpg" alt="">
+<dl>
+        <dd>
+            <a href="xygk/xyjj.htm">学院概况</a>
+        </dd>
+        <dd>
+            <a href="dqgz/dqxw.htm">党群工作</a>
+        </dd>
+        <dd>
+            <a href="szdw/xrcyj.htm">师资队伍</a>
+        </dd>
+        <dd>
+            <a href="rcpy/zysz.htm">人才培养</a>
+        </dd>
+        <dd>
+            <a href="xsgz/xgjj.htm">学生工作</a>
+        </dd>
+        <dd>
+            <a href="hzjl/hzjg.htm">合作交流</a>
+        </dd>
+        <dd>
+            <a href="cxxy/dbxqgk.htm">创新校园</a>
+        </dd>
+        <dd>
+            <a href="zt/b_s_bqgzs.htm">加入我们</a>
+        </dd>
+</dl>
+                        
+                <dl>
+                    <dd>
+                        <a href="xygk/xyjj.htm">学院简介</a>
+                    </dd>
+                    <dd>
+                        <a href="xygk/gltd.htm">管理团队</a>
+                    </dd>
+                    <dd>
+                        <a href="xygk/zzjg.htm">组织机构</a>
+                    </dd>
+                    <dd>
+                        <a href="xygk/jslc.htm">建设历程</a>
+                    </dd>
+                    <dd>
+                        <a href="xygk/lxwm.htm">联系我们</a>
+                    </dd>
+                </dl>
+                <dl>
+                    <dd>
+                        <a href="dqgz/dqjj.htm">党群简介</a>
+                    </dd>
+                    <dd>
+                        <a href="dqgz/dqxw.htm">党群新闻</a>
+                    </dd>
+                </dl>
+                <dl>
+                    <dd>
+                        <a href="szdw/xrcyj.htm">人才引进</a>
+                    </dd>
+                    <dd>
+                        <a href="szdw/xszml.htm">师资名录</a>
+                    </dd>
+                </dl>
+                <dl>
+                    <dd>
+                        <a href="rcpy/zysz.htm">专业设置</a>
+                    </dd>
+                    <dd>
+                        <a href="rcpy/tsys.htm">特色优势</a>
+                    </dd>
+                    <dd>
+                        <a href="rcpy/ptjs.htm">平台建设</a>
+                    </dd>
+                    <dd>
+                        <a href="rcpy/xsds.htm">学术导师</a>
+                    </dd>
+                </dl>
+                <dl>
+                    <dd>
+                        <a href="xsgz/xgjj.htm">学工简介</a>
+                    </dd>
+                    <dd>
+                        <a href="xsgz/txxw.htm">团学新闻</a>
+                    </dd>
+                    <dd>
+                        <a href="xsgz/jzxj.htm">奖助学金</a>
+                    </dd>
+                </dl>
+                <dl>
+                    <dd>
+                        <a href="hzjl/hzln.htm">合作理念</a>
+                    </dd>
+                    <dd>
+                        <a href="hzjl/hzjg.htm">合作机构</a>
+                    </dd>
+                </dl>
+                <dl>
+                    <dd>
+                        <a href="cxxy/dbxqgk.htm">东部(国际)校区</a>
+                    </dd>
+                    <dd>
+                        <a href="cxxy/xyqw.htm">校园区位</a>
+                    </dd>
+                    <dd>
+                        <a href="cxxy/xyghln.htm">校园规划理念</a>
+                    </dd>
+                    <dd>
+                        <a href="cxxy/xmjsgm.htm">项目建设规模</a>
+                    </dd>
+                    <dd>
+                        <a href="cxxy/xydtjz.htm">校园单体建筑</a>
+                    </dd>
+                    <dd>
+                        <a href="cxxy/zhxygh.htm">智慧校园规划</a>
+                    </dd>
+                </dl>
+                <dl>
+                    <dd>
+                        <a href="zt/b_s_bqgzs.htm">报考我们</a>
+                    </dd>
+                    <dd>
+                        <a href="zt/cptxyc.htm">应聘我们</a>
+                    </dd>
+                </dl>
+                        <img src="/images/dhimg2.jpg" alt="">
+                    </div></div>
+            </div>
+        </header>
+        <!--幻灯-->
+            <div id="carousel-example-generic" class="carousel slide scroolsy" data-ride="carousel">
+            <ol class="carousel-indicators">
+                <li data-target="#carousel-example-generic" data-slide-to="0" class="active"></li>
+                <li data-target="#carousel-example-generic" data-slide-to="0" class=""></li>
+                <li data-target="#carousel-example-generic" data-slide-to="0" class=""></li>
+                <li data-target="#carousel-example-generic" data-slide-to="0" class=""></li>
+                <li data-target="#carousel-example-generic" data-slide-to="0" class=""></li>
+                <li data-target="#carousel-example-generic" data-slide-to="0" class=""></li>
+                <li data-target="#carousel-example-generic" data-slide-to="0" class=""></li>
+                <li data-target="#carousel-example-generic" data-slide-to="0" class=""></li>
+            </ol>
+            <div class="carousel-inner silder-top" role="listbox">
+                <div class="item active">
+                    <a href=""><img src="images/weixintupian_20260907150426_31_2.png" alt=""></a>
+                    <div class="carousel-caption">
+                    </div>
+                </div>
+                <div class="item ">
+                    <a href=""><img src="images/weixintupian_20251122212744_835_617.png" alt=""></a>
+                    <div class="carousel-caption">
+                    </div>
+                </div>
+                <div class="item ">
+                    <a href=""><img src="images/weixintupian_20251122211829_828_617.png" alt=""></a>
+                    <div class="carousel-caption">
+                    </div>
+                </div>
+                <div class="item ">
+                    <a href=""><img src="images/weixintupian_20240731172409.png" alt=""></a>
+                    <div class="carousel-caption">
+                    </div>
+                </div>
+                <div class="item ">
+                    <a href=""><img src="images/4.png" alt=""></a>
+                    <div class="carousel-caption">
+                    </div>
+                </div>
+                <div class="item ">
+                    <a href=""><img src="images/weixintupian_20260514160111_171_3502.jpg" alt=""></a>
+                    <div class="carousel-caption">
+                    </div>
+                </div>
+                <div class="item ">
+                    <a href=""><img src="images/reyi.png" alt=""></a>
+                    <div class="carousel-caption">
+                    </div>
+                </div>
+                <div class="item ">
+                    <a href=""><img src="images/yundonghui.png" alt=""></a>
+                    <div class="carousel-caption">
+                    </div>
+                </div>
+            </div>
+            <a class="left carousel-control" href="#carousel-example-generic" role="button" data-slide="prev">
+                <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
+            </a>
+            <a class="right carousel-control" href="#carousel-example-generic" role="button" data-slide="next">
+                <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
+            </a>
+            </div>
+        <!--新闻-->
+
+        <div class="sybg1">
+        <div class="container">
+            <div class="row newbox">
+                <div class="new-tit" aos="fade-up"><strong>新闻</strong><i>NEWS</i></div>
+                <div>
+
+<script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script>                    <div class="col-xs-12 col-sm-6 col-md-5" aos="fade-right">
+                        <a href="https://mp.weixin.qq.com/s/kQg1HdPhSBF_5qngdrpikg" title="智慧城市与交通学院2026级学生开学典礼圆满举行"><img src="/__local/6/24/71/269AD74182058F87F2E4D8F7CEF_8A9F0469_3A2AB.jpg" alt=""></a>
+                        <div>
+                            <p><a href="https://mp.weixin.qq.com/s/kQg1HdPhSBF_5qngdrpikg" title="智慧城市与交通学院2026级学生开学典礼圆满举行">智慧城市与交通学院2026级学生开学典礼圆满举行</a></p>
+                            <span>2026.09.22</span>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-12 col-sm-6 col-md-7" aos="fade-left" aos-delay="100">
+                        <ul>                    
+                            <li>
+                                <a href="info/1024/2916.htm" title="诚聘海内外英才"><img src="/__local/A/8E/BD/6A36D62B26A0C32638AE0E0C7D1_4D3C482D_27F0AA.jpg" alt=""></a>
+                                <p><a href="info/1024/2916.htm" title="诚聘海内外英才">诚聘海内外英才</a></p>
+                                <span>2025.03.01</span>
+                            </li>
+
+                            <li>
+                                <a href="https://mp.weixin.qq.com/s/Mmws5sduuGZhdQxtMu2SoA" title="东部（国际）校区2027届毕业生首场专场双选会成功举办"><img src="/__local/B/BB/31/028C91B332F292D30B9D35BC83E_CAB1D822_452B1.jpg" alt=""></a>
+                                <p><a href="https://mp.weixin.qq.com/s/Mmws5sduuGZhdQxtMu2SoA" title="东部（国际）校区2027届毕业生首场专场双选会成功举办">东部（国际）校区2027届毕业生首场专场双选会成功举办</a></p>
+                                <span>2026.09.22</span>
+                            </li>
+                        </ul>
+                        <div class="clearfix"></div>
+                    </div>
+
+                    <div class="clearfix"></div>
+                    <div class="xznew_li" aos="fade-left" aos-delay="100">
+                        <ul>
+                            <li>
+                                <div class="rq-left"><strong>13</strong>
+                                    <p>2026/09</p>
+                                </div>
+                                <div class="nr_rig">
+                                    <a href="https://mp.weixin.qq.com/s/aCNyVSNFJZsLvVrvxjITwg" title="学院召开本科2026级新生家校沟通会">学院召开本科2026级新生家校沟通会</a>
+                                </div>
+                            </li>
+
+                            <li>
+                                <div class="rq-left"><strong>12</strong>
+                                    <p>2026/09</p>
+                                </div>
+                                <div class="nr_rig">
+                                    <a href="https://mp.weixin.qq.com/s/Ry0RkuS-caLOpyhHSv2TKg" title="你好，小智 | 金秋启序，奔赴新程">你好，小智 | 金秋启序，奔赴新程</a>
+                                </div>
+                            </li>
+                        </ul>
+
+                        <ul>
+                            <li>
+                                <div class="rq-left"><strong>08</strong>
+                                    <p>2026/09</p>
+                                </div>
+                                <div class="nr_rig">
+                                    <a href="http://mp-weixin-qq-com-s.vpn.swjtu.edu.cn:8118/s/gZ8VVJTVbW0lkeqzfmZZQw" title="东部（国际）校区新学期第一课顺利开讲！">东部（国际）校区新学期第一课顺利开讲！</a>
+                                </div>
+                            </li>
+
+                            <li>
+                                <div class="rq-left"><strong>08</strong>
+                                    <p>2026/09</p>
+                                </div>
+                                <div class="nr_rig">
+                                    <a href="http://mp-weixin-qq-com-s.vpn.swjtu.edu.cn:8118/s/0cczTg3vMJq500xk4qowfg" title="东部（国际）校区2027届毕业生首场校园招聘会成功举办！">东部（国际）校区2027届毕业生首场校园招聘会成功举办！</a>
+                                </div>
+                            </li>
+                        </ul>
+
+                        <ul>
+                            <li>
+                                <div class="rq-left"><strong>20</strong>
+                                    <p>2026/07</p>
+                                </div>
+                                <div class="nr_rig">
+                                    <a href="https://mp.weixin.qq.com/s/rFuwxzhDO79GqhuPTo0X2g" title="入驻东部（国际）校区 | 学院顺利完成集中搬迁">入驻东部（国际）校区 | 学院顺利完成集中搬迁</a>
+                                </div>
+                            </li>
+
+                            <li>
+                                <div class="rq-left"><strong>20</strong>
+                                    <p>2026/07</p>
+                                </div>
+                                <div class="nr_rig">
+                                    <a href="http://mp-weixin-qq-com-s.vpn.swjtu.edu.cn:8118/s/i8K14Kle-tItssIJIM6Oww" title="王平调研东部（国际）校区首批本科生搬迁入驻情况">王平调研东部（国际）校区首批本科生搬迁入驻情况</a>
+                                </div>
+                            </li>
+                        </ul>
+                        <div class="clearfix"></div>
+                    </div>
+
+<script>_showDynClickBatch(['dynclicks_u6_16050','dynclicks_u6_2916','dynclicks_u6_16060','dynclicks_u6_15910','dynclicks_u6_15880','dynclicks_u6_15840','dynclicks_u6_15830','dynclicks_u6_15370','dynclicks_u6_15360'],[16050,2916,16060,15910,15880,15840,15830,15370,15360],"wbnews", 1722204083)</script>
+</div>
+                <div class="clearfix"></div>
+                <div class="more-btn" aos="fade-up"><a href="xw/zxxw.htm" target="">更多</a></div>
+            </div>
+        </div>
+        </div>
+
+        <!--学术-->
+        <div class="xsbg">
+            <div class="container">
+                <div class="row xsbox">
+                    <div class="new-tit" aos="fade-up"><strong>学术</strong><i>ACADEMIC</i></div>
+                    <div class="col-xs-12 col-sm-6 col-md-6" aos="fade-up" aos-delay="0">
+
+                        
+                        <dl>
+                            <dt>
+                                <div class="xs-left"><strong>26</strong>
+                                    <p>2025/02</p>
+                                </div>
+                                <div class="xs_rig">
+                                    <h5><a href="info/1025/9980.htm" title="【讲座预告】探寻智能出行与交通安全研究的结合点">【讲座预告】探寻智能出行与交通安全研究的结合点</a></h5>
+                                    <p>
+                                        <span>袁泉</span>
+                                        <span>2月28日</span>
+                                        <span>X30820</span>
+                                    </p>
+                                </div>
+                            </dt>
+
+                            <dd>
+                                <div class="xs_rq"><span>05-17</span></div>
+                                <div class="xs_rig">
+                                    <h5><a href="info/1025/7230.htm" title="【讲座预告】Frede Blaabjerg：Power Electronics Technology - Quo Vadis">【讲座预告】Frede Blaabjerg：Power Electronics Technology - Quo Vadis</a></h5>
+                                    <p>
+                                        <span>Prof. Frede Blaabjerg</span>
+                                        <span>2024年5月18日14:30</span>
+                                        <span>X31641</span>
+                                    </p>
+                                </div>
+                            </dd>
+                            <dd>
+                                <div class="xs_rq"><span>05-16</span></div>
+                                <div class="xs_rig">
+                                    <h5><a href="info/1025/7120.htm" title="【讲座预告】全球胜任力工作坊——留学经验分享">【讲座预告】全球胜任力工作坊——留学经验分享</a></h5>
+                                    <p>
+                                        <span>保义</span>
+                                        <span>2024年5月16日16:00</span>
+                                        <span>X31641</span>
+                                    </p>
+                                </div>
+                            </dd>
+                            <dd>
+                                <div class="xs_rq"><span>05-10</span></div>
+                                <div class="xs_rig">
+                                    <h5><a href="info/1025/7200.htm" title="【学科竞赛】第十届“天府建造节”——城市设计专业大一学生巧手筑梦，智绘未来">【学科竞赛】第十届“天府建造节”——城市设计专业大一学生巧手筑梦，智绘未来</a></h5>
+                                    <p>
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                    </p>
+                                </div>
+                            </dd>
+                        </dl>
+                        <div class="clearfix"></div>
+
+<script>_showDynClickBatch(['dynclicks_u7_9980','dynclicks_u7_7230','dynclicks_u7_7120','dynclicks_u7_7200'],[9980,7230,7120,7200],"wbnews", 1722204083)</script>
+</div>
+                    <div class="col-xs-12 col-sm-3 col-md-3" aos="fade-up" aos-delay="50">
+                        <a href="zt/b_s_bqgzs.htm"><img src="images/xsimg1.jpg"></a>
+                    </div>
+                    <div class="col-xs-12 col-sm-3 col-md-3" aos="fade-up" aos-delay="100">
+                        <a href="zt/cptxyc.htm"><img src="images/xsimg2.jpg"></a>
+                    </div>
+                    <div class="clearfix"></div>
+                </div>
+                <div class="clearfix"></div>
+            </div>
+        </div>
+        <!--新闻-->
+        <div class="daybox">
+            <div class="container">
+                <div class="row">
+                    <div class="col-xs-12 col-sm-5 col-md-7" aos="fade-right">
+                        <div class="new-tit" aos="fade-up"><strong>通知公告</strong><i>NOTICE</i></div>
+                        <ul id="myTab" class="nav nav-tabs">
+                            <li class="active"><a href="#tz" data-toggle="tab">院务</a></li>
+                            <li><a href="#xs" data-toggle="tab">党群</a></li>
+                            <li><a href="#zs" data-toggle="tab">教学</a></li>
+                            <li><a href="#xg" data-toggle="tab">学工</a></li>
+                            <li><a href="#sz" data-toggle="tab">师资</a></li>
+                            <li><a href="#ky" data-toggle="tab">科研</a></li>
+                            <a href="tz/yw.htm" class="daymore">更多</a>
+                        </ul>
+                        <div id="myTabContent" class="tab-content">
+                            <div class="tab-pane fade in active" id="tz">
+
+                                <dl>
+                                    <dt>
+                                        <span>
+                                            <i>09</i>
+                                            <em>十月</em>
+                                        </span>
+                                        <div>
+                                            <h3><a href="info/1103/16190.htm" title="【奖助学金】智慧城市与交通学院关于开展2026年度“交大菁英”助学计划助学金评选工作的通知">【奖助学金】智慧城市与交通学院关于开展2026年度“交大菁英...</a></h3>
+                                            <p>全体2025级智慧交通专业同学：根据学校工作安排，现启动我院2026年度“交大菁英”助学计划助学金评选工作，具体事宜通知如下：一、评选要求及名额1...</p>
+                                        </div>
+                                    </dt>
+                                    <dd><a href="info/1103/16180.htm" title="【奖助学金】智慧城市与交通学院关于开展2026年度詹天佑奖学金评选工作的通知">【奖助学金】智慧城市与交通学院关于开展2026年度詹天佑奖学...</a><em>2026-10-09</em></dd>
+                                    <dd><a href="info/1103/16170.htm" title="智慧城市与交通学院关于开展2026年师生联欢会征集通知">智慧城市与交通学院关于开展2026年师生联欢会征集通知</a><em>2026-10-08</em></dd>
+                                    <dd><a href="info/1103/16140.htm" title="【园区工作】智慧城市与交通学院2026－2027学年第一学期第1次宿舍文明检查成绩公示及情况通报">【园区工作】智慧城市与交通学院2026－2027学年第一学期第1次...</a><em>2026-09-30</em></dd>
+                                    <dd><a href="info/1103/16120.htm" title="【评优工作】智慧城市与交通学院关于组织开展2025-2026学年研究生荣誉称号评选工作的通知">【评优工作】智慧城市与交通学院关于组织开展2025-2026学年研...</a><em>2026-09-28</em></dd>
+                                    <dd><a href="info/1101/16090.htm" title="【学生党建】城市轨道交通学院关于2026-02期入党积极分子名单的公示">【学生党建】城市轨道交通学院关于2026-02期入党积极分子名单...</a><em>2026-09-27</em></dd>
+                                </dl>
+
+<script>_showDynClickBatch(['dynclicks_u8_16190','dynclicks_u8_16180','dynclicks_u8_16170','dynclicks_u8_16140','dynclicks_u8_16120','dynclicks_u8_16090'],[16190,16180,16170,16140,16120,16090],"wbnews", 1722204083)</script>
+</div>
+                            <div class="tab-pane fade" id="xs">
+
+                                <dl>
+                                    <dt>
+                                        <span>
+                                            <i>27</i>
+                                            <em>九月</em>
+                                        </span>
+                                        <div>
+                                            <h3><a href="info/1101/16090.htm" title="【学生党建】城市轨道交通学院关于2026-02期入党积极分子名单的公示">【学生党建】城市轨道交通学院关于2026-02期入党积极分子名单...</a></h3>
+                                            <p>由个人提交入党申请，结合党支部派人谈话及各团支部“推优入党”（入党积极分子）情况，经学生党支部研究决定，现推荐王曈宇等52名同学为2026-02期...</p>
+                                        </div>
+                                    </dt>
+                                    <dd><a href="info/1101/15170.htm" title="关于开展2026年新生党员组织关系转接工作的通知">关于开展2026年新生党员组织关系转接工作的通知</a><em>2026-06-12</em></dd>
+                                    <dd><a href="info/1101/15160.htm" title="【学生党建】城市轨道交通学院关于2025-01期预备党员拟转正公示">【学生党建】城市轨道交通学院关于2025-01期预备党员拟转正公...</a><em>2026-06-05</em></dd>
+                                    <dd><a href="info/1101/15070.htm" title="关于开展2026届毕业生党员党组织关系转接的通知">关于开展2026届毕业生党员党组织关系转接的通知</a><em>2026-05-26</em></dd>
+                                    <dd><a href="info/1101/14910.htm" title="【学生党建】城市轨道交通学院关于2026-01期预备党员接收公示">【学生党建】城市轨道交通学院关于2026-01期预备党员接收公示</a><em>2026-05-08</em></dd>
+                                    <dd><a href="info/1101/14740.htm" title="【学生党建】城市轨道交通学院关于2026-01期党员发展对象名单的公示">【学生党建】城市轨道交通学院关于2026-01期党员发展对象名单...</a><em>2026-04-07</em></dd>
+                                </dl>
+
+<script>_showDynClickBatch(['dynclicks_u9_16090','dynclicks_u9_15170','dynclicks_u9_15160','dynclicks_u9_15070','dynclicks_u9_14910','dynclicks_u9_14740'],[16090,15170,15160,15070,14910,14740],"wbnews", 1722204083)</script>
+</div>
+                            <div class="tab-pane fade" id="zs">
+
+                                <dl>
+                                    <dt>
+                                        <span>
+                                            <i>18</i>
+                                            <em>九月</em>
+                                        </span>
+                                        <div>
+                                            <h3><a href="info/1102/15990.htm" title="西南交通大学智慧城市与交通学院2027年接收推荐免试攻读研究生工作实施细则">西南交通大学智慧城市与交通学院2027年接收推荐免试攻读研究...</a></h3>
+                                            <p>西南交通大学智慧城市与交通学院2027年接收推荐免试攻读研究生工作实施细则详见附件。</p>
+                                        </div>
+                                    </dt>
+                                    <dd><a href="info/1102/15940.htm" title="【免研8】智慧城市与交通学院2027届免试研究生拟推荐候选人名单公示">【免研8】智慧城市与交通学院2027届免试研究生拟推荐候选人名...</a><em>2026-09-14</em></dd>
+                                    <dd><a href="info/1102/15870.htm" title="【转专业】智慧城市与交通学院2026年本科生转专业拟录取学生名单公示">【转专业】智慧城市与交通学院2026年本科生转专业拟录取学生...</a><em>2026-09-10</em></dd>
+                                    <dd><a href="info/1102/15860.htm" title="【免研5】智慧城市与交通学院2027届推荐免试研究生综合成绩（第一版）公示">【免研5】智慧城市与交通学院2027届推荐免试研究生综合成绩（...</a><em>2026-09-08</em></dd>
+                                    <dd><a href="info/1102/15850.htm" title="【免研4】智慧城市与交通学院2027届推荐免试研究生综合评议加分申请（第一版）结果公示">【免研4】智慧城市与交通学院2027届推荐免试研究生综合评议加...</a><em>2026-09-08</em></dd>
+                                    <dd><a href="info/1102/15820.htm" title="关于组织开展智慧城市与交通学院2026年转专业面试工作通知">关于组织开展智慧城市与交通学院2026年转专业面试工作通知</a><em>2026-09-08</em></dd>
+                                </dl>
+
+<script>_showDynClickBatch(['dynclicks_u10_15990','dynclicks_u10_15940','dynclicks_u10_15870','dynclicks_u10_15860','dynclicks_u10_15850','dynclicks_u10_15820'],[15990,15940,15870,15860,15850,15820],"wbnews", 1722204083)</script>
+</div>
+                            <div class="tab-pane fade" id="xg">
+
+                                <dl>
+                                    <dt>
+                                        <span>
+                                            <i>09</i>
+                                            <em>十月</em>
+                                        </span>
+                                        <div>
+                                            <h3><a href="info/1103/16190.htm" title="【奖助学金】智慧城市与交通学院关于开展2026年度“交大菁英”助学计划助学金评选工作的通知">【奖助学金】智慧城市与交通学院关于开展2026年度“交大菁英...</a></h3>
+                                            <p>全体2025级智慧交通专业同学：根据学校工作安排，现启动我院2026年度“交大菁英”助学计划助学金评选工作，具体事宜通知如下：一、评选要求及名额1...</p>
+                                        </div>
+                                    </dt>
+                                    <dd><a href="info/1103/16180.htm" title="【奖助学金】智慧城市与交通学院关于开展2026年度詹天佑奖学金评选工作的通知">【奖助学金】智慧城市与交通学院关于开展2026年度詹天佑奖学...</a><em>2026-10-09</em></dd>
+                                    <dd><a href="info/1103/16170.htm" title="智慧城市与交通学院关于开展2026年师生联欢会征集通知">智慧城市与交通学院关于开展2026年师生联欢会征集通知</a><em>2026-10-08</em></dd>
+                                    <dd><a href="info/1103/16140.htm" title="【园区工作】智慧城市与交通学院2026－2027学年第一学期第1次宿舍文明检查成绩公示及情况通报">【园区工作】智慧城市与交通学院2026－2027学年第一学期第1次...</a><em>2026-09-30</em></dd>
+                                    <dd><a href="info/1103/16120.htm" title="【评优工作】智慧城市与交通学院关于组织开展2025-2026学年研究生荣誉称号评选工作的通知">【评优工作】智慧城市与交通学院关于组织开展2025-2026学年研...</a><em>2026-09-28</em></dd>
+                                    <dd><a href="info/1103/16100.htm" title="【评优工作】智慧城市与交通学院关于组织开展2025-2026学年本科生荣誉称号评选工作的通知">【评优工作】智慧城市与交通学院关于组织开展2025-2026学年本...</a><em>2026-09-27</em></dd>
+                                </dl>
+
+<script>_showDynClickBatch(['dynclicks_u11_16190','dynclicks_u11_16180','dynclicks_u11_16170','dynclicks_u11_16140','dynclicks_u11_16120','dynclicks_u11_16100'],[16190,16180,16170,16140,16120,16100],"wbnews", 1722204083)</script>
+</div>
+                            <div class="tab-pane fade" id="sz">
+
+                                <dl>
+                                </dl>
+
+
+</div>
+                            <div class="tab-pane fade" id="ky">
+
+                                <dl>
+                                </dl>
+
+
+</div>
+                        </div>
+                    </div>                
+                    <div class="col-xs-12 col-sm-7 col-md-5" aos="fade-left" aos-delay="50">
+                        <div id="demo">
+                            <div id="ca"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--专题-->
+        <div class="container">
+            <div class="row ztbox">                <div class="col-xs-12 col-sm-3 col-md-3" aos="fade-up" aos-delay="0">
+                    <div>
+                        <p class="ztit">
+                            <a href="zt/dsxxjy.htm" title="党建专栏">党的二十大<br />学校第十五次党代会 <br />党史学习教育</a>
+                        </p>
+                        <p class="zteng"></p>
+                        <a href="zt/dsxxjy.htm" title="党建专栏" class="ztmore">了解更多></a>
+                    </div>
+                    <span><img src="images/dsxx.png" alt=""></span>
+                </div>
+                <div class="col-xs-12 col-sm-3 col-md-3" aos="fade-down" aos-delay="50">
+                    <span><img src="images/qgzs.png" alt=""></span>
+                    <div>
+                        <p class="ztit">
+                            <a href="zt/b_s_bqgzs.htm" title="本、硕、博全国招生">本、硕、博全国招生</a>
+                        </p>
+                        <p class="zteng"></p>
+                        <a href="zt/b_s_bqgzs.htm" title="本、硕、博全国招生" class="ztmore">了解更多></a>
+                    </div>
+                </div>
+                <div class="col-xs-12 col-sm-3 col-md-3" aos="fade-up" aos-delay="100">
+                    <div>
+                        <p class="ztit">
+                            <a href="zt/cptxyc.htm" title="诚聘天下英才">诚聘天下英才</a>
+                        </p>
+                        <p class="zteng"></p>
+                        <a href="zt/cptxyc.htm" title="诚聘天下英才" class="ztmore">了解更多></a>
+                    </div>
+                    <span><img src="images/specialimg3.jpg" alt=""></span>
+                </div>
+                <div class="col-xs-12 col-sm-3 col-md-3" aos="fade-down" aos-delay="150">
+                    <span><img src="images/specialimg4.jpg" alt=""></span>
+                    <div>
+                        <p class="ztit">
+                            <a href="zt/zhcsyjtxy.htm" title="智慧城市与交通学院">智慧城市与交通学院</a>
+                        </p>
+                        <p class="zteng"></p>
+                        <a href="zt/zhcsyjtxy.htm" title="智慧城市与交通学院" class="ztmore">了解更多></a>
+                    </div>
+                </div>
+
+
+</div>
+        </div>
+        <!--视频-->
+        <div class="container">
+            <div class="row viderobox">
+                <div class="col-md-12" aos="fade-up" aos-delay="50"><a href="https://v.qq.com/x/page/a3312o5ayui.html?sf=uri" target="_blank" onclick="_addDynClicks(&#34;wburl&#34;, 1722204083, 76081)"><img src="https://iscit.swjtu.edu.cn/images/video1.jpg" alt=""></a>
+</div>
+            </div>
+        </div>
+        <!--logo-->
+        <div class="hot-product">                <div class="container">
+                <div class="row" aos="fade-up" aos-delay="50">
+                    <div class="hot-product-banner owl-carousel">
+                        <div class="owl-item">
+                            <img src="images/syy.png" alt="" />
+                            <div class="hot-product-bannder-content">
+                                <a href="https://www.enflame-tech.com/" target="_blank">官方网站</a>
+                            </div>
+                        </div>
+                        <div class="owl-item">
+                            <img src="images/km_.png" alt="" />
+                            <div class="hot-product-bannder-content">
+                                <a href="http://www.camy.com.cn/" target="_blank">官方网站</a>
+                            </div>
+                        </div>
+                        <div class="owl-item">
+                            <img src="images/jm.jpg" alt="" />
+                            <div class="hot-product-bannder-content">
+                                <a href="http://www.greenjm.cn/19529.html" target="_blank">官方网站</a>
+                            </div>
+                        </div>
+                        <div class="owl-item">
+                            <img src="images/ysw.jpg" alt="" />
+                            <div class="hot-product-bannder-content">
+                                <a href="http://www.isv-tech.com/" target="_blank">官方网站</a>
+                            </div>
+                        </div>
+                        <div class="owl-item">
+                            <img src="images/bd.jpg" alt="" />
+                            <div class="hot-product-bannder-content">
+                                <a href="https://www.baidu.com/" target="_blank">官方网站</a>
+                            </div>
+                        </div>
+                        <div class="owl-item">
+                            <img src="images/tx_.png" alt="" />
+                            <div class="hot-product-bannder-content">
+                                <a href="https://www.tencent.com/zh-cn/" target="_blank">官方网站</a>
+                            </div>
+                        </div>
+                        <div class="owl-item">
+                            <img src="images/jdd.jpg" alt="" />
+                            <div class="hot-product-bannder-content">
+                                <a href="https://www.jd.com/hprm/1318a2c1a7c274559f29.html" target="_blank">官方网站</a>
+                            </div>
+                        </div>
+                        <div class="owl-item">
+                            <img src="images/05logo.jpg" alt="" />
+                            <div class="hot-product-bannder-content">
+                                <a href="https://www.pcitech.com/" target="_blank">官方网站</a>
+                            </div>
+                        </div>
+                        <div class="owl-item">
+                            <img src="images/04logo.jpg" alt="" />
+                            <div class="hot-product-bannder-content">
+                                <a href="https://www.apollo.auto" target="_blank">官方网站</a>
+                            </div>
+                        </div>
+                        <div class="owl-item">
+                            <img src="images/03logo.jpg" alt="" />
+                            <div class="hot-product-bannder-content">
+                                <a href="https://cn.uniview.com/" target="_blank">官方网站</a>
+                            </div>
+                        </div>
+                        <div class="owl-item">
+                            <img src="images/02logo.jpg" alt="" />
+                            <div class="hot-product-bannder-content">
+                                <a href="https://www.jdjinsui.com/home" target="_blank">官方网站</a>
+                            </div>
+                        </div>
+                        <div class="owl-item">
+                            <img src="images/01logo.jpg" alt="" />
+                            <div class="hot-product-bannder-content">
+                                <a href="https://www.camet.org.cn/" target="_blank">官方网站</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div></div>
+        
+        <!--学校-->
+        <div class="widbfb">
+            <div class="container">
+                <div class="row" aos="fade-up">
+
+                    <div class="col-xs-3 col-sm-3 col-md-3" aos="fade-up" aos-delay="0" onclick="javascript:showimage('/__local/5/95/85/4291BE5DDA7EA7CC115CD3199B7_FA6CC4DA_807F0.jpg','','学院师生参加第123届校运会');" alt="">
+                        <img src="/__local/5/95/85/4291BE5DDA7EA7CC115CD3199B7_FA6CC4DA_807F0.jpg">
+                        <div>
+                            <p class="stime"></p>
+                            <p class="stext">学院师生参加第123届校运会</p>
+                        </div>
+                    </div>
+                    <div class="col-xs-3 col-sm-3 col-md-3" aos="fade-up" aos-delay="50">
+                        <ul>
+                            <li onclick="javascript:showimage('/__local/4/31/7A/5B91257E14A1DB2CD417691B9B8_F67B2AC2_712D5.jpg','','学生参加第五届太极拳比赛');" alt="">
+                                <img src="/__local/4/31/7A/5B91257E14A1DB2CD417691B9B8_F67B2AC2_712D5.jpg">
+                                <div>
+                                    <p class="stime"></p>
+                                    <p class="stext">学生参加第五届太极拳比赛</p>
+                                </div>
+                            </li>
+                            <li onclick="javascript:showimage('/__local/D/7C/14/6A2BCCA1B07D898983060761DCC_0B389BFB_65B64.jpg','','学院承办四川省科协创新型品牌科普活动');" alt="">
+                                <img src="/__local/D/7C/14/6A2BCCA1B07D898983060761DCC_0B389BFB_65B64.jpg">
+                                <div>
+                                    <p class="stime"></p>
+                                    <p class="stext">学院承办四川省科协创新型品牌科普活动</p>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-xs-3 col-sm-3 col-md-3" aos="fade-up" aos-delay="150" onclick="javascript:showimage('/__local/8/48/22/41455814D08481A76F48E7CF106_CAC8A16D_B39ED.jpg','','学生赴中国香港参加国际学科竞赛');" alt="">
+                        <img src="/__local/8/48/22/41455814D08481A76F48E7CF106_CAC8A16D_B39ED.jpg">
+                        <div>
+                            <p class="stime"></p>
+                            <p class="stext">学生赴中国香港参加国际学科竞赛</p>
+                        </div>
+                    </div>
+                    <div class="col-xs-3 col-sm-3 col-md-3" aos="fade-up" aos-delay="200">
+                        <ul>
+                            <li onclick="javascript:showimage('/__local/9/36/B6/4F2B1FB33C9EF4A8A15C88062F4_2973D71A_AD4F7.jpg','','学院开心农场喜迎农作物丰收');" alt="">
+                                <img src="/__local/9/36/B6/4F2B1FB33C9EF4A8A15C88062F4_2973D71A_AD4F7.jpg">
+                                <div>
+                                    <p class="stime"></p>
+                                    <p class="stext">学院开心农场喜迎农作物丰收</p>
+                                </div>
+                            </li>
+                            <li onclick="javascript:showimage('/__local/7/05/20/27422ED11E482E03056204C45A2_212092C8_84B2A.jpg','','学院举行首届师生联欢会');" alt="">
+                                <img src="/__local/7/05/20/27422ED11E482E03056204C45A2_212092C8_84B2A.jpg">
+                                <div>
+                                    <p class="stime"></p>
+                                    <p class="stext">学院举行首届师生联欢会</p>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+<script>_showDynClickBatch(['dynclicks_u17_6860','dynclicks_u17_6850','dynclicks_u17_6840','dynclicks_u17_6830','dynclicks_u17_6810','dynclicks_u17_6800'],[6860,6850,6840,6830,6810,6800],"wbnews", 1722204083)</script>
+</div>
+            </div>
+        </div>
+        
+        
+        <!--版权-->
+        <div class="foot-bg">
+            <div class="container">
+                <div class="row footer">
+                    <div class="col-xs-12 col-sm-12 col-md-5" aos="fade-right"><script language="javascript" src="/system/resource/js/news/mp4video.js"></script>
+
+<p><img src="/__local/9/C6/41/C47D2998028616C109B85A2F910_042A5EC1_58C9.png?e=.png" vsbhref="vurl" vurl="/_vsl/9C641C47D2998028616C109B85A2F910/042A5EC1/58C9?e=.png" vheight="" vwidth="" orisrc="/__local/9/C6/41/C47D2998028616C109B85A2F910_042A5EC1_58C9.png" class="img_vsb_content"></p>
+<p style="font-size: 14px; white-space: pre-wrap; text-align: left; line-height: normal"><span style="color: #ffffff">地址：中国四川省成都市东部新区林栖大道88号，641419</span></p>
+<p style="font-size: 14px; white-space: pre-wrap; text-align: left; line-height: normal"><span style="color: #ffffff">电话：028-8136 3757&nbsp;&nbsp;&nbsp;&nbsp; 028-8136 5891</span></p>
+<p style="font-size: 14px; white-space: pre-wrap; text-align: left; line-height: normal"><span style="color: #ffffff"><span><span><span><span>邮箱：iscit-go@swjtu.edu.cn</span></span></span></span></span></p>
+<p style="font-size: 14px; white-space: pre-wrap; text-align: left; line-height: normal"><span style="color: #ffffff">版权所有©西南交通大学</span></p>
+<p><br></p>
+<p><span style="font-size: 16px; color: #ffffff"></span></p>
+<p><span style="font-size: 16px; color: #ffffff"></span></p>
+<div yne-bulb-block="paragraph" style="font-size: 14px; white-space: pre-wrap; text-align: left; line-height: 1">
+ <span style="color: #ffffff"></span> &nbsp; &nbsp;
+ <div yne-bulb-block="paragraph" style="font-size: 14px; white-space: pre-wrap; text-align: left; line-height: 1">
+  <p><span style="font-size: 14px; font-family: 宋体FONT-FAMILY: 宋体"></span> &nbsp; &nbsp; &nbsp; &nbsp;</p>
+  <p><span style="font-size: 14px; font-family: 宋体FONT-FAMILY: 宋体"></span> &nbsp; &nbsp; &nbsp; &nbsp;</p>
+  <div yne-bulb-block="paragraph" style="font-size: 14px; white-space: pre-wrap; text-align: left; line-height: 1">
+   &nbsp;
+  </div>
+  <p><br> &nbsp; &nbsp; &nbsp; &nbsp;</p>
+  <p style="font-size: 14px; white-space: pre-wrap; text-align: left; line-height: normal">&nbsp;</p>
+ </div>
+</div></div>
+                    <div class="col-xs-12 col-sm-12 col-md-7" aos="fade-left" aos-delay="50">                        <ul>
+                            <li>
+                                <a href="index.htm" title="首页">首页<span>HOME</span></a>
+                                    <p>
+                                            <a href="xygk/xyjj.htm" title="学院概况">学院概况</a>
+                                            <a href="dqgz/dqxw.htm" title="党群工作">党群工作</a>
+                                            <a href="szdw/xrcyj.htm" title="师资队伍">师资队伍</a>
+                                            <a href="rcpy/zysz.htm" title="人才培养">人才培养</a>
+                                            <a href="xsgz/xgjj.htm" title="学生工作">学生工作</a>
+                                            <a href="hzjl/hzjg.htm" title="合作交流">合作交流</a>
+                                            <a href="cxxy/dbxqgk.htm" title="创新校园">创新校园</a>
+                                            <a href="zt/b_s_bqgzs.htm" title="加入我们">加入我们</a>
+                                    </p>
+                            </li>
+                            <li>
+                                <a href="xygk/xyjj.htm" title="学院概况">学院概况<span>OVERVIEW</span></a>
+                                    <p>
+                                        <a href="xygk/xyjj.htm" title="学院简介">学院简介</a>
+                                        <a href="xygk/gltd.htm" title="管理团队">管理团队</a>
+                                        <a href="xygk/zzjg.htm" title="组织机构">组织机构</a>
+                                        <a href="xygk/jslc.htm" title="建设历程">建设历程</a>
+                                        <a href="xygk/lxwm.htm" title="联系我们">联系我们</a>
+                                    </p>
+                            </li>
+                            <li>
+                                <a href="dqgz/dqxw.htm" title="党群工作">党群工作<span>PARTY</span></a>
+                                    <p>
+                                        <a href="dqgz/dqjj.htm" title="党群简介">党群简介</a>
+                                        <a href="dqgz/dqxw.htm" title="党群新闻">党群新闻</a>
+                                    </p>
+                            </li>
+                            <li>
+                                <a href="szdw/xrcyj.htm" title="师资队伍">师资队伍<span>FACULTY</span></a>
+                                    <p>
+                                        <a href="szdw/xrcyj.htm" title="人才引进">人才引进</a>
+                                        <a href="szdw/xszml.htm" title="师资名录">师资名录</a>
+                                    </p>
+                            </li>
+                            <li>
+                                <a href="rcpy/zysz.htm" title="人才培养">人才培养<span>EDUCATION</span></a>
+                                    <p>
+                                        <a href="rcpy/zysz.htm" title="专业设置">专业设置</a>
+                                        <a href="rcpy/tsys.htm" title="特色优势">特色优势</a>
+                                        <a href="rcpy/ptjs.htm" title="平台建设">平台建设</a>
+                                        <a href="rcpy/xsds.htm" title="学术导师">学术导师</a>
+                                    </p>
+                            </li>
+                            <li>
+                                <a href="xsgz/xgjj.htm" title="学生工作">学生工作<span>STUDENT WORK</span></a>
+                                    <p>
+                                        <a href="xsgz/xgjj.htm" title="学工简介">学工简介</a>
+                                        <a href="xsgz/txxw.htm" title="团学新闻">团学新闻</a>
+                                        <a href="xsgz/jzxj.htm" title="奖助学金">奖助学金</a>
+                                    </p>
+                            </li>
+                            <li>
+                                <a href="hzjl/hzjg.htm" title="合作交流">合作交流<span>COLLABORATIONS</span></a>
+                                    <p>
+                                        <a href="hzjl/hzln.htm" title="合作理念">合作理念</a>
+                                        <a href="hzjl/hzjg.htm" title="合作机构">合作机构</a>
+                                    </p>
+                            </li>
+                            <li>
+                                <a href="cxxy/dbxqgk.htm" title="创新校园">创新校园<span>CAMPUS</span></a>
+                                    <p>
+                                        <a href="cxxy/dbxqgk.htm" title="东部(国际)校区">东部(国际)校区</a>
+                                        <a href="cxxy/xyqw.htm" title="校园区位">校园区位</a>
+                                        <a href="cxxy/xyghln.htm" title="校园规划理念">校园规划理念</a>
+                                        <a href="cxxy/xmjsgm.htm" title="项目建设规模">项目建设规模</a>
+                                        <a href="cxxy/xydtjz.htm" title="校园单体建筑">校园单体建筑</a>
+                                        <a href="cxxy/zhxygh.htm" title="智慧校园规划">智慧校园规划</a>
+                                    </p>
+                            </li>
+                            <li>
+                                <a href="zt/b_s_bqgzs.htm" title="加入我们">加入我们<span>JOIN US</span></a>
+                                    <p>
+                                        <a href="zt/b_s_bqgzs.htm" title="报考我们">报考我们</a>
+                                        <a href="zt/cptxyc.htm" title="应聘我们">应聘我们</a>
+                                    </p>
+                            </li>
+</div>
+                    <div class="clearfix"></div>
+                    <div class="footimg">
+                        <img src="images/foot-img2.png" alt="">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--弹出模态框大图-->
+        <div class="modal fade" id="ShowImage_Form" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+            <div class="modal-dialog mndt-box">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="img_show">
+                        </div>
+                        <div class="scr-text">
+                            <p class="stime" id="img_sj"></p>
+                            <p class="stext" id="img_dd"></p>
+                        </div>
+                    </div>
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div>
+        <script type="text/javascript" src="js/jquery.min.js"></script>
+        <script src="js/bootstrap.min.js"></script>
+        <script type="text/javascript" src="js/plugins.js"></script>
+        <script type="text/javascript" src="js/test1.js"></script>
+        <script type="text/javascript" src="js/calendar.js?ver=1.01"></script>
+        <script type="text/javascript" src="js/highlight.min.js"></script>
+        <script type="text/javascript" src="js/aos.js"></script>
+        <script type="text/javascript" src="js/common.js?ver=1.01"></script>
+        <script>
+            new Calendar({
+                // 设置显示位置
+                parent: 'ca',
+                // 初始化显示时间
+                // viewMode：
+                // 0 - 日期模式（默认值）
+                viewMode: 0,
+                hasFooter: false,
+                DAYS: ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"],
+                pickMode: 'multiple',
+                // 配置日期选择的事件处理器 onDatePick，参数如下：
+                // time - 选中的日期时间
+                // $el - 点击的 DOM 节点
+                // calendar - 日历控件的实例
+                onDatePick: function(time, $el, calendar) {
+                    //console.log('选择时间：', time)
+                    //console.log('选择DOM：', $el)
+                    //console.log('日历实例：', calendar)
+                },
+                setDate: ["2021-2-19"],
+                onYearPick: function(time, $el, calendar) {
+                    return false
+                },
+                onMonthPick: function(time, $el, calendar) {
+                    return false
+                }
+            })
+        </script>
+        <script>
+            AOS.init({
+                disable: window.innerWidth < 1200
+            });
+        </script>
+
+        <script>
+            hljs.initHighlightingOnLoad();
+            $('.hero__scroll').on('click', function(e) {
+                $('html, body').animate({
+                    scrollTop: $(window).height()
+                }, 1200);
+            });
+        </script>
+
+        <script>
+            $('#myTab a').mouseover(function(e){
+                e.preventDefault();
+                $(this).tab('show');
+            })
+        </script>        
+                
+    </body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

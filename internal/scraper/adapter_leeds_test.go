@@ -283,3 +283,40 @@ func TestLeedsResourceValidationRequiresHTTPContentTypeAndMagic(t *testing.T) {
 		t.Fatal("mismatched PDF magic was accepted")
 	}
 }
+
+func TestLeedsLiveHomepageSupportsIndexFeed(t *testing.T) {
+	items, err := parseLeedsNews(readLeedsFixture(t, "leeds_live_home.html"), "https://leeds.swjtu.edu.cn")
+	if err != nil {
+		t.Fatalf("parse Leeds live homepage: %v", err)
+	}
+	if len(items) != 21 {
+		t.Fatalf("live homepage item count = %d, want 21: %#v", len(items), items)
+	}
+	counts := map[string]int{}
+	seen := map[string]bool{}
+	for _, item := range items {
+		counts[item.Type]++
+		if seen[item.URL] {
+			t.Errorf("duplicate live homepage URL: %s", item.URL)
+		}
+		seen[item.URL] = true
+		if !strings.HasPrefix(item.URL, "https://leeds.swjtu.edu.cn/info/") {
+			t.Errorf("live homepage leaked non-local URL: %#v", item)
+		}
+	}
+	for _, module := range []string{"学院新闻", "学院通知", "信息公示", "活动预告"} {
+		if counts[module] == 0 {
+			t.Errorf("live homepage module %q has no items: %#v", module, counts)
+		}
+	}
+
+	// The homepage is a single-page preview feed, not a reverse-numbered archive.
+	for _, slug := range []string{"", "index"} {
+		if pages, err := leedsTotalPages(slug); err != nil || pages != 1 {
+			t.Fatalf("leedsTotalPages(%q) = %d, %v; want 1, nil", slug, pages, err)
+		}
+	}
+	if pages, err := leedsTotalPagesFromHTML(readLeedsFixture(t, "leeds_live_home.html"), "index"); err != nil || pages != 1 {
+		t.Fatalf("leedsTotalPagesFromHTML(index) = %d, %v; want 1, nil", pages, err)
+	}
+}

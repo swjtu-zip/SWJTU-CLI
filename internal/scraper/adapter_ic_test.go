@@ -39,10 +39,10 @@ func TestICAdapterRegistrationAndFeeds(t *testing.T) {
 func TestICPageURLUsesReverseGeneratedFiles(t *testing.T) {
 	base := icTestBaseURL
 	want := map[string]string{
-		"first":  base + "/xwzx.htm",
-		"second": base + "/xwzx/2.htm",
-		"middle": base + "/xwzx/2.htm",
-		"last":   base + "/xwzx/1.htm",
+		"first":  base + "/xwzx/xwjj.htm",
+		"second": base + "/xwzx/xwjj/2.htm",
+		"middle": base + "/xwzx/xwjj/2.htm",
+		"last":   base + "/xwzx/xwjj/1.htm",
 	}
 	got := map[string]string{
 		"first":  icPageURL(base, "xwzx", 1, 3, ".htm"),
@@ -52,6 +52,9 @@ func TestICPageURLUsesReverseGeneratedFiles(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("reverse page URLs = %#v, want %#v", got, want)
+	}
+	if got := icPageURL(base, "index", 1, 0, ".htm"); got != base+"/index.htm" {
+		t.Fatalf("index page URL = %q, want %s", got, base+"/index.htm")
 	}
 	for _, tc := range []struct {
 		page, total int
@@ -71,16 +74,16 @@ func TestICPageURLUsesReverseGeneratedFiles(t *testing.T) {
 
 func TestICListPageFetchesFirstMiddleLastAndRejectsOutOfRange(t *testing.T) {
 	fixtures := map[string][]byte{
-		"/xwzx.htm":   loadICFixture(t, "ic_list_first.html"),
-		"/xwzx/2.htm": loadICFixture(t, "ic_list_middle.html"),
-		"/xwzx/1.htm": loadICFixture(t, "ic_list_last.html"),
-		"/xwzx/0.htm": loadICFixture(t, "ic_list_out_of_range.html"),
+		"/xwzx/xwjj.htm": loadICFixture(t, "ic_list_first.html"),
+		"/xwzx/xwjj/2.htm": loadICFixture(t, "ic_list_middle.html"),
+		"/xwzx/xwjj/1.htm": loadICFixture(t, "ic_list_last.html"),
+		"/xwzx/xwjj/0.htm": loadICFixture(t, "ic_list_out_of_range.html"),
 	}
 	var requests []string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requests = append(requests, r.URL.Path)
 		body, ok := fixtures[r.URL.Path]
-		if !ok || r.URL.Path == "/xwzx/0.htm" {
+		if !ok || r.URL.Path == "/xwzx/xwjj/0.htm" {
 			http.NotFound(w, r)
 			return
 		}
@@ -114,7 +117,7 @@ func TestICListPageFetchesFirstMiddleLastAndRejectsOutOfRange(t *testing.T) {
 		t.Fatalf("static route was accepted: %v", err)
 	}
 	for _, path := range requests {
-		if path == "/xwzx/0.htm" {
+		if path == "/xwzx/xwjj/0.htm" {
 			t.Fatal("out-of-range page requested physical /0.htm")
 		}
 	}
@@ -382,5 +385,230 @@ func TestICPageFixtureNamesAreStable(t *testing.T) {
 		if !strings.Contains(items[0].Title, fmt.Sprintf("第%d页", page)) {
 			t.Fatalf("fixture page %d title = %q", page, items[0].Title)
 		}
+	}
+}
+
+// The live site was re-themed: articles use .show_1 instead of .show01, the
+// homepage is a real article list that backs the implicit index feed, and
+// xwzx.htm turned into a column hub whose news list moved to xwzx/xwjj.htm.
+// The ic_live_* fixtures are copies of the real pages captured on 2026-10-09.
+
+func TestICIndexFeedParsesLiveHomepage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/index.htm" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(loadICFixture(t, "ic_live_home.html"))
+	}))
+	defer server.Close()
+
+	site := AllSites["ic"]
+	oldBase, oldClient, oldNoCache := site.BaseURL, defaultClient, NoCache
+	site.BaseURL, defaultClient, NoCache = server.URL, server.Client(), true
+	t.Cleanup(func() { site.BaseURL, defaultClient, NoCache = oldBase, oldClient, oldNoCache })
+
+	items, total, err := icListPage("index", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 1 {
+		t.Fatalf("index total pages = %d, want 1", total)
+	}
+	if len(items) != 10 {
+		t.Fatalf("index items = %d, want 10 (6 news + 4 notices): %#v", len(items), items)
+	}
+	byType := make(map[string]int)
+	for _, item := range items {
+		if !strings.Contains(item.URL, "/info/") {
+			t.Fatalf("non-article homepage URL %q", item.URL)
+		}
+		if item.Title == "" || item.Date == "" || item.Type == "" {
+			t.Fatalf("incomplete homepage metadata: %+v", item)
+		}
+		byType[item.Type]++
+	}
+	if byType["新闻动态"] != 6 || byType["通知公告"] != 4 {
+		t.Fatalf("homepage type mix = %#v, want 6 新闻动态 + 4 通知公告", byType)
+	}
+	if _, _, err := icListPage("index", 2); err == nil || !strings.Contains(err.Error(), "out of range") {
+		t.Fatalf("index page 2 error = %v, want out of range", err)
+	}
+	if _, _, err := icListPage("portal", 1); err == nil || !strings.Contains(err.Error(), "non-article feed") {
+		t.Fatalf("unknown feed error = %v, want non-article feed", err)
+	}
+}
+
+func TestICLiveArticleParsesNewShowTemplate(t *testing.T) {
+	article, err := parseAdapter_icArticle(loadICFixture(t, "ic_live_article.html"), icTestBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title != "西南交通大学东部（国际）校区求实餐厅档口（饮品）技术合作项目成交公告" {
+		t.Fatalf("title = %q", article.Title)
+	}
+	if article.Type != "新闻动态" {
+		t.Fatalf("type = %q, want 新闻动态 from the 新闻中心 breadcrumb", article.Type)
+	}
+	if article.Date != "2026-09-29" || article.PublishedAt != "2026-09-29" {
+		t.Fatalf("date/published_at = %q/%q, want date-only metadata", article.Date, article.PublishedAt)
+	}
+	if strings.Contains(article.PublishedAt, ":") {
+		t.Fatalf("publication clock invented from date-only meta row: %q", article.PublishedAt)
+	}
+	if !strings.Contains(article.Content, "评审工作已经结束") {
+		t.Fatalf("body text missing: %q", article.Content)
+	}
+	if strings.Contains(article.Content, "推荐阅读") {
+		t.Fatalf("related-reading block leaked into body: %q", article.Content)
+	}
+	if len(article.Images) != 0 || len(article.Attachments) != 0 {
+		t.Fatalf("resources invented on a text-only article: images=%v attachments=%v", article.Images, article.Attachments)
+	}
+}
+
+func TestICLiveXwjjListHasReversePagination(t *testing.T) {
+	body := loadICFixture(t, "ic_live_list_xwjj.html")
+	items, err := parseAdapter_icList(body, icTestBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 9 {
+		t.Fatalf("xwzx items = %d, want 9: %#v", len(items), items)
+	}
+	first := items[0]
+	if first.Title != "四川省教育考试院调研东部（国际）校区标准化考场建设" || first.Date != "2026-09-20" {
+		t.Fatalf("first item = %+v", first)
+	}
+	if first.Type != "新闻动态" {
+		t.Fatalf("first item type = %q, want 新闻动态 (新闻聚焦 nav)", first.Type)
+	}
+	total, err := icTotalPagesFromHTML(body, "xwzx")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 18 {
+		t.Fatalf("xwzx total pages = %d, want 18 from .p_pages", total)
+	}
+}
+
+func TestICListPageMapsXwzxLogicalPagesToLiveFiles(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body []byte
+		switch r.URL.Path {
+		case "/xwzx/xwjj.htm":
+			body = loadICFixture(t, "ic_live_list_xwjj.html")
+		case "/xwzx/xwjj/17.htm":
+			body = loadICFixture(t, "ic_live_list_xwjj_p2.html")
+		default:
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(body)
+	}))
+	defer server.Close()
+
+	site := AllSites["ic"]
+	oldBase, oldClient, oldNoCache := site.BaseURL, defaultClient, NoCache
+	site.BaseURL, defaultClient, NoCache = server.URL, server.Client(), true
+	t.Cleanup(func() { site.BaseURL, defaultClient, NoCache = oldBase, oldClient, oldNoCache })
+
+	items, total, err := icListPage("xwzx", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 18 || len(items) != 9 {
+		t.Fatalf("xwzx page 1 = total %d items %d, want 18/9", total, len(items))
+	}
+	items, total, err = icListPage("xwzx", 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 18 || len(items) != 9 {
+		t.Fatalf("xwzx page 2 = total %d items %d, want 18/9", total, len(items))
+	}
+	if !strings.HasSuffix(items[0].URL, "/info/1061/2841.htm") {
+		t.Fatalf("xwzx page 2 first URL = %q, want /info/1061/2841.htm", items[0].URL)
+	}
+	if _, _, err := icListPage("xwzx", 19); err == nil || !strings.Contains(err.Error(), "out of range") {
+		t.Fatalf("xwzx page 19 error = %v, want out of range", err)
+	}
+}
+
+func TestICLiveTzggListFiltersExternalRows(t *testing.T) {
+	body := loadICFixture(t, "ic_live_list_tzgg.html")
+	items, err := parseAdapter_icList(body, icTestBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 11 {
+		t.Fatalf("tzgg items = %d, want 11 local rows (external ISCit row filtered): %#v", len(items), items)
+	}
+	if items[0].Title != "西南交通大学东部（国际）校区求实餐厅档口（饮品）技术合作项目成交公告" || items[0].Date != "2026-09-29" {
+		t.Fatalf("first item = %+v", items[0])
+	}
+	if items[0].Type != "通知公告" {
+		t.Fatalf("first item type = %q, want 通知公告", items[0].Type)
+	}
+	for _, item := range items {
+		if strings.Contains(item.URL, "iscit.swjtu.edu.cn") {
+			t.Fatalf("external notice leaked into tzgg feed: %q", item.URL)
+		}
+	}
+	total, err := icTotalPagesFromHTML(body, "xwzx/tzgg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 1 {
+		t.Fatalf("tzgg total pages = %d, want 1", total)
+	}
+}
+
+func TestICLiveColumnHubIsNotAPaginatedList(t *testing.T) {
+	body := loadICFixture(t, "ic_live_hub.html")
+	if _, err := icTotalPagesFromHTML(body, "xwzx"); err == nil || !strings.Contains(err.Error(), "no source pagination") {
+		t.Fatalf("hub total pages error = %v, want no source pagination", err)
+	}
+}
+
+func TestICListNewsRangeEndToEndOverLiveFixtures(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body []byte
+		switch r.URL.Path {
+		case "/index.htm":
+			body = loadICFixture(t, "ic_live_home.html")
+		case "/xwzx/xwjj.htm":
+			body = loadICFixture(t, "ic_live_list_xwjj.html")
+		case "/xwzx/xwjj/17.htm":
+			body = loadICFixture(t, "ic_live_list_xwjj_p2.html")
+		default:
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(body)
+	}))
+	defer server.Close()
+
+	site := AllSites["ic"]
+	oldBase, oldClient, oldNoCache := site.BaseURL, defaultClient, NoCache
+	site.BaseURL, defaultClient, NoCache = server.URL, server.Client(), true
+	t.Cleanup(func() { site.BaseURL, defaultClient, NoCache = oldBase, oldClient, oldNoCache })
+
+	indexItems, err := site.ListNewsRange("index", "2000-01-01", "2099-12-31", 0)
+	if err != nil {
+		t.Fatalf("index ListNewsRange: %v", err)
+	}
+	if len(indexItems) != 10 {
+		t.Fatalf("index ListNewsRange items = %d, want 10", len(indexItems))
+	}
+	xwzxItems, err := site.ListNewsRange("xwzx", "2000-01-01", "2099-12-31", 2)
+	if err != nil {
+		t.Fatalf("xwzx ListNewsRange: %v", err)
+	}
+	if len(xwzxItems) != 18 {
+		t.Fatalf("xwzx ListNewsRange items = %d, want 18 (9 + 9 over two pages)", len(xwzxItems))
 	}
 }

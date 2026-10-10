@@ -236,6 +236,117 @@ func TestIscitRejectsStaticShellsWAFAndUnverifiedShortLists(t *testing.T) {
 	}
 }
 
+func TestIscitIndexFeedIsAuditedHomepage(t *testing.T) {
+	if !iscitKnownFeed("index") {
+		t.Fatal("iscit index feed is not registered as audited")
+	}
+	if got := iscitPageURL(iscitCanonicalBaseURL, "index", 1, 0, ".htm"); got != iscitCanonicalBaseURL+"/index.htm" {
+		t.Fatalf("index page URL = %q", got)
+	}
+	if got := iscitPageURL(iscitCanonicalBaseURL, "index", 2, 1, ".htm"); got != "" {
+		t.Fatalf("index page 2 URL = %q, want empty", got)
+	}
+
+	home := readIscitFixture(t, "iscit_live_index.html")
+	if total, err := iscitTotalPagesFromHTML(home, "index"); err != nil || total != 1 {
+		t.Fatalf("index total = %d, err=%v; want 1", total, err)
+	}
+	items, err := parseIscitNews(home, iscitCanonicalBaseURL)
+	if err != nil {
+		t.Fatalf("parse live homepage: %v", err)
+	}
+	if len(items) < 10 {
+		t.Fatalf("live homepage yielded %d items, want at least 10", len(items))
+	}
+	for _, item := range items {
+		if _, ok := iscitArticleURL(iscitCanonicalBaseURL, item.URL); !ok {
+			t.Fatalf("homepage item is not a local article: %#v", item)
+		}
+		if item.Title == "" || item.Type == "" {
+			t.Fatalf("homepage item lost title/type: %#v", item)
+		}
+	}
+
+	// A real list slug must keep refusing the homepage shell, and unknown
+	// slugs stay unaudited (defense in depth around the index allowance).
+	if _, err := iscitTotalPagesFromHTML(home, "xw/zxxw"); err == nil {
+		t.Fatal("homepage shell accepted for a non-index list slug")
+	}
+	if iscitKnownFeed("index/nope") {
+		t.Fatal("unexpected slug treated as the index feed")
+	}
+	if _, err := iscitTotalPages("not-a-feed"); err == nil {
+		t.Fatal("unknown slug accepted by total-pages lookup")
+	}
+}
+
+func TestIscitLiveZxxwKeepsLocalRowsAmongExternalOnes(t *testing.T) {
+	raw := readIscitFixture(t, "iscit_live_zxxw.html")
+	items, err := parseIscitNews(raw, iscitCanonicalBaseURL)
+	if err != nil {
+		t.Fatalf("parse live zxxw list: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("live zxxw local items = %#v, want exactly the one local row", items)
+	}
+	if items[0].URL != iscitCanonicalBaseURL+"/info/1024/2916.htm" || items[0].Title != "诚聘海内外英才" || items[0].Date != "2025-03-01" || items[0].Type != "最新新闻" {
+		t.Fatalf("live zxxw local item = %#v", items[0])
+	}
+	if total, err := iscitTotalPagesFromHTML(raw, "xw/zxxw"); err != nil || total != 50 {
+		t.Fatalf("live zxxw source total = %d, err=%v; want 50", total, err)
+	}
+}
+
+func TestIscitAllExternalRowsAreVerifiedEmptyNotAnError(t *testing.T) {
+	const externalList = `<!doctype html>
+<html><head><meta name="pageType" content="2"><meta name="pageTitle" content="最新新闻"><title>最新新闻</title></head>
+<body>
+<div class="new-list"><div class="newlb-box"><ul>
+<li><div class="newlb-left"><strong>22</strong><p>2026.09</p></div>
+<div class="newlb-rig"><h6><a href="https://mp.weixin.qq.com/s/kQg1HdPhSBF_5qngdrpikg" title="智慧城市与交通学院2026级学生开学典礼圆满举行">智慧城市与交通学院2026级学生开学典礼圆满举行</a></h6><p></p></div></li>
+<li><div class="newlb-left"><strong>22</strong><p>2026.09</p></div>
+<div class="newlb-rig"><h6><a href="http://mp-weixin-qq-com-s.vpn.swjtu.edu.cn:8118/s/gZ8VVJTVbW0lkeqzfmZZQw" title="东部（国际）校区2027届毕业生首场专场双选会成功举办">东部（国际）校区2027届毕业生首场专场双选会成功举办</a></h6><p></p></div></li>
+<li><div class="newlb-left"><strong>13</strong><p>2026.09</p></div>
+<div class="newlb-rig"><h6><a href="https://mp.weixin.qq.com/s/aCNyVSNFJZsLvVrvxjITwg" title="学院召开本科2026级新生家校沟通会">学院召开本科2026级新生家校沟通会</a></h6><p></p></div></li>
+</ul></div></div>
+<span class="p_pages"><span class="p_no_d">1</span><span class="p_no"><a href="zxxw/49.htm">2</a></span></span>
+</body></html>`
+	items, err := parseIscitNews([]byte(externalList), iscitCanonicalBaseURL)
+	if err != nil {
+		t.Fatalf("all-external list must be a verified empty feed, not an error: %v", err)
+	}
+	if items == nil || len(items) != 0 {
+		t.Fatalf("all-external list items = %#v, want non-nil empty", items)
+	}
+
+	// A same-host non-article anchor means the template changed: keep the
+	// hard error instead of swallowing the rows.
+	const sameHostStatic = `<!doctype html>
+<html><head><meta name="pageType" content="2"><meta name="pageTitle" content="最新新闻"><title>最新新闻</title></head>
+<body>
+<div class="new-list"><div class="newlb-box"><ul>
+<li><div class="newlb-rig"><h6><a href="../xygk/xyjj.htm" title="学院简介">学院简介</a></h6></div></li>
+</ul></div></div>
+<span class="p_pages"><span class="p_no_d">1</span></span>
+</body></html>`
+	if _, err := parseIscitNews([]byte(sameHostStatic), iscitCanonicalBaseURL); err == nil {
+		t.Fatal("same-host static rows were silently swallowed as an external list")
+	}
+
+	// Rows without any resolvable content anchor are a structural change too.
+	const noAnchors = `<!doctype html>
+<html><head><meta name="pageType" content="2"><meta name="pageTitle" content="最新新闻"><title>最新新闻</title></head>
+<body>
+<div class="new-list"><div class="newlb-box"><ul>
+<li><div class="newlb-rig"><h6>只有标题没有链接</h6></div></li>
+</ul></div></div>
+<span class="p_pages"><span class="p_no_d">1</span></span>
+</body></html>`
+	if _, err := parseIscitNews([]byte(noAnchors), iscitCanonicalBaseURL); err == nil {
+		t.Fatal("anchor-less rows were silently swallowed as an external list")
+	}
+}
+
 func TestIscitArticleDate(t *testing.T) {
 	html, err := os.ReadFile("testdata/iscit_article.html")
 	if err != nil {

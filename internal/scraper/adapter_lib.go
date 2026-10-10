@@ -76,9 +76,12 @@ var libTokenState struct {
 // The portal is a Smart Library/VIPS application rather than one of the
 // university's ordinary 博达 pages.  Keep all selectors and URL rules here;
 // sharing the generic parser would turn service/resource links into news.
+// The served homepage is a client-rendered SPA shell with no article list,
+// so the SDK must not synthesize an implicit "index" feed for it.
 func init() {
 	if site := AllSites["lib"]; site != nil {
 		site.BaseURL = libCanonicalBaseURL
+		site.NoIndexFeed = true
 	}
 	registerAdapter("lib", SiteAdapter{
 		SubPages:     libSubPages,

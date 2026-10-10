@@ -1,0 +1,708 @@
+﻿<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="renderer" content="webkit" />
+        <meta name="force-rendering" content="webkit" />
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1" />
+        <title>西南交通大学科技发展集团有限公司</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="西南交通大学科技发展集团有限公司">
+<META Name="keywords" Content="西南交通大学科技发展集团有限公司" />
+
+        <meta name="description" content="" />
+        
+        <meta name="viewport" content="width=device-width, maximum-scale=1, initial-scale=1, user-scalable=no, viewport-fit=cover">
+        <link rel="stylesheet" type="text/css" href="static/css/swiper.min.css" />
+        <link rel="stylesheet" type="text/css" href="static/css/normalize.css" />
+        <link rel="stylesheet" type="text/css" href="static/css/style.css" />
+        <link rel="stylesheet" type="text/css" href="static/css/responsive.css" />
+    <!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1001,'/index.jsp',-1,1799702144)</script>
+</head>
+    <body>
+        <header class="header">
+            
+            <div class="header-bd">
+                <div class="wrapper">
+                    <div class="logo img">                      
+                        <a href="index.htm" target="">
+                            <img src="static/images/logo1.png" alt="">
+                        </a>                        
+                    </div>
+                    <div class="serch">
+                                        <!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu0 .qwss{
+        border: solid 2px rgba(0, 0, 0, 0.16);
+        display: block;
+        padding: 0 90px 0 20px;
+        height: 100%;
+        width: 100%;}
+    #appu0 .tj{
+        position: absolute;
+        top: 0;
+        right: 0;
+        border: none;
+        background: #074b9e;
+        height: 100%;
+        width: 86px;
+        color: #fff;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        text-align: center;
+        padding: 0 0;}
+</style>
+<div id="divu0" style="height: 100%;"></div>
+<script type="text/html" id="htmlu0">
+    <div id="appu0" style="height: 100%;">
+        <div v-if="!isError" style="height: 100%;">
+            <input type="text" class="qwss" placeholder="站内搜索" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+            <input class="tj" name="submit_button" type="button" value="搜索" v-on:click="onSubmit()"/>
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu0").html($("#htmlu0").text());
+</script>
+<script>
+    var appOwner = "1799702144";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu0",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu0 = document.querySelector("#appu0");
+   if (appElementu0 && appElementu0.__vue__) {
+
+   } else {
+      $("#divu0").html($("#htmlu0").text());
+      var appOwner = "1799702144";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou0 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu0(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu0();
+        }
+      };
+
+      function onSubmitu0(e) {
+        queryInfou0.query.keyWord= $("#appu0  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou0.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+                                        </div>
+                    <div class="gh">
+                        <a href="javascript:void(0);"></a>
+                    </div>
+                </div>
+            </div>
+            <nav class="nav">
+                <div class="wrapper"><UL>
+  
+    <li><a href="index.htm">首页</a>
+    </li>  
+
+    <li><a href="jtgk/jtjj.htm">集团概况</a>
+       <i class="icon"></i>
+         <div class="childer">
+                <a href="jtgk/jtjj.htm">集团简介</a>
+                <a href="jtgk/zzjg.htm">组织架构</a>
+                <a href="jtgk/bmzz.htm">部门职责</a>
+         </div>
+    </li>  
+
+    <li><a href="xwzx/xwdt.htm">新闻中心</a>
+       <i class="icon"></i>
+         <div class="childer">
+                <a href="xwzx/xwdt.htm">新闻动态</a>
+                <a href="xwzx/tzgg.htm">通知公告</a>
+         </div>
+    </li>  
+
+    <li><a href="djgz/djdt.htm">党建工作</a>
+       <i class="icon"></i>
+         <div class="childer">
+                <a href="djgz/djdt.htm">党建动态</a>
+                <a href="djgz/zbdj.htm">支部党建</a>
+                <a href="djgz/lxjc.htm">联系基层</a>
+         </div>
+    </li>  
+
+    <li><a href="jjgz/jjdt.htm">纪检工作</a>
+       <i class="icon"></i>
+         <div class="childer">
+                <a href="jjgz/jjdt.htm">纪检动态</a>
+                <a href="jjgz/djfg.htm">党纪法规</a>
+                <a href="jjgz/jsjy.htm">警示教育</a>
+                <a href="jjgz/jdjb.htm">监督举报</a>
+         </div>
+    </li>  
+
+    <li><a href="qywh.htm">企业文化</a>
+       <i class="icon"></i>
+         <div class="childer">
+                <a href="qywh/qydt.htm">企业动态</a>
+                <a href="qywh/whjs.htm">文化建设</a>
+         </div>
+    </li>  
+
+    <li><a href="zcfg.htm">政策法规</a>
+    </li>  
+
+    <li><a href="info/1043/2942.htm">投资企业</a>
+       <i class="icon"></i>
+         <div class="childer">
+                <a href="tzqy/qyjs.htm">企业介绍</a>
+         </div>
+    </li>  
+
+</UL></div>
+            </nav>
+        </header>
+        <div class="banner-wrap">
+                <script language="javascript" src="/system/resource/js/dynclicks.js"></script><div class="swiper-box">
+<div class="swiper-container">
+<UL class="swiper-wrapper">
+
+
+<LI class="swiper-slide" style="BACKGROUND-IMAGE: url(images/fenjin155.jpg)"><A href="javascript:void(0);" onclick="_addDynClicks(&#34;wbimage&#34;, 1799702144, 1025145)"></A></LI>
+
+
+<LI class="swiper-slide" style="BACKGROUND-IMAGE: url(images/xueweifu.jpg)"><A href="javascript:void(0);" onclick="_addDynClicks(&#34;wbimage&#34;, 1799702144, 1018099)"></A></LI>
+
+
+<LI class="swiper-slide" style="BACKGROUND-IMAGE: url(images/ershisi.jpg)"><A href="javascript:void(0);" onclick="_addDynClicks(&#34;wbimage&#34;, 1799702144, 1018084)"></A></LI>
+
+
+<LI class="swiper-slide" style="BACKGROUND-IMAGE: url(images/xiaoyuanjingse.jpg)"><A href="javascript:void(0);" onclick="_addDynClicks(&#34;wbimage&#34;, 1799702144, 1018112)"></A></LI>
+
+</UL>
+<DIV class="wrapper">
+<DIV class="swiper-button-prev"></DIV>
+<DIV class="swiper-button-next"></DIV></DIV>
+<DIV class="swiper-pagination"></DIV>
+</div>
+</div>
+        </div>
+                
+        
+        <div class="news-wrap">
+            <div class="wrapper">
+                <div class="news-swiper swiper-container news-item">
+                    
+
+<script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script><ul class="swiper-wrapper">
+   <LI class="swiper-slide" style="BACKGROUND-IMAGE:url(/__local/F/D7/7D/534B9C2921A6461771246E211EE_B3117650_13512.jpg);">
+   <A href="https://news.swjtu.edu.cn/info/8071/202366.htm">
+   <DIV class="txt">
+      <P class="toe">校企院协同促转化 药食同源月饼热销中秋市场 ——西...</P>
+   </DIV>
+   </A>
+   </LI>
+
+   <LI class="swiper-slide" style="BACKGROUND-IMAGE:url(/__local/8/D5/E7/4F0FF9529D936814AEED85D34D5_DB834181_27A83.jpeg);">
+   <A href="info/1025/4382.htm">
+   <DIV class="txt">
+      <P class="toe">科发集团党委召开会议总结树立和践行正确政绩观学习教育</P>
+   </DIV>
+   </A>
+   </LI>
+
+   <LI class="swiper-slide" style="BACKGROUND-IMAGE:url(/__local/D/A8/E7/3B6CAD8965AD41F99F0DBC7F003_3FD2C4FE_2DF0F.jpeg);">
+   <A href="info/1025/4362.htm">
+   <DIV class="txt">
+      <P class="toe">传承优良家风 涵养时代清风——科发集团赴天府家风馆...</P>
+   </DIV>
+   </A>
+   </LI>
+
+   <LI class="swiper-slide" style="BACKGROUND-IMAGE:url(/system/resource/images/defaultimg.gif);">
+   <A href="info/1025/4302.htm">
+   <DIV class="txt">
+      <P class="toe">扛牢校办企业使命，在服务学校“双一流”建设中创造...</P>
+   </DIV>
+   </A>
+   </LI>
+
+   <LI class="swiper-slide" style="BACKGROUND-IMAGE:url(/__local/2/2B/00/51D05C38FCBEF76CC17FF622FAA_2AE6444E_4EF47.jpg);">
+   <A href="info/1025/4272.htm">
+   <DIV class="txt">
+      <P class="toe">产学研深度融合 西南交大携手中力股份培育新质生产力</P>
+   </DIV>
+   </A>
+   </LI>
+
+   <LI class="swiper-slide" style="BACKGROUND-IMAGE:url(/__local/A/0C/5F/95487A362E01E28544C249B6699_7E8420FA_3CF2D.png);">
+   <A href="info/1025/4222.htm">
+   <DIV class="txt">
+      <P class="toe">科发集团召开2026年度全面从严治党工作会暨重点工作...</P>
+   </DIV>
+   </A>
+   </LI>
+
+   <LI class="swiper-slide" style="BACKGROUND-IMAGE:url(/__local/3/E2/3A/E52FB055B5ABEBF75893BC1994F_A447D633_84435.png);">
+   <A href="https://mp.weixin.qq.com/s/WaOhqQqxvOa09HNub0yVug">
+   <DIV class="txt">
+      <P class="toe">扬华创品正式发布 ！</P>
+   </DIV>
+   </A>
+   </LI>
+
+   <LI class="swiper-slide" style="BACKGROUND-IMAGE:url(/__local/2/57/8A/DF6B1ADAEB0CD922C1688A3D9BD_2F5B3F3E_25C06.jpeg);">
+   <A href="info/1025/4102.htm">
+   <DIV class="txt">
+      <P class="toe">西南交通大学党委副书记、纪委书记夏玉峰一行调研科...</P>
+   </DIV>
+   </A>
+   </LI>
+
+</ul>
+<script>_showDynClickBatch(['dynclicks_u3_4452','dynclicks_u3_4382','dynclicks_u3_4362','dynclicks_u3_4302','dynclicks_u3_4272','dynclicks_u3_4222','dynclicks_u3_4132','dynclicks_u3_4102'],[4452,4382,4362,4302,4272,4222,4132,4102],"wbnews", 1799702144)</script>
+
+                    <div class="swiper-pagination"></div>
+                </div>
+                <div class="news-box news-item">
+                    <div class="hd">
+                        <div class="tabs">
+                                                   <a class="active" href="#tabs01">新闻动态</a>
+                                                   <a href="#tabs02">通知公告</a></li>                                                   
+                        </div>
+                        <div class="more">
+                            <a href="xwzx/xwdt.htm">More+</a>
+                        </div>
+                    </div>
+                    <div class="bd">
+                        <div role="tabpanel" class="item" id="tabs01">
+                            
+                            <div class="list">
+
+<UL>
+
+<LI><A href="https://news.swjtu.edu.cn/info/8071/202366.htm" title="校企院协同促转化 药食同源月饼热销中秋市场 ——西南交大与成都市第三人民医院联合研发月饼并实现科技成果落地">
+<P class="toe">校企院协同促转化 药食同源月饼热销中秋市场 ——西南交大与成都市第三人民医院联合研发月饼并实现科技成果落地</P><SPAN>2026-09-24</SPAN> </A></LI>
+
+<LI><A href="info/1025/4382.htm" title="科发集团党委召开会议总结树立和践行正确政绩观学习教育">
+<P class="toe">科发集团党委召开会议总结树立和践行正确政绩观学习教育</P><SPAN>2026-09-21</SPAN> </A></LI>
+
+<LI><A href="info/1025/4362.htm" title="传承优良家风 涵养时代清风——科发集团赴天府家风馆开展&quot;廉心筑未来&quot;廉洁教育实践活动">
+<P class="toe">传承优良家风 涵养时代清风——科发集团赴天府家风馆开展&quot;廉心筑未来&quot;廉洁教育实践活动</P><SPAN>2026-09-11</SPAN> </A></LI>
+
+<LI><A href="info/1025/4302.htm" title="扛牢校办企业使命，在服务学校“双一流”建设中创造实绩   ——科发集团党委书记陈天利讲授专题党课">
+<P class="toe">扛牢校办企业使命，在服务学校“双一流”建设中创造实绩   ——科发集团党委书记陈天利讲授专题党课</P><SPAN>2026-07-17</SPAN> </A></LI>
+
+<LI><A href="info/1025/4272.htm" title="产学研深度融合 西南交大携手中力股份培育新质生产力">
+<P class="toe">产学研深度融合 西南交大携手中力股份培育新质生产力</P><SPAN>2026-07-08</SPAN> </A></LI>
+
+<LI><A href="info/1025/4222.htm" title="科发集团召开2026年度全面从严治党工作会暨重点工作布置会">
+<P class="toe">科发集团召开2026年度全面从严治党工作会暨重点工作布置会</P><SPAN>2026-06-18</SPAN> </A></LI>
+
+<LI><A href="https://mp.weixin.qq.com/s/WaOhqQqxvOa09HNub0yVug" title="扬华创品正式发布 ！">
+<P class="toe">扬华创品正式发布 ！</P><SPAN>2026-04-20</SPAN> </A></LI>
+
+<LI><A href="info/1025/4102.htm" title="西南交通大学党委副书记、纪委书记夏玉峰一行调研科发集团">
+<P class="toe">西南交通大学党委副书记、纪委书记夏玉峰一行调研科发集团</P><SPAN>2026-04-15</SPAN> </A></LI>
+
+<LI><A href="info/1025/4092.htm" title="科发集团机关党支部开展主题党日活动 深入学习贯彻习近平总书记重要回信精神">
+<P class="toe">科发集团机关党支部开展主题党日活动 深入学习贯彻习近平总书记重要回信精神</P><SPAN>2026-04-09</SPAN> </A></LI>
+
+<LI><A href="info/1025/4072.htm" title="科发集团党委召开会议专题学习习近平总书记给四所交通大学全体师生重要回信精神">
+<P class="toe">科发集团党委召开会议专题学习习近平总书记给四所交通大学全体师生重要回信精神</P><SPAN>2026-04-08</SPAN> </A></LI>
+
+</UL><script>_showDynClickBatch(['dynclicks_u4_4452','dynclicks_u4_4382','dynclicks_u4_4362','dynclicks_u4_4302','dynclicks_u4_4272','dynclicks_u4_4222','dynclicks_u4_4132','dynclicks_u4_4102','dynclicks_u4_4092','dynclicks_u4_4072'],[4452,4382,4362,4302,4272,4222,4132,4102,4092,4072],"wbnews", 1799702144)</script>
+</div>
+                        </div>
+                        <div role="tabpanel" class="item" id="#tabs02" style="display:none;">
+                            
+                            <div class="list">
+                                
+
+<UL>
+<LI><A href="info/1024/4352.htm">
+<P class="toe">税法学习活动通知</P><SPAN>2026-09-03</SPAN> </A></LI>
+
+<LI><A href="info/1024/4292.htm">
+<P class="toe">关于2026年学校专业技术职务评聘工作的通知（一）</P><SPAN>2026-07-17</SPAN> </A></LI>
+
+<LI><A href="info/1024/3962.htm">
+<P class="toe">关于在所属企业开展2026年春节前安全生产风险隐患全面自...</P><SPAN>2026-01-16</SPAN> </A></LI>
+
+<LI><A href="info/1024/3952.htm">
+<P class="toe">关于广泛征求对科发集团领导班子及成员意见与建议的通知</P><SPAN>2026-01-06</SPAN> </A></LI>
+
+<LI><A href="info/1024/3912.htm">
+<P class="toe">关于开展科发集团2025年事业编制教职工年度（聘期）工作...</P><SPAN>2025-12-19</SPAN> </A></LI>
+
+<LI><A href="info/1024/3692.htm">
+<P class="toe">科发集团关于做好2025年国庆、中秋假期网络安全保障工作...</P><SPAN>2025-09-30</SPAN> </A></LI>
+
+<LI><A href="info/1024/3612.htm">
+<P class="toe">关于组织收听收看纪念中国人民抗日战争暨世界反法西斯战...</P><SPAN>2025-09-02</SPAN> </A></LI>
+
+<LI><A href="info/1024/3592.htm">
+<P class="toe">关于2025年学校专业技术职务评聘工作的通知（一）</P><SPAN>2025-07-15</SPAN> </A></LI>
+
+<LI><A href="info/1024/3462.htm">
+<P class="toe">科发集团关于2025年度非教学科研一线其他专业技术五级及...</P><SPAN>2025-05-20</SPAN> </A></LI>
+
+<LI><A href="info/1024/3402.htm">
+<P class="toe">关于做好2025年“五一”端午节期间纠“四风”树新风工作...</P><SPAN>2025-04-30</SPAN> </A></LI>
+
+</UL><script>_showDynClickBatch(['dynclicks_u5_4352','dynclicks_u5_4292','dynclicks_u5_3962','dynclicks_u5_3952','dynclicks_u5_3912','dynclicks_u5_3692','dynclicks_u5_3612','dynclicks_u5_3592','dynclicks_u5_3462','dynclicks_u5_3402'],[4352,4292,3962,3952,3912,3692,3612,3592,3462,3402],"wbnews", 1799702144)</script>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="news-box news-item">
+                    <div class="hd">
+                        <div class="tabs">
+                            <a class="active" href="#tabs03">党建动态</a>
+                            <a href="#tabs04">纪检动态</a>
+                        </div>
+                        <div class="more-button">
+                            <a href="djgz/djdt.htm">More+</a>
+                        </div>
+                    </div>
+                    <div class="bd">
+                        <div role="tabpanel" class="item" id="tabs03">
+                            <div class="list">
+                                
+
+<ul>
+<LI><A href="info/1026/4392.htm">
+<P class="toe">科发集团党委召开会议总结树立和践行正确政绩观学习教育</P><SPAN>2026-09-21</SPAN> </A></LI>
+
+<LI><A href="info/1026/4372.htm">
+<P class="toe">传承优良家风 涵养时代清风——科发集团赴天府家风馆开展...</P><SPAN>2026-09-11</SPAN> </A></LI>
+
+<LI><A href="info/1026/4312.htm">
+<P class="toe">扛牢校办企业使命，在服务学校“双一流”建设中创造实绩 ...</P><SPAN>2026-07-17</SPAN> </A></LI>
+
+<LI><A href="info/1026/4282.htm">
+<P class="toe">党建联建深化产教融合 数智赋能助力轨道建设  ——国佳电...</P><SPAN>2026-07-16</SPAN> </A></LI>
+
+<LI><A href="info/1026/4262.htm">
+<P class="toe">科发集团后服公司党支部与机关党支部联合开展主题党日暨...</P><SPAN>2026-07-01</SPAN> </A></LI>
+
+<LI><A href="info/1026/4252.htm">
+<P class="toe">习近平：在庆祝中国共产党成立105周年大会上的讲话</P><SPAN>2026-07-01</SPAN> </A></LI>
+
+</ul><script>_showDynClickBatch(['dynclicks_u6_4392','dynclicks_u6_4372','dynclicks_u6_4312','dynclicks_u6_4282','dynclicks_u6_4262','dynclicks_u6_4252'],[4392,4372,4312,4282,4262,4252],"wbnews", 1799702144)</script>
+
+                            </div>
+                        </div>
+                        <div role="tabpanel" class="item" id="tabs04" style="display: none;">
+                            <div class="list">
+                                
+
+<ul>
+<LI><A href="info/1029/4412.htm">
+<P class="toe">科发集团“传承优良家风 涵养时代清风”廉洁教育实践活动...</P><SPAN>2026-09-22</SPAN> </A></LI>
+
+<LI><A href="info/1029/3982.htm">
+<P class="toe">中国共产党第二十届中央纪律检查委员会第五次全体会议公报</P><SPAN>2026-01-19</SPAN> </A></LI>
+
+<LI><A href="info/1029/3972.htm">
+<P class="toe">习近平在二十届中央纪委五次全会上发表重要讲话</P><SPAN>2026-01-19</SPAN> </A></LI>
+
+<LI><A href="info/1029/3742.htm">
+<P class="toe">科发集团开展后服司新任领导干部任前廉政谈话</P><SPAN>2025-10-16</SPAN> </A></LI>
+
+<LI><A href="info/1029/3552.htm">
+<P class="toe">靶向纠治国企“四风”顽疾</P><SPAN>2025-06-17</SPAN> </A></LI>
+
+<LI><A href="info/1029/3182.htm">
+<P class="toe">违反中央八项规定精神问题的表现形式、解释、案例</P><SPAN>2025-03-13</SPAN> </A></LI>
+
+</ul><script>_showDynClickBatch(['dynclicks_u7_4412','dynclicks_u7_3982','dynclicks_u7_3972','dynclicks_u7_3742','dynclicks_u7_3552','dynclicks_u7_3182'],[4412,3982,3972,3742,3552,3182],"wbnews", 1799702144)</script>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="news-box news-item">
+                    <div class="hd">
+                        <div class="tabs">
+                            <a class="active" href="javascript:void(0);">企业动态</a>
+                        </div>
+                        <div class="more-button">
+                            <a href="qywh/qydt.htm" target="">More+</a>
+                        </div>
+                    </div>
+                    <div class="bd">
+                        <div class="item">
+                            <div class="list">
+
+<UL>
+
+<LI><A href="https://news.swjtu.edu.cn/info/8071/202366.htm">
+<P class="toe">校企院协同促转化 药食同源月饼热销中秋市场 ——西南交...</P><SPAN>2026-09-24</SPAN> </A></LI>
+
+<LI><A href="info/1039/4402.htm">
+<P class="toe">第五届轨道交通能源与动力系统技术发展大会在成都举办</P><SPAN>2026-09-21</SPAN> </A></LI>
+
+<LI><A href="info/1039/4332.htm">
+<P class="toe">院校联名『药食同源月饼』上线，把本草文化揉进一轮月圆</P><SPAN>2026-08-28</SPAN> </A></LI>
+
+<LI><A href="https://mp.weixin.qq.com/s/QCoueFZeJIlLJ2IcgqmsBg">
+<P class="toe">百卅交大｜设计院以系统性设计成果，打造校园更新标杆</P><SPAN>2026-06-04</SPAN> </A></LI>
+
+<LI><A href="https://mp.weixin.qq.com/s/ZHDlc512LX8ny7JcN2ZfHw?scene=1&click_id=2">
+<P class="toe">贯通成果转化链条 赋能汽车产业发展 ——天府（成都·龙泉...</P><SPAN>2026-01-28</SPAN> </A></LI>
+
+<LI><A href="info/1039/3352.htm">
+<P class="toe">第四届成渝双城残疾人创业先锋大赛正式启动</P><SPAN>2025-04-25</SPAN> </A></LI>
+
+</UL><script>_showDynClickBatch(['dynclicks_u8_4442','dynclicks_u8_4402','dynclicks_u8_4332','dynclicks_u8_4182','dynclicks_u8_3992','dynclicks_u8_3352'],[4442,4402,4332,4182,3992,3352],"wbnews", 1799702144)</script>
+</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <footer class="footer">
+            <div class="links">
+                <div class="wrapper">
+                    <div class="label">
+                        友情链接
+                    </div>
+                    <script language="javascript" src="/system/resource/js/openlink.js"></script><ul>
+<li>
+    <a href="https://www.swjtu.edu.cn" target="_blank" onclick="_addDynClicks(&#34;wburl&#34;, 1799702144, 76171)">学校主页</a>
+</li>
+<li>
+    <a href="http://www.moe.gov.cn/" target="_blank" onclick="_addDynClicks(&#34;wburl&#34;, 1799702144, 76173)">教育部</a>
+</li>
+<li>
+    <a href="http://www.sasac.gov.cn/" target="_blank" onclick="_addDynClicks(&#34;wburl&#34;, 1799702144, 76172)">国务院国资委</a>
+</li>
+<li>
+    <a href="https://gzw.sc.gov.cn/" target="_blank" onclick="_addDynClicks(&#34;wburl&#34;, 1799702144, 76174)">四川省国资委</a>
+</li>
+<li>
+    <a href="https://mail.swjtu.edu.cn/" target="_blank" onclick="_addDynClicks(&#34;wburl&#34;, 1799702144, 76175)">交大邮箱</a>
+</li>
+</ul>
+
+
+            
+                </div>
+            </div>
+            <div class="bd ">
+                <div class="wrapper">
+                    <div class="content ">
+                        <div class="left">
+                            <div class="logo">
+                                <a href="index.html">
+                                    <img src="static/images/logo2.png" alt="">
+                                </a>
+                            </div>
+                            <div class="contact-us">
+                                <div class="title">
+                                    <h4>联系我们</h4>
+                                    <span>CONTACT  US</span>
+                                </div>
+                                <ul class="list"><script language="javascript" src="/system/resource/js/news/mp4video.js"></script>
+<ul class="list list-paddingleft-2">
+ <li><p>&nbsp;<img src="/__local/B/50/3D/F67678CC2D1A403F74005C27484_87E8B854_6F7.png?e=.png" vsbhref="vurl" vurl="/_vsl/B503DF67678CC2D1A403F74005C27484/87E8B854/6F7?e=.png" vheight="" vwidth="" orisrc="/__local/B/50/3D/F67678CC2D1A403F74005C27484_87E8B854_6F7.png" class="img_vsb_content">&nbsp; &nbsp;地址：四川省成都市金牛区二环路北一段111号西南交通大学</p></li>
+ <li><p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 九里校区创新大厦11楼</p></li>
+ <li><p>&nbsp;<img src="/__local/4/CC/F9/B1D694871F4ABA716972515D7FF_B220768B_6D2.png?e=.png" vsbhref="vurl" vurl="/_vsl/4CCF9B1D694871F4ABA716972515D7FF/B220768B/6D2?e=.png" vheight="" vwidth="" orisrc="/__local/4/CC/F9/B1D694871F4ABA716972515D7FF_B220768B_6D2.png" class="img_vsb_content"><span><span>&nbsp;&nbsp; 电话：028-87601198</span></span></p></li>
+ <li><p>&nbsp;<img src="/__local/9/07/46/E7BD17811F6A48660E67E68CF40_671C3F67_6CE.png?e=.png" vsbhref="vurl" vurl="/_vsl/90746E7BD17811F6A48660E67E68CF40/671C3F67/6CE?e=.png" vheight="" vwidth="" orisrc="/__local/9/07/46/E7BD17811F6A48660E67E68CF40_671C3F67_6CE.png" class="img_vsb_content">&nbsp;&nbsp; 邮箱：kfjt<a href="mailto:cyjtgs_xz@swjtu.edu.cn" style="text-decoration: none">@swjtu.edu.cn</a></p></li>
+</ul></ul>
+                            </div>
+                        </div>
+                        <div class="right">
+                            <div class="title">
+                                <h4>微信公众号</h4>
+                                <span>WECHAT</span>
+                            </div>
+                            <div class="qr-box">
+                                <div class="img">
+                                    <img src="static/images/qr.jpg" alt="">
+                                </div>
+                                <div class="txt">
+                                    <p>关注公众号</p>
+                                    <p>了解新动态</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="copy ">
+                        <p><!-- 版权内容请在本组件"内容配置-版权"处填写 -->
+<p>Copyright © 2023 成都西南交通大学科技发展集团有限公司</p></p>
+                        <a class="zd" href="#">站长统计</a>
+                    </div>  
+                </div>
+            </div>
+        </footer>
+        <!-- 遮罩层 -->
+        <div class="shade"></div>
+        <script src="static/js/jquery.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="static/js/swiper.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="static/js/script.js" type="text/javascript" charset="utf-8"></script>
+        <script type="text/javascript">
+            $(function(){
+                var mySwiper = new Swiper ('.banner-wrap .swiper-box .swiper-container', {
+                    autoplay:true,
+                    loop: true, // 循环模式选项
+                    // 如果需要分页器
+                    pagination: {
+                        el: '.swiper-pagination',
+                    },
+                    // 如果需要前进后退按钮
+                    navigation: {
+                        nextEl: '.swiper-button-next',
+                        prevEl: '.swiper-button-prev',
+                    },
+                });
+                var mySwiper2 = new Swiper('.news-swiper',{
+                autoplay:true,
+                    loop: true, // 循环模式选项
+                    // 如果需要分页器
+                    pagination: {
+                        el: '.swiper-pagination',
+                        clickable :true,
+                    },
+                })    
+            
+                // tab选项卡
+                $(".news-wrap .news-box .tabs a").hover(function(){
+                    let index = $(this).index()
+                    $(this).addClass('active').siblings().removeClass('active');
+                    $(this).parents('.news-box').find('.item').hide().eq(index).show();
+                })
+            })
+
+        </script>
+    </body>
+    
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"swjtu-cli/internal/model"
 )
 
 func readJzxyFixture(t *testing.T, name string) []byte {
@@ -63,6 +65,52 @@ func TestJzxyPageURLUsesReverseGeneratedNumbering(t *testing.T) {
 		if got := jzxyPageURL(jzxyCanonicalBaseURL, "xxzx/xyxw", tc.page, tc.total, ".htm"); got != "" {
 			t.Errorf("out-of-range page %d/%d returned %q", tc.page, tc.total, got)
 		}
+	}
+	if got := jzxyPageURL(jzxyCanonicalBaseURL, "index", 2, 1, ".htm"); got != "" {
+		t.Errorf("home page 2/1 returned %q, want empty", got)
+	}
+}
+
+func TestJzxyIndexFeedHasSingleScopedHomePage(t *testing.T) {
+	site := AllSites["jzxy"]
+	if site == nil || site.TotalPagesFunc == nil {
+		t.Fatal("jzxy total-pages hook is missing")
+	}
+	// The home page is a single-page module digest; the total must be
+	// reported without touching the network (ListNewsRange validates the
+	// home shell while parsing page 1 before asking for the total).
+	pages, err := site.TotalPagesFunc("index")
+	if err != nil || pages != 1 {
+		t.Fatalf("index total pages = (%d, %v), want (1, nil)", pages, err)
+	}
+
+	items, err := parseAdapter_jzxyList(readJzxyFixture(t, "jzxy_live_home.html"), jzxyCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 28 {
+		t.Fatalf("parsed %d live home items, want 28: %#v", len(items), items)
+	}
+	byURL := make(map[string]model.NewsItem, len(items))
+	for _, item := range items {
+		if !strings.HasPrefix(item.URL, jzxyCanonicalBaseURL+"/info/") {
+			t.Errorf("non-canonical live home URL: %#v", item)
+		}
+		byURL[item.URL] = item
+	}
+	// Hero carousel slides carry no invented metadata but must be kept.
+	hero := byURL[jzxyCanonicalBaseURL+"/info/1241/17951.htm"]
+	if hero.Title != "欢迎海内外英才依托建筑学院申报国家优秀青年科学基金项目（海外）" || hero.Type != "" || hero.Date != "" {
+		t.Errorf("hero slide item = %#v", hero)
+	}
+	// Tab-scoped modules keep their column names and dates.
+	news := byURL[jzxyCanonicalBaseURL+"/info/1032/24701.htm"]
+	if news.Type != "学院新闻" || news.Date != "2026-07-10" {
+		t.Errorf("news module item = %#v", news)
+	}
+	notice := byURL[jzxyCanonicalBaseURL+"/info/1030/25421.htm"]
+	if notice.Type != "本科生通知" || notice.Date != "2026-10-09" {
+		t.Errorf("notice tab item = %#v", notice)
 	}
 }
 func TestJzxyListParserScopesRealListAndPreservesType(t *testing.T) {
@@ -231,6 +279,37 @@ func TestJzxyArticleUsesOnlyFixedPublicationMetadata(t *testing.T) {
 	}
 	if article.Date != "" || article.PublishedAt != "" {
 		t.Fatalf("body date polluted publication metadata: (%q, %q)", article.Date, article.PublishedAt)
+	}
+}
+
+func TestJzxyLiveArticleWithoutBreadcrumbColumnUsesSectionHeader(t *testing.T) {
+	article, err := parseAdapter_jzxyArticle(readJzxyFixture(t, "jzxy_live_article.html"), jzxyCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title != "欢迎海内外英才依托建筑学院申报国家优秀青年科学基金项目（海外）" {
+		t.Fatalf("article title = %q", article.Title)
+	}
+	// The 首页高清大图 column renders no column link in the breadcrumb
+	// ("首页 > 正文" only); the type must fall back to the section header.
+	if article.Type != "首页高清大图" {
+		t.Fatalf("article type = %q, want 首页高清大图", article.Type)
+	}
+	if article.Date != "2025-01-14" || article.PublishedAt != "2025-01-14" {
+		t.Fatalf("publication time = (%q, %q)", article.Date, article.PublishedAt)
+	}
+}
+
+func TestJzxyLiveArticleBreadcrumbColumnStillTakesPrecedence(t *testing.T) {
+	article, err := parseAdapter_jzxyArticle(readJzxyFixture(t, "jzxy_live_article_notice.html"), jzxyCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Type != "本科生通知" {
+		t.Fatalf("article type = %q, want 本科生通知 from breadcrumb", article.Type)
+	}
+	if article.Date != "2026-10-09" || article.PublishedAt != "2026-10-09" {
+		t.Fatalf("publication time = (%q, %q)", article.Date, article.PublishedAt)
 	}
 }
 

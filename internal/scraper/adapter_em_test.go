@@ -98,6 +98,86 @@ func TestEmPageCountReadsDisplayedLogicalNumbers(t *testing.T) {
 	}
 }
 
+func TestEmLiveHomeParsesEveryModuleAndExcludesExternalLinks(t *testing.T) {
+	items, err := parseAdapter_emList(mustEmFixture(t, "em_live_home.html"), emFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	counts := make(map[string]int)
+	seen := make(map[string]bool)
+	for _, item := range items {
+		counts[item.Type]++
+		if seen[item.URL] {
+			t.Errorf("duplicate live home article URL: %q", item.URL)
+		}
+		seen[item.URL] = true
+		if strings.Contains(item.URL, "bksy.swjtu.edu.cn") || strings.Contains(item.URL, "mp.weixin.qq.com") {
+			t.Errorf("external live home link leaked into feed: %#v", item)
+		}
+	}
+
+	wantCounts := map[string]int{
+		"校区要闻": 4,
+		"校区公告": 10,
+		"党政办公": 10,
+		"人才培养": 9,
+		"教育培训": 10,
+		"后勤保障": 10,
+		"工作动态": 4,
+		"校区风光": 5,
+	}
+	if !reflect.DeepEqual(counts, wantCounts) {
+		t.Fatalf("live home type counts = %#v, want %#v (items=%d)", counts, wantCounts, len(items))
+	}
+	if len(items) != 62 {
+		t.Fatalf("live home items = %d, want 62", len(items))
+	}
+
+	var found bool
+	for _, item := range items {
+		if item.URL == emFixtureBaseURL+"/info/1023/21306.htm" {
+			found = item.Type == "校区要闻" && item.Date == "2026-09-30" && item.Title == "峨眉校区召开2026年第六次安全生产工作会议"
+		}
+	}
+	if !found {
+		t.Fatal("live home 校区要闻 spot check missing")
+	}
+}
+
+func TestEmIndexFeedCountsAsSingleHomepage(t *testing.T) {
+	oldClient, oldNoCache := defaultClient, NoCache
+	defaultClient = &http.Client{Transport: emTestRoundTripper(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path == "/index.htm" {
+			return emTestResponse(req, http.StatusOK, "text/html; charset=utf-8", mustEmFixture(t, "em_live_home.html")), nil
+		}
+		return emTestResponse(req, http.StatusNotFound, "text/html", []byte("not found")), nil
+	})}
+	NoCache = true
+	t.Cleanup(func() { defaultClient, NoCache = oldClient, oldNoCache; ClearCache() })
+
+	total, err := emTotalPages("index")
+	if err != nil || total != 1 {
+		t.Fatalf("em index total = %d, err=%v; want a single homepage page", total, err)
+	}
+}
+
+func TestEmIndexFeedRejectsHomeShapedShells(t *testing.T) {
+	shell := []byte(`<html><body><div class="newsBox"></div><div id="tabs-container1"><div class="swiper-slide"><ul><li><a href="/xwdt.htm">新闻动态</a></li></ul></div></div></body></html>`)
+	oldClient, oldNoCache := defaultClient, NoCache
+	defaultClient = &http.Client{Transport: emTestRoundTripper(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path == "/index.htm" {
+			return emTestResponse(req, http.StatusOK, "text/html; charset=utf-8", shell), nil
+		}
+		return emTestResponse(req, http.StatusNotFound, "text/html", []byte("not found")), nil
+	})}
+	NoCache = true
+	t.Cleanup(func() { defaultClient, NoCache = oldClient, oldNoCache; ClearCache() })
+
+	if total, err := emTotalPages("index"); err == nil || total != 0 {
+		t.Fatalf("em index total = %d, err=%v; want refusal for a home-shaped shell", total, err)
+	}
+}
+
 func TestEmHomeParsesEveryModuleAndExcludesExternalLinks(t *testing.T) {
 	html, err := os.ReadFile("testdata/em.html")
 	if err != nil {

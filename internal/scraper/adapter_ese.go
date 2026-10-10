@@ -22,6 +22,8 @@ import (
 // ese.swjtu.edu.cn numbers generated list pages from oldest to newest while
 // the site presents page 1 as the newest page. Keep the site's feeds and URL
 // mapping in this adapter instead of changing the shared Boda implementation.
+// The homepage is served as the implicit "index" feed: it renders the scoped
+// home sections (parseEseAdapterHome) and is always a single page.
 func init() {
 	registerAdapter("ese", SiteAdapter{
 		SubPages:     eseSubPages,
@@ -119,12 +121,15 @@ func esePageURL(baseURL, slug string, page, totalPages int, extension string) st
 
 func eseTotalPages(slug string) (int, error) {
 	slug = strings.Trim(strings.TrimSpace(slug), "/")
-	if !eseKnownSubPage(slug) {
-		return 0, fmt.Errorf("ese: %q is not an audited article-list route", slug)
-	}
 	site := AllSites["ese"]
 	if site == nil {
 		return 0, fmt.Errorf("ese: site registration is missing")
+	}
+	if strings.EqualFold(slug, "index") {
+		return eseHomeTotalPages(site.BaseURL)
+	}
+	if !eseKnownSubPage(slug) {
+		return 0, fmt.Errorf("ese: %q is not an audited article-list route", slug)
 	}
 
 	var lastErr error
@@ -141,6 +146,39 @@ func eseTotalPages(slug string) (int, error) {
 	}
 	if lastErr == nil {
 		lastErr = fmt.Errorf("ese: unable to read page count for %s", slug)
+	}
+	return 0, lastErr
+}
+
+// eseHomeTotalPages backs the implicit "index" homepage feed. The homepage is
+// a scoped preview (eseAdapterHasHomeSections), not a paginated archive, so a
+// rendered homepage always reports exactly one page; error/WAF shells and
+// pages without the audited home sections stay errors instead of collapsing
+// into a fake single page.
+func eseHomeTotalPages(baseURL string) (int, error) {
+	var lastErr error
+	for _, extension := range []string{".htm", ".html"} {
+		body, err := fetch(esePageURL(baseURL, "index", 1, 0, extension))
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if eseAdapterLooksLikeErrorPage(doc) {
+			lastErr = fmt.Errorf("ese: index is an error or verification page")
+			continue
+		}
+		if eseAdapterHasHomeSections(doc) {
+			return 1, nil
+		}
+		lastErr = fmt.Errorf("ese: index has no recognized homepage sections")
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("ese: unable to read homepage page count")
 	}
 	return 0, lastErr
 }

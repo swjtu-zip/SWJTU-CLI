@@ -102,7 +102,13 @@ func physTotalPages(slug string) (int, error) {
 	return physTotalPagesFromHTML(body, slug)
 }
 
+// physKnownFeed reports the audited article-list routes. The homepage is an
+// audited feed too: it renders the .home1/.home3/.home4 news modules that
+// physHomepageItems scopes extraction to, and it has no pagination.
 func physKnownFeed(slug string) bool {
+	if slug == "index" {
+		return true
+	}
 	for _, known := range physSubPages {
 		if slug == known {
 			return true
@@ -115,6 +121,17 @@ func physTotalPagesFromHTML(raw []byte, slug string) (int, error) {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(raw)))
 	if err != nil {
 		return 0, fmt.Errorf("phys: parse pagination for %s: %w", slug, err)
+	}
+	if strings.Trim(strings.TrimSpace(slug), "/") == "index" {
+		// The homepage feed is a single scoped page: it either is the audited
+		// homepage or the response must be rejected, never silently counted.
+		if !physIsHomepage(doc) {
+			return 0, fmt.Errorf("phys: %s response is not the homepage", slug)
+		}
+		if physLooksUnavailable(doc) {
+			return 0, fmt.Errorf("phys: %s response is an error, login, or verification page", slug)
+		}
+		return 1, nil
 	}
 	if physIsHomepage(doc) || doc.Find(".newlist1").Length() == 0 {
 		return 0, fmt.Errorf("phys: %s response is not a list page", slug)

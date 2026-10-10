@@ -36,7 +36,7 @@ func TestHzcRegistersAuditedFeedsAndReversePagination(t *testing.T) {
 	if !reflect.DeepEqual(site.SubPages, want) || site.ArticleFetchFunc == nil {
 		t.Fatalf("hzc feeds = %#v, want %#v", site.SubPages, want)
 	}
-	if site.BaseURL != hzcCanonicalBaseURL || site.PageURL == nil || site.TotalPagesFunc == nil {
+	if site.BaseURL != hzcCanonicalBaseURL || site.PageURL == nil || site.ListPageFunc == nil {
 		t.Fatalf("hzc registration lost canonical URL or pagination hooks: %#v", site)
 	}
 	if got := hzcPageURL(hzcCanonicalBaseURL, "xwdt/zx", 1, 38, ".htm"); got != "https://hzc.swjtu.edu.cn/xwdt/zx.htm" {
@@ -292,5 +292,152 @@ func TestHzcFetchResourceRejectsNon2xxAndCrossOriginRedirect(t *testing.T) {
 		if _, _, err := hzcFetchResource(server.URL+path, server.URL, server.URL+"/info/1039/9001.htm", fmt.Sprintf("%s", path), false); err == nil {
 			t.Errorf("resource %s was accepted", path)
 		}
+	}
+}
+
+func TestHzcZxLivePagesKeepLocalRowsAndAllowExternalOnly(t *testing.T) {
+	first := parseHzcDocument(t, "hzc_live_zx_first.html")
+	if got := hzcPaginationTotal(first); got != 39 {
+		t.Fatalf("live zx pagination total = %d, want 39", got)
+	}
+	items, err := parseAdapter_hzcList(hzcFixture(t, "hzc_live_zx_first.html"), hzcCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 5 {
+		t.Fatalf("live zx first page kept %d local rows, want 5 of 10: %#v", len(items), items)
+	}
+	for _, item := range items {
+		if !strings.Contains(item.URL, "hzc.swjtu.edu.cn/info/") {
+			t.Fatalf("external row leaked into local feed: %#v", item)
+		}
+	}
+
+	// Physical page 35 (logical 5/39) consists entirely of news.swjtu.edu.cn
+	// rows. It must parse as a legal empty page, not fail the whole crawl.
+	externalOnly, err := parseAdapter_hzcList(hzcFixture(t, "hzc_live_zx_external_only.html"), hzcCanonicalBaseURL)
+	if err != nil {
+		t.Fatalf("external-only live page was rejected: %v", err)
+	}
+	if len(externalOnly) != 0 {
+		t.Fatalf("external-only live page returned items: %#v", externalOnly)
+	}
+
+	mixed, err := parseAdapter_hzcList(hzcFixture(t, "hzc_live_zx_mixed.html"), hzcCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mixed) != 3 {
+		t.Fatalf("mixed live page kept %d local rows, want 3: %#v", len(mixed), mixed)
+	}
+	last, err := parseAdapter_hzcList(hzcFixture(t, "hzc_live_zx_last.html"), hzcCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(last) != 1 {
+		t.Fatalf("last live page items = %#v, want 1 local row", last)
+	}
+}
+
+// hzcRenderListPage builds a minimal but faithful hzc list page: pageType=2,
+// a .conlistComm of dl rows, and reverse-numbered pagination markup.
+// localTitles are rendered as numeric ../../info/1039/ rows; externalTitles
+// as absolute news.swjtu.edu.cn rows.
+func hzcRenderListPage(current, total int, localTitles, externalTitles []string) string {
+	var rows strings.Builder
+	writeRow := func(tab, href, title string) {
+		fmt.Fprintf(&rows, `<dl><dt><span> <a href="../%s.htm">[%s]</a></span>`+
+			`<a target="_blank " title="%s" href="%s">%s</a></dt>`+
+			`<dd>时间：2025-11-19 &nbsp;&nbsp;&nbsp;阅读次数：</dd></dl>`, tab, tab, title, href, title)
+	}
+	for i, title := range localTitles {
+		writeRow("最新", fmt.Sprintf("../../info/1039/195%02d.htm", current*10+i), title)
+	}
+	for i, title := range externalTitles {
+		writeRow("对外", fmt.Sprintf("https://news.swjtu.edu.cn/info/1011/90%03d.htm", i), title)
+	}
+	pageLinks := fmt.Sprintf(`<span class="p_no_d">%d</span>`, current)
+	if current > 1 {
+		pageLinks = fmt.Sprintf(`<span class="p_no"><a href="%d.htm">%d</a></span>`, total-current+1, current)
+	}
+	return fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset="UTF-8">`+
+		`<meta name="pageType" content="2"><title>最新-合作发展处</title></head><body>`+
+		`<div class="current"><h3>最新</h3></div><div class="conlistComm">%s</div>`+
+		`<div class="pb_sys_common"><span class="p_pages">%s`+
+		`<span class="p_dot">...</span><span class="p_no"><a href="1.htm">%d</a></span>`+
+		`<span class="p_last p_fun"><a href="1.htm">尾页</a></span></span></div>`+
+		`</body></html>`, rows.String(), pageLinks, total)
+}
+
+func TestHzcListPageCompactsLogicalPagesAcrossExternalOnlyPages(t *testing.T) {
+	// Five physical pages; position 2 (file 4.htm) is external-only, exactly
+	// like the live xwdt/zx archive. Local articles exist before AND after it.
+	pages := map[string]string{
+		"/xwdt/zx.htm":   hzcRenderListPage(1, 5, []string{"本地消息一", "本地消息二"}, nil),
+		"/xwdt/zx/4.htm": hzcRenderListPage(2, 5, nil, []string{"外站消息甲", "外站消息乙"}),
+		"/xwdt/zx/3.htm": hzcRenderListPage(3, 5, []string{"本地消息三"}, []string{"外站消息丙"}),
+		"/xwdt/zx/2.htm": hzcRenderListPage(4, 5, []string{"本地消息四", "本地消息五"}, nil),
+		"/xwdt/zx/1.htm": hzcRenderListPage(5, 5, []string{"本地消息六"}, nil),
+	}
+	var requests int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, ok := pages[r.URL.Path]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		requests++
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(body))
+	}))
+	defer server.Close()
+
+	site := AllSites["hzc"]
+	oldBase, oldNoCache := site.BaseURL, NoCache
+	site.BaseURL, NoCache = server.URL, true
+	t.Cleanup(func() {
+		site.BaseURL, NoCache = oldBase, oldNoCache
+		ClearCache()
+	})
+
+	items, err := site.ListNewsRange("xwdt/zx", "2000-01-01", "2099-12-31", 0)
+	if err != nil {
+		t.Fatalf("range crawl across an external-only page failed: %v", err)
+	}
+	wantTitles := []string{"本地消息一", "本地消息二", "本地消息三", "本地消息四", "本地消息五", "本地消息六"}
+	if len(items) != len(wantTitles) {
+		t.Fatalf("range crawl kept %d items, want %d: %#v", len(items), len(wantTitles), items)
+	}
+	for i, want := range wantTitles {
+		if items[i].Title != want {
+			t.Fatalf("item %d title = %q, want %q (order lost a local page)", i, items[i].Title, want)
+		}
+	}
+	if requests != len(pages) {
+		t.Fatalf("server requests = %d, want exactly %d (each physical page fetched once)", requests, len(pages))
+	}
+
+	// Logical page numbers compact onto pages with local articles: page 2 is
+	// physical position 3, and asking past the archive end is a legal empty
+	// page rather than an error.
+	page2, err := site.ListNewsPage("xwdt/zx", 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page2) != 1 || page2[0].Title != "本地消息三" {
+		t.Fatalf("compacted logical page 2 = %#v, want 本地消息三", page2)
+	}
+	beyond, err := site.ListNewsPage("xwdt/zx", 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(beyond) != 0 {
+		t.Fatalf("page past the archive end = %#v, want empty", beyond)
+	}
+	if _, err := site.ListNewsPage("xwdt/zx", 0); err == nil {
+		t.Fatal("page 0 was accepted")
+	}
+	if _, err := site.ListNewsPage("not-a-feed", 1); err == nil {
+		t.Fatal("unknown route was accepted")
 	}
 }

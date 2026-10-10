@@ -3,6 +3,7 @@ package scraper
 import (
 	"bytes"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"net/url"
@@ -71,6 +72,11 @@ var (
 
 func iscitKnownFeed(slug string) bool {
 	slug = strings.Trim(slug, "/")
+	if slug == "index" {
+		// The homepage renders real article modules (最新新闻/学术动态/通知
+		// tabs) with local /info/ links, so it is an audited feed.
+		return true
+	}
 	for _, known := range iscitSubPages {
 		if slug == known {
 			return true
@@ -169,6 +175,13 @@ func iscitTotalPagesFromHTML(body []byte, slug string) (int, error) {
 	}
 	if err := iscitResponseError(doc); err != nil {
 		return 0, err
+	}
+	if strings.Trim(strings.TrimSpace(slug), "/") == "index" {
+		if !iscitIsHomepage(doc) {
+			return 0, fmt.Errorf("iscit: %s did not return the audited homepage article modules", slug)
+		}
+		// The homepage is a single dashboard page; it has no archive paging.
+		return 1, nil
 	}
 	if iscitIsHomepage(doc) {
 		return 0, fmt.Errorf("iscit: %s returned the homepage shell instead of its list", slug)
@@ -292,10 +305,76 @@ func parseIscitNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 		iscitAppendListRow(&items, seen, row, typ, baseURL)
 	})
 	if len(items) == 0 && !iscitKnownEmptyFeedType(typ) {
+		if iscitRowsAreAllExternal(container, baseURL) {
+			// The list itself is healthy: every row carries a real title and
+			// date but links off-site (WeChat or its campus VPN proxy), so
+			// there is genuinely nothing local to archive. Only the row-level
+			// proof above may turn the empty result into success.
+			return items, nil
+		}
 		return nil, fmt.Errorf("iscit: article list contains no usable local article rows")
 	}
 	// Keep a non-nil empty slice for the two audited, legitimate empty tabs.
 	return items, nil
+}
+
+// iscitRowsAreAllExternal reports whether every parsed list row carries real
+// content that only links off-site. The college now publishes much of its
+// news as WeChat posts (direct mp.weixin.qq.com links, or the campus VPN
+// proxy rewriting of them); those rows have titles and dates but no local
+// article URL. The verdict is accepted only when every row was inspected: a
+// row without a resolvable content anchor, a same-host non-article anchor, or
+// a local /info/ path means the template changed or rows were dropped, and
+// the empty result must stay a hard error.
+func iscitRowsAreAllExternal(container *goquery.Selection, baseURL string) bool {
+	if container == nil || container.Length() == 0 {
+		return false
+	}
+	base, err := url.Parse(baseURL)
+	if err != nil || base.Host == "" {
+		return false
+	}
+	rows := container.Find("li")
+	if rows.Length() == 0 {
+		return false
+	}
+	allExternal := true
+	rows.EachWithBreak(func(_ int, row *goquery.Selection) bool {
+		anchors := row.Find("a[href]")
+		if anchors.Length() == 0 {
+			allExternal = false
+			return false
+		}
+		rowExternal := false
+		anchors.EachWithBreak(func(_ int, anchor *goquery.Selection) bool {
+			href := strings.TrimSpace(html.UnescapeString(anchor.AttrOr("href", "")))
+			if href == "" {
+				allExternal = false
+				return false
+			}
+			parsed, parseErr := url.Parse(cleanURL(resolveURL(baseURL, href)))
+			if parseErr != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+				allExternal = false
+				return false
+			}
+			if iscitArticlePathRe.MatchString(parsed.Path) || strings.EqualFold(parsed.Hostname(), base.Hostname()) {
+				allExternal = false
+				return false
+			}
+			if strings.TrimSpace(anchor.AttrOr("title", "")) == "" && strings.TrimSpace(anchor.Text()) == "" {
+				allExternal = false
+				return false
+			}
+			rowExternal = true
+			return true
+		})
+		if !allExternal || !rowExternal {
+			allExternal = false
+			return false
+		}
+		return true
+	})
+	return allExternal
 }
 
 func iscitListContainer(doc *goquery.Document) *goquery.Selection {
@@ -339,7 +418,7 @@ func iscitAppendListRow(items *[]model.NewsItem, seen map[string]int, row *goque
 			return
 		}
 		title := iscitListRowTitle(row, anchor)
-		if title == "" || !isValidNewsTitle(title) || utf8.RuneCountInString(title) > 200 {
+		if !iscitIsRowTitle(title) {
 			return
 		}
 		item := model.NewsItem{
@@ -363,6 +442,24 @@ func iscitAppendListRow(items *[]model.NewsItem, seen map[string]int, row *goque
 		seen[fullURL] = len(*items)
 		*items = append(*items, item)
 	})
+}
+
+// iscitIsRowTitle accepts the shared nav-label filter first. A title that
+// only collides with the shared skip list (e.g. "诚聘海内外英才", a real
+// recruitment article on this site) is still a real headline when the anchor
+// already resolved to a local /info/ article path — navigation labels never
+// point at generated article pages, so the URL check above bounds the risk.
+func iscitIsRowTitle(title string) bool {
+	if title == "" || utf8.RuneCountInString(title) > 200 {
+		return false
+	}
+	if isValidNewsTitle(title) {
+		return true
+	}
+	if len(title) < 6 {
+		return false
+	}
+	return !strings.HasSuffix(title, ">>") && !strings.HasSuffix(title, "》")
 }
 
 func iscitListRowTitle(row, anchor *goquery.Selection) string {
@@ -474,7 +571,7 @@ func iscitParseHomepage(doc *goquery.Document, baseURL string) ([]model.NewsItem
 			return
 		}
 		title := iscitListRowTitle(row, anchor)
-		if title == "" || !isValidNewsTitle(title) || utf8.RuneCountInString(title) > 200 {
+		if !iscitIsRowTitle(title) {
 			return
 		}
 		publishedAt := ""

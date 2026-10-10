@@ -363,6 +363,136 @@ func TestCmListSurfacesExternalOnlyRows(t *testing.T) {
 	}
 }
 
+func TestCmListAllExternalRowsIsEmptyFeed(t *testing.T) {
+	body := []byte(`<html><head><meta name="pageTitle" content="教师招聘"></head><body><div class="n_list"><ul><li><a href="https://mp.weixin.qq.com/s/example" target="_blank" title="微信招聘信息" class="eclip">微信招聘信息</a><time>2026-01-12</time></li></ul></div><div class="p_pages"><span class="p_no_d">1</span></div></body></html>`)
+	items, err := parseAdapter_cmList(body, "https://cm.swjtu.edu.cn")
+	if err != nil {
+		t.Fatalf("all-external list page should parse as an empty feed, got error: %v", err)
+	}
+	if len(items) != 0 {
+		t.Fatalf("all-external list page returned %d items, want empty feed: %#v", len(items), items)
+	}
+	if got := cmExternalListRowCount(body, "https://cm.swjtu.edu.cn"); got != 1 {
+		t.Fatalf("cmExternalListRowCount() = %d, want 1", got)
+	}
+}
+
+func TestCmLiveListsSkipExternalRowsAndKeepLocalOnes(t *testing.T) {
+	cases := []struct {
+		file           string
+		wantCount      int
+		wantFirstURL   string
+		wantFirstTitle string
+		wantFirstDate  string
+	}{
+		{
+			file:           "testdata/cm_live_jszp.html",
+			wantCount:      1,
+			wantFirstURL:   "https://cm.swjtu.edu.cn/info/1064/14421.htm",
+			wantFirstTitle: "西南交通大学医学院求贤榜： 心怀“国之大者”，逐梦“西南交大”",
+			wantFirstDate:  "2023-01-13",
+		},
+		{
+			file:           "testdata/cm_live_rczp.html",
+			wantCount:      4,
+			wantFirstURL:   "https://cm.swjtu.edu.cn/info/1063/24751.htm",
+			wantFirstTitle: "@全球英才，西南交通大学医学院诚邀依托申报2025海外优青！",
+			wantFirstDate:  "2025-02-25",
+		},
+		{
+			file:           "testdata/cm_live_xyyw_page4.html",
+			wantCount:      14,
+			wantFirstURL:   "https://cm.swjtu.edu.cn/info/1031/30151.htm",
+			wantFirstTitle: "医学院党委理论学习中心组开展树立和践行正确政绩观学习教育暨全国两会精神专题学习",
+			wantFirstDate:  "2026-03-25",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.file, func(t *testing.T) {
+			body, err := os.ReadFile(tc.file)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := cmExternalListRowCount(body, "https://cm.swjtu.edu.cn"); got != 1 {
+				t.Fatalf("cmExternalListRowCount() = %d, want 1 external row", got)
+			}
+			items, err := parseAdapter_cmList(body, "https://cm.swjtu.edu.cn")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(items) != tc.wantCount {
+				t.Fatalf("got %d items, want %d local rows kept: %#v", len(items), tc.wantCount, items)
+			}
+			first := items[0]
+			if first.URL != tc.wantFirstURL || first.Title != tc.wantFirstTitle || first.Date != tc.wantFirstDate {
+				t.Fatalf("first item = %+v, want url=%q title=%q date=%q", first, tc.wantFirstURL, tc.wantFirstTitle, tc.wantFirstDate)
+			}
+			for _, item := range items {
+				if !strings.Contains(item.URL, "://cm.swjtu.edu.cn/") {
+					t.Errorf("external row leaked into feed: %+v", item)
+				}
+			}
+		})
+	}
+}
+
+func TestCmListPageSkipsExternalRowsAndTreatsAllExternalPageAsEmpty(t *testing.T) {
+	jszpBody, err := os.ReadFile("testdata/cm_live_jszp.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	externalOnly := []byte(`<html><head><meta name="pageTitle" content="人才招聘"></head><body><div class="n_list"><ul><li><a href="https://mp.weixin.qq.com/s/LMtoEylXdORvk8eGv392nA" target="_blank" title="@全球英才丨西南交通大学诚邀依托申报2026海外优青 ！" class="eclip">@全球英才丨西南交通大学诚邀依托申报2026海外优青 ！</a><time>2026-01-05</time></li></ul></div><div class="pb_sys_common"><span class="p_t">共1条</span><span class="p_pages"><span class="p_no_d">1</span></span></div></body></html>`)
+	responses := map[string][]byte{
+		"/cpyc/jszp.htm": jszpBody,
+		"/cpyc/rczp.htm": externalOnly,
+	}
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if body, ok := responses[r.URL.Path]; ok {
+			_, _ = w.Write(body)
+			return
+		}
+		http.NotFound(w, r)
+	})
+	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := &http.Server{Handler: handler}
+	go func() { _ = server.Serve(listener) }()
+	defer server.Close()
+
+	site := AllSites["cm"]
+	oldBaseURL, oldNoCache := site.BaseURL, NoCache
+	site.BaseURL = "http://" + listener.Addr().String()
+	NoCache = true
+	defer func() {
+		site.BaseURL = oldBaseURL
+		NoCache = oldNoCache
+	}()
+
+	items, totalPages, err := site.ListPageFunc("cpyc/jszp", 1)
+	if err != nil {
+		t.Fatalf("mixed list page failed: %v", err)
+	}
+	if totalPages != 1 {
+		t.Fatalf("totalPages = %d, want 1", totalPages)
+	}
+	if len(items) != 1 || items[0].URL != "http://"+listener.Addr().String()+"/info/1064/14421.htm" {
+		t.Fatalf("mixed list page items = %#v, want only the local row", items)
+	}
+
+	items, totalPages, err = site.ListPageFunc("cpyc/rczp", 1)
+	if err != nil {
+		t.Fatalf("all-external list page should be an empty feed, got error: %v", err)
+	}
+	if totalPages != 1 {
+		t.Fatalf("totalPages = %d, want 1", totalPages)
+	}
+	if len(items) != 0 {
+		t.Fatalf("all-external list page items = %#v, want empty feed", items)
+	}
+}
+
 func TestCmLiveArticleFiltersHTMLResourcesByTypeAndMagic(t *testing.T) {
 	articleHTML := `<html><body><div class="ny-tit"><h4>通知公告</h4></div><div class="detail"><div class="dtl-tit"><h4>资源验证通知</h4><div class="dtl-ar"><span>发布时间：2026-08-31</span></div></div><div class="dtl-txt"><div class="v_news_content"><p>正文内容</p><img src="/good.png"><img src="/bad.png"><a href="/good.pdf">有效附件.pdf</a><a href="/system/_content/download.jsp?urltype=news.DownloadAttachUrl&amp;wbfileid=BAD">验证码附件.rar</a></div></div></div></body></html>`
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

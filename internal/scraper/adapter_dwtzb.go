@@ -298,11 +298,14 @@ func parseAdapter_dwtzbArticle(raw []byte, baseURL string) (*model.Article, erro
 	// dwtzb's detail template is stable: all article fields live below this
 	// exact content shell.  In particular, do not fall back to a same-named
 	// .artical or .v_news_content from a navigation/mobile/SPA fragment.
+	// The CMS emits the body wrapper with a varying numeric suffix
+	// (vsb_content, vsb_content_2, vsb_content_4, vsb_content_501, ...),
+	// so match the id prefix while staying inside the .artical shell.
 	scope := doc.Find("#content.pages .artical").First()
 	if scope.Length() == 0 {
 		return nil, fmt.Errorf("dwtzb article has no article container")
 	}
-	content := scope.Find("#vsb_content_2 .v_news_content, #vsb_content .v_news_content").First()
+	content := scope.Find("[id^='vsb_content'] .v_news_content").First()
 	if content.Length() == 0 {
 		return nil, fmt.Errorf("dwtzb article has no content container")
 	}

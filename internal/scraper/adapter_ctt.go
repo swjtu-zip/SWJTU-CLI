@@ -85,6 +85,14 @@ func init() {
 func cttPageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
 	slug = strings.Trim(slug, "/")
+	if slug == "" || slug == "index" {
+		// The implicit homepage feed is a single preview page, not a
+		// reverse-numbered archive.
+		if page != 1 {
+			return ""
+		}
+		return baseURL + "/"
+	}
 	if extension == "" {
 		extension = ".htm"
 	}
@@ -115,6 +123,12 @@ func cttPageURL(baseURL, slug string, page, totalPages int, extension string) st
 // the labels, rather than the generated hrefs, is essential because the href
 // for the last page is /1.htm even when the logical total is much larger.
 func cttTotalPages(slug string) (int, error) {
+	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if slug == "" || slug == "index" {
+		// The homepage feed is a single preview page parsed by the home
+		// template selectors in parseCttNews.
+		return 1, nil
+	}
 	baseURL := cttBaseURL
 	if site := AllSites["ctt"]; site != nil && strings.TrimSpace(site.BaseURL) != "" {
 		baseURL = strings.TrimRight(strings.TrimSpace(site.BaseURL), "/")
@@ -141,9 +155,9 @@ func cttTotalPages(slug string) (int, error) {
 		return total, nil
 	}
 	if cttListShellFromHTML(body) {
-		if !cttHasListEntries(doc) {
-			return 0, fmt.Errorf("ctt: recognized list is empty (%s)", slug)
-		}
+		// The column is still served (breadcrumb plus pagination shell) but
+		// currently has no articles. That is a legitimate one-page empty
+		// feed, not an error.
 		return 1, nil
 	}
 	return 0, fmt.Errorf("ctt: %s does not expose a recognized list page", slug)
@@ -202,6 +216,9 @@ func cttResponseReason(doc *goquery.Document) string {
 	if reason := cttBlockedTextReason(title); reason != "" {
 		return reason
 	}
+	if strings.Contains(title, "404") || strings.Contains(title, "错误提示") || strings.Contains(title, "页面未找到") {
+		return "error response (404)"
+	}
 
 	if doc.Find("#app, #root, [id='__next'], [data-reactroot]").Length() > 0 && doc.Find("script").Length() > 0 {
 		return "SPA shell"
@@ -224,7 +241,7 @@ func cttBlockedTextReason(text string) string {
 		return ""
 	}
 	for _, marker := range []string{
-		"验证码", "人机验证", "安全验证", "访问验证", "访问被拒绝", "拒绝访问",
+		"验证码", "人机验证", "安全验证", "访问验证", "访问被拒绝", "拒绝访问", "页面未找到",
 		"captcha", "cloudflare", "access denied", "just a moment", "cf-chl", "challenge-platform", "waf", "403 forbidden",
 	} {
 		if strings.Contains(text, marker) {
@@ -315,7 +332,10 @@ func parseCttNews(html []byte, baseURL string) ([]model.NewsItem, error) {
 
 	if len(items) == 0 {
 		if cttListShell(doc) {
-			return nil, fmt.Errorf("ctt: recognized list is empty")
+			// The column is still served (breadcrumb plus pagination shell)
+			// but currently has no articles, e.g. xzfc/mtgz. A recognized
+			// empty archive is a legitimate empty feed, not an error.
+			return items, nil
 		}
 		return nil, fmt.Errorf("ctt: list contains no recognized article entries")
 	}

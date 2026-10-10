@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 func TestClxyAdapterRegistration(t *testing.T) {
@@ -12,7 +14,7 @@ func TestClxyAdapterRegistration(t *testing.T) {
 	if !ok {
 		t.Fatal("clxy site is not registered")
 	}
-	if site.BaseURL != clxyCanonicalBaseURL || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.ArticleFetchFunc == nil {
+	if site.BaseURL != clxyCanonicalBaseURL || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil || site.ArticleFetchFunc == nil {
 		t.Fatalf("clxy adapter hooks are incomplete: %+v", site)
 	}
 	want := []string{
@@ -87,8 +89,8 @@ func TestClxyListParserExtractsRowsDatesAndTypes(t *testing.T) {
 	}
 
 	items, err := parseAdapter_clxyList(html, "https://clxy.swjtu.edu.cn")
-	if err == nil || !strings.Contains(err.Error(), "outside the site") {
-		t.Fatalf("external row was accepted as a successful complete feed: items=%#v err=%v", items, err)
+	if err != nil {
+		t.Fatalf("list with an external row must stay a successful partial feed: items=%#v err=%v", items, err)
 	}
 	if len(items) != 3 {
 		t.Fatalf("got %d clxy list items, want 3: %#v", len(items), items)
@@ -272,17 +274,119 @@ func TestClxyLiveHomeAndListFixtures(t *testing.T) {
 	}
 }
 
-func TestClxyLiveExternalOnlyListIsNotSuccessful(t *testing.T) {
+func TestClxyLiveExternalOnlyListIsLegitimateEmptyFeed(t *testing.T) {
 	html, err := os.ReadFile("testdata/clxy_list_jyzp_external_live.html")
 	if err != nil {
 		t.Fatal(err)
 	}
 	items, err := parseAdapter_clxyList(html, clxyCanonicalBaseURL)
-	if err == nil || !strings.Contains(err.Error(), "outside the site") {
-		t.Fatalf("external-only employment list was accepted: items=%#v err=%v", items, err)
+	if err != nil {
+		t.Fatalf("employment archive whose rows all link off-site must parse as an empty feed: %v", err)
 	}
 	if len(items) != 0 {
 		t.Fatalf("external-only employment list leaked local items: %#v", items)
+	}
+}
+
+func TestClxyLiveMixedListPagesSkipExternalRows(t *testing.T) {
+	cases := []struct {
+		fixture  string
+		rows     int
+		local    int
+		external int
+	}{
+		// jwgg/bks logical page 2 (/jwgg/bks/55.htm): three 转发通知 rows
+		// point at jwc.swjtu.edu.cn.
+		{"testdata/clxy_list_jwgg_bks_external_live.html", 10, 7, 3},
+		// jwgg logical page 2 (/jwgg/112.htm): same forwarded notices.
+		{"testdata/clxy_list_jwgg_external_live.html", 10, 7, 3},
+		// kjdt page 1: one report is mirrored by news.swjtu.edu.cn.
+		{"testdata/clxy_list_kjdt_external_live.html", 10, 9, 1},
+	}
+	for _, tc := range cases {
+		t.Run(tc.fixture, func(t *testing.T) {
+			html, err := os.ReadFile(tc.fixture)
+			if err != nil {
+				t.Fatal(err)
+			}
+			doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			rows := clxyListRows(doc)
+			if rows.Length() != tc.rows {
+				t.Fatalf("row count = %d, want %d", rows.Length(), tc.rows)
+			}
+			if got := clxyExternalListRowCount(rows, clxyCanonicalBaseURL); got != tc.external {
+				t.Fatalf("external row count = %d, want %d", got, tc.external)
+			}
+
+			items, err := parseAdapter_clxyList(html, clxyCanonicalBaseURL)
+			if err != nil {
+				t.Fatalf("mixed list page must not fail: %v", err)
+			}
+			if len(items) != tc.local {
+				t.Fatalf("local item count = %d, want %d: %#v", len(items), tc.local, items)
+			}
+			for _, item := range items {
+				if !strings.HasPrefix(item.URL, clxyCanonicalBaseURL+"/info/") {
+					t.Errorf("external row leaked into items: %#v", item)
+				}
+			}
+		})
+	}
+}
+
+func TestClxyTotalPagesFromHTMLMatchesArchives(t *testing.T) {
+	cases := []struct {
+		fixture string
+		want    int
+	}{
+		// The 就业招聘 archive links out to jiuye.swjtu.edu.cn on every page;
+		// it is reported as a single legitimate empty page.
+		{"testdata/clxy_list_jyzp_external_live.html", 1},
+		{"testdata/clxy_list_jwgg_bks_external_live.html", 56},
+		{"testdata/clxy_list_jwgg_external_live.html", 113},
+		{"testdata/clxy_list_kjdt_external_live.html", 3},
+		{"testdata/clxy_list_xyxw_first_live.html", 112},
+	}
+	for _, tc := range cases {
+		t.Run(tc.fixture, func(t *testing.T) {
+			html, err := os.ReadFile(tc.fixture)
+			if err != nil {
+				t.Fatal(err)
+			}
+			pages, err := clxyTotalPagesFromHTML(html)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if pages != tc.want {
+				t.Fatalf("total pages = %d, want %d", pages, tc.want)
+			}
+		})
+	}
+
+	for _, name := range []string{"testdata/clxy_list_404_live.html", "testdata/clxy_permission_live.html"} {
+		html, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if pages, err := clxyTotalPagesFromHTML(html); err == nil {
+			t.Fatalf("%s was accepted with %d pages", name, pages)
+		}
+	}
+}
+
+func TestClxyTotalPagesShortCircuitsIndex(t *testing.T) {
+	// The homepage aggregation has no archive counter and must not be fetched
+	// through this hook at all.
+	pages, err := clxyTotalPages("index")
+	if err != nil || pages != 1 {
+		t.Fatalf("clxyTotalPages(index) = %d, %v; want 1, nil", pages, err)
+	}
+	pages, err = clxyTotalPages("/")
+	if err != nil || pages != 1 {
+		t.Fatalf("clxyTotalPages(/) = %d, %v; want 1, nil", pages, err)
 	}
 }
 

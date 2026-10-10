@@ -168,12 +168,13 @@ func cmListPage(slug string, page int) ([]model.NewsItem, int, error) {
 			return nil, 0, err
 		}
 	}
+	// Rows whose only target links off-site (currently WeChat reposts of job
+	// notices) are deliberately skipped by the parser: they cannot be handed
+	// to the CM article parser, while every local row on the page is kept.
+	// A page whose rows are all external is reported as an empty feed.
 	items, err := parseAdapter_cmList(body, baseURL)
 	if err != nil {
 		return nil, totalPages, err
-	}
-	if unsupported := cmExternalListRowCount(body, baseURL); unsupported > 0 {
-		return items, totalPages, fmt.Errorf("cm: %s page %d has %d external-only article row(s); refusing to silently omit them", slug, page, unsupported)
 	}
 	if err := cmRepairListMetadata(items, baseURL); err != nil {
 		return nil, totalPages, err
@@ -485,9 +486,12 @@ func cmTitleIsTruncated(title string) bool {
 	return strings.HasSuffix(title, "...") || strings.HasSuffix(title, "…")
 }
 
-// cpyc/rczp and cpyc/jszp currently expose WeChat links rather than CM detail
-// pages. They cannot be handed to the CM article parser; surface that fact as
-// a feed error instead of reporting a successful empty page.
+// cmExternalListRowCount counts list rows whose only article target links
+// off-site (e.g. WeChat reposts of job notices on the cpyc and xyyw feeds).
+// parseAdapter_cmList deliberately skips those rows — they cannot be handed
+// to the CM article parser — while keeping the local rows on the same page,
+// and treats a page whose rows are all external as an empty feed. The count
+// is what distinguishes that case from a genuinely broken or empty list.
 func cmExternalListRowCount(html []byte, baseURL string) int {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(html)))
 	if err != nil {
@@ -563,6 +567,11 @@ func parseAdapter_cmList(html []byte, baseURL string) ([]model.NewsItem, error) 
 	if list := doc.Find(".n_list > ul").First(); list.Length() > 0 {
 		items := parseCmListRows(list.ChildrenFiltered("li"), cmPageType(doc), baseURL, true)
 		if len(items) == 0 {
+			if cmExternalListRowCount(html, baseURL) > 0 {
+				// The list is real but every row links off-site; nothing here
+				// can be collected, so report a valid empty feed.
+				return []model.NewsItem{}, nil
+			}
 			return nil, fmt.Errorf("cm list contains no article entries")
 		}
 		return items, nil
@@ -573,6 +582,9 @@ func parseAdapter_cmList(html []byte, baseURL string) ([]model.NewsItem, error) 
 		// publication date, so do not expose this list-only placeholder.
 		items := parseCmListRows(list.ChildrenFiltered("li"), cmPageType(doc), baseURL, false)
 		if len(items) == 0 {
+			if cmExternalListRowCount(html, baseURL) > 0 {
+				return []model.NewsItem{}, nil
+			}
 			return nil, fmt.Errorf("cm list contains no article entries")
 		}
 		return items, nil

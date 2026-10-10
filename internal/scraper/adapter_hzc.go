@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -56,7 +57,7 @@ func init() {
 		ParseList:    parseAdapter_hzcList,
 		ParseArticle: parseAdapter_hzcArticle,
 		PageURL:      hzcPageURL,
-		TotalPages:   hzcTotalPages,
+		ListPage:     hzcListPage,
 		FetchArticle: hzcFetchArticle,
 	})
 }
@@ -100,36 +101,156 @@ func hzcKnownFeed(slug string) bool {
 	return false
 }
 
-func hzcTotalPages(slug string) (int, error) {
-	slug = strings.Trim(strings.TrimSpace(slug), "/")
-	if slug == "" || slug == "index" || slug == "home" {
-		return 1, nil
+// hzcFetchListHTML fetches a generated list page, tolerating the .html
+// spelling the CMS occasionally emits for archived pages.
+func hzcFetchListHTML(pageURL string) ([]byte, error) {
+	body, err := fetch(pageURL)
+	if err == nil {
+		return body, nil
 	}
-	if !hzcKnownFeed(slug) {
-		return 0, fmt.Errorf("hzc: %q is not an article-list route", slug)
+	if strings.HasSuffix(strings.ToLower(pageURL), ".htm") {
+		if body, fallbackErr := fetch(strings.TrimSuffix(pageURL, ".htm") + ".html"); fallbackErr == nil {
+			return body, nil
+		}
+	}
+	return nil, err
+}
+
+// hzcListPage owns the GET-and-parse path for hzc article lists. hzc columns
+// syndicate news.swjtu.edu.cn rows alongside local /info/ articles, and a
+// physical page can consist of external rows only: the live xwdt/zx archive
+// has such pages in the middle of its 39-page run, with local articles both
+// before and after them. Feeding the shared walker those empty pages would
+// abort the crawl with "returned no articles" (or, with a break-on-empty
+// rule, stop it even earlier) and silently drop every older local article.
+// The walker therefore compacts logical page numbers onto physical pages
+// that actually contain local articles and skips the external-only ones. It
+// reports total 0 (not exposed) so the shared range walker applies its
+// empty-page-break cap and stops cleanly once the physical archive is
+// exhausted.
+func hzcListPage(slug string, page int) ([]model.NewsItem, int, error) {
+	if page < 1 {
+		return nil, 0, fmt.Errorf("hzc: list page must be positive: %d", page)
 	}
 	site := AllSites["hzc"]
 	if site == nil {
-		return 0, fmt.Errorf("hzc: site registration is missing")
+		return nil, 0, fmt.Errorf("hzc: site registration is missing")
 	}
-	body, err := fetch(hzcPageURL(site.BaseURL, slug, 1, 0, ".htm"))
+	baseURL := strings.TrimRight(strings.TrimSpace(site.BaseURL), "/")
+	if baseURL == "" {
+		baseURL = hzcCanonicalBaseURL
+	}
+	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if slug == "" || slug == "index" || slug == "home" {
+		if page != 1 {
+			return nil, 1, fmt.Errorf("hzc: homepage has no page %d", page)
+		}
+		body, err := hzcFetchListHTML(baseURL + "/index.htm")
+		if err != nil {
+			return nil, 1, fmt.Errorf("hzc: read homepage: %w", err)
+		}
+		items, err := parseAdapter_hzcList(body, baseURL)
+		if err != nil {
+			return nil, 1, err
+		}
+		return items, 1, nil
+	}
+	if !hzcKnownFeed(slug) {
+		return nil, 0, fmt.Errorf("hzc: %q is not an article-list route", slug)
+	}
+	scan, err := hzcEnsureListScan(baseURL, slug)
 	if err != nil {
-		return 0, fmt.Errorf("hzc: read first page for %s: %w", slug, err)
+		return nil, 0, err
 	}
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
+	for len(scan.nonEmpty) < page && !scan.done {
+		if err := hzcScanNextListPosition(baseURL, slug, scan); err != nil {
+			return nil, 0, err
+		}
+	}
+	if page > len(scan.nonEmpty) {
+		return []model.NewsItem{}, 0, nil
+	}
+	return scan.pages[scan.nonEmpty[page-1]], 0, nil
+}
+
+// hzcListScan caches one walk over a slug's reverse-numbered physical pages
+// so a range crawl fetches each page at most once. Scans expire with the
+// shared fetch-cache TTL so long-lived processes pick up newly published
+// articles instead of serving a stale first page forever.
+type hzcListScan struct {
+	fetchedAt time.Time
+	total     int                      // physical page count reported by position-1 pagination
+	pages     map[int][]model.NewsItem // parsed local items keyed by physical position (1 = newest)
+	nonEmpty  []int                    // physical positions holding at least one local article
+	scanned   int                      // leading physical positions already scanned
+	done      bool                     // scanned through the last physical page
+}
+
+var hzcListWalks = struct {
+	sync.Mutex
+	scans map[string]*hzcListScan
+}{scans: make(map[string]*hzcListScan)}
+
+func hzcEnsureListScan(baseURL, slug string) (*hzcListScan, error) {
+	key := baseURL + "|" + slug
+	hzcListWalks.Lock()
+	defer hzcListWalks.Unlock()
+	if scan, ok := hzcListWalks.scans[key]; ok && time.Since(scan.fetchedAt) < cacheTTL {
+		return scan, nil
+	}
+	scan := &hzcListScan{total: 1, pages: make(map[int][]model.NewsItem)}
+	body, err := hzcFetchListHTML(hzcPageURL(baseURL, slug, 1, 0, ".htm"))
 	if err != nil {
-		return 0, fmt.Errorf("hzc: parse first page for %s: %w", slug, err)
+		return nil, fmt.Errorf("hzc: read first page for %s: %w", slug, err)
 	}
-	if err := hzcRejectErrorPage(doc, "list"); err != nil {
-		return 0, err
+	items, err := parseAdapter_hzcList(body, baseURL)
+	if err != nil {
+		return nil, err
 	}
-	if hzcPageType(doc) != "2" || doc.Find(".conlistComm").Length() == 0 {
-		return 0, fmt.Errorf("hzc: %s is not a list page", slug)
+	if doc, docErr := goquery.NewDocumentFromReader(strings.NewReader(string(body))); docErr == nil {
+		if total := hzcPaginationTotal(doc); total > 0 {
+			scan.total = total
+		}
 	}
-	if total := hzcPaginationTotal(doc); total > 0 {
-		return total, nil
+	scan.fetchedAt = time.Now()
+	scan.scanned = 1
+	scan.pages[1] = items
+	if len(items) > 0 {
+		scan.nonEmpty = append(scan.nonEmpty, 1)
 	}
-	return 0, fmt.Errorf("hzc: %s has no recognized pagination", slug)
+	hzcListWalks.scans[key] = scan
+	return scan, nil
+}
+
+func hzcScanNextListPosition(baseURL, slug string, scan *hzcListScan) error {
+	if scan.scanned >= scan.total {
+		scan.done = true
+		return nil
+	}
+	pos := scan.scanned + 1
+	pageURL := hzcPageURL(baseURL, slug, pos, scan.total, ".htm")
+	if pageURL == "" {
+		return fmt.Errorf("hzc: no list URL for %s physical page %d/%d", slug, pos, scan.total)
+	}
+	body, err := hzcFetchListHTML(pageURL)
+	if err != nil {
+		return fmt.Errorf("hzc: read %s physical page %d/%d: %w", slug, pos, scan.total, err)
+	}
+	items, err := parseAdapter_hzcList(body, baseURL)
+	if err != nil {
+		return err
+	}
+	if doc, docErr := goquery.NewDocumentFromReader(strings.NewReader(string(body))); docErr == nil {
+		if middleTotal := hzcPaginationTotal(doc); middleTotal > 1 && middleTotal != scan.total {
+			return fmt.Errorf("hzc: %s physical page %d reported total %d, want %d", slug, pos, middleTotal, scan.total)
+		}
+	}
+	scan.scanned = pos
+	scan.pages[pos] = items
+	if len(items) > 0 {
+		scan.nonEmpty = append(scan.nonEmpty, pos)
+	}
+	return nil
 }
 
 func parseAdapter_hzcList(raw []byte, baseURL string) ([]model.NewsItem, error) {

@@ -122,6 +122,13 @@ func jzxyPageURL(baseURL, slug string, page, totalPages int, extension string) s
 }
 
 func jzxyTotalPages(slug string) (int, error) {
+	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if slug == "index" {
+		// The home page is a single-page module digest; parseAdapter_jzxyList
+		// scopes it via pageType=1. ListNewsRange parses page 1 before asking
+		// for the total, so the home shell has already been validated here.
+		return 1, nil
+	}
 	listURL := jzxyPageURL(jzxyCanonicalBaseURL, slug, 1, 0, ".htm")
 	body, err := fetch(listURL)
 	if err != nil {
@@ -683,7 +690,17 @@ func jzxyArticleType(doc *goquery.Document) string {
 			typ = value
 		}
 	})
-	return typ
+	if typ != "" {
+		return typ
+	}
+	// Some article columns (e.g. 首页高清大图) render no column link in the
+	// breadcrumb, only "首页 > 正文". Fall back to the section header, which
+	// names the owning column on every observed article template.
+	value := jzxyText(doc.Find(".notices .title .tit").First().Text())
+	if value != "" && value != "首页" && value != "正文" && jzxyValidTitle(value) {
+		return value
+	}
+	return ""
 }
 
 func jzxyCollectAttachments(doc *goquery.Document, baseURL string, article *model.Article) {

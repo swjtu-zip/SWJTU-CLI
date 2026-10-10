@@ -36,11 +36,13 @@ var journalsAttachmentExts = []string{
 // The live site is a directory of journals, not a 博达 news site: its valid
 // links point to xnjdxb.swjtu.edu.cn, Springer, IET, ScienceDirect, CNKI, or
 // are placeholders. SubPages therefore remains empty until the origin has a
-// real local article list.
+// real local article list, and the SDK must not synthesise an index feed for
+// a homepage that exposes no local article list.
 func init() {
 	if site := AllSites["journals"]; site != nil {
 		site.BaseURL = journalsCanonicalBaseURL
 		site.SubPages = nil
+		site.NoIndexFeed = true
 	}
 	registerAdapter("journals", SiteAdapter{
 		ParseList:    parseAdapter_journalsList,

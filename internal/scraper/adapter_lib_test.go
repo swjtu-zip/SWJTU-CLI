@@ -180,6 +180,24 @@ func TestLibEmptyAndNonArticleResponsesAreStrict(t *testing.T) {
 	}
 }
 
+func TestLibLiveHomepageIsSPAShellAndSkipsIndexFeed(t *testing.T) {
+	// The served homepage is a client-rendered SPA shell without any
+	// server-side article list, so the SDK must not offer an index feed.
+	site := AllSites["lib"]
+	if site == nil || !site.NoIndexFeed {
+		t.Fatalf("lib site must set NoIndexFeed: %#v", site)
+	}
+	if items, err := parseAdapter_libList(readLibFixture(t, "lib_live_home.html"), libCanonicalBaseURL); err == nil || items != nil {
+		t.Fatalf("lib SPA homepage shell was accepted as a list: items=%#v err=%v", items, err)
+	}
+	if _, _, err := libListPage("index", 1); err == nil {
+		t.Fatal("lib index slug was accepted as an audited article column")
+	}
+	if got := libPageURL(libCanonicalBaseURL, "index", 2, 1, ".htm"); got != "" {
+		t.Fatalf("lib index page 2 URL = %q, want empty", got)
+	}
+}
+
 func TestLibLiveAPIListFixtureUsesSourceColumnsAndDateOnly(t *testing.T) {
 	feed, ok := libFeedForSlug("news")
 	if !ok {

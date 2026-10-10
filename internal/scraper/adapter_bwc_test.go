@@ -422,3 +422,96 @@ func bwcTestResponse(req *http.Request, status int, contentType string, body []b
 		Request:    req,
 	}
 }
+
+// The live homepage (fetched 2026-10-09) renders the five audited modules
+// with real /info/... article links, so the implicit "index" feed is a scoped
+// homepage parse, never a document-wide scan.
+func TestBwcLiveHomepageServesScopedIndexFeed(t *testing.T) {
+	data := readBWCFixture(t, "bwc_live_home.html")
+	items, err := parseAdapter_bwcList(data, bwcFixtureBase)
+	if err != nil {
+		t.Fatalf("parse live BWC homepage: %v", err)
+	}
+	wantTypes := map[string]bool{"工作动态": false, "通知公告": false, "安全警示": false, "政策法规": false, "下载专区": false}
+	for _, item := range items {
+		if _, ok := wantTypes[item.Type]; !ok {
+			t.Errorf("homepage item outside the five audited modules: %#v", item)
+		}
+		wantTypes[item.Type] = true
+		if !strings.HasPrefix(item.URL, bwcFixtureBase+"/info/") {
+			t.Errorf("homepage item is not a local article: %#v", item)
+		}
+	}
+	for typ, seen := range wantTypes {
+		if !seen {
+			t.Errorf("homepage module %q produced no feed items", typ)
+		}
+	}
+	if got := bwcTotalPages(data); got != 1 {
+		t.Fatalf("live homepage total pages = %d, want 1", got)
+	}
+}
+
+func TestBwcIndexListPageFetchesHomepageAndNeverPaginates(t *testing.T) {
+	requested := make([]string, 0, 2)
+	oldClient, oldBase, oldNoCache := defaultClient, AllSites["bwc"].BaseURL, NoCache
+	defaultClient = &http.Client{Transport: bwcTestRoundTripper(func(req *http.Request) (*http.Response, error) {
+		requested = append(requested, req.URL.Path)
+		if req.URL.Host != "bwc.test" || req.URL.Path != "/index.htm" {
+			return bwcTestResponse(req, http.StatusNotFound, "text/html; charset=utf-8", readBWCFixture(t, "bwc_out_of_range.html")), nil
+		}
+		return bwcTestResponse(req, http.StatusOK, "text/html; charset=utf-8", readBWCFixture(t, "bwc_live_home.html")), nil
+	})}
+	AllSites["bwc"].BaseURL, NoCache = "https://bwc.test", true
+	ClearCache()
+	t.Cleanup(func() {
+		defaultClient, AllSites["bwc"].BaseURL, NoCache = oldClient, oldBase, oldNoCache
+		ClearCache()
+	})
+
+	items, total, err := bwcListPage("index", 1)
+	if err != nil || total != 1 || len(items) == 0 {
+		t.Fatalf("bwcListPage(index, 1) = items=%d total=%d err=%v", len(items), total, err)
+	}
+	if _, _, err := bwcListPage("index", 2); err == nil {
+		t.Fatal("bwcListPage(index, 2) was accepted")
+	}
+	for _, path := range requested {
+		if path != "/index.htm" {
+			t.Fatalf("index feed requested a non-homepage path: %#v", requested)
+		}
+	}
+}
+
+// The live English News column (fetched 2026-10-09) now renders an empty
+// server-side table with an explicit "共0条 0/0" counter: a legitimate empty
+// feed, not markup drift and not a WAF page.
+func TestBwcLiveEnglishNewsEmptyIsLegalEmptyFeed(t *testing.T) {
+	data := readBWCFixture(t, "bwc_live_english_news_empty.html")
+	items, err := parseAdapter_bwcList(data, bwcFixtureBase)
+	if err != nil {
+		t.Fatalf("live empty English News column: %v", err)
+	}
+	if len(items) != 0 {
+		t.Fatalf("empty English News column yielded items: %#v", items)
+	}
+	if got := bwcTotalPages(data); got != 1 {
+		t.Fatalf("empty English News total pages = %d, want 1", got)
+	}
+
+	// Rows that exist but yield no valid article URL are markup drift and must
+	// keep surfacing as an error instead of an empty feed.
+	drift := []byte(`<html><head><title>News-西南交通大学保卫处</title></head><body>
+		<span id="fanye">共3条&nbsp;1/1&nbsp;</span>
+		<table id="MainContent_GridView1"><tr><td><a href="https://external.example/story">Story</a></td><td>2018-01-18</td></tr></table>
+	</body></html>`)
+	if _, err := parseAdapter_bwcList(drift, bwcFixtureBase); err == nil {
+		t.Fatal("English table with unparseable rows was accepted as a legal empty feed")
+	}
+	// A row-less table without an explicit empty counter is not proven empty.
+	nocounter := []byte(`<html><head><title>News-西南交通大学保卫处</title></head><body>
+		<table id="MainContent_GridView1"></table></body></html>`)
+	if _, err := parseAdapter_bwcList(nocounter, bwcFixtureBase); err == nil {
+		t.Fatal("row-less English table without an empty counter was accepted")
+	}
+}

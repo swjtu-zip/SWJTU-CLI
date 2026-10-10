@@ -306,3 +306,46 @@ type kfjtTestRoundTripper func(*http.Request) (*http.Response, error)
 func (f kfjtTestRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
 }
+
+func TestKFJTLiveHomepageSupportsIndexFeed(t *testing.T) {
+	items, err := parseAdapter_kfjtList(readKFJTFixture(t, "kfjt_live_home.html"), kfjtFixtureBaseURL)
+	if err != nil {
+		t.Fatalf("parse KFJT live homepage: %v", err)
+	}
+	if len(items) != 33 {
+		t.Fatalf("live homepage item count = %d, want 33: %#v", len(items), items)
+	}
+	counts := map[string]int{}
+	seen := map[string]bool{}
+	for _, item := range items {
+		counts[item.Type]++
+		if seen[item.URL] {
+			t.Errorf("duplicate live homepage URL: %s", item.URL)
+		}
+		seen[item.URL] = true
+		if !strings.HasPrefix(item.URL, kfjtFixtureBaseURL+"/info/") {
+			t.Errorf("live homepage leaked non-local URL: %#v", item)
+		}
+		if item.Date == "" || item.Type == "" {
+			t.Errorf("live homepage item lacks metadata: %#v", item)
+		}
+	}
+	for _, module := range []string{"新闻动态", "通知公告", "党建动态", "纪检动态", "企业动态"} {
+		if counts[module] == 0 {
+			t.Errorf("live homepage module %q has no items: %#v", module, counts)
+		}
+	}
+
+	// The homepage is a single-page preview feed, not a reverse-numbered archive.
+	for _, slug := range []string{"", "index", "home"} {
+		if pages, err := kfjtTotalPages(slug); err != nil || pages != 1 {
+			t.Fatalf("kfjtTotalPages(%q) = %d, %v; want 1, nil", slug, pages, err)
+		}
+	}
+	if got := kfjtPageURL(kfjtFixtureBaseURL, "index", 1, 1, ".htm"); got != kfjtFixtureBaseURL+"/index.htm" {
+		t.Fatalf("index page URL = %q", got)
+	}
+	if got := kfjtPageURL(kfjtFixtureBaseURL, "index", 2, 1, ".htm"); got != "" {
+		t.Fatalf("index page 2 URL = %q, want empty", got)
+	}
+}

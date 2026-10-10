@@ -1,6 +1,7 @@
 package scraper
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 	"os"
@@ -157,20 +158,24 @@ func TestMysLiveHomepageAndReversePaginationFixtures(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse captured mys homepage: %v", err)
 	}
-	if len(items) != 9 {
+	// 2026-10-09 capture: 5 carousel tiles plus the four news modules
+	// (6+6+6+6 rows), deduplicated by URL.
+	if len(items) != 29 {
 		t.Fatalf("captured homepage items = %d, want carousel plus four modules: %#v", len(items), items)
 	}
 	want := map[string]struct{ title, typ string }{
-		mysFixtureBaseURL + "/info/1001/11013.htm": {"唐臣筑梦·扬华致远——茅以升学院毕业嘉年华圆满落幕", ""},
-		mysFixtureBaseURL + "/info/1001/10873.htm": {"唐臣读书课第六讲 烽火弦歌：王尧教授人民文学奖长篇小说《桃花坞》读书分享会圆满...", ""},
+		mysFixtureBaseURL + "/info/1001/11793.htm": {"定格市井烟火，留住岁月温度——唐臣读书课第七讲顺利开讲", ""},
 		mysFixtureBaseURL + "/info/1059/10513.htm": {"2026年茅以升学院“唐臣奖章”评选通知", "学院通知"},
 		mysFixtureBaseURL + "/info/1060/11623.htm": {"行走先贤足迹传承报国初心｜通识课《架桥者茅以升》师生赴杭州开展主题研学实践", "唐臣要闻"},
 		mysFixtureBaseURL + "/info/1023/11513.htm": {"茅以升学院学生社团干部任职名单公示", "公示专栏"},
-		mysFixtureBaseURL + "/info/1037/11553.htm": {"“2026行知中国的茅院人”（暑假版）征稿通知", "活动公告"},
+		mysFixtureBaseURL + "/info/1037/11693.htm": {"唐臣读书课总第七讲 定格市井烟火，留住岁月温度——彭镇老茶馆的人文摄影之道 即将开课啦", "活动公告"},
 	}
 	for _, item := range items {
 		if expected, ok := want[item.URL]; ok && (item.Title != expected.title || item.Type != expected.typ || item.Date != "" || item.PublishedAt != "") {
 			t.Errorf("captured homepage item = %#v, want title=%q type=%q and no date", item, expected.title, expected.typ)
+		}
+		if !strings.HasPrefix(item.URL, mysFixtureBaseURL+"/info/") {
+			t.Errorf("homepage item is not a local article link: %#v", item)
 		}
 	}
 	for url := range want {
@@ -455,4 +460,138 @@ func TestMysResourceValidationRequiresContentTypeAndMagic(t *testing.T) {
 	if !mysResourceBodyIsUsable("application/msword", []byte{0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1}, "good.doc", false) {
 		t.Fatal("valid legacy Office OLE magic was rejected")
 	}
+}
+
+func TestMysIndexFeedHasSingleVerifiedPage(t *testing.T) {
+	if got := mysPageURL("http://mys.swjtu.edu.cn", "index", 1, 0, ".htm"); got != mysFixtureBaseURL+"/index.htm" {
+		t.Fatalf("index first page = %q, want %s/index.htm", got, mysFixtureBaseURL)
+	}
+	if got := mysPageURL("http://mys.swjtu.edu.cn", "index", 2, 1, ".htm"); got != "" {
+		t.Fatalf("index page 2 = %q, want empty (homepage is a single preview page)", got)
+	}
+
+	serve := func(fixture string) {
+		defaultClient = &http.Client{Transport: mysTestRoundTripper(func(request *http.Request) (*http.Response, error) {
+			if request.URL.Path == "/index.htm" {
+				return mysTestHTTPResponse(request, http.StatusOK, "text/html; charset=utf-8", readMysFixture(t, fixture)), nil
+			}
+			return mysTestHTTPResponse(request, http.StatusNotFound, "text/html", []byte("not found")), nil
+		})}
+	}
+	oldClient, oldNoCache := defaultClient, NoCache
+	NoCache = true
+	defer func() { defaultClient, NoCache = oldClient, oldNoCache }()
+
+	serve("mys_live_home.html")
+	ClearCache()
+	if total, err := mysTotalPages("index"); err != nil || total != 1 {
+		t.Fatalf("index total = %d, %v; want 1 confirmed page", total, err)
+	}
+
+	// A portal that lost its article modules, a static profile, or a detail
+	// page must not be reported as a healthy single-page feed.
+	for _, fixture := range []string{"mys_live_static_profile.html", "mys_live_article.html", "mys_empty.html"} {
+		serve(fixture)
+		ClearCache()
+		if total, err := mysTotalPages("index"); err == nil || total != 0 {
+			t.Errorf("index over %s = %d, %v; want refusal", fixture, total, err)
+		}
+	}
+}
+
+func TestMysLivePosterArticleParsesAndVerifiesOversizedImage(t *testing.T) {
+	// info/1037/11693.htm is a poster-style announcement: the whole body is
+	// one tall PNG and the prose is empty.  Parse must still succeed and keep
+	// the poster as the single image candidate.
+	article, err := parseAdapter_mysArticle(readMysFixture(t, "mys_live_article_11693.html"), mysFixtureBaseURL)
+	if err != nil {
+		t.Fatalf("parse captured poster article: %v", err)
+	}
+	if article.Title != "唐臣读书课总第七讲 定格市井烟火，留住岁月温度——彭镇老茶馆的人文摄影之道 即将开课啦" || article.Date != "2026-09-16" {
+		t.Fatalf("poster article metadata = %#v", article)
+	}
+	if len(article.Images) != 1 || article.Images[0] != mysFixtureBaseURL+"/__local/4/92/57/9C1BA28AB8550AFA663A37791E0_89E08620_27A4E2C.png" {
+		t.Fatalf("poster image candidates = %#v", article.Images)
+	}
+	if strings.TrimSpace(article.Content) != "" {
+		t.Fatalf("poster article content = %q, want empty prose", article.Content)
+	}
+
+	// The live poster is ~39.6MiB.  The fetch path must accept bodies within
+	// the raised cap and keep refusing bodies beyond it.
+	pngHeader := []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}
+	streamPNG := func(size int) io.ReadCloser {
+		return io.NopCloser(io.MultiReader(bytes.NewReader(pngHeader), &mysZeroReader{left: int64(size - len(pngHeader))}))
+	}
+	oldClient, oldNoCache := defaultClient, NoCache
+	defaultClient = &http.Client{Transport: mysTestRoundTripper(func(request *http.Request) (*http.Response, error) {
+		response := &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"image/png"}}, Request: request}
+		switch request.URL.Path {
+		case "/big.png":
+			response.Body = streamPNG(40 << 20)
+		case "/huge.png":
+			response.Body = streamPNG(mysMaxResourceBytes + 1)
+		default:
+			response.StatusCode = http.StatusNotFound
+			response.Body = io.NopCloser(strings.NewReader("not found"))
+		}
+		return response, nil
+	})}
+	NoCache = true
+	defer func() { defaultClient, NoCache = oldClient, oldNoCache }()
+
+	if _, _, err := mysFetchResource(mysFixtureBaseURL+"/big.png", mysFixtureBaseURL, true); err != nil {
+		t.Fatalf("40MiB poster within the cap was rejected: %v", err)
+	}
+	if _, _, err := mysFetchResource(mysFixtureBaseURL+"/huge.png", mysFixtureBaseURL, true); err == nil {
+		t.Fatal("body exceeding the cap was accepted")
+	}
+
+	// End to end: the captured poster article must no longer collapse to
+	// "no usable content" once the image fits under the cap.
+	defaultClient = &http.Client{Transport: mysTestRoundTripper(func(request *http.Request) (*http.Response, error) {
+		response := &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"image/png"}}, Request: request}
+		switch request.URL.Path {
+		case "/info/1037/11693.htm":
+			response.Header.Set("Content-Type", "text/html; charset=utf-8")
+			response.Body = io.NopCloser(bytes.NewReader(readMysFixture(t, "mys_live_article_11693.html")))
+		case "/__local/4/92/57/9C1BA28AB8550AFA663A37791E0_89E08620_27A4E2C.png":
+			response.Body = streamPNG(40 << 20)
+		default:
+			response.StatusCode = http.StatusNotFound
+			response.Body = io.NopCloser(strings.NewReader("not found"))
+		}
+		return response, nil
+	})}
+	ClearCache()
+	site := AllSites["mys"]
+	oldBase := site.BaseURL
+	site.BaseURL = mysFixtureBaseURL
+	defer func() { site.BaseURL = oldBase; ClearCache() }()
+	snapshot, _, err := site.GetArticleSnapshot(mysFixtureBaseURL + "/info/1037/11693.htm")
+	if err != nil {
+		t.Fatalf("fetch captured poster article: %v", err)
+	}
+	if len(snapshot.Images) != 1 || len(snapshot.Attachments) != 0 {
+		t.Fatalf("poster article resources = %#v", snapshot)
+	}
+	if !strings.Contains(snapshot.ContentHTML, "/__local/4/92/57/9C1BA28AB8550AFA663A37791E0_89E08620_27A4E2C.png") {
+		t.Fatalf("poster image missing from ContentHTML: %q", snapshot.ContentHTML)
+	}
+}
+
+type mysZeroReader struct{ left int64 }
+
+func (reader *mysZeroReader) Read(p []byte) (int, error) {
+	if reader.left <= 0 {
+		return 0, io.EOF
+	}
+	if int64(len(p)) > reader.left {
+		p = p[:reader.left]
+	}
+	for i := range p {
+		p[i] = 0
+	}
+	reader.left -= int64(len(p))
+	return len(p), nil
 }

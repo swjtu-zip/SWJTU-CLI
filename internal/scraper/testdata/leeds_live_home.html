@@ -1,0 +1,2144 @@
+﻿ <!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>西南交通大学-利兹学院 SWJTU-Leeds Joint School</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="西南交通大学-利兹学院 SWJTU-Leeds Joint School">
+<META Name="keywords" Content="西南交通大学-利兹学院 SWJTU-Leeds Joint School" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" media="screen" href="css/animate.css" />
+  <link rel="stylesheet" type="text/css" media="screen" href="css/swiper.min.css" />
+  <link rel="stylesheet" type="text/css" media="screen" href="css/css.css" />
+  <link rel="stylesheet" type="text/css" media="screen" href="css/in_x.css" />
+  <script src="js/jquery.min.js"></script>
+  <script src="js/swiper.min.js"></script>
+
+
+  <!--[if lte IE 9]><script>alert("您正在使用的浏览器版本过低，为了您的最佳体验，请先升级浏览器。IE和360浏览器升级到最新版本，或者下载安装chrome浏览器");window.location.href="http://support.dmeng.net/upgrade-your-browser.html?referrer="+encodeURIComponent(window.location.href);</script><![endif]-->
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1001,'/index.jsp',-1,1843391153)</script>
+</head>
+
+<body>
+  <div class="top"></div>
+
+
+
+
+  <div class="header" id="fixedNav">
+
+    <div class="wps flex">
+      <div class="logo flex-v-center">
+        
+<!-- 网站logo图片地址请在本组件"内容配置-网站logo"处填写 -->
+<a href="index.htm" title="利兹学院(新)"><img src="images/logo.png" alt="" class="imgMargin"></a>
+      </div>
+
+      <div class="headerR ">
+
+        <ul class="header-t flex-right">
+          <li>
+            <script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/openlink.js"></script>
+<a href="english/index.htm" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76312)"><i class="iconfont icon-yuyan"></i><span class="en">EN</span></a>
+
+
+          </li>
+          <li class="topser pore"> <a href="javascript:;" class="toSearch"><i class="swiper-icons swi-sousuo">搜索</i></a>
+            <div class="serpc">
+              <!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu2 .qwss{}
+    #appu2 .tj{}
+</style>
+<div id="divu2"></div>
+<script type="text/html" id="htmlu2">
+    <div id="appu2" class="serpc">
+        <div v-if="!isError" class="flex">
+            <input type="text" class="qwss inp" placeholder="搜索" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+            <input class="tj sub" name="submit_button" type="button" value="" v-on:click="onSubmit()"/>
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu2").html($("#htmlu2").text());
+</script>
+<script>
+    var appOwner = "1843391153";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu2",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu2 = document.querySelector("#appu2");
+   if (appElementu2 && appElementu2.__vue__) {
+
+   } else {
+      $("#divu2").html($("#htmlu2").text());
+      var appOwner = "1843391153";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou2 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu2(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu2();
+        }
+      };
+
+      function onSubmitu2(e) {
+        queryInfou2.query.keyWord= $("#appu2  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou2.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+              <span class="swiper-icons swi-close close"></span>
+            </div>
+          </li>
+
+        </ul>
+
+
+        <div class="mian-nav">
+          <ul class="nav flex-right ">
+            
+
+
+                        <li><a href="index.htm" class="dropdown-toggle">首页</a>
+                        
+                        </li>
+
+
+                    
+
+
+
+
+                        <li><a href="xzjg/xyjj.htm" class="dropdown-toggle">行政架构</a>
+                        
+                            <div class="sub-nav ">
+                                <div class="sub-nav-h ">
+                                
+
+                                    <a href="xzjg/xyjj.htm">学院简介</a>
+
+                                    <a href="xzjg/yjysm.htm">愿景与使命</a>
+
+                                    <a href="xzjg/lhglwyh.htm">联合管理委员会</a>
+
+                                    <a href="xzjg/xyld.htm">学院领导</a>
+
+                                    <a href="xzjg/xzjg.htm">行政架构</a>
+                                </div>
+                            </div>
+                        </li>
+
+
+                    
+
+
+
+
+                        <li><a href="jwxx/zyjs.htm" class="dropdown-toggle">教务信息</a>
+                        
+                            <div class="sub-nav ">
+                                <div class="sub-nav-h ">
+                                
+
+                                    <a href="jwxx/zyjs.htm">专业介绍</a>
+
+                                    <a href="jwxx/szllx/tmgc.htm">师资力量</a>
+
+                                    <a href="http://jwc.swjtu.edu.cn/vatuu/WebAction?setAction=leedsIndex">利兹学院教学信息平台</a>
+
+                                    <a href="jwxx/jxrl.htm">教学日历</a>
+
+                                    <a href="jwxx/jd_lz_sbs_xwxm.htm">交大-利兹“双博士”学位项目</a>
+
+                                    <a href="jwxx/sys.htm">实验室</a>
+                                </div>
+                            </div>
+                        </li>
+
+
+                    
+
+
+
+
+                        <li><a href="xszc/zzjg.htm" class="dropdown-toggle">学生支持</a>
+                        
+                            <div class="sub-nav ">
+                                <div class="sub-nav-h ">
+                                
+
+                                    <a href="xszc/zzjg.htm">组织架构</a>
+
+                                    <a href="xszc/xshd.htm">学生活动</a>
+
+                                    <a href="xszc/xsfc.htm">学生风采</a>
+
+                                    <a href="xszc/gjjl.htm">国际交流</a>
+
+                                    <a href="http://lxzd.swjtu.edu.cn/">留学指导系统</a>
+                                </div>
+                            </div>
+                        </li>
+
+
+                    
+
+
+
+
+                        <li><a href="djysz/dzbjs.htm" class="dropdown-toggle">党建与思政</a>
+                        
+                            <div class="sub-nav ">
+                                <div class="sub-nav-h ">
+                                
+
+                                    <a href="djysz/zbfc.htm">支部风采</a>
+
+                                    <a href="djysz/djyd.htm">党建园地</a>
+
+                                    <a href="ljlz/wjjb.htm">廉洁利兹</a>
+
+                                    <a href="djysz/fdx.htm">分党校</a>
+
+                                    <a href="djysz/jszj.htm">教师之家</a>
+                                </div>
+                            </div>
+                        </li>
+
+
+                    
+
+
+
+
+                        <li><a href="ztjy/xjpxsdzgtsshzysxztjy/xxdt.htm" class="dropdown-toggle">主题教育</a>
+                        
+                            <div class="sub-nav ">
+                                <div class="sub-nav-h ">
+                                
+
+                                    <a href="ztjy/xjpxsdzgtsshzysxztjy.htm">学习贯彻习近平新时代中国特色社会主义思想主题教育</a>
+                                </div>
+                            </div>
+                        </li>
+
+
+                    
+
+
+
+
+                        <li><a href="yyzj.htm" class="dropdown-toggle">院友之家</a>
+                        
+                        </li>
+
+
+                    
+
+
+
+
+                        <li><a href="lxwm.htm" class="dropdown-toggle">联系我们</a>
+                        
+                        </li>
+
+
+                    
+
+
+
+
+                        <li><a href="yqw/yqsy.htm" class="dropdown-toggle">十周年庆</a>
+                        
+                        </li>
+
+
+                    
+
+
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 移动端头部s -->
+  <div>
+    <div class="headerm flex">
+      <div class="logo flex-v-center">
+            
+
+                <a href="index.htm" onclick="_addDynClicks(&#34;wbimage&#34;, 1843391153, 65105)"><img src="images/logo.png" alt=""></a>
+            
+
+
+      </div>
+      <div class="mobNavbtn flex"><a href="javascript:;" class="trans searchbtn toSearch2 flex-v-center"><img src="images/sou.png" height="20" /></a>
+        <div class="flex-v-center">
+          <button class="menu-btn">
+            <span class="line-1"></span><span class="line-2"></span><span class="line-3"></span>MENU
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="sermob">
+
+
+      <!-- 3.1.3版本 -->
+
+
+
+<style>
+    #appu5 .qwss{}
+    #appu5 .tj{
+        right: 30px;
+        top: 12px;}
+</style>
+<div id="divu5"></div>
+<script type="text/html" id="htmlu5">
+    <div id="appu5">
+        <div v-if="!isError" class="sermob" style="display: block;">
+            <input type="text" class="qwss inp" placeholder="搜索..." autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+            <input class="tj sub" name="submit_button" type="button" value="" v-on:click="onSubmit()"/>
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu5").html($("#htmlu5").text());
+</script>
+<script>
+    var appOwner = "1843391153";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu5",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu5 = document.querySelector("#appu5");
+   if (appElementu5 && appElementu5.__vue__) {
+
+   } else {
+      $("#divu5").html($("#htmlu5").text());
+      var appOwner = "1843391153";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou5 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu5(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu5();
+        }
+      };
+
+      function onSubmitu5(e) {
+        queryInfou5.query.keyWord= $("#appu5  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou5.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+      <span class="swiper-icons swi-close close"></span>
+    </div>
+
+    <div class="mobNav">
+      <div class="flex toplink">
+        
+ <a href="english/index.htm" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76312)"><i class="iconfont icon-duoyuyan"></i><span>EN</span></a>
+
+           
+            
+
+
+      </div>
+      <ul>
+            
+     <li>
+                    <div class="navp flex"><a href="index.htm">首页</a><i></i></div>
+                </li>
+     <li>
+                    <div class="navp flex"><a href="xzjg/xyjj.htm">行政架构</a><i></i></div>
+                    
+                    <div class="subNavm">
+                    
+
+                        <a href="xzjg/xyjj.htm">学院简介</a>
+
+                        <a href="xzjg/yjysm.htm">愿景与使命</a>
+
+                        <a href="xzjg/lhglwyh.htm">联合管理委员会</a>
+
+                        <a href="xzjg/xyld.htm">学院领导</a>
+
+                        <a href="xzjg/xzjg.htm">行政架构</a>
+                    </div>
+                </li>
+     <li>
+                    <div class="navp flex"><a href="jwxx/zyjs.htm">教务信息</a><i></i></div>
+                    
+                    <div class="subNavm">
+                    
+
+                        <a href="jwxx/zyjs.htm">专业介绍</a>
+
+                        <a href="jwxx/szllx/tmgc.htm">师资力量</a>
+
+                        <a href="http://jwc.swjtu.edu.cn/vatuu/WebAction?setAction=leedsIndex">利兹学院教学信息平台</a>
+
+                        <a href="jwxx/jxrl.htm">教学日历</a>
+
+                        <a href="jwxx/jd_lz_sbs_xwxm.htm">交大-利兹“双博士”学位项目</a>
+
+                        <a href="jwxx/sys.htm">实验室</a>
+                    </div>
+                </li>
+     <li>
+                    <div class="navp flex"><a href="xszc/zzjg.htm">学生支持</a><i></i></div>
+                    
+                    <div class="subNavm">
+                    
+
+                        <a href="xszc/zzjg.htm">组织架构</a>
+
+                        <a href="xszc/xshd.htm">学生活动</a>
+
+                        <a href="xszc/xsfc.htm">学生风采</a>
+
+                        <a href="xszc/gjjl.htm">国际交流</a>
+
+                        <a href="http://lxzd.swjtu.edu.cn/">留学指导系统</a>
+                    </div>
+                </li>
+     <li>
+                    <div class="navp flex"><a href="djysz/dzbjs.htm">党建与思政</a><i></i></div>
+                    
+                    <div class="subNavm">
+                    
+
+                        <a href="djysz/zbfc.htm">支部风采</a>
+
+                        <a href="djysz/djyd.htm">党建园地</a>
+
+                        <a href="ljlz/wjjb.htm">廉洁利兹</a>
+
+                        <a href="djysz/fdx.htm">分党校</a>
+
+                        <a href="djysz/jszj.htm">教师之家</a>
+                    </div>
+                </li>
+     <li>
+                    <div class="navp flex"><a href="ztjy/xjpxsdzgtsshzysxztjy/xxdt.htm">主题教育</a><i></i></div>
+                    
+                    <div class="subNavm">
+                    
+
+                        <a href="ztjy/xjpxsdzgtsshzysxztjy.htm">学习贯彻习近平新时代中国特色社会主义思想主题教育</a>
+                    </div>
+                </li>
+     <li>
+                    <div class="navp flex"><a href="yyzj.htm">院友之家</a><i></i></div>
+                </li>
+     <li>
+                    <div class="navp flex"><a href="lxwm.htm">联系我们</a><i></i></div>
+                </li>
+     <li>
+                    <div class="navp flex"><a href="yqw/yqsy.htm">十周年庆</a><i></i></div>
+                </li>
+
+      </ul>
+    </div>
+  </div>
+  <!-- 移动端头部e -->
+
+
+                <div class="banner_bg">
+    <div class="banner">
+      <div class="swiper-container  banner-scroll">
+        <div class="swiper-wrapper">        
+<div class="swiper-slide">
+            <div class="banner-box">
+                <a href="" title="" onclick="_addDynClicks(&#34;wbimage&#34;, 1843391153, 1025214)" target="_blank" class="banner-img">
+                    <img src="images/87366BE94E80B1730605315F1F8_0115AAD6_1E3B1.jpg" alt="" />
+                </a>
+                <a href="" title="" onclick="_addDynClicks(&#34;wbimage&#34;, 1843391153, 1025214)" target="_blank" class="banner-video">
+                <abbr class="videosrc" style="display:none;"></abbr>
+                    <video id="index_video" src="" poster="" muted="" autoplay="" ref="videoPlayer" style="width:100%;height:100%;object-fit: fill;"></video>
+                </a> 
+
+            </div>
+          </div> 
+                
+<div class="swiper-slide">
+            <div class="banner-box">
+                <a href="" title="" onclick="_addDynClicks(&#34;wbimage&#34;, 1843391153, 1025218)" target="_blank" class="banner-img">
+                    <img src="images/d6feb874b70065c094b04fa316c2790b.jpg" alt="" />
+                </a>
+                <a href="" title="" onclick="_addDynClicks(&#34;wbimage&#34;, 1843391153, 1025218)" target="_blank" class="banner-video">
+                <abbr class="videosrc" style="display:none;"></abbr>
+                    <video id="index_video" src="" poster="" muted="" autoplay="" ref="videoPlayer" style="width:100%;height:100%;object-fit: fill;"></video>
+                </a> 
+
+            </div>
+          </div> 
+                
+<div class="swiper-slide">
+            <div class="banner-box">
+                <a href="" title="" onclick="_addDynClicks(&#34;wbimage&#34;, 1843391153, 1026689)" target="_blank" class="banner-img">
+                    <img src="images/1.jpg" alt="" />
+                </a>
+                <a href="" title="" onclick="_addDynClicks(&#34;wbimage&#34;, 1843391153, 1026689)" target="_blank" class="banner-video">
+                <abbr class="videosrc" style="display:none;"></abbr>
+                    <video id="index_video" src="" poster="" muted="" autoplay="" ref="videoPlayer" style="width:100%;height:100%;object-fit: fill;"></video>
+                </a> 
+
+            </div>
+          </div> 
+                
+<div class="swiper-slide">
+            <div class="banner-box">
+                <a href="" title="" onclick="_addDynClicks(&#34;wbimage&#34;, 1843391153, 1025216)" target="_blank" class="banner-img">
+                    <img src="images/3.jpg" alt="" />
+                </a>
+                <a href="" title="" onclick="_addDynClicks(&#34;wbimage&#34;, 1843391153, 1025216)" target="_blank" class="banner-video">
+                <abbr class="videosrc" style="display:none;"></abbr>
+                    <video id="index_video" src="" poster="" muted="" autoplay="" ref="videoPlayer" style="width:100%;height:100%;object-fit: fill;"></video>
+                </a> 
+
+            </div>
+          </div> 
+                
+</div>
+        <!-- Add Arrows -->
+        <div class="swiper-pagination"></div>
+      </div>
+    </div></div>
+    
+ <style>
+.banner-video {display:none;} 
+ </style>   
+ <script>
+ this.$nextTick(() => {
+  this.$refs.videoPlayer.muted = false;
+  this.$refs.videoPlayer.play();
+})
+ </script>
+
+
+
+    <!-- trait -->
+
+    <div class="trait_bg">
+      <div class="trait">
+        <ul>
+          
+
+<script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script><li>
+                <a href="index/zsxx.htm">
+                    <b>
+                        <span>招生信息</span>
+                        <i>欢迎各位同学报考西南交通大学-利兹学院！</i>
+                    </b>
+                    <em>   <img src="images/te1.png" alt=""></em>
+                </a>
+            </li>
+            
+<li>
+                <a href="info/1040/2430.htm">
+                    <b>
+                        <span>诚聘英才</span>
+                        <i>融汇中西 诚聘英才</i>
+                    </b>
+                    <em>   <img src="images/te2.png" alt=""></em>
+                </a>
+            </li>
+            
+<li>
+                <a href="https://adfs.leeds.ac.uk/adfs/ls/?SAMLRequest=lVJNb8IwDP0rke80TQuDRRTEhtCQmFbRssMuKGvdka1NWJ2i%2FfyVLw0uSJMiS3Hs9%2BL3PBz%2FVCXbYU3amgiE5wNDk9lcm48IVumsM4DxaEiqKoOtnDRuY5b43SA51jYakseXCJraSKtIkzSqQpIuk8nkeSEDz5fb2jqb2RLYhAhr11I9WkNNhXWC9U5nuFouItg4tyXJeaVNm1VeiZiTpzKv%2BeKqZe7sufghJMkLV6VWxNdCiLUANm2%2FpI1yhzHOSCov6BqmTfCSOLCZrTM8zBNBoUpCYPNpBCroCsS%2BuCuKvLfph6Hf2%2BQD0e0Xmf9ZtOLMKVZEeod%2FbUQNzg05ZVwEgR%2BIjtif1BdSBDIMveC%2B9wYsPqnwoM1R3VuSvR%2BLSD6ladyJX5IU2OvZpbYATp7IA3t9acZtYHV2AEb%2F03vILwlHp%2Bv1Tox%2BAQ%3D%3D&SigAlg=http%3A%2F%2Fwww.w3.org%2F2001%2F04%2Fxmldsig-more%23rsa-sha256&Signature=L5WW8EeUVCiQVnQwgWGg1SnHAYVB8X%2BdGQAhOtXNE%2F6maZSkJvIGznkQ053%2FodbnG5eVc%2BolRsyvoDca8HqcZ7m3r8yxNjLhK6jhJn2vH%2BZQWwxH%2FB89bLNM0dKM%2BDHVoHX%2FCRUh6uuEBGquG%2FqnBW9VcBaIBF6JobS5ynKXUvlZlm8bO6RK9WrpQDPbmrGLBHh4apLrDWRS0PVKRhdxt6i%2B2Y2wM3O92xZ0Nvq9FgBlhue1AMdyxmRakJF1a4l3fu0mnJrM%2BBzXH9%2B2XpMyvJBpT7Dof6fzYW5ulGeQ5W9xKL4%2FEHJ4vTIThVeYQw6ctO1GcE8o8bIYubYvGL2XVA%3D%3D">
+                    <b>
+                        <span>Minerva系统</span>
+                        <i>Minerva系统</i>
+                    </b>
+                    <em>   <img src="images/te3.png" alt=""></em>
+                </a>
+            </li>
+            
+<li>
+                <a href="index/zyxz.htm">
+                    <b>
+                        <span>资源下载</span>
+                        <i>欢迎点击查看更多学院的资料，了解并且下载。期待你的到来。</i>
+                    </b>
+                    <em>   <img src="images/te4.png" alt=""></em>
+                </a>
+            </li>
+            
+<script>_showDynClickBatch(['dynclicks_u9_2429','dynclicks_u9_2430','dynclicks_u9_2433','dynclicks_u9_2432'],[2429,2430,2433,2432],"wbnews", 1843391153)</script>
+
+        </ul>
+
+      </div>
+      <div class="clearboth"></div>
+    </div>
+  </div>
+
+
+
+
+
+
+  <!-- news -->
+
+  <div class="news_bg">
+    <div class="news">
+      <div class="title">
+        <div class="titleL">
+          <i>News</i>
+          <h3><a href="index/xyxw.htm" title="学院新闻">学院新闻</a></h3>
+          <!--<p>融汇中西 交通天下 培育英才</p>-->
+        </div>
+
+        <a href="index/xyxw.htm" class="titleR" title="View More">
+          View More
+        </a>
+      </div>
+      <div class="news_box1">
+        <ul>
+          
+
+<li>
+                    <div class="pic"><a href="info/1032/24014.htm"><img src="/__local/8/BF/8B/329E513510910D0FBECC15C1E4D_015832AF_3BEAF.jpg" alt=""></a></div>
+                    <div class="txt">
+                        <i>2026.09.30</i>
+                        <a href="info/1032/24014.htm">利兹学院开展2026级新生实验室开放日参观活动</a>
+                    </div>
+                </li>
+                
+<li>
+                    <div class="pic"><a href="info/1032/24064.htm"><img src="/__local/D/7C/C3/20152C6665582ACF9F96CDB4AE3_E65892DA_76518.png" alt=""></a></div>
+                    <div class="txt">
+                        <i>2026.09.29</i>
+                        <a href="info/1032/24064.htm">利兹动态｜东启新程，筑梦于兹：利兹学院2026级新生开学典礼暨开学第一...</a>
+                    </div>
+                </li>
+                
+<li>
+                    <div class="pic"><a href="info/1032/23944.htm"><img src="/__local/B/FC/2E/F5282F84E709BD4F26BC38DF165_44BE529E_80C5B.jpg" alt=""></a></div>
+                    <div class="txt">
+                        <i>2026.09.28</i>
+                        <a href="info/1032/23944.htm">倾听一线心声 凝聚育人合力——利兹学院召开一年级授课教师座谈会</a>
+                    </div>
+                </li>
+                
+<li>
+                    <div class="pic"><a href="info/1032/24044.htm"><img src="/__local/5/CD/B8/6D30C184F6B7A39AFD519763DF1_AF531DA2_125BC.jpeg" alt=""></a></div>
+                    <div class="txt">
+                        <i>2026.09.24</i>
+                        <a href="info/1032/24044.htm">以茶叙军训·以心话成长｜利兹学院2026级新生“院长午餐会、书记下午茶”...</a>
+                    </div>
+                </li>
+                
+<li>
+                    <div class="pic"><a href="info/1032/23894.htm"><img src="/__local/2/8E/30/4A617AD00A310C25A2843000C51_22FBAB74_942E7.jpg" alt=""></a></div>
+                    <div class="txt">
+                        <i>2026.09.24</i>
+                        <a href="info/1032/23894.htm">计算机科学与技术专业教学研讨会顺利举行</a>
+                    </div>
+                </li>
+                
+<li>
+                    <div class="pic"><a href="info/1032/23884.htm"><img src="/__local/C/A8/FE/53DECCD076D23050500B647CA65_01A36722_50D31.jpg" alt=""></a></div>
+                    <div class="txt">
+                        <i>2026.09.23</i>
+                        <a href="info/1032/23884.htm">瑞典延雪平大学副校长Thomas Winman一行来利兹学院开展参观交流</a>
+                    </div>
+                </li>
+                
+<script>_showDynClickBatch(['dynclicks_u10_24014','dynclicks_u10_24064','dynclicks_u10_23944','dynclicks_u10_24044','dynclicks_u10_23894','dynclicks_u10_23884'],[24014,24064,23944,24044,23894,23884],"wbnews", 1843391153)</script>
+
+        </ul>
+      </div>
+    </div>
+    <div class="clearboth"></div>
+  </div>
+
+  <!-- Noitce -->
+
+  <div class="noitce_bg">
+    <div class="noitce_box">
+      <div class="noitce_list">
+        <ul>
+          <li class="on">
+            <a>
+              <i>Notice</i>
+              <span>学院通知</span>
+              <!-- <p>引进优质的教育教学资源，实现两校工程学科领域本科教育的实质性合作</p>-->
+            </a>
+            
+            
+                    <div class="more"><a href="xytz.htm">View More</a></div>
+          </li>
+          <li>
+            <a>
+              <i>Announcement</i>
+              <span>信息公示 </span>
+              <!-- <p>引进优质的教育教学资源，实现两校工程学科领域本科教育的实质性合作</p>-->
+               </a>
+                      <div class="more"><a href="xxgs.htm">View More</a></div>
+           
+          </li>
+        </ul>
+
+      </div>
+      <div class="noitce_r">
+        <div id="NoitceCenterTobox" class="NoitceCenterTobox swiper-container">
+          <ul class="swiper-wrapper">
+            <li class="swiper-slide">
+              
+
+<dl>
+                            <a href="info/1035/24114.htm" title="">【评奖】关于开展2026年度詹天佑奖学金评选工作的通知</a>
+                            <span>2026.10.09</span>
+                        </dl>
+                        
+<dl>
+                            <a href="info/1035/24094.htm" title="">利兹学院关于开展2025-2026学年研究生荣誉称号评审工作的通知</a>
+                            <span>2026.09.30</span>
+                        </dl>
+                        
+<dl>
+                            <a href="info/1013/23954.htm" title="">关于2026—2027学年第一学期本研课程互选的通知</a>
+                            <span>2026.09.28</span>
+                        </dl>
+                        
+<dl>
+                            <a href="info/1035/23924.htm" title="">关于开展2026年研究生国家奖学金和博士生扬华新秀奖学金申请工作的通知</a>
+                            <span>2026.09.24</span>
+                        </dl>
+                        
+<dl>
+                            <a href="info/1035/23914.htm" title="">【评奖】利兹学院关于开展2026年度茅以升系列奖学金评选工作的通知</a>
+                            <span>2026.09.24</span>
+                        </dl>
+                        
+<script>_showDynClickBatch(['dynclicks_u11_24114','dynclicks_u11_24094','dynclicks_u11_23954','dynclicks_u11_23924','dynclicks_u11_23914'],[24114,24094,23954,23924,23914],"wbnews", 1843391153)</script>
+
+            </li>
+            <li class="swiper-slide">
+              
+
+<dl>
+                            <a href="info/1039/24104.htm" title="">【第十三届大艺节】关于第四届“书写经典 翰墨飘香”书法比赛结果的公示</a>
+                            <span>2026.10.08</span>
+                        </dl>
+                        
+<dl>
+                            <a href="info/1039/24004.htm" title="">【评奖公示】第九届感恩中国近现代科学家奖学金拟推荐人选公示</a>
+                            <span>2026.09.29</span>
+                        </dl>
+                        
+<dl>
+                            <a href="info/1039/23994.htm" title="">【评奖公示】利兹学院2025-2026学年国家奖学金拟推荐人选公示</a>
+                            <span>2026.09.29</span>
+                        </dl>
+                        
+<dl>
+                            <a href="info/1039/23934.htm" title="">利兹学院2025-2026学年宝钢教育奖（优秀学生奖）拟推荐人选公示</a>
+                            <span>2026.09.25</span>
+                        </dl>
+                        
+<dl>
+                            <a href="info/1039/23794.htm" title="">利兹学院2025—2026学年研究生综合素质测评结果公示</a>
+                            <span>2026.09.18</span>
+                        </dl>
+                        
+<script>_showDynClickBatch(['dynclicks_u12_24104','dynclicks_u12_24004','dynclicks_u12_23994','dynclicks_u12_23934','dynclicks_u12_23794'],[24104,24004,23994,23934,23794],"wbnews", 1843391153)</script>
+
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="clearboth"></div>
+  </div>
+
+  <!-- 活动预告 -->
+
+  <div class="Events">
+    <div class="container" style="position: relative;">
+
+            <div class="title EventsBox58">
+              <div class="titleL">
+                <i>Events</i>
+                <h3><a href="index/hdyg.htm" title="活动预告">活动预告</a></h3>
+              </div>
+              <a href="index/hdyg.htm" class="titleR" title="View More">View More</a>
+            </div>
+            <div class="EventsBoxR EventsBoxR1">
+                <div class="EventsBoxRTop EventsBoxRTop1">
+                    <img src="images/lizmoren.jpg" alt="">
+                </div>
+            </div>
+            
+            
+            <div class="EventsBox copy1  EventsBoxL-hide EventsBoxL" style="padding-top: 0;">
+              <div class="EventsBoxL  ">
+                
+
+             <div class="Events_boxnr">
+                        <ul id="" class="copy">
+                            
+
+
+ <li class="EventsBoxLTop">                            
+  <div class="EventsBoxLTopTime"> <b>  </b> </div>                            
+  <div class="EventsBoxLTopText"><a href="info/1044/22724.htm" target="_blank" title="关于举办第四届中外合作办学招生、就业与深造论坛的通知（二号通知）">关于举办第四届中外合作办学招生、就业与深造论坛的通知（二号通知）</a> </div>  
+</li>    
+                            
+
+
+ <li class="EventsBoxLTop">                            
+  <div class="EventsBoxLTopTime"> <b>  </b> </div>                            
+  <div class="EventsBoxLTopText"><a href="info/1044/22784.htm" target="_blank" title="关于举办第四届中外合作办学招生、就业与深造论坛的通知（一号通知）">关于举办第四届中外合作办学招生、就业与深造论坛的通知（一号通知）</a> </div>  
+</li>    
+                            
+
+
+ <li class="EventsBoxLTop">                            
+  <div class="EventsBoxLTopTime"> <b>  </b> </div>                            
+  <div class="EventsBoxLTopText"><a href="info/1044/21224.htm" target="_blank" title="“诗之桥：西南交大—利兹大学中英诗歌双城诗会”（二号通知）">“诗之桥：西南交大—利兹大学中英诗歌双城诗会”（二号通知）</a> </div>  
+</li>    
+                            
+
+
+ <li class="EventsBoxLTop">                            
+  <div class="EventsBoxLTopTime"> <b>  </b> </div>                            
+  <div class="EventsBoxLTopText"><a href="info/1044/21214.htm" target="_blank" title="“诗之桥：西南交大—利兹大学中英诗歌双城诗会”即将在我校启幕">“诗之桥：西南交大—利兹大学中英诗歌双城诗会”即将在我校启幕</a> </div>  
+</li>    
+                            
+
+
+ <li class="EventsBoxLTop">                            
+  <div class="EventsBoxLTopTime"> <b>  </b> </div>                            
+  <div class="EventsBoxLTopText"><a href="info/1044/16214.htm" target="_blank" title="招生季|西南交通大学-利兹学院2025年校园开放日邀请函">招生季|西南交通大学-利兹学院2025年校园开放日邀请函</a> </div>  
+</li>    
+                            
+</ul>
+                        
+      </div><script>_showDynClickBatch(['dynclicks_u13_22724','dynclicks_u13_22784','dynclicks_u13_21224','dynclicks_u13_21214','dynclicks_u13_16214'],[22724,22784,21224,21214,16214],"wbnews", 1843391153)</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+              </div>
+            </div>
+          <div class="EventsBoxL">
+            
+
+
+
+
+<script language="javascript" src="/system/resource/js/news/statpagedown.js"></script><link rel="stylesheet" type="text/css" href="cal/css/schedule.css">
+
+
+<script src="cal/js/schedule.js"></script>
+<script src="cal/js/jquery.tmpl.min.js"></script>
+<div class="EventsBox">
+    <div class="box EventsBoxR">
+        <div class="calendar">
+            <div id="schedule-box" class="boxshaw">
+            </div>
+        </div>
+    </div>
+</div>
+<!--弹出框元素 className不要修改 -->
+<script id="dialogHtml" type="text/x-jquery-tmpl">
+<div class="EventsBoxL">
+
+
+              <div class="Events_boxnr">
+
+    <ul id="calendarnews">
+    {{each(pos, news) list_news}}
+
+     <li  class="EventsBoxLTop">
+                            <div class="EventsBoxLTopTime" data-Date="2022-04-06">
+                                <i>{{= news.showDate2}}</i>
+                                <span>{{= news.showDate1}}</span>
+                                <div class="EventsBoxLTopTimetext">{{= news.showDate3}}</div>
+                                <b>{{= news.showDate3}}</b>
+                            </div>
+                            <div class="EventsBoxLTopText">
+                                <a href="{{= news.url}}">{{= news.showTitle}}</a>
+                                <div class="EventsBoxLTopTextZy">
+                                    <i><img src="images/EventsBoxLTopTextZy1.png" alt="">
+                                        {{= news.showDate}}</i>
+                                    <i><img src="images/EventsBoxLTopTextZy2.png" alt=""> {{= news.showSubTitle}}</i>
+                                    <i><img src="images/EventsBoxLTopTextZy3.png" alt="">{{= news.showAuthor}}</i>
+                                </div>
+                            </div>
+                            <div class="EventsBoxRTop">
+                                    <img src="{{= news.picUrl}}" alt="">
+                                </div>
+                        </li>
+
+  {{/each}}
+
+    </ul>
+     </div>
+
+         </div>
+</script>
+
+<script>_showDynClickBatch(['dynclicks_u14_22724','dynclicks_u14_22784','dynclicks_u14_21224','dynclicks_u14_21214','dynclicks_u14_16214','dynclicks_u14_15124','dynclicks_u14_15034','dynclicks_u14_14434','dynclicks_u14_14424','dynclicks_u14_14414','dynclicks_u14_14404','dynclicks_u14_14384','dynclicks_u14_14134','dynclicks_u14_14014','dynclicks_u14_14044','dynclicks_u14_14034','dynclicks_u14_14054','dynclicks_u14_13674','dynclicks_u14_12564','dynclicks_u14_12574','dynclicks_u14_11504','dynclicks_u14_11514','dynclicks_u14_8954','dynclicks_u14_8944','dynclicks_u14_8754','dynclicks_u14_8344','dynclicks_u14_8284','dynclicks_u14_8174','dynclicks_u14_5984','dynclicks_u14_5844','dynclicks_u14_5414','dynclicks_u14_4944','dynclicks_u14_4824','dynclicks_u14_4331','dynclicks_u14_4141','dynclicks_u14_4140','dynclicks_u14_4066','dynclicks_u14_4065','dynclicks_u14_4050','dynclicks_u14_4046','dynclicks_u14_4031','dynclicks_u14_4047','dynclicks_u14_3996','dynclicks_u14_3922','dynclicks_u14_3881','dynclicks_u14_3813','dynclicks_u14_3479','dynclicks_u14_3392','dynclicks_u14_3391','dynclicks_u14_3383','dynclicks_u14_3334','dynclicks_u14_3332','dynclicks_u14_3333','dynclicks_u14_3234','dynclicks_u14_2765','dynclicks_u14_2688','dynclicks_u14_2451'],[22724,22784,21224,21214,16214,15124,15034,14434,14424,14414,14404,14384,14134,14014,14044,14034,14054,13674,12564,12574,11504,11514,8954,8944,8754,8344,8284,8174,5984,5844,5414,4944,4824,4331,4141,4140,4066,4065,4050,4046,4031,4047,3996,3922,3881,3813,3479,3392,3391,3383,3334,3332,3333,3234,2765,2688,2451],"wbnews", 1843391153)</script>
+<script>
+    //初始化有文章的日期
+    var newsListDataArray = [];
+    
+    newsListDataArray[""] = JSON.parse('[{"showTitle": "关于举办第四届中外合作办学招生、就业与深造论坛的通知...","url": "info/1044/22724.htm","pos": "1", "picUrl": "", "showDate": "", "showDate1": "2026.06", "showDate2": "20", "showDate3": "周六", "showSubTitle": "", "showAuthor": "", "showClickTimes": "84", "showColumnName": "活动预告" },{"showTitle": "关于举办第四届中外合作办学招生、就业与深造论坛的通知...","url": "info/1044/22784.htm","pos": "2", "picUrl": "", "showDate": "", "showDate1": "2026.05", "showDate2": "11", "showDate3": "周一", "showSubTitle": "", "showAuthor": "", "showClickTimes": "61", "showColumnName": "活动预告" },{"showTitle": "“诗之桥：西南交大—利兹大学中英诗歌双城诗会”（二号...","url": "info/1044/21224.htm","pos": "3", "picUrl": "/__local/4/40/F0/1DD6E6F621B4971980AAA77471A_28B44530_3385BC.png", "showDate": "", "showDate1": "2026.03", "showDate2": "31", "showDate3": "周二", "showSubTitle": "", "showAuthor": "", "showClickTimes": "42", "showColumnName": "活动预告" },{"showTitle": "“诗之桥：西南交大—利兹大学中英诗歌双城诗会”即将在...","url": "info/1044/21214.htm","pos": "4", "picUrl": "/__local/1/E3/5E/A0CCAEF7A60084812176A674997_E4EA5EB5_166689.png", "showDate": "", "showDate1": "2026.03", "showDate2": "23", "showDate3": "周一", "showSubTitle": "", "showAuthor": "", "showClickTimes": "82", "showColumnName": "活动预告" },{"showTitle": "招生季|西南交通大学-利兹学院2025年校园开放日邀请函","url": "info/1044/16214.htm","pos": "5", "picUrl": "/__local/8/FD/9C/99D89D5250F23FD076DAE503230_03106B35_20F9AF3.jpg", "showDate": "", "showDate1": "2025.06", "showDate2": "24", "showDate3": "周二", "showSubTitle": "", "showAuthor": "", "showClickTimes": "173", "showColumnName": "活动预告" },{"showTitle": "栗子校园 | 精勤讲坛第十三期活动预告","url": "info/1044/15124.htm","pos": "6", "picUrl": "", "showDate": "", "showDate1": "2025.05", "showDate2": "22", "showDate3": "周四", "showSubTitle": "", "showAuthor": "", "showClickTimes": "84", "showColumnName": "活动预告" },{"showTitle": "匠心筑梦·智启未来 | 利兹学院机械专业2021级本科毕业设...","url": "info/1044/15034.htm","pos": "7", "picUrl": "/__local/B/97/3E/C8F0FF84F52D7B45AC2721EEF34_3EEEB0F3_3C0F3.jpeg", "showDate": "", "showDate1": "2025.05", "showDate2": "20", "showDate3": "周二", "showSubTitle": "", "showAuthor": "", "showClickTimes": "144", "showColumnName": "活动预告" },{"showTitle": "栗子校园 | 「423世界读书日」利兹学院邀你共赴“阅见世...","url": "info/1044/14434.htm","pos": "8", "picUrl": "", "showDate": "", "showDate1": "2025.04", "showDate2": "25", "showDate3": "周五", "showSubTitle": "", "showAuthor": "", "showClickTimes": "120", "showColumnName": "活动预告" },{"showTitle": "西南交通大学第九届“Spelling Bee”词王争霸赛决赛即将...","url": "info/1044/14424.htm","pos": "9", "picUrl": "", "showDate": "", "showDate1": "2025.04", "showDate2": "25", "showDate3": "周五", "showSubTitle": "", "showAuthor": "", "showClickTimes": "265", "showColumnName": "活动预告" },{"showTitle": "毕业季｜夏至音浪 乐然盛夏：利兹学院2025年夏季音乐节节...","url": "info/1044/14414.htm","pos": "10", "picUrl": "", "showDate": "", "showDate1": "2025.04", "showDate2": "25", "showDate3": "周五", "showSubTitle": "", "showAuthor": "", "showClickTimes": "205", "showColumnName": "活动预告" },{"showTitle": "毕业季 | 青春不散场，未来皆可期：利兹学院毕业季「十个...","url": "info/1044/14404.htm","pos": "11", "picUrl": "", "showDate": "", "showDate1": "2025.04", "showDate2": "25", "showDate3": "周五", "showSubTitle": "", "showAuthor": "", "showClickTimes": "168", "showColumnName": "活动预告" },{"showTitle": "栗子校园 | 2025年利兹学院春季集体劳动周系列活动","url": "info/1044/14384.htm","pos": "12", "picUrl": "", "showDate": "", "showDate1": "2025.04", "showDate2": "25", "showDate3": "周五", "showSubTitle": "", "showAuthor": "", "showClickTimes": "114", "showColumnName": "活动预告" },{"showTitle": "栗子校园 | 学术科创活动预告","url": "info/1044/14134.htm","pos": "13", "picUrl": "", "showDate": "", "showDate1": "2025.04", "showDate2": "14", "showDate3": "周一", "showSubTitle": "", "showAuthor": "", "showClickTimes": "159", "showColumnName": "活动预告" },{"showTitle": "栗子校园 | “留学报国正当时”系列主题活动第一期“心怀...","url": "info/1044/14014.htm","pos": "14", "picUrl": "", "showDate": "", "showDate1": "2025.04", "showDate2": "07", "showDate3": "周一", "showSubTitle": "", "showAuthor": "", "showClickTimes": "94", "showColumnName": "活动预告" },{"showTitle": "利兹学院2024-2025学年第二学期第二次“书记下午茶”活动...","url": "info/1044/14044.htm","pos": "15", "picUrl": "", "showDate": "", "showDate1": "2025.04", "showDate2": "03", "showDate3": "周四", "showSubTitle": "", "showAuthor": "", "showClickTimes": "79", "showColumnName": "活动预告" },{"showTitle": "西南交通大学第九届词王争霸赛“Spelling Bee”即将揭幕...","url": "info/1044/14034.htm","pos": "16", "picUrl": "", "showDate": "", "showDate1": "2025.04", "showDate2": "03", "showDate3": "周四", "showSubTitle": "", "showAuthor": "", "showClickTimes": "142", "showColumnName": "活动预告" },{"showTitle": "栗子资讯 | “你问我答，共筑学涯”校园学习生活疑问大征...","url": "info/1044/14054.htm","pos": "17", "picUrl": "", "showDate": "", "showDate1": "2025.04", "showDate2": "01", "showDate3": "周二", "showSubTitle": "", "showAuthor": "", "showClickTimes": "92", "showColumnName": "活动预告" },{"showTitle": "利兹学院2024-2025学年大一年级英语特色项目Poster Prese...","url": "info/1044/13674.htm","pos": "18", "picUrl": "/__local/7/78/A3/A559F498FC9C32ED1CF579D3E83_65257DE5_3D59E.jpg", "showDate": "", "showDate1": "2025.03", "showDate2": "26", "showDate3": "周三", "showSubTitle": "", "showAuthor": "", "showClickTimes": "118", "showColumnName": "活动预告" },{"showTitle": "栗子校园 | “星光璀璨，新生之夜”迎新晚会活动预告","url": "info/1044/12564.htm","pos": "19", "picUrl": "/__local/B/29/C3/5F8F96AC778522595F4F3E9FDB4_F7354611_1E4C3E.jpg", "showDate": "", "showDate1": "2024.11", "showDate2": "29", "showDate3": "周五", "showSubTitle": "", "showAuthor": "", "showClickTimes": "112", "showColumnName": "活动预告" },{"showTitle": "栗子校园 | “镜头下的光影校园”金秋季摄影作品分享活动...","url": "info/1044/12574.htm","pos": "20", "picUrl": "/__local/9/EB/31/771E2A851A3F03BA3E65E3D9ADD_FB8324EC_A6C0C.png", "showDate": "", "showDate1": "2024.11", "showDate2": "26", "showDate3": "周二", "showSubTitle": "", "showAuthor": "", "showClickTimes": "90", "showColumnName": "活动预告" },{"showTitle": "利兹学院2024-2025学年第一学期心理健康教育活动看板","url": "info/1044/11504.htm","pos": "21", "picUrl": "/__local/F/F6/03/464070F23CC08813717BE4F1529_EEE3F2B7_C483C.jpg", "showDate": "", "showDate1": "2024.10", "showDate2": "28", "showDate3": "周一", "showSubTitle": "", "showAuthor": "", "showClickTimes": "105", "showColumnName": "活动预告" },{"showTitle": "精勤讲坛第十期：中子与同步辐射高能X射线在材料科学与工...","url": "info/1044/11514.htm","pos": "22", "picUrl": "/__local/7/0F/F8/C324C5E6A1FE415528958883EC1_4AB7986F_62532.jpg", "showDate": "", "showDate1": "2024.10", "showDate2": "25", "showDate3": "周五", "showSubTitle": "", "showAuthor": "", "showClickTimes": "83", "showColumnName": "活动预告" },{"showTitle": "【小栗子有话对你说】第二期：留学规划专场","url": "info/1044/8954.htm","pos": "23", "picUrl": "", "showDate": "", "showDate1": "2024.06", "showDate2": "18", "showDate3": "周二", "showSubTitle": "", "showAuthor": "", "showClickTimes": "164", "showColumnName": "活动预告" },{"showTitle": "【小栗子有话对你说】第一期：免研分享专场","url": "info/1044/8944.htm","pos": "24", "picUrl": "", "showDate": "", "showDate1": "2024.06", "showDate2": "18", "showDate3": "周二", "showSubTitle": "", "showAuthor": "", "showClickTimes": "153", "showColumnName": "活动预告" },{"showTitle": "精勤讲坛第六期：电气工程及其自动化与控制技术探索","url": "info/1044/8754.htm","pos": "25", "picUrl": "/__local/B/F9/F9/0F1FF32977EB2F3D767D3A7C2FE_01E17370_DE35B3.jpg", "showDate": "", "showDate1": "2024.06", "showDate2": "12", "showDate3": "周三", "showSubTitle": "", "showAuthor": "", "showClickTimes": "360", "showColumnName": "活动预告" },{"showTitle": "利兹学院2023-2024学年第2学期第二期院长午餐会","url": "info/1044/8344.htm","pos": "26", "picUrl": "/__local/1/10/F5/986FFEA5F3DFA3109086D6C6BBB_BDD95F19_46661.png", "showDate": "", "showDate1": "2024.05", "showDate2": "15", "showDate3": "周三", "showSubTitle": "", "showAuthor": "", "showClickTimes": "49", "showColumnName": "活动预告" },{"showTitle": "本周六，利兹学院与您相约重庆、上海","url": "info/1044/8284.htm","pos": "27", "picUrl": "", "showDate": "", "showDate1": "2024.05", "showDate2": "14", "showDate3": "周二", "showSubTitle": "", "showAuthor": "", "showClickTimes": "163", "showColumnName": "活动预告" },{"showTitle": "本周日，利兹学院招生宣讲会济南专场来袭","url": "info/1044/8174.htm","pos": "28", "picUrl": "", "showDate": "", "showDate1": "2024.05", "showDate2": "10", "showDate3": "周五", "showSubTitle": "", "showAuthor": "", "showClickTimes": "124", "showColumnName": "活动预告" },{"showTitle": "利兹学院2023-2024学年第二期书记下午茶","url": "info/1044/5984.htm","pos": "29", "picUrl": "/__local/9/C3/BD/5783D525CD842F2F2ED85D7E248_D6AE30C2_6485E.png", "showDate": "", "showDate1": "2024.03", "showDate2": "13", "showDate3": "周三", "showSubTitle": "", "showAuthor": "", "showClickTimes": "107", "showColumnName": "活动预告" },{"showTitle": "精勤讲坛第五期：超级计算机简史","url": "info/1044/5844.htm","pos": "30", "picUrl": "/__local/5/A3/45/75788725C2597A6955B9026DEC7_1C1A5CAE_5ED05.jpg", "showDate": "", "showDate1": "2024.03", "showDate2": "01", "showDate3": "周五", "showSubTitle": "", "showAuthor": "", "showClickTimes": "108", "showColumnName": "活动预告" },{"showTitle": "奔赴未来 青春有你——2023年利兹学院迎新晚会","url": "info/1044/5414.htm","pos": "31", "picUrl": "/__local/A/B8/F7/B01DD544C6E2C9F5C00384175DD_2DC45FC8_1BA6DF.jpg", "showDate": "", "showDate1": "2023.12", "showDate2": "06", "showDate3": "周三", "showSubTitle": "", "showAuthor": "", "showClickTimes": "161", "showColumnName": "活动预告" },{"showTitle": "精勤讲坛第四期：高速铁路动力学中的波动现象","url": "info/1044/4944.htm","pos": "32", "picUrl": "/__local/A/05/D8/C4E7E5595C10245082F15267681_49DB3830_654CD.jpg", "showDate": "", "showDate1": "2023.10", "showDate2": "23", "showDate3": "周一", "showSubTitle": "", "showAuthor": "", "showClickTimes": "108", "showColumnName": "活动预告" },{"showTitle": "西南交通大学-利兹学院留学归国人员分享会(第二期)","url": "info/1044/4824.htm","pos": "33", "picUrl": "/__local/9/7F/5D/73D3231DF714225A58D5438A616_6307A217_5746D.jpg", "showDate": "", "showDate1": "2023.10", "showDate2": "17", "showDate3": "周二", "showSubTitle": "", "showAuthor": "", "showClickTimes": "177", "showColumnName": "活动预告" },{"showTitle": "利兹学院2023-2024学年第一期书记下午茶","url": "info/1044/4331.htm","pos": "34", "picUrl": "", "showDate": "", "showDate1": "2023.09", "showDate2": "19", "showDate3": "周二", "showSubTitle": "", "showAuthor": "", "showClickTimes": "109", "showColumnName": "活动预告" },{"showTitle": "竞赛点燃梦想，创新引领未来——利兹学院土木工程专业科...","url": "info/1044/3333.htm","pos": "53", "picUrl": "/__local/6/20/7F/AD4E995758A44E60161547C2D45_81C3EC9E_117C30.png", "showDate": "", "showDate1": "2022.11", "showDate2": "22", "showDate3": "周二", "showSubTitle": "", "showAuthor": "学生支持中心", "showClickTimes": "141", "showColumnName": "活动预告" },{"showTitle": "“心系祖国 强国有我” 利兹学院留学报国分享会","url": "info/1044/3234.htm","pos": "54", "picUrl": "", "showDate": "", "showDate1": "2022.11", "showDate2": "09", "showDate3": "周三", "showSubTitle": "", "showAuthor": "宾道春", "showClickTimes": "148", "showColumnName": "活动预告" },{"showTitle": "“弘扬科学家精神 传承留学报国传统”行前培训","url": "info/1044/2765.htm","pos": "55", "picUrl": "", "showDate": "", "showDate1": "2022.09", "showDate2": "12", "showDate3": "周一", "showSubTitle": "", "showAuthor": "SSO", "showClickTimes": "135", "showColumnName": "活动预告" },{"showTitle": "利兹学院2022级新生家长会","url": "info/1044/2688.htm","pos": "56", "picUrl": "/__local/2/EC/A5/BD3057470A1DE3CDEC0EB8E714B_D8747C8A_F1D36.jpg", "showDate": "", "showDate1": "2022.08", "showDate2": "26", "showDate3": "周五", "showSubTitle": "", "showAuthor": "", "showClickTimes": "235", "showColumnName": "活动预告" }]');
+    
+    newsListDataArray["2023-06-15"] = JSON.parse('[{"showTitle": "利兹学院2023届毕业生音乐节","url": "info/1044/4141.htm","pos": "35", "picUrl": "/__local/B/BA/2C/95BC295AEDC8C69FAC454B5AC66_32D18729_CC8D2.png", "showDate": "2023年06月15日", "showDate1": "2023.06", "showDate2": "14", "showDate3": "周三", "showSubTitle": "", "showAuthor": "", "showClickTimes": "165", "showColumnName": "活动预告" },{"showTitle": "2023届学生毕业典礼暨学位授予仪式","url": "info/1044/4140.htm","pos": "36", "picUrl": "/__local/E/DB/B5/7A86611CED00663F5E5BB95D4A3_9F2B0F75_1E58E.png", "showDate": "2023年06月15日", "showDate1": "2023.06", "showDate2": "14", "showDate3": "周三", "showSubTitle": "", "showAuthor": "", "showClickTimes": "218", "showColumnName": "活动预告" }]');
+    
+    newsListDataArray["2023-06-10"] = JSON.parse('[{"showTitle": "利兹学院党委学生支部主题党日活动——听老党员沈志云院...","url": "info/1044/4066.htm","pos": "37", "picUrl": "", "showDate": "2023年06月10日", "showDate1": "2023.06", "showDate2": "06", "showDate3": "周二", "showSubTitle": "", "showAuthor": "余典", "showClickTimes": "150", "showColumnName": "活动预告" }]');
+    
+    newsListDataArray["2023-06-06"] = JSON.parse('[{"showTitle": "利兹学院2023届优秀毕业设计成果展示","url": "info/1044/4065.htm","pos": "38", "picUrl": "", "showDate": "2023年06月06日", "showDate1": "2023.06", "showDate2": "06", "showDate3": "周二", "showSubTitle": "", "showAuthor": "", "showClickTimes": "210", "showColumnName": "活动预告" }]');
+    
+    newsListDataArray["2023-05-30"] = JSON.parse('[{"showTitle": "西南交通大学-利兹学院“精勤讲坛”第二期","url": "info/1044/4050.htm","pos": "39", "picUrl": "/__local/D/C5/FF/4E36D8B36093BC31C479AFA5BFE_B080284E_655C0D.jpg", "showDate": "2023年05月30日", "showDate1": "2023.05", "showDate2": "29", "showDate3": "周一", "showSubTitle": "", "showAuthor": "张晓婷", "showClickTimes": "111", "showColumnName": "活动预告" }]');
+    
+    newsListDataArray["2023-06-01"] = JSON.parse('[{"showTitle": "利兹学院2022-2023学年第六期书记下午茶","url": "info/1044/4046.htm","pos": "40", "picUrl": "/__local/3/3B/5D/852F176A0F4BE6339D4DE2F7DE3_07DA7855_19ACBE.png", "showDate": "2023年06月01日", "showDate1": "2023.05", "showDate2": "25", "showDate3": "周四", "showSubTitle": "", "showAuthor": "刘爽", "showClickTimes": "107", "showColumnName": "活动预告" }]');
+    
+    newsListDataArray["2023-05-19"] = JSON.parse('[{"showTitle": "全球治理与全球胜任力人才培养讲座","url": "info/1044/4031.htm","pos": "41", "picUrl": "/__local/C/1D/AE/36C4BF9B4B139B06E4CDCF47419_F850FFF5_1CE16.jpg", "showDate": "2023年05月19日", "showDate1": "2023.05", "showDate2": "18", "showDate3": "周四", "showSubTitle": "", "showAuthor": "", "showClickTimes": "96", "showColumnName": "活动预告" }]');
+    
+    newsListDataArray["2023-05-12"] = JSON.parse('[{"showTitle": "利兹学院首届我最喜爱的教师评选活动拉开帷幕","url": "info/1044/4047.htm","pos": "42", "picUrl": "/__local/D/35/4B/55D149F33768019F1655F662ABB_5CA76047_4E387.png", "showDate": "2023年05月12日", "showDate1": "2023.05", "showDate2": "12", "showDate3": "周五", "showSubTitle": "", "showAuthor": "", "showClickTimes": "82", "showColumnName": "活动预告" }]');
+    
+    newsListDataArray["2023-05-11"] = JSON.parse('[{"showTitle": "利兹学院2022-2023学年第五期院长午餐会","url": "info/1044/3996.htm","pos": "43", "picUrl": "/__local/A/6F/D9/DCC138A9CF70B37A641F8DE3A8E_1FA5A07A_32912.png", "showDate": "2023年05月11日", "showDate1": "2023.05", "showDate2": "08", "showDate3": "周一", "showSubTitle": "", "showAuthor": "刘爽", "showClickTimes": "89", "showColumnName": "活动预告" }]');
+    
+    newsListDataArray["2023-04-20"] = JSON.parse('[{"showTitle": "利兹学院2022-2023学年第五期书记下午茶","url": "info/1044/3922.htm","pos": "44", "picUrl": "/__local/D/78/A0/3306E78132E002FF64B57383623_300B6F40_5161C.png", "showDate": "2023年04月20日", "showDate1": "2023.04", "showDate2": "18", "showDate3": "周二", "showSubTitle": "", "showAuthor": "刘爽", "showClickTimes": "88", "showColumnName": "活动预告" }]');
+    
+    newsListDataArray["2023-04-06"] = JSON.parse('[{"showTitle": "2022-2023学年第四期院长午餐会","url": "info/1044/3881.htm","pos": "45", "picUrl": "/__local/9/21/24/190FCED28F2122C976CC7E9BA6A_95E0BAD2_32A6D.png", "showDate": "2023年04月06日", "showDate1": "2023.04", "showDate2": "04", "showDate3": "周二", "showSubTitle": "", "showAuthor": "", "showClickTimes": "109", "showColumnName": "活动预告" }]');
+    
+    newsListDataArray["2023-03-23"] = JSON.parse('[{"showTitle": "书记下午茶","url": "info/1044/3813.htm","pos": "46", "picUrl": "/__local/6/90/F8/89D6521DE8EF658F28000F1B0D5_3EC665CB_56F97.png", "showDate": "2023年03月23日", "showDate1": "2023.03", "showDate2": "20", "showDate3": "周一", "showSubTitle": "", "showAuthor": "刘爽", "showClickTimes": "95", "showColumnName": "活动预告" }]');
+    
+    newsListDataArray["2022-12-30"] = JSON.parse('[{"showTitle": "学习宣传贯彻党的二十大精神 利兹学院双语热词答题活动","url": "info/1044/3479.htm","pos": "47", "picUrl": "/__local/5/A2/62/FD0C0A149B2B00119851E490E0B_19F9836E_CE7EC.jpg", "showDate": "2022年12月30日", "showDate1": "2022.12", "showDate2": "28", "showDate3": "周三", "showSubTitle": "", "showAuthor": "宾道春", "showClickTimes": "88", "showColumnName": "活动预告" }]');
+    
+    newsListDataArray["2022-12-09"] = JSON.parse('[{"showTitle": "工程实践与创新国际联合中心科创竞赛分享会","url": "info/1044/3392.htm","pos": "48", "picUrl": "", "showDate": "2022年12月09日", "showDate1": "2022.12", "showDate2": "08", "showDate3": "周四", "showSubTitle": "", "showAuthor": "学生支持中心", "showClickTimes": "113", "showColumnName": "活动预告" }]');
+    
+    newsListDataArray["2022-12-08"] = JSON.parse('[{"showTitle": "竞赛点燃梦想，创新引领未来——利兹学院机械设计与制造...","url": "info/1044/3391.htm","pos": "49", "picUrl": "", "showDate": "2022年12月08日", "showDate1": "2022.12", "showDate2": "08", "showDate3": "周四", "showSubTitle": "", "showAuthor": "学生支持中心", "showClickTimes": "128", "showColumnName": "活动预告" },{"showTitle": "利兹学院2022-2023学年第二期“院长午餐会”","url": "info/1044/3383.htm","pos": "50", "picUrl": "/__local/C/BE/D2/DB2128067E77C9F73023063B67D_7402FC4E_D2EBE.png", "showDate": "2022年12月08日", "showDate1": "2022.12", "showDate2": "07", "showDate3": "周三", "showSubTitle": "", "showAuthor": "学生支持中心", "showClickTimes": "101", "showColumnName": "活动预告" }]');
+    
+    newsListDataArray["2022-11-24"] = JSON.parse('[{"showTitle": "利兹学院 2022-2023学年第三期 “书记下午茶”","url": "info/1044/3334.htm","pos": "51", "picUrl": "", "showDate": "2022年11月24日", "showDate1": "2022.11", "showDate2": "23", "showDate3": "周三", "showSubTitle": "", "showAuthor": "学生支持中心", "showClickTimes": "132", "showColumnName": "活动预告" },{"showTitle": "利兹学院留学专场讲座","url": "info/1044/3332.htm","pos": "52", "picUrl": "", "showDate": "2022年11月24日", "showDate1": "2022.11", "showDate2": "22", "showDate3": "周二", "showSubTitle": "", "showAuthor": "宾道春", "showClickTimes": "124", "showColumnName": "活动预告" }]');
+    
+    newsListDataArray["2022-06-25"] = JSON.parse('[{"showTitle": "2022招生 | 西南交通大学中外合作办学专场开放日预告","url": "info/1044/2451.htm","pos": "57", "picUrl": "/__local/3/35/23/70EDEFD71612B3911192A65F4DE_31BE4DAA_30739B.jpg", "showDate": "2022年06月25日", "showDate1": "2022.06", "showDate2": "23", "showDate3": "周四", "showSubTitle": "", "showAuthor": "", "showClickTimes": "464", "showColumnName": "活动预告" }]');
+    
+
+    //关闭弹出窗口
+    function closeDialog(obj){
+        $(obj).parent().parent().remove();
+    }
+
+    function getZero(num) {
+        // 单数前面加0
+        if (parseInt(num) < 10) {
+            num = '0' + num;
+        }
+        return num;
+    }
+
+    function getToday(){
+        var myDate = new Date();
+        var year = myDate.getFullYear(); //获取当前年
+        var mon = myDate.getMonth() + 1; //获取当前月
+        var date = myDate.getDate(); //获取当前日
+        // 以自己需要的方式拼接
+        var now = year + "-" + getZero(mon) + "-" + getZero(date);
+
+        return now;
+    }
+
+    var mySchedule = new Schedule({
+        el: '#schedule-box',    //容器元素
+        date: getToday(),      //当前日期
+        selectedDate: ['2023-06-15', '2023-06-10', '2023-06-06', '2023-05-30', '2023-06-01', '2023-05-19', '2023-05-12', '2023-05-11', '2023-04-20', '2023-04-06', '2023-03-23', '2022-12-30', '2022-12-09', '2022-12-08', '2022-11-24', '2022-06-25'],    //选中的日期
+        showToday: false, //回到今天
+        nextMonthCb: function (currentYear, currentMonth) {
+            dateHover();
+        },
+        nextYeayCb: function (currentYear, currentMonth) {
+            dateHover();
+        },
+        prevMonthCb: function (currentYear, currentMonth) {
+            dateHover();
+        },
+        prevYearCb: function (currentYear, currentMonth) {
+            dateHover();
+        }
+    });
+
+    dateHover();
+    function dateHover(){
+
+        //触摸事件
+        $(".currentDate").click(function () {
+            var value = $(this).attr("title");
+
+            var className = $(this).attr("class");
+            if(newsListDataArray[value] != undefined){
+                var list_news = newsListDataArray[value];
+                if(list_news.length > 10){
+                    list_news = list_news.slice(0, 10);
+                }
+
+                var data = { dialog_title: value, list_news: list_news };
+                var dialogHtml = $("#dialogHtml").tmpl(data);
+
+                //$(".dateTip").remove();
+                $("#calendarnews").remove();
+                $(this).parent().append(dialogHtml);
+            }else{
+                //$(".dateTip").remove();
+                $("#calendarnews").remove();
+            }
+            
+            
+            $(".EventsBoxL-hide").hide();
+         $(".copy1").hide();
+        })
+
+        /*
+        //点击事件
+        $(".currentDate").click(function () {
+            var value = $(this).attr("title");
+
+            var className = $(this).attr("class");
+            if(newsListDataArray[value] != undefined){
+                var moreLink = "";
+                if(moreLink.indexOf("?") > 0){
+                    moreLink += "&d=" + btoa(value);
+                }else{
+                    moreLink += "?d=" + btoa(value);
+                }
+                if(moreLink != ""){
+                    window.location.href = moreLink;
+                }
+            }
+        })*/
+    }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          </div>
+
+        
+    </div>
+  </div>
+  <script type="text/javascript">
+    //使用服务器期时间戳,校正本地日历时间
+    var calUtil = {
+      showYear: 2017,//当前日历显示的年份
+      showMonth: 1,//当前日历显示的月份
+      curDay: 1,//当前日历显示的天数
+      curDate: '2017-01-01',
+      eventName: "load",
+      map: {}, //存储date-json:index对应关系
+      //初始化日历
+      init: function (signList) {
+        //初始化时间
+        calUtil.setMonthAndDay();
+        //初始化下拉列表
+        $('.year-m div span').text(calUtil.showYear + "年" + calUtil.showMonth + "月");
+        $('.year-m ul').html(calUtil.setTimeHeadList());
+        //绑定日历页面初始化
+        $("#calendar").html(calUtil.drawCal(calUtil.showYear, calUtil.showMonth, signList));
+        //绑定初始化对应的事件
+        calUtil.bindEnvent();
+      },
+      //绑定事件
+      bindEnvent: function () {
+        //绑定下拉事件
+        $(".year-m ul li").click(function () {
+          //ajax获取日历json数据 $(this).attr('lay-ymd');
+          if ($(this).attr('year') == undefined || $(this).attr('month') == undefined) return;
+          calUtil.showYear = Number($(this).attr('year'));
+          calUtil.showMonth = Number($(this).attr('month'));
+          calUtil.eventName = "current";
+          calUtil.init([{ "date": "" }]);
+          calUtil.map = {};
+          getJson(calUtil.showYear, calUtil.dateInit(calUtil.showMonth));
+        });
+        $(".calendar-content .calendar-has").each(function (a, b) {
+          $(b).on("click", function () {
+            console.log(a)
+            $(".calendar-this").removeClass("calendar-this");
+            $(this).addClass("calendar-this")   //添加点击样式
+          })
+        });
+        //日期点击事件
+        $("#calendar tbody tr .calendar-has").click(function () {
+          var date = $(this).attr('lay-ymd');
+          var dayJson = calUtil.map[date];
+          var html = '';
+
+          if (dayJson.length == 1) {
+            $(".sbtn").css("opacity", "0")
+          } else
+            $(".sbtn").css("opacity", "1")
+          for (var i = 0; i < dayJson.length; i++) {
+            var dayDate = dayJson[i];
+            var url = dayDate.url == undefined ? '' : dayDate.url;
+            var title = dayDate.title == undefined ? '' : dayDate.title;
+            var time = dayDate.date == undefined ? '' : dayDate.date;
+            var week = dayDate.week == undefined ? '' : dayDate.week;
+            var month = dayDate.month == undefined ? '' : dayDate.month;
+            var day = dayDate.day == undefined ? '' : dayDate.day;
+            var name = dayDate.name == undefined ? '' : dayDate.name;
+            var hours = dayDate.hdsj == undefined ? '' : dayDate.hdsj;
+            var addr = dayDate.hddd == undefined ? '' : dayDate.hddd;
+            html +=
+              '<li class="EventsBoxLTop">\n' +
+              '<div class="EventsBoxLTopTime">\n' +
+              '<i>' + day + '</i>\n' +
+              '<span>' + month + '</span>\n' +
+              '<div class="EventsBoxLTopTimetext">' + week + '</div>\n' +
+              '<b>' + time + '&nbsp;&nbsp;&nbsp;&nbsp;' + hours + '</b>\n' +
+              '</div>\n' +
+              '<div class="EventsBoxLTopText">\n' +
+              '<a href="' + url + '">' + title + '</a>\n' +
+              '<div class="EventsBoxLTopTextZy">\n' +
+              '<i><img src="images/EventsBoxLTopTextZy1.png" alt="">\n' + time + '&nbsp;&nbsp;&nbsp;&nbsp;' + hours + '</i>\n' +
+              '<i><img src="images/EventsBoxLTopTextZy2.png" alt=""> ' + addr + '</i>\n' +
+              '<i><img src="images/EventsBoxLTopTextZy3.png" alt=""> 李志林</i>\n' +
+              ' </div>\n' +
+              '</div>\n' +
+              '</li>';
+
+          }
+
+          $("#calendarnews").html(html);
+          swiperInit();
+
+        });
+      },
+      //日历时间的下拉选择
+      setTimeHeadList: function () {
+        var html = '';
+        for (var i = -5; i < 6; i++) {
+          var varYear, varMonth;
+          if (calUtil.showMonth + i > 12) {
+            varYear = calUtil.showYear + 1;
+            varMonth = calUtil.showMonth + i - 12;
+          } else if (calUtil.showMonth + i < 1) {
+            varYear = calUtil.showYear - 1;
+            varMonth = calUtil.showMonth + i + 12;
+          } else {
+            varYear = calUtil.showYear;
+            varMonth = calUtil.showMonth + i;
+          }
+          html += '<li ' + (i == 0 ? 'class="cur"' : ' year="' + varYear + '" month="' + varMonth + '" ') + '>' + varYear + '年' + varMonth + '月</li>';
+        }
+        return html;
+      },
+      dateInit: function (num) {
+        return (num < 10 ? '0' : '') + num;
+      },
+      //获取当前选择的年月
+      setMonthAndDay: function () {
+        switch (calUtil.eventName) {
+          case "load":
+            var current = new Date();
+            calUtil.showYear = current.getFullYear();
+            calUtil.showMonth = current.getMonth() + 1;
+            calUtil.curDay = current.getDate();
+            calUtil.curDate = calUtil.showYear + '-' + calUtil.dateInit(calUtil.showMonth) + '-' + calUtil.dateInit(calUtil.curDay);
+            break;
+          case "current":
+            break;
+        }
+      },
+      bulidCal: function (iYear, iMonth) {
+        var aMonth = new Array();
+        aMonth[0] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        var iDayOfFirst = new Date(iYear, iMonth - 1, 1).getDay();
+        var iDaysInMonth = new Date(iMonth, iMonth, 0).getDate();
+        var iVarDate = 1;
+        for (var w = 1, d = iDayOfFirst; w < 7 && iVarDate <= iDaysInMonth; w++, d = 0) {
+          aMonth[w] = new Array(7);
+          for (; d < aMonth[w].length; d++) {
+            if (iVarDate <= iDaysInMonth) {
+              aMonth[w][d] = iVarDate;
+              iVarDate++;
+            }
+          }
+        }
+        return aMonth;
+      },
+      ifHasSigned: function (signList, day) {
+        var boo = false;
+        for (var i = 0; i < signList.length; i++) {
+          if (signList[i].date == day) {
+            boo = true;
+            if (calUtil.map[day] == undefined) calUtil.map[day] = [];
+            calUtil.map[day].push(signList[i]);
+          }
+        }
+        return boo;
+      },
+      drawCal: function (iYear, iMonth, signList) {
+        var myMonth = calUtil.bulidCal(iYear, iMonth);
+        var htmls = new Array();
+        var curTime = "";
+        htmls.push("<thead>");
+        for (var i = 0; i < myMonth[0].length; i++) htmls.push("<th>" + myMonth[0][i] + "</th>");
+        htmls.push("</thead>");
+        htmls.push("<tbody>");
+        var srtYearMonth = iYear + '-' + calUtil.dateInit(iMonth);
+        for (var w = 1; w < myMonth.length; w++) {
+          htmls.push("<tr>");
+          for (var d = 0; d < 7; d++) {
+            if (myMonth[w][d] == undefined) {
+              htmls.push("<td><span></span></td>");
+            } else {
+              var ifHasSigned = calUtil.ifHasSigned(signList, srtYearMonth + '-' + calUtil.dateInit(myMonth[w][d]));
+              var tdClass = '';
+              //是当天时间
+              var time = srtYearMonth + '-' + calUtil.dateInit(myMonth[w][d]);
+              if (time == calUtil.curDate) tdClass += ' calendar-this ';
+              if (ifHasSigned) tdClass += ' calendar-has ';
+              htmls.push('<td lay-ymd="' + time + '" class="' + tdClass + '"><span>' + myMonth[w][d] + '</span></td>');
+            }
+          }
+          htmls.push("</tr>");
+        }
+        htmls.push("</tbody>");
+        return htmls.join('');
+      }
+    };
+    calUtil.init([{ "date": "" }]);
+    function getJson(year, date) {
+      $.ajax({
+        url: "newsdata/" + year + "-" + date + ".json?r=" + Math.random(),
+        type: "get",
+        dataType: "json",
+        contentType: "application/x-www-form-urlencoded; charset=UTF-8",
+        success: function (data) {
+          calUtil.init(data);
+        },
+        error: function (XMLHttpRequest, textStatus, errorThrown) {
+        },
+        complete: function (XMLHttpRequest, textStatus) {
+          this;
+        }
+      });
+    }
+    getJson(calUtil.showYear, (calUtil.showMonth < 10 ? '0' + calUtil.showMonth : calUtil.showMonth));
+    function swiperInit() {
+      $(".day-this").removeClass("calendar-this");
+      $(this).addClass("calendar-this");
+    }
+    swiperInit();
+  </script>
+
+  <!-- 师资力量 -->
+  <div class="Faculty">
+    <div class="container">
+      <div class="title">
+        <div class="titleL">
+          <i>Faculty</i>
+          <h3><a href="jwxx/szllx/tmgc.htm" title="师资力量">师资力量</a></h3>
+          <!-- <p>引进优质的教育教学资源，实现两校工程学科领域本科教育的实质性合作</p>-->
+        </div>
+
+        <a href="jwxx/szllx/tmgc.htm" class="titleR" title="View More">
+          View More
+        </a>
+      </div>
+    </div>
+    <div class="FacultyBox">
+      <div class="swiper-container">
+       
+          
+
+ <ul class="swiper-wrapper">
+<li class="swiper-slide swiper-slide-active">
+                        <a href="https://eps.leeds.ac.uk/physics/staff/6131/dr-ben-hanson" class="FacultyImg">
+                            <img src="/__local/1/FC/7B/D48C8BB4566D558497B7D3509B1_F63C09A1_3E61B.jpg" alt="">
+                            <span>
+                                <b>Benjamin Hanson</b>
+                                <i></i>
+                            </span>
+                        </a>
+
+                        <a class="FacultyImgText" href="https://eps.leeds.ac.uk/physics/staff/6131/dr-ben-hanson">
+                            <b>Benjamin Hanson</b>
+                            <i>职称：讲师</i>
+                            <i>学历：博士</i>
+                            <i>研究方向：</i>
+
+                        </a>
+                    </li>
+
+                    
+<li class="swiper-slide ">
+                        <a href="https://eps.leeds.ac.uk/faculty-engineering-physical-sciences/staff/14137/dr-zhilun-lu" class="FacultyImg">
+                            <img src="/__local/8/2A/58/61C7C26CBBB2C882721396339F3_4CF16F98_489F9.jpg" alt="">
+                            <span>
+                                <b>Zhilun LU</b>
+                                <i></i>
+                            </span>
+                        </a>
+
+                        <a class="FacultyImgText" href="https://eps.leeds.ac.uk/faculty-engineering-physical-sciences/staff/14137/dr-zhilun-lu">
+                            <b>Zhilun LU</b>
+                            <i>职称：助理教授</i>
+                            <i>学历：博士</i>
+                            <i>研究方向：</i>
+
+                        </a>
+                    </li>
+
+                    
+<li class="swiper-slide ">
+                        <a href="https://eps.leeds.ac.uk/faculty-engineering-physical-sciences/staff/14758/dr-kamalanathan-kajan" class="FacultyImg">
+                            <img src="/__local/8/25/A3/819C549C7BC07810B12DEAFDA32_6E14B27A_886F2.jpg" alt="">
+                            <span>
+                                <b>Kamalanathan Kajan</b>
+                                <i></i>
+                            </span>
+                        </a>
+
+                        <a class="FacultyImgText" href="https://eps.leeds.ac.uk/faculty-engineering-physical-sciences/staff/14758/dr-kamalanathan-kajan">
+                            <b>Kamalanathan Kajan</b>
+                            <i>职称：讲师</i>
+                            <i>学历：博士</i>
+                            <i>研究方向：</i>
+
+                        </a>
+                    </li>
+
+                    
+<li class="swiper-slide ">
+                        <a href="https://eps.leeds.ac.uk/physics/staff/4687/dr-zhaopeng-zhang" class="FacultyImg">
+                            <img src="/__local/6/46/57/EAADC51FF43CD1D6D6A86921C41_BE4D1E2E_3E58B.jpg" alt="">
+                            <span>
+                                <b>Zhaopeng ZHANG</b>
+                                <i></i>
+                            </span>
+                        </a>
+
+                        <a class="FacultyImgText" href="https://eps.leeds.ac.uk/physics/staff/4687/dr-zhaopeng-zhang">
+                            <b>Zhaopeng ZHANG</b>
+                            <i>职称：研究员</i>
+                            <i>学历：PHD</i>
+                            <i>研究方向：</i>
+
+                        </a>
+                    </li>
+
+                    
+<li class="swiper-slide ">
+                        <a href="https://peopledevelopment.leeds.ac.uk/news/joanne-shiel-awarded-pfhea/" class="FacultyImg">
+                            <img src="/__local/C/3D/90/E6466EE2B3C584F876D7CFD6365_7AB098B5_1A260C.jpg" alt="">
+                            <span>
+                                <b>Joanne Shiel</b>
+                                <i></i>
+                            </span>
+                        </a>
+
+                        <a class="FacultyImgText" href="https://peopledevelopment.leeds.ac.uk/news/joanne-shiel-awarded-pfhea/">
+                            <b>Joanne Shiel</b>
+                            <i>职称：副教授</i>
+                            <i>学历：硕士</i>
+                            <i>研究方向：</i>
+
+                        </a>
+                    </li>
+
+                    
+<li class="swiper-slide ">
+                        <a href="https://eps.leeds.ac.uk/computing/staff/258/dr-john-stell" class="FacultyImg">
+                            <img src="/__local/5/90/C3/FCE3131E1C8D79D71D1609B029F_E0B018FF_88EC5.jpg" alt="">
+                            <span>
+                                <b>John G. Stell</b>
+                                <i></i>
+                            </span>
+                        </a>
+
+                        <a class="FacultyImgText" href="https://eps.leeds.ac.uk/computing/staff/258/dr-john-stell">
+                            <b>John G. Stell</b>
+                            <i>职称：高级讲师</i>
+                            <i>学历：博士</i>
+                            <i>研究方向：</i>
+
+                        </a>
+                    </li>
+
+                    
+<li class="swiper-slide ">
+                        <a href="https://eps.leeds.ac.uk/computing/staff/6452/professor-zheng-wang" class="FacultyImg">
+                            <img src="/__local/8/95/51/1E8F1012FB7065EBD9176DC5A82_FBDB4095_3B0A5.jpg" alt="">
+                            <span>
+                                <b>Zheng WANG</b>
+                                <i></i>
+                            </span>
+                        </a>
+
+                        <a class="FacultyImgText" href="https://eps.leeds.ac.uk/computing/staff/6452/professor-zheng-wang">
+                            <b>Zheng WANG</b>
+                            <i>职称：教授</i>
+                            <i>学历：博士</i>
+                            <i>研究方向：</i>
+
+                        </a>
+                    </li>
+
+                    
+<li class="swiper-slide ">
+                        <a href="https://eps.leeds.ac.uk/mechanical-engineering/staff/161/professor-martin-levesley" class="FacultyImg">
+                            <img src="/__local/7/58/DA/A91B9531C3A5DD84A41D4F20AFA_F99FBC42_97B0E.jpg" alt="">
+                            <span>
+                                <b>Martin Levesley</b>
+                                <i></i>
+                            </span>
+                        </a>
+
+                        <a class="FacultyImgText" href="https://eps.leeds.ac.uk/mechanical-engineering/staff/161/professor-martin-levesley">
+                            <b>Martin Levesley</b>
+                            <i>职称：教授</i>
+                            <i>学历：博士</i>
+                            <i>研究方向：</i>
+
+                        </a>
+                    </li>
+
+                    
+<li class="swiper-slide ">
+                        <a href="https://eps.leeds.ac.uk/mechanical-engineering/staff/435/dr-qingen-meng" class="FacultyImg">
+                            <img src="/__local/2/F9/00/D985FF1524ADB627492E4F51CF8_2278E92E_67B6E.jpg" alt="">
+                            <span>
+                                <b>Qingen Meng</b>
+                                <i></i>
+                            </span>
+                        </a>
+
+                        <a class="FacultyImgText" href="https://eps.leeds.ac.uk/mechanical-engineering/staff/435/dr-qingen-meng">
+                            <b>Qingen Meng</b>
+                            <i>职称：讲师</i>
+                            <i>学历：博士</i>
+                            <i>研究方向：</i>
+
+                        </a>
+                    </li>
+
+                    
+<li class="swiper-slide ">
+                        <a href="https://eps.leeds.ac.uk/civil-engineering/staff/964/professor-dariusz-wanatowski" class="FacultyImg">
+                            <img src="/__local/F/A9/2D/6616D20CDDED9231E47331498A5_6094AEFB_207A2D.jpg" alt="">
+                            <span>
+                                <b>Dariusz Wanatowski</b>
+                                <i></i>
+                            </span>
+                        </a>
+
+                        <a class="FacultyImgText" href="https://eps.leeds.ac.uk/civil-engineering/staff/964/professor-dariusz-wanatowski">
+                            <b>Dariusz Wanatowski</b>
+                            <i>职称：教授</i>
+                            <i>学历：博士</i>
+                            <i>研究方向：</i>
+
+                        </a>
+                    </li>
+
+                    
+<li class="swiper-slide ">
+                        <a href="https://eps.leeds.ac.uk/staff/105/dr-andrew-sleigh" class="FacultyImg">
+                            <img src="/__local/B/78/E9/930DDAA6243910AAC827DD8E3AB_96C18306_6FD4E.jpg" alt="">
+                            <span>
+                                <b>Andrew Sleigh</b>
+                                <i></i>
+                            </span>
+                        </a>
+
+                        <a class="FacultyImgText" href="https://eps.leeds.ac.uk/staff/105/dr-andrew-sleigh">
+                            <b>Andrew Sleigh</b>
+                            <i>职称：高级讲师</i>
+                            <i>学历：博士</i>
+                            <i>研究方向：</i>
+
+                        </a>
+                    </li>
+
+                    
+<li class="swiper-slide ">
+                        <a href="https://environment.leeds.ac.uk/transport/staff/941/dr-yue-huang" class="FacultyImg">
+                            <img src="/__local/5/1F/33/AB595B8184257372121A31A16A8_CBD13D8F_138EDF.jpg" alt="">
+                            <span>
+                                <b>Yue Huang</b>
+                                <i></i>
+                            </span>
+                        </a>
+
+                        <a class="FacultyImgText" href="https://environment.leeds.ac.uk/transport/staff/941/dr-yue-huang">
+                            <b>Yue Huang</b>
+                            <i>职称：副教授</i>
+                            <i>学历：博士</i>
+                            <i>研究方向：</i>
+
+                        </a>
+                    </li>
+
+                    
+</ul><script>_showDynClickBatch(['dynclicks_u15_12114','dynclicks_u15_12214','dynclicks_u15_12154','dynclicks_u15_12194','dynclicks_u15_12134','dynclicks_u15_12144','dynclicks_u15_12204','dynclicks_u15_12164','dynclicks_u15_12174','dynclicks_u15_12124','dynclicks_u15_12104','dynclicks_u15_12184'],[12114,12214,12154,12194,12134,12144,12204,12164,12174,12124,12104,12184],"wbnews", 1843391153)</script>
+
+        
+      </div>
+    </div>
+  </div>
+
+  <!-- 党建专题 -->
+  <div class="PartyBuilding">
+    <div class="container">
+      <div class="PartyBuildingBox">
+        <div class="title">
+          <div class="titleL">
+            <i>Party Building</i>
+            <h3><a href="djysz/djyd.htm" title="党建园地">党建园地</a>
+            </h3>
+            <!--<p>引进优质的教育教学资源，实现两校工程学科领域本科教育的实质性合作</p>-->
+          </div>
+          <a href="djysz/djyd.htm" class="titleR" title="View More">
+            View More
+          </a>
+        </div>
+
+        <div class="swiper-container">
+          <ul class="swiper-wrapper">
+            <li class="swiper-slide">
+                  <dl>
+                                <a href="https://leeds.swjtu.edu.cn/content.jsp?urltype=news.NewsContentUrl&wbtreeid=1018&wbnewsid=14154" onclick="_addDynClicks(&#34;wbimage&#34;, 1843391153, 1018071)">
+                                    <img src="images/25/04/15/1f5wizs9g3/何校讲党课.jpg">
+                                </a>
+                            </dl>
+                            
+<dl>
+                                <a href="#" onclick="_addDynClicks(&#34;wbimage&#34;, 1843391153, 65091)">
+                                    <img src="images/shida.jpg">
+                                </a>
+                            </dl>
+                            
+
+            </li>
+
+            <li class="swiper-slide">
+                  <dl>
+                                <a href="#" onclick="_addDynClicks(&#34;wbimage&#34;, 1843391153, 65093)">
+                                    <img src="images/shida.jpg">
+                                </a>
+                            </dl>
+                            
+<dl>
+                                <a href="#" onclick="_addDynClicks(&#34;wbimage&#34;, 1843391153, 65094)">
+                                    <img src="images/img8.jpg">
+                                </a>
+                            </dl>
+                            
+
+            </li>
+
+          </ul>
+
+
+          <div class="PartyBuildingL"></div>
+          <div class="PartyBuildingR"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 校园生活 -->
+  <div class="campusLife">
+    <div class="campusLifeTitle">
+      <div class="container">
+        <div class="title">
+          <div class="titleL">
+            <i>Campus Life</i>
+            <h3><a href="" title="校园生活">校园生活</a></h3>
+            <!-- <p>引进优质的教育教学资源，实现两校工程学科领域本科教育的实质性合作</p>-->
+          </div>
+          <a href="index/xysh.htm" class="titleR" title="View More">
+            View More
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="campusLifeBox">
+      <div class="swiper-container gallery-top">
+        <ul class="swiper-wrapper">
+
+<li class="swiper-slide">
+                         <img src="/__local/7/22/4E/EFFE3D1A49AA9F3FDCFA0DE1A07_03FAF71B_1800E.png" alt="" video-src="video/0404lzxcp10613100521.mp4">
+                        <i></i>
+                    </li>
+
+                    
+<li class="swiper-slide">
+                         <img src="/__local/4/5F/9E/24C3AF00E25A11BCB8F16CE9418_7B1AE112_478C8.jpg" alt="" video-src="video/zhuanyeshixiVLOG.mp4">
+                        <i></i>
+                    </li>
+
+                    
+<li class="swiper-slide">
+                         <img src="/__local/8/B6/90/0750FB29FF77132EFCB0FF9180F_A91301A1_85141.jpg" alt="" video-src="video/GliderMaking-May2022.mp4">
+                        <i></i>
+                    </li>
+
+                    
+<li class="swiper-slide">
+                         <img src="/__local/F/84/87/25BD793F943C920E735AAE3839B_8BFCBD51_2CB0B.jpg" alt="" video-src="video/woainizhongguo.mp4">
+                        <i></i>
+                    </li>
+
+                    
+<li class="swiper-slide">
+                         <img src="/__local/6/50/C3/34556A0D232174DCF2D1BBC4E58_546E2697_4D423.jpg" alt="" video-src="video/lzxy2017xcp.mp4">
+                        <i></i>
+                    </li>
+
+                    
+<script>_showDynClickBatch(['dynclicks_u18_4142','dynclicks_u18_2946','dynclicks_u18_2945','dynclicks_u18_2944','dynclicks_u18_2943'],[4142,2946,2945,2944,2943],"wbnews", 1843391153)</script>
+</ul>
+      </div>
+    </div>
+    <div class="campusLifeList">
+      <div class="swiper-container gallery-thumbs">
+        <ul class="swiper-wrapper">
+
+<li class="swiper-slide">
+                       <div class="pic"> <img src="/__local/7/22/4E/EFFE3D1A49AA9F3FDCFA0DE1A07_03FAF71B_1800E.png" alt=""></div>
+                    </li>
+
+                    
+<li class="swiper-slide">
+                       <div class="pic"> <img src="/__local/4/5F/9E/24C3AF00E25A11BCB8F16CE9418_7B1AE112_478C8.jpg" alt=""></div>
+                    </li>
+
+                    
+<li class="swiper-slide">
+                       <div class="pic"> <img src="/__local/8/B6/90/0750FB29FF77132EFCB0FF9180F_A91301A1_85141.jpg" alt=""></div>
+                    </li>
+
+                    
+<li class="swiper-slide">
+                       <div class="pic"> <img src="/__local/F/84/87/25BD793F943C920E735AAE3839B_8BFCBD51_2CB0B.jpg" alt=""></div>
+                    </li>
+
+                    
+<li class="swiper-slide">
+                       <div class="pic"> <img src="/__local/6/50/C3/34556A0D232174DCF2D1BBC4E58_546E2697_4D423.jpg" alt=""></div>
+                    </li>
+
+                    
+<script>_showDynClickBatch(['dynclicks_u19_4142','dynclicks_u19_2946','dynclicks_u19_2945','dynclicks_u19_2944','dynclicks_u19_2943'],[4142,2946,2945,2944,2943],"wbnews", 1843391153)</script>
+</ul>
+      </div>
+      <div class="campusLifeListL"></div>
+      <div class="campusLifeListR"></div>
+    </div>
+  </div>
+
+
+  <div class="campusLifeVideo">
+    <div class="campusLifeVideoClose"><img src="images/campusLifeVideoClose.png" alt="关闭"></div>
+    <video src="" autoplay loop controls id="myVideo"></video>
+  </div>
+
+
+  <!--只在首页使用的js全放于footer上面-->
+  <script src="js/wow.min.js"></script>
+  <script src="js/public.js"></script>
+  <script src="js/index.js"></script>
+
+  <!--footer-->
+  <div class="footer_bg">
+    <div class="footer">
+      <div class="f_l">
+        <ul>
+          <li style="margin-right: 6%;">
+               
+ <a href="http://www.moe.gov.cn/" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76331)">中华人民共和国教育部</a>
+                    
+   
+ <a href="http://zwfw.cscse.edu.cn/" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76361)">中国（教育部）留学服务中心</a>
+                    
+
+          </li>
+
+          <li style="margin-right: 7%;">
+             <a href="https://www.crs.jsj.edu.cn/" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76332)">中外合作办学监管工作信息平台</a>
+                    
+ <a href="https://www.chsi.com.cn/" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76333)">中国高等教育学生信息网</a>
+                    
+
+          </li>
+          <li style="width: 17%;">
+             <a href="https://www.swjtu.edu.cn/" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76334)">西南交通大学</a>
+                    
+ <a href="https://www.leeds.ac.uk/" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76335)">利兹大学</a>
+                    
+ <a href="https://www.gochengdu.cn/en" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76336)">GO CHENGDU</a>
+                    
+
+          </li>
+          <li style="width: 21%;margin-right: 0;">
+             <a href="http://jwc.swjtu.edu.cn/index.html" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76337)">西南交通大学教务处</a>
+                    
+ <a href="http://xg.swjtu.edu.cn/web" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76338)">党委学生工作部（处）</a>
+                    
+ <a href="https://book.swjtu.edu.cn/" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76362)">共青团西南交通大学委员会</a>
+                    
+ <a href="https://zsjy.swjtu.edu.cn/" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76363)">招生就业处</a>
+                    
+ <a href="https://one.swjtu.edu.cn/ywtbportal/Lite/index.html#/home/Lite_home" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76364)">一网通办服务大厅</a>
+                    
+
+          </li>
+        </ul>
+      </div>
+      <div class="f_r">
+        <div class="f_logo">
+              
+<a href="index.htm" onclick="_addDynClicks(&#34;wbimage&#34;, 1843391153, 65099)"><img src="images/f_logo.png" alt=""></a>
+
+
+        </div>
+        <div class="f_cont">
+          <script language="javascript" src="/system/resource/js/news/mp4video.js"></script>
+<ul class=" list-paddingleft-2" style="list-style-type: none;"> 
+ <li> <p> 地址：成都东部新区林栖大道88号主楼8楼 </p> </li> 
+ <li> <p> 地址：四川省成都市郫都区犀安路999号西南交通大学3号教学楼 </p> </li> 
+ <li> <p> 联系方式：党政管理东部校区：81368870、犀浦校区：66367109 </p> </li> 
+ <li> <p> 人事招聘东部校区：81368873、犀浦校区：66367509 </p> </li> 
+ <li> <p> 教师支持东部校区：81368871、犀浦校区：66367102 </p> </li> 
+ <li> <p> 教学管理东部校区：81368871、犀浦校区：66367105 </p> </li> 
+ <li> <p> 学生支持东部校区：81368872、犀浦校区：66367107 </p> </li> 
+ <li> <p> 招生就业东部校区：81368871、犀浦校区：66367507 </p> </li> 
+ <li> <p> 版权: 西南交通大学-利兹学院 </p> </li> 
+</ul>
+        </div>
+      </div>
+    </div>
+    <div class="end">
+      <div class="e_l">
+        <ul>
+              
+<li>
+                    <a href="#" onclick="_addDynClicks(&#34;wbimage&#34;, 1843391153, 65100)">
+                        <span><img src="images/f1.png" alt=""></span>
+                        <i></i>
+                    </a>
+                </li>
+                
+<li>
+                    <a href="#" onclick="_addDynClicks(&#34;wbimage&#34;, 1843391153, 65101)">
+                        <span><img src="images/f2.png" alt=""></span>
+                        <i></i>
+                    </a>
+                </li>
+                
+<li>
+                    <a href="#" onclick="_addDynClicks(&#34;wbimage&#34;, 1843391153, 65102)">
+                        <span><img src="images/f3.png" alt=""></span>
+                        <i></i>
+                    </a>
+                </li>
+                
+<li>
+                    <a href="#" onclick="_addDynClicks(&#34;wbimage&#34;, 1843391153, 65103)">
+                        <span><img src="images/f4.png" alt=""></span>
+                        <i></i>
+                    </a>
+                </li>
+                
+
+        </ul>
+      </div>
+      <div class="links">
+        <div class="links_t"><span>友情链接</span></div>
+            <div class="yq_nr">
+                <ul>
+                    
+
+  
+ <li>  <a href="http://www.moe.gov.cn/" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76314)" target="_blank">中华人民共和国教育部</a></li>
+                    
+
+  
+ <li>  <a href="http://jsj.moe.gov.cn/" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76315)" target="_blank">教育涉外监管信息网</a></li>
+                    
+
+  
+ <li>  <a href="https://www.chsi.com.cn/" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76316)" target="_blank">中国高等教育学生信息网</a></li>
+                    
+
+  
+ <li>  <a href="https://www.swjtu.edu.cn/" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76317)" target="_blank">西南交通大学</a></li>
+                    
+
+  
+ <li>  <a href="https://www.leeds.ac.uk/" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76318)" target="_blank">利兹大学</a></li>
+                    
+
+  
+ <li>  <a href="http://jwc.swjtu.edu.cn/index.html" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76319)" target="_blank">西南交通大学教务处</a></li>
+                    
+
+  
+ <li>  <a href="http://xg.swjtu.edu.cn/web" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76320)" target="_blank">扬华素质网</a></li>
+                    
+
+  
+ <li>  <a href="https://book.swjtu.edu.cn/" onclick="_addDynClicks(&#34;wburl&#34;, 1843391153, 76321)" target="_blank">新青年素质网</a></li>
+                    
+</ul>
+            </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <script>
+    $("#calendarnews .EventsBoxLTop").eq(0).addClass("on")
+    setTimeout(function () {
+      $(".currentDate").on("click",function(){
+        $(".EventsBoxL-hide").hide();
+         $(".copy1").hide();
+        
+      })
+    }, 100)
+  </script>
+
+
+
+
+<script>
+    var bannerSwiper = new Swiper('.banner-scroll', {
+      watchSlidesProgress: true,
+    slidesPerView: 'auto',
+    centeredSlides: true,
+    loop: true,
+    loopedSlides: 3,
+      autoplay: {
+        delay: 5000,
+        disableOnInteraction: false,
+      },
+      speed: 3000,
+      pagination: {
+          el: ".swiper-pagination",
+          clickable: true,
+        },
+      navigation: {
+        nextEl: '.banner-next',
+        prevEl: '.banner-prev',
+      },
+      on:{
+        init: function(swiper){
+            if($(".banner-scroll .swiper-slide-active").find(".videosrc").text().indexOf(".mp4")!=-1){
+                $(".swiper-slide-active video").attr("src",$(".banner-scroll .swiper-slide-active").find(".videosrc").text())
+                var boxVideo = $(".swiper-slide-active video")[0]
+                setTimeout(function(){
+                $(".swiper-slide-active .banner-img").show();
+                boxVideo.play();
+
+                $(".swiper-slide-active .banner-video").show();
+                $(".swiper-slide-active .banner-img").hide();
+                    bannerSwiper.autoplay.stop();
+                    boxVideo.addEventListener('ended', function () { 
+                        bannerSwiper.autoplay.start();
+                        bannerSwiper.slideNext();
+                    }, false);
+                },500);
+            }
+
+        },
+        transitionStart: function(swiper){
+                $(".swiper-slide-active .banner-img").show();
+            if($(".banner-scroll .swiper-slide-active").find(".videosrc").text().indexOf(".mp4")!=-1){
+              setTimeout(function(){
+                bannerSwiper.autoplay.stop();
+              },1000);
+                $(".swiper-slide-active video").attr("src",$(".banner-scroll .swiper-slide-active").find(".videosrc").text())
+
+
+                var boxVideo = $(".swiper-slide-active video")[0]
+
+
+                boxVideo.play();
+  //boxVideo.currentTime=0;
+
+                $(".swiper-slide-active .banner-video").show();
+                $(".swiper-slide-active .banner-img").hide();
+                boxVideo.addEventListener('ended', function () { 
+                    bannerSwiper.autoplay.start();
+                    bannerSwiper.slideNext();
+                    boxVideo.pause();
+                }, false);
+            }
+        }
+    },
+    });
+
+</script> 
+
+
+
+</body>
+
+</html>

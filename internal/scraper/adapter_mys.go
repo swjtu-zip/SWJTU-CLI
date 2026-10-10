@@ -70,7 +70,18 @@ var (
 	mysAttachmentRE  = regexp.MustCompile(`(?i)\.(?:docx?|xlsx?|pptx?|pdf|zip|rar|7z|txt|csv|wps|rtf)(?:$|[?#&])`)
 )
 
-const mysMaxResourceBytes = 32 << 20
+// mysMaxResourceBytes bounds a single verified resource.  The site serves
+// poster-style articles whose only body is one tall PNG; the largest observed
+// so far is ~39.6MiB (https://mys.swjtu.edu.cn/info/1037/11693.htm, 2026-10-09),
+// so the cap must stay above that or those articles drop to "no usable
+// content" during image verification.
+const mysMaxResourceBytes = 48 << 20
+
+// mysResourceFetchTimeout bounds a single resource download.  The origin
+// serves multi-MiB posters at roughly 1MiB/s, so the 15s page-fetch default
+// cannot move them; three minutes covers the observed ~40s for the largest
+// poster with headroom while still failing a stalled transfer.
+const mysResourceFetchTimeout = 3 * time.Minute
 
 func init() {
 	// The registry entry predates the HTTPS canonical URL.  Keep all emitted
@@ -115,6 +126,9 @@ func mysPageURL(baseURL, slug string, page, totalPages int, extension string) st
 
 func mysTotalPages(slug string) (int, error) {
 	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if slug == "index" {
+		return mysHomepageTotalPages()
+	}
 	if !mysKnownFeed(slug) {
 		return 0, fmt.Errorf("mys: %q is not an article-list route", slug)
 	}
@@ -137,6 +151,28 @@ func mysTotalPages(slug string) (int, error) {
 		return 0, fmt.Errorf("mys: %s has no reliable page count", slug)
 	}
 	return pages, nil
+}
+
+// mysHomepageTotalPages confirms the implicit homepage feed still exposes a
+// public article list before reporting its single page.  The homepage is a
+// preview page, not a reverse-numbered archive, so a confirmed portal always
+// has exactly one page.
+func mysHomepageTotalPages() (int, error) {
+	body, err := fetch(mysPageURL(mysCanonicalBaseURL, "index", 1, 0, ".htm"))
+	if err != nil {
+		return 0, fmt.Errorf("mys: fetch homepage: %w", err)
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
+	if err != nil {
+		return 0, fmt.Errorf("mys: parse homepage: %w", err)
+	}
+	if mysPageType(doc) == "3" {
+		return 0, fmt.Errorf("mys: index route now serves an article instead of the portal")
+	}
+	if items := mysHomepageItems(doc, mysCanonicalBaseURL); len(items) == 0 {
+		return 0, fmt.Errorf("mys: homepage contains no article modules")
+	}
+	return 1, nil
 }
 
 func mysKnownFeed(slug string) bool {
@@ -759,6 +795,7 @@ func mysFetchResource(rawURL, baseURL string, image bool) ([]byte, string, error
 		req.Header.Set("Accept", "application/octet-stream,application/pdf,*/*;q=0.8")
 	}
 	client := *defaultClient
+	client.Timeout = mysResourceFetchTimeout
 	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
 		if len(via) == 0 || strings.EqualFold(next.URL.Hostname(), via[len(via)-1].URL.Hostname()) {
 			return nil

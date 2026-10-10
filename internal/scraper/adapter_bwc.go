@@ -46,8 +46,9 @@ var bwcSubPages = []string{
 }
 
 var (
-	bwcArticlePathRE  = regexp.MustCompile(`(?i)^/info/[0-9]+/[0-9]+\.html?$`)
-	bwcPageCounterRE  = regexp.MustCompile(`(?:^|[^0-9])[0-9]+\s*/\s*([0-9]+)(?:[^0-9]|$)`)
+	bwcArticlePathRE       = regexp.MustCompile(`(?i)^/info/[0-9]+/[0-9]+\.html?$`)
+	bwcPageCounterRE       = regexp.MustCompile(`(?:^|[^0-9])[0-9]+\s*/\s*([0-9]+)(?:[^0-9]|$)`)
+	bwcEnglishEmptyCounter = regexp.MustCompile(`共\s*0\s*条|(?:^|\s)0\s*/\s*0(?:\s|$)`)
 	bwcAttachmentRE   = regexp.MustCompile(`(?i)\.(?:pdf|docx?|xlsx?|pptx?|zip|rar|7z|txt|csv|wps|rtf)(?:$|[?#])`)
 	bwcHTMLShellRE    = regexp.MustCompile(`(?is)<!doctype\s+html|<html(?:\s|>)|<head(?:\s|>)|<body(?:\s|>)|请输入验证码|验证码下载附件|请先登录|请登录后|登录页面|页面不存在|您访问的页面不存在|访问被拒绝|请求已被阻断|安全验证|人机验证|access\s+denied|request\s+blocked|just\s+a\s+moment|cloudflare`)
 	bwcResourceMarkRE = regexp.MustCompile(`(?i)(?:/|^)(?:captcha|verify(?:code|image)?|verification|createimage|getcode|codevalue|waf|access[-_]denied|login)(?:[/?.]|$)|(?:验证码|人机验证|安全验证)`)
@@ -56,6 +57,8 @@ var (
 // bwcAdapter keeps this site's non-standard list and article markup out of
 // the shared 博达 parser. In particular, a successful HTML shell is not a
 // successful feed: every parser below requires the site's real content nodes.
+// The homepage is served as the implicit "index" feed (bwcHomeListPage): it
+// exposes the same five named modules as the audited column lists.
 func init() {
 	registerAdapter("bwc", SiteAdapter{
 		SubPages:     bwcSubPages,
@@ -118,6 +121,9 @@ func bwcListPage(slug string, page int) ([]model.NewsItem, int, error) {
 		baseURL = site.BaseURL
 	}
 	slug = bwcCanonicalSlug(slug)
+	if strings.EqualFold(slug, "index") {
+		return bwcHomeListPage(baseURL, page)
+	}
 	if !bwcIsKnownListRoute(slug) {
 		return nil, 0, fmt.Errorf("bwc: %s is not an audited article-list route", slug)
 	}
@@ -152,6 +158,28 @@ func bwcListPage(slug string, page int) ([]model.NewsItem, int, error) {
 		totalPages = 1
 	}
 	return items, totalPages, nil
+}
+
+// bwcHomeListPage serves the implicit "index" homepage feed. The homepage is
+// a scoped preview of the five named modules (see parseBwcNewsList), not a
+// reverse-numbered archive, so it always reports exactly one page; page 2+ is
+// refused up front rather than mapped onto a guessed generated file name.
+func bwcHomeListPage(baseURL string, page int) ([]model.NewsItem, int, error) {
+	if page < 1 {
+		return nil, 0, fmt.Errorf("bwc: list page must be positive: %d", page)
+	}
+	if page > 1 {
+		return nil, 0, fmt.Errorf("bwc: homepage feed has a single page, got page %d", page)
+	}
+	body, err := bwcFetchListPage(bwcPageURL(baseURL, "index", 1, 0, ".htm"))
+	if err != nil {
+		return nil, 0, err
+	}
+	items, err := parseBwcNewsList(body, baseURL)
+	if err != nil {
+		return nil, 0, err
+	}
+	return items, 1, nil
 }
 
 func bwcFetchListPage(pageURL string) ([]byte, error) {
@@ -393,12 +421,27 @@ func parseBwcNewsList(html []byte, baseURL string) ([]model.NewsItem, error) {
 			add(articleLink.AttrOr("href", ""), title, date, typ)
 		})
 		if len(items) == 0 {
+			if bwcEnglishListIsExplicitlyEmpty(doc, englishTable) {
+				return []model.NewsItem{}, nil
+			}
 			return nil, fmt.Errorf("bwc: English article table contained no real rows")
 		}
 		return items, nil
 	}
 
 	return nil, fmt.Errorf("bwc: no recognized article-list container")
+}
+
+// bwcEnglishListIsExplicitlyEmpty separates a genuinely drained column from
+// markup drift. Only a server-rendered table with zero rows plus an explicit
+// "共0条"/"0/0" counter qualifies as a legal empty feed; rows that exist but
+// fail the article-URL gate still raise the no-real-rows error above.
+func bwcEnglishListIsExplicitlyEmpty(doc *goquery.Document, table *goquery.Selection) bool {
+	if table == nil || table.Length() == 0 || table.Find("tr").Length() > 0 {
+		return false
+	}
+	counter := strings.Join(strings.Fields(doc.Find("[id^='fanye'], .p_t").Text()), " ")
+	return bwcEnglishEmptyCounter.MatchString(counter)
 }
 
 func bwcEachArticleCandidate(scope *goquery.Selection, visit func(*goquery.Selection)) {

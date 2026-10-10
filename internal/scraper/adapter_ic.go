@@ -27,7 +27,9 @@ const icMaxResourceBytes int64 = 32 << 20
 // entry points linked by the current navigation/home page.  The campus
 // gallery and video center are media surfaces rather than /info article
 // lists, while gywm, rcpy, wlxy, and ypwm are profile, programme,
-// campus-planning, or recruitment pages; none are news feeds.
+// campus-planning, or recruitment pages; none are news feeds.  xwzx.htm
+// itself is now a column hub without pagination; the reverse-numbered news
+// list continues at xwzx/xwjj.htm (see icPageURL).
 var icSubPages = []string{
 	"xwzx",
 	"xwzx/tzgg",
@@ -58,11 +60,16 @@ func init() {
 }
 
 // icPageURL maps logical page numbers to the reversed generated filenames
-// used by the static site: page 1 is xwzx.htm and the last logical page is
-// xwzx/1.htm.
+// used by the static site: page 1 is the list's slug.htm and the last logical
+// page is slug/1.htm.  The xwzx.htm column hub lost its own pagination when
+// the site was reorganized; the reverse-numbered news list it used to carry
+// now lives at xwzx/xwjj.htm, so the xwzx feed follows that list.
 func icPageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	baseURL = strings.TrimRight(baseURL, "/")
 	slug = strings.Trim(slug, "/")
+	if slug == "xwzx" {
+		slug = "xwzx/xwjj"
+	}
 	if extension == "" {
 		extension = ".htm"
 	} else if !strings.HasPrefix(extension, ".") {
@@ -90,6 +97,9 @@ func icBaseURL() string {
 
 func icIsKnownFeed(slug string) bool {
 	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if slug == "index" {
+		return true
+	}
 	for _, candidate := range icSubPages {
 		if slug == candidate {
 			return true
@@ -216,6 +226,8 @@ func icSourceRowCount(doc *goquery.Document) int {
 		".news-list-page ul.news-list > li",
 		".news-list-page .news-list > li",
 		".news-list > li",
+		".index_new2 > ul > li",
+		".notice_1 > ul > li",
 		".conlistComm > dl",
 	} {
 		if rows := doc.Find(selector).Length(); rows > 0 {
@@ -739,11 +751,17 @@ func parseAdapter_icArticle(rawHTML []byte, baseURL string) (*model.Article, err
 		return nil, err
 	}
 	var headline string
-	for _, selector := range []string{".show01 h5", ".show01 h1", ".show01 .title", ".show01 .news-title"} {
+	for _, selector := range []string{".show01 h5", ".show01 h1", ".show01 .title", ".show01 .news-title", ".show_1 h5", ".show_1 h1", ".show_1 .title", ".show_1 .news-title"} {
 		if value := cleanTitle(strings.TrimSpace(doc.Find(selector).First().Text())); value != "" {
 			headline = value
 			break
 		}
+	}
+	if headline == "" {
+		// 博达 pages almost always carry a clean pageTitle meta; the current
+		// template renders the headline in .show_1 .title, but keep the meta
+		// as a fallback the way parseBodaArticle already trusts it.
+		headline = cleanTitle(strings.TrimSpace(doc.Find(`meta[name="pageTitle"]`).AttrOr("content", "")))
 	}
 	if headline == "" {
 		return nil, fmt.Errorf("ic: article headline is missing")
@@ -785,7 +803,7 @@ func icArticleSource(doc *goquery.Document) string {
 	if doc == nil {
 		return ""
 	}
-	meta := doc.Find(".show01, .article-meta, .news_source").First()
+	meta := doc.Find(".show01, .show_1, .article-meta, .news_source").First()
 	var source string
 	meta.Find("em, span, [data-source], .source").EachWithBreak(func(_ int, field *goquery.Selection) bool {
 		value := strings.TrimSpace(strings.Join(strings.Fields(field.Text()), " "))
@@ -817,7 +835,18 @@ func icArticleDateFields(doc *goquery.Document) (string, string) {
 		}
 	}
 
-	meta := doc.Find(".show01, .article-meta, .news_source").First()
+	// The current template renders the meta row as .show_1 .sourse with a
+	// bare date (no 发布日期 label) next to an icon, e.g. "2026-09-29".
+	if row := doc.Find(".show_1 .sourse").First(); row.Length() > 0 {
+		if precise := icPreciseDate(row.Text()); precise != "" {
+			if publishedAtHasClock(precise) {
+				return precise[:10], precise
+			}
+			return precise[:10], ""
+		}
+	}
+
+	meta := doc.Find(".show01, .show_1, .article-meta, .news_source").First()
 	for _, selector := range []string{
 		"time[datetime]", "[data-date]", ".date", ".time", "[class*='date']", "[class*='time']", "em", "span",
 	} {
@@ -1021,14 +1050,21 @@ func icSectionType(doc *goquery.Document) string {
 		return ""
 	}
 	var value string
-	for _, selector := range []string{"#nav_slide .n_title h1", ".n_title h1", ".position #curType", ".position", ".current"} {
+	for _, selector := range []string{"#nav_slide .n_title h1", ".n_title h1", ".position #curType", ".position", ".current", ".nav_class li.active a"} {
 		value = cleanTitle(strings.TrimSpace(doc.Find(selector).First().Text()))
 		if value != "" {
 			break
 		}
 	}
+	if value == "" {
+		// The current template's breadcrumb (.local2) only tracks the top
+		// column, e.g. 首页 > 新闻中心; use its last segment.
+		if crumb := doc.Find(".local2 a").Last(); crumb.Length() > 0 {
+			value = cleanTitle(strings.TrimSpace(crumb.Text()))
+		}
+	}
 	switch value {
-	case "新闻中心", "NEWS", "NEWS新闻动态":
+	case "新闻中心", "NEWS", "NEWS新闻动态", "新闻聚焦":
 		return "新闻动态"
 	case "视频中心", "精彩视频":
 		return "精彩视频"

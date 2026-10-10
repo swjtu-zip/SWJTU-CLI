@@ -182,6 +182,14 @@ var (
 )
 
 func init() {
+	// The VATUU homepage is a portal shell: it links to the newsList category
+	// pages, system functions (course query, login, file/rule lists), and
+	// external teaching systems, but exposes no article rows of its own, so
+	// the SDK must not publish an implicit "index" feed for it. The route
+	// lookup below still refuses the "index" slug as defense in depth.
+	if site := AllSites["jwc"]; site != nil {
+		site.NoIndexFeed = true
+	}
 	registerAdapter("jwc", SiteAdapter{
 		SubPages:     jwcSubPages,
 		ParseList:    parseAdapter_jwcList,

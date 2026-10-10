@@ -1,0 +1,447 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<HTML><HEAD><TITLE>师德榜样-党委教师工作部</TITLE><meta name="pageType" content="2">
+<meta name="pageTitle" content="师德榜样">
+<META Name="keywords" Content="党委教师工作部,师德榜样" />
+
+
+
+
+
+<META content="text/html; charset=UTF-8" http-equiv="Content-Type"><LINK rel="stylesheet" type="text/css" href="dfiles/12976/templates/fdc/css/style.css"><LINK rel="stylesheet" type="text/css" href="dfiles/12976/templates/fdc/style/comm.css">
+<link rel="stylesheet" href="css/swiper.min.css">
+    <link rel="stylesheet" href="css/aos.css">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/main.css">
+<META name="description" content="西南交通大学党委教师工作部（教师发展中心）是负责学校教师思想政治工作、师德师风建设、教师培训和教师职业发展相关工作的二级职能部门。党委教师工作部与教师发展中心合署办公，以“两块牌子、一套人马”模式运行。">
+
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="list.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1168,'/list.jsp',-1,1781360696)</script>
+</HEAD>
+<BODY><!-- header部分 -->
+    <header>
+        <div class="top">
+            <div class="container clearfix flexsb alstart part-a">
+                <div class="logo">
+                    <a href="index.html">
+                        <img src="image/header-logo.png" alt="">
+                    </a>
+                </div>
+                <div class="search"><!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><div id="divu0"></div>
+<script type="text/html" id="htmlu0">
+    <div id="appu0">
+          <div class="flexst" v-if="!isError">
+                        <div class="ipt-box">
+                            <input type="text" class="qwss" placeholder="全文搜索" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+                            <div class="search-icon-box" v-on:click="onSubmit()">
+                                <img src="../image/search-icon.png" alt="">
+                            </div>
+                        </div>
+                    </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu0").html($("#htmlu0").text());
+</script>
+<script>
+    var appOwner = "1781360696";
+    var token = 'tourist';
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu0",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu0 = document.querySelector("#appu0");
+   if (appElementu0 && appElementu0.__vue__) {
+
+   } else {
+      $("#divu0").html($("#htmlu0").text());
+      var appOwner = "1781360696";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou0 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu0(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu0();
+        }
+      };
+
+      function onSubmitu0(e) {
+        queryInfou0.query.keyWord= $("#appu0  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou0.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script></div>
+                <!-- 手机端-三根横线 -->
+                <div class="navmob-btn">
+                    <a class="head-menu-btn " href="javascript:;">
+                        <span class="line-1"></span>
+                        <span class="line-2"></span>
+                        <span class="line-3"></span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+   
+    <!-- 导航栏部分 -->
+    <div class="nav ">
+        <nav class="nav-box container">
+            <!-- pc端 -->
+            <ul class="flexsb nav_list fs20 pc-nav"><li class="mune_a ">
+                    <a href="index.htm" class="link-a ">首页</a>
+                    
+ </li>
+<li class="mune_a ">
+                    <a href="bmjj.htm" class="link-a ">部门简介</a>
+                    
+                            <ul class="secondary-menu nav-down">
+                                <li> <a class="a_item" href="bmjj/gzzz.htm">工作职责</a></li>
+                                <li> <a class="a_item" href="bmjj/jgsz.htm">机构设置</a></li>
+                                <li> <a class="a_item" href="bmjj/gzry.htm">工作人员</a></li>
+                            </ul>
+ </li>
+<li class="mune_a ">
+                    <a href="tzgg.htm" class="link-a ">通知公告</a>
+                    
+ </li>
+<li class="mune_a ">
+                    <a href="xwdt.htm" class="link-a ">新闻动态</a>
+                    
+ </li>
+<li class="mune_a ">
+                    <a href="llxx.htm" class="link-a ">理论学习</a>
+                    
+ </li>
+<li class="mune_a ">
+                    <a href="sdby.htm" class="link-a ">师德榜样</a>
+                    
+                            <ul class="secondary-menu nav-down">
+                                <li> <a class="a_item" href="sdby/rybz.htm">荣誉表彰</a></li>
+                                <li> <a class="a_item" href="sdby/yrgs.htm">育人故事</a></li>
+                            </ul>
+ </li>
+<li class="mune_a ">
+                    <a href="gzzd.htm" class="link-a ">规章制度</a>
+                    
+                            <ul class="secondary-menu nav-down">
+                                <li> <a class="a_item" href="gzzd/sjwj.htm">上级文件</a></li>
+                                <li> <a class="a_item" href="gzzd/xxwj.htm">学校文件</a></li>
+                            </ul>
+ </li>
+<li class="mune_a ">
+                    <a href="sdjd.htm" class="link-a ">师德监督</a>
+                    
+                            <ul class="secondary-menu nav-down">
+                                <li> <a class="a_item" href="sdjd/dxal.htm">典型案例</a></li>
+                                <li> <a class="a_item" href="sdjd/jbxz.htm">举报须知</a></li>
+                            </ul>
+ </li>
+</ul>
+             <!-- mb端 -->
+            <div class="mb-nav-box" style="display:block">
+                <ul class="flexcolumn mb-nav fadeupmbNav"><li class="mune_a flexsb">
+                      <a href="index.htm">首页</a>
+                            
+                    </li> 
+
+<li class="mune_a flexsb">
+                          <a href="javascript:void(0);">部门简介</a>
+                       <span class="nav_click">
+                            <span class="caret"></span>
+                        </span>
+                            
+                    </li> 
+ 
+                             <div class="secondary-menu nav-down ">
+                             <div class="flexsb">
+                                <li> 
+                                <a class="a_item" href="bmjj/gzzz.htm">工作职责</a>
+                                </li>
+                                <li> 
+                                <a class="a_item" href="bmjj/jgsz.htm">机构设置</a>
+                                </li>
+                                <li> 
+                                <a class="a_item" href="bmjj/gzry.htm">工作人员</a>
+                                </li>
+                                 </div>
+                           </div>
+
+<li class="mune_a flexsb">
+                      <a href="tzgg.htm">通知公告</a>
+                            
+                    </li> 
+
+<li class="mune_a flexsb">
+                      <a href="xwdt.htm">新闻动态</a>
+                            
+                    </li> 
+
+<li class="mune_a flexsb">
+                      <a href="llxx.htm">理论学习</a>
+                            
+                    </li> 
+
+<li class="mune_a flexsb">
+                          <a href="javascript:void(0);">师德榜样</a>
+                       <span class="nav_click">
+                            <span class="caret"></span>
+                        </span>
+                            
+                    </li> 
+ 
+                             <div class="secondary-menu nav-down ">
+                             <div class="flexsb">
+                                <li> 
+                                <a class="a_item" href="sdby/rybz.htm">荣誉表彰</a>
+                                </li>
+                                <li> 
+                                <a class="a_item" href="sdby/yrgs.htm">育人故事</a>
+                                </li>
+                                 </div>
+                           </div>
+
+<li class="mune_a flexsb">
+                          <a href="javascript:void(0);">规章制度</a>
+                       <span class="nav_click">
+                            <span class="caret"></span>
+                        </span>
+                            
+                    </li> 
+ 
+                             <div class="secondary-menu nav-down ">
+                             <div class="flexsb">
+                                <li> 
+                                <a class="a_item" href="gzzd/sjwj.htm">上级文件</a>
+                                </li>
+                                <li> 
+                                <a class="a_item" href="gzzd/xxwj.htm">学校文件</a>
+                                </li>
+                                 </div>
+                           </div>
+
+<li class="mune_a flexsb">
+                          <a href="javascript:void(0);">师德监督</a>
+                       <span class="nav_click">
+                            <span class="caret"></span>
+                        </span>
+                            
+                    </li> 
+ 
+                             <div class="secondary-menu nav-down ">
+                             <div class="flexsb">
+                                <li> 
+                                <a class="a_item" href="sdjd/dxal.htm">典型案例</a>
+                                </li>
+                                <li> 
+                                <a class="a_item" href="sdjd/jbxz.htm">举报须知</a>
+                                </li>
+                                 </div>
+                           </div>
+
+</ul>
+            </div>
+        </nav>
+    </div>
+<DIV class="banner"><DIV class="banner_con"></DIV></DIV><!--banner End-->
+<DIV class="wrap"><!--PageLeft-->
+<DIV class="main_left">
+<DIV class="menu">
+<H3>
+师德榜样</H3>
+
+
+<div class="submenu  "> <a href="sdby/rybz.htm">荣誉表彰</a> </div>
+
+<div class="submenu  "> <a href="sdby/yrgs.htm">育人故事</a> </div>
+
+
+</DIV></DIV><!--PageLeft-->
+<DIV class="main_right">
+<DIV class="current">
+<H3>
+师德榜样</H3>        
+                <a href="index.htm">首页</a>
+
+                >
+                <a href="sdby.htm">师德榜样</a>
+</DIV>
+
+
+
+
+<script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/dynclicks.js"></script> <div class="content">
+
+     
+    
+</div>
+<div class="clear10">  </div> 
+          <div align="center">   <INPUT TYPE="hidden" NAME="actiontype" VALUE=""><input type="hidden" name="_scode_" value="1790751628618"><input type="hidden" name="urltype" value="tree.TreeTempUrl"><input type="hidden" name="wbtreeid" value="1168"><input type="hidden" name="outFlag" value="false">
+<style type="text/css">
+.headStyle1tmnmnn0ee, .headStyle1tmnmnn0ee td, .headStyle1tmnmnn0ee div {font-size: 12px;font-family:宋体; color: #000000; margin-left: auto; margin-right: auto; line-height:14px;}
+.defaultButtonStyle {font-size: 12px;font-family:宋体; height:20px;color: #000000;BORDER: #AFD5F5 1px solid; margin: 0px;padding: 0px; FILTER:progid:DXImageTransform.Microsoft.Gradient(GradientType=0,StartColorStr=#ffffff, EndColorStr=#BDDBF7);  CURSOR: pointer; line-height:14px;background:-webkit-gradient(linear, 0 0, 0 100%, from(#ffffff), to(#BDDBF7));background: -moz-linear-gradient( top,#ffffff,#BDDBF7);background:-ms-linear-gradient(top,#ffffff 0%,#bddbf7 100%);}
+.defaultinputStyle {font-size: 12px;font-family:宋体; height:20px; border:1px solid #AFD5F5; line-height:14px;}
+.colHeader {font-size: 12px;font-family:宋体; line-height:14px;}
+.headStyle1tmnmnn0ee a, .pageList .this-page {font-size: 12px;font-family:宋体; display:inline-block; height:14px; padding: 2px 4px; border: solid 1px #AFD5F5; background: #fff; text-decoration: none; MARGIN-RIGHT: 1px;line-height:14px;}
+.headStyle1tmnmnn0ee a:visited {font-size: 12px;font-family:宋体; color: #000000; text-decoration: none; line-height:14px;}
+.headStyle1tmnmnn0ee .PrevDisabled {font-size: 12px;font-family:宋体; display:inline-block;height:14px;  margin-right: 3px; padding: 2px 4px; background: #fff;color:#ccc;border: solid 1px #AFD5F5; line-height:14px;}
+.headStyle1tmnmnn0ee .SelectList {font-size: 12px;font-family:宋体;line-height:14px;}
+.headStyle1tmnmnn0ee .Prev { font-size: 12px;font-family:宋体; margin-right: 3px; padding: 2px 4px;line-height:14px;}
+.headStyle1tmnmnn0ee .break {font-size: 12px;font-family:宋体; border: none; text-decoration: none; line-height:14px;}
+.headStyle1tmnmnn0ee .NextDisabled { font-size: 12px;font-family:宋体;display:inline-block; height:14px; margin-left: 2px; padding: 2px 4px;background: #fff;color:#ccc;border: solid 1px #AFD5F5; line-height:14px;}
+.headStyle1tmnmnn0ee .Next { font-size: 12px;font-family:宋体; margin-left: 2px; padding: 2px 4px;line-height:14px;}
+.headStyle1tmnmnn0ee .this-page {font-size: 12px;font-family:宋体;display:inline-block;height:14px;padding: 2px 4px; border: solid 1px #AFD5F5; background: #E1F0FD; font-weight: bold; color:black; MARGIN-RIGHT: 1px;line-height:14px;}
+.headStyle1tmnmnn0ee a:hover {font-size: 12px;font-family:宋体;color: black; background: #EFF7FE; border-color: #AFD5F5; text-decoration: none;line-height:14px;}
+.headStyle1tmnmnn0ee a:link {font-size: 12px;font-family:宋体;color: #000000; text-decoration: none;line-height:14px;}
+.headStyle1tmnmnn0ee a:active { font-size: 12px;font-family:宋体;color: black; text-decoration: none; background: #EFF7FE; line-height:14px;}
+</style><script language="javascript" src="/system/resource/js/gotopage.js"></script><script type="text/javascript">function a1027750_gopage_fun(){_simple_list_gotopage_fun(0,'a1027750GOPAGE',2)}</script><table cellspacing="0" cellpadding="0" border="0"><TR><td colspan="0"><table cellspacing="0" class="headStyle1tmnmnn0ee" width="100%" cellpadding="1"><tr valign="middle"><TD nowrap align="left" width="1%" id="fanye1027750">共0条&nbsp;&nbsp;0/0&nbsp;</td><td nowrap align="left"><div></div></td></tr></table></table> </div>
+
+</DIV></DIV>
+<!--footer-->
+  <footer class=" fecai co73 aos-init aos-animate" aos="fade-up" aos-delay="50">
+        <div class="content">
+            <span class="fs12">
+
+<script language="javascript" src="/system/resource/js/ajax.js"></script>
+地点：犀浦校区综合楼431        电话：66367659，66367669
+
+<script>_showDynClickBatch(['dynclicks_u9_9393'],[9393],"wbnews", 1781360696)</script>
+</span>
+        </div>
+        <div class="copyright">
+            <span class="fs12">
+
+
+Copyrightundefinedcopy;西南交通大学党委教师工作部版权所有 蜀ICP备05026985号
+
+<script>_showDynClickBatch(['dynclicks_u10_9483'],[9483],"wbnews", 1781360696)</script>
+</span>
+        </div>
+    </footer>
+<script type="text/javascript" src="dfiles/12976/templates/fdc/js/jquery.min.js"></script>
+<script type="text/javascript" src="dfiles/12976/templates/fdc/js/homeban.js"></script>
+<script type="text/javascript" src="dfiles/12976/templates/fdc/js/jquery.touchslider.js"></script>
+<script type="text/javascript" src="dfiles/12976/templates/fdc/js/common.js?v=1.1"></script>
+<script src="js/aos.js"></script>
+<script src="js/jquery.min.js"></script>
+<script src="js/swiper.min.js"></script>
+<script src="js/main.js"></script>
+
+</BODY></HTML>
+
+
+
+
+
+

@@ -56,6 +56,8 @@ func TestAIAdapterRegistrationAndReversePagination(t *testing.T) {
 		{"xsbg", 2, 2, aiBaseURL + "/xsbg/1.htm"},
 		{"kxyj", 2, 2, aiBaseURL + "/kxyj/1.htm"},
 		{"jcsj", 1, 1, aiBaseURL + "/jcsj.htm"},
+		{"index", 1, 1, aiBaseURL + "/index.htm"},
+		{"index", 2, 1, ""},
 	}
 	for _, tc := range cases {
 		if got := site.PageURL(aiBaseURL, tc.slug, tc.page, tc.total, ".htm"); got != tc.want {
@@ -129,6 +131,53 @@ func TestAITotalPagesHookReadsLivePageBox(t *testing.T) {
 	total, err := site.GetTotalPages("xwdt")
 	if err != nil || total != 4 {
 		t.Fatalf("AI total page hook = %d, %v; want 4", total, err)
+	}
+}
+
+// The homepage exposes the four article modules plus the 精彩瞬间 marquee and
+// no pagination control, so the audited "index" feed is exactly one page.
+// aiTotalPages must verify the homepage instead of rejecting the route.
+func TestAITotalPagesHookAcceptsAuditedHomepageAsSinglePage(t *testing.T) {
+	homePage := loadAIFixture(t, "ai_live_home.html")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/index.htm" || r.URL.Path == "/index.html" {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write(homePage)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+
+	site := AllSites["ai"]
+	oldBase, oldNoCache := site.BaseURL, NoCache
+	site.BaseURL, NoCache = server.URL, true
+	t.Cleanup(func() {
+		site.BaseURL, NoCache = oldBase, oldNoCache
+		ClearCache()
+	})
+
+	total, err := site.GetTotalPages("index")
+	if err != nil || total != 1 {
+		t.Fatalf("AI index total page hook = %d, %v; want 1", total, err)
+	}
+	if _, err := site.GetTotalPages("not-a-feed"); err == nil {
+		t.Fatal("AI total page hook admitted an unknown route")
+	}
+}
+
+func TestAIHomepageTotalPagesValidation(t *testing.T) {
+	if !aiHomepageTotalPagesFromHTML(loadAIFixture(t, "ai_live_home.html")) {
+		t.Fatal("captured AI homepage was not recognized as the audited index feed")
+	}
+	for name, raw := range map[string][]byte{
+		"archive list": loadAIFixture(t, "ai_live_xwdt_first.html"),
+		"static page":  []byte(`<html><head><meta name="pageType" content="2"></head><body><div class="article"><h1>人才培养</h1></div></body></html>`),
+		"waf":          []byte(`<!doctype html><html><head><title>安全验证</title></head><body><h1>请求被拦截</h1></body></html>`),
+	} {
+		if aiHomepageTotalPagesFromHTML(raw) {
+			t.Fatalf("%s was accepted as the AI index homepage", name)
+		}
 	}
 }
 

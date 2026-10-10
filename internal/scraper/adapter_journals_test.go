@@ -28,6 +28,9 @@ func TestJournalsAdapterRegistrationAndNoGuessedFeeds(t *testing.T) {
 	if site.PageURL != nil || site.ListPageFunc != nil || site.TotalPagesFunc != nil {
 		t.Fatal("journals must not invent first/middle/last or reverse pagination for a directory-only origin")
 	}
+	if !site.NoIndexFeed {
+		t.Fatal("journals homepage is a static journal directory; the SDK must not generate an index feed")
+	}
 }
 
 func TestJournalsHomepageRejectsExternalDirectoryAsNews(t *testing.T) {

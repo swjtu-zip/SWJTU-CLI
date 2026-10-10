@@ -955,9 +955,10 @@ func fdcListPage(slug string, page int) ([]model.NewsItem, int, error) {
 	if !hasPagination {
 		totalPages = 1
 	} else if totalPages == 0 {
-		if page != 1 {
-			return nil, 0, fmt.Errorf("fdc: %s is an explicit empty list; page %d is out of range", slug, page)
-		}
+		// The list is explicitly empty (共0条 0/0) and has no older pages.
+		// ListNewsRange treats a zero total as "unknown" and probes page 2
+		// with a high cap, so every probe must get this same empty result
+		// and make the walker break on the empty page, not an error.
 		if firstCurrent != 0 {
 			return nil, 0, fmt.Errorf("fdc: %s reported invalid empty-list page %d", slug, firstCurrent)
 		}
