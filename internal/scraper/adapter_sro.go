@@ -92,7 +92,7 @@ var (
 	// otherwise normal pages, so blocked-page markers must be title-scoped:
 	// a genuine block, verification, or maintenance page names the problem in
 	// its <title>, while a real article or list never does.
-	sroBlockedRE = regexp.MustCompile(`(?is)<title>(?:[^<]*(?:安全验证|请输入验证码|人机验证|access\s+denied|forbidden|cloudflare|just\s+a\s+moment|统一身份认证|应用维护中|页面不存在)|\s*(?:404|403|500)(?:\s|not|forbidden|error|错误|[-—]))`)
+	sroBlockedRE = regexp.MustCompile(`(?is)<title>(?:[^<]*(?:安全验证|安全威胁|请求已被阻断|请输入验证码|人机验证|access\s+denied|forbidden|cloudflare|just\s+a\s+moment|统一身份认证|应用维护中|页面不存在)|\s*(?:404|403|500)(?:\s|not|forbidden|error|错误|[-—]))`)
 )
 
 const sroMaxResourceBytes = 32 << 20
