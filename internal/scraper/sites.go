@@ -31,6 +31,10 @@ type BodaSite struct {
 	// The SDK then skips the implicit "index" feed for them instead of
 	// letting every sync run record a refused-route failure.
 	NoIndexFeed bool
+	// Disabled removes the site from the crawl schedule entirely. The
+	// adapter stays registered so its parsers remain testable, but the SDK
+	// emits no feeds for the site.
+	Disabled bool
 	// ParseArticleFunc optionally overrides article parsing for this site.
 	// Even sites on the same CMS ship different HTML, so each site can
 	// provide its own adapter instead of relying on the generic parser.

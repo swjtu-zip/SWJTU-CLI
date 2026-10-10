@@ -43,6 +43,13 @@ var (
 // This site uses the same CMS family as several other units, but its list
 // rows, article heading, and outside-body attachment block are different.
 func init() {
+	// The campus WAF blocks our datacenter IP for every route (403 even with
+	// a browser UA), and the archive owner decided the site carries nothing
+	// worth archiving. Keep the adapter registered for its tests but pull
+	// the site off the crawl schedule.
+	if site := AllSites["jgdw"]; site != nil {
+		site.Disabled = true
+	}
 	registerAdapter("jgdw", SiteAdapter{
 		SubPages:     jgdwSubPages,
 		ParseList:    parseAdapter_jgdwList,

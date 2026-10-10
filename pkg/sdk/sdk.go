@@ -125,6 +125,9 @@ func Feeds() []Feed {
 	sort.Strings(ids)
 	for _, id := range ids {
 		site := scraper.AllSites[id]
+		if site.Disabled {
+			continue
+		}
 		if !site.NoIndexFeed {
 			feeds = append(feeds, Feed{
 				ID: id + ":index", SiteID: id, SiteName: site.Name, Category: site.Category,
