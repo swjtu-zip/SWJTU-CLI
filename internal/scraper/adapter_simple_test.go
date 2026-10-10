@@ -8,7 +8,7 @@ import "testing"
 func TestAuditedBodaAdaptersExposeAllDiscoveredFeeds(t *testing.T) {
 	want := map[string]int{
 		"phys": 17, "ott": 12, "rsc": 17, "rvl": 22, "rwxy": 15,
-		"scyshj": 7, "sj": 15, "sports": 20, "talent": 4, "xb": 7,
+		"scyshj": 6, "sj": 15, "sports": 20, "talent": 4, "xb": 7,
 		"xczx": 2, "xgh": 10, "xuncha": 9, "xyb": 7, "ygb": 10, "zzxy": 23,
 	}
 	for id, count := range want {

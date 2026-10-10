@@ -1,0 +1,766 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>西南交通大学四川省营商环境研究院 Sichuan Institute of Doing Business</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="西南交通大学四川省营商环境研究院 Sichuan Institute of Doing Business">
+<META Name="keywords" Content="西南交通大学,四川省营商环境研究院 Sichuan Institute of Doing Business" />
+
+
+<link rel="stylesheet" href="style/style.css?ver=18" type="text/css">
+<link rel="stylesheet" href="css/publice.css" type="text/css">
+<link href="css/zzsc.css" rel="stylesheet" type="text/css" />
+
+<!--Announced by Visual SiteBuilder 9-->
+<!-- CustomerNO:7765626265723230777847565253544203070000 -->
+<script type="text/javascript" src="dfiles/16558/system/resource/js/counter.js"></script>
+<!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1150,'/index.jsp',-1,1878060340)</script>
+</head>
+<body>
+<div class="yb_conct">
+  <div class="yb_bar">
+    <ul>
+           <li class="yb_top">返回顶部</li>
+      <li class="yb_phone">028-67131991</li>
+      <li class="yb_ercode" style="height:53px;">微信二维码 <br>
+        <img class="hd_qr" src="images/wx_pic.jpg" width="125" alt=""> </li>
+    </ul>
+  </div>
+</div>
+<!--top s-->    
+<div class="topWrap clearfix">
+    <div class="topDiv">
+        
+<!-- 网站logo图片地址请在本组件"内容配置-网站logo"处填写 -->
+<div class="logo">
+<a href="">
+<!-- 网站logo图片地址请在本组件"内容配置-网站logo"处填写 -->
+<a href="index.htm" title="四川省营商环境研究院"><img src="images/logo.png" width="550" height="60" border="0" alt="四川省营商环境研究院" title="四川省营商环境研究院"></a></a>
+</div>
+        <div class="topR fr">
+            <script language="javascript" src="dfiles/16558/system/resource/js/dynclicks.js"></script><script language="javascript" src="dfiles/16558/system/resource/js/openlink.js"></script><div class="topR_t fr">
+     <a href="yjygk/jj.htm" onclick="_addDynClicks(&#34;wburl&#34;, 1451319075, 36190)" target="">研究院概况</a>
+     |
+     <a href="lxwm.htm" onclick="_addDynClicks(&#34;wburl&#34;, 1451319075, 36191)" target="">联系我们</a>
+     
+</div>
+
+
+<div><!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu1 .qwss{}
+    #appu1 .tj{}
+</style>
+<div id="divu1"></div>
+<script type="text/html" id="htmlu1">
+    <div id="appu1">
+        <div v-if="!isError" class="Search">
+            <input type="text" class="qwss search_text" placeholder="" autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+            <div class="fdj fr">
+                <input class="tj button pngFix" name="submit_button" type="button" value="" v-on:click="onSubmit()"/>
+            </div>
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu1").html($("#htmlu1").text());
+</script>
+<script>
+    var appOwner = "1878060340";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu1",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu1 = document.querySelector("#appu1");
+   if (appElementu1 && appElementu1.__vue__) {
+
+   } else {
+      $("#divu1").html($("#htmlu1").text());
+      var appOwner = "1878060340";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou1 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu1(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu1();
+        }
+      };
+
+      function onSubmitu1(e) {
+        queryInfou1.query.keyWord= $("#appu1  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou1.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script></div>
+        </div>
+    </div>
+</div>
+
+<!--nav-->
+<div class="navWrap  clearfix">
+    <div class="nav">    <ul>
+        <li class="mainmenu">
+            <a class="link" href="index.htm">首页</a>                       
+        </li>
+    </ul>
+    <ul>
+        <li class="mainmenu">
+            <a class="link" href="yjygk.htm">研究院概况</a>                       
+            <dl>
+                <dd><a href="yjygk/jj.htm">简介</a></dd>
+                <dd><a href="yjygk/yjtd.htm">研究团队</a></dd>
+            </dl>
+        </li>
+    </ul>
+    <ul>
+        <li class="mainmenu">
+            <a class="link" href="tzxw.htm">通知新闻</a>                       
+            <dl>
+                <dd><a href="tzxw/tzgg.htm">通知公告</a></dd>
+                <dd><a href="tzxw/xwdt.htm">新闻动态</a></dd>
+            </dl>
+        </li>
+    </ul>
+    <ul>
+        <li class="mainmenu">
+            <a class="link" href="xsjl.htm">学术交流</a>                       
+        </li>
+    </ul>
+    <ul>
+        <li class="mainmenu">
+            <a class="link" href="zchj.htm">政策汇集</a>                       
+        </li>
+    </ul>
+    <ul>
+        <li class="mainmenu">
+            <a class="link" href="dxal.htm">典型案例</a>                       
+        </li>
+    </ul>
+    <ul>
+        <li class="mainmenu">
+            <a class="link" href="scsjczxwyh/zzgc.htm">四川省决策咨询委员会</a>                       
+            <dl>
+                <dd><a href="scsjczxwyh/zzgc.htm">组织构成</a></dd>
+                <dd><a href="scsjczxwyh/wygd.htm">委员观点</a></dd>
+                <dd><a href="scsjczxwyh/hdly.htm">活动掠影</a></dd>
+            </dl>
+        </li>
+    </ul>
+    <ul>
+        <li class="mainmenu">
+            <a class="link" href="lxwm.htm">联系我们</a>                       
+        </li>
+    </ul>
+    <ul>
+    </ul>
+    <ul>
+    </ul>
+</div>
+</div>
+<script type="text/javascript">
+
+    $(".mainmenu dl").hide();
+
+</script>
+
+<div style="margin:0 auto;width:1000px;">
+
+<script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script>    <div class="banner_three">
+            <div class="eachBox">
+                <div class="changeBox_a1" id="change_32">
+                                            <div class="changeDiv"><h3><a href="#" target="_blank"></a></h3> <a target="_blank" href="#" title=""><img width="1000" height="335" src="/__local/D/6D/4B/B42A4AFB328027C3D906D587563_A25B0A90_2D2B8.jpg?e=.jpg" /></a></div>
+                        <div class="changeDiv"><h3><a href="#" target="_blank"></a></h3> <a target="_blank" href="#" title=""><img width="1000" height="335" src="/__local/B/EA/F0/037862E9792B7FE9DC2037B43CE_7A26E974_BF812.png?e=.png" /></a></div>
+                        <div class="changeDiv"><h3><a href="#" target="_blank"></a></h3> <a target="_blank" href="#" title=""><img width="1000" height="335" src="/__local/5/B2/31/3CDD4A5467B9B5CD7A3C0DFCA42_1C284D25_5B69C.jpg" /></a></div>
+                        <div class="changeDiv"><h3><a href="#" target="_blank"></a></h3> <a target="_blank" href="#" title=""><img width="1000" height="335" src="/__local/2/91/B3/81E85C15C3B351EB8E9F09E13A8_0ECC7880_34312.jpeg" /></a></div>
+                    <ul class="ul_change_a2">
+                        <li><span></span></li>
+                        <li><span></span></li>
+                        <li><span></span></li>
+                        <li><span></span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+<script>_showDynClickBatch(['dynclicks_u3_3178','dynclicks_u3_3148','dynclicks_u3_2468','dynclicks_u3_2428'],[3178,3148,2468,2428],"wbnews", 1878060340)</script>
+</div>
+
+<!--main--> <DIV class="vsb-container container clearfix" columns="6" containerid="2"></DIV>
+<DIV class="vsb-container container clearfix" columns="6" containerid="2"><!--新闻信息5-->
+<DIV class="vsb-space new_inforBox new_inforBoxb fl" columns="6">
+<DIV class="dynamic dynamicd">
+<H2>新闻动态 </H2><SPAN><A href="tzxw/xwdt.htm" onfocus="undefined" target=""><IMG src="dfiles/16558/img/more.png"></A></SPAN></DIV>
+<DIV class="newBox">
+<DIV class="new_pic new_pica"><LINK href="/system/resource/style/component/news/list/imagechangenews.css" type="text/css" rel="stylesheet">
+
+<DIV id="u_u4_ifocus" class="u_u4_divcc">
+    <DIV id="u_u4_ifocus_pic">
+        <DIV id="u_u4_ifocus_piclist" style="LEFT: 0px; TOP: -675px">
+            <UL>
+            
+            <LI><A href="info/1161/2578.htm" target="_blank"><IMG src="/__local/F/AC/B0/81FB28B588482BBF45402AF3B9A_0F84FFB6_16B00.png" border="0"></A> </LI>
+            
+            <LI><A href="info/1161/2498.htm" target="_blank"><IMG src="/__local/8/05/4E/BAF1B5DD9EADCBEF34AFD025A34_30C5205C_8B6D6.png" border="0"></A> </LI>
+            
+            <LI><A href="info/1161/2298.htm" target="_blank"><IMG src="/__local/0/05/A2/77981CE71F0400C174B9C3C014A_8BA57591_298D9.png" border="0"></A> </LI>
+            
+            <LI><A href="info/1161/2048.htm" target="_blank"><IMG src="/__local/2/CA/E0/FB7C0DEA41779C83CB7886368EF_AD800745_69ACC.jpg" border="0"></A> </LI>
+            
+            </UL>
+        </DIV>
+        <DIV id="u_u4_ifocus_opdiv"></DIV>
+            <DIV id="u_u4_ifocus_tx">
+                <UL id="u_u4_ifocus_tx_ul">
+              
+                <LI class="normal"><span class="titlestyle1059058">四川省2024年度营商环境评价工作全面启动</span></LI>
+             
+                <LI class="normal"><span class="titlestyle1059058">普华永道—四川省营商环境咨询委员会 学术交流会圆满召开</span></LI>
+             
+                <LI class="normal"><span class="titlestyle1059058">2024年成德眉资同城化营商环境建设工作会议召开</span></LI>
+             
+                <LI class="normal"><span class="titlestyle1059058">内江市——四川省营商环境研究院  优化营商环境研究课题交流...</span></LI>
+             
+                </UL>
+            </DIV>
+    </DIV>
+    <DIV id="u_u4_ifocus_btn">
+        <UL id="u_u4_ifocus_btn_ul">
+            
+          <LI class="current"><IMG alt="" src="/__local/E/9D/08/B2A6B22E64D6697568BC7349562_3437C683_A66F4.png"> 
+          </LI>
+          
+          <LI class="current"><IMG alt="" src="/__local/8/05/4E/BAF1B5DD9EADCBEF34AFD025A34_30C5205C_8B6D6.png"> 
+          </LI>
+          
+          <LI class="current"><IMG alt="" src="/__local/3/59/F3/A5C00E7DEE421DACDF4E9CAFDE6_CF6FF697_4CB01.jpeg"> 
+          </LI>
+          
+          <LI class="current"><IMG alt="" src="/__local/2/CA/E0/FB7C0DEA41779C83CB7886368EF_AD800745_69ACC.jpg"> 
+          </LI>
+          
+        </UL>
+    </DIV>
+</DIV>
+
+<style>
+A {
+    COLOR: #666666; TEXT-DECORATION: none
+;}
+A:hover {
+    COLOR: #ff3701; TEXT-DECORATION: underline
+;}
+div UL LI H2 H3 H4 {
+    PADDING-RIGHT: 0px; PADDING-LEFT: 0px; PADDING-BOTTOM: 0px; MARGIN: 0px; PADDING-TOP: 0px
+;}
+div UL LI {
+    LIST-STYLE-TYPE: none
+;}
+#u_u4_ifocus {
+    BORDER-RIGHT: #A6D89B 1px solid; BORDER-TOP: #A6D89B 1px solid; BACKGROUND: #FFFFFF; MARGIN-BOTTOM: 5px; BORDER-LEFT: #A6D89B 1px solid; WIDTH: 500px; BORDER-BOTTOM: #A6D89B 1px solid; HEIGHT: 245px
+;}
+#u_u4_ifocus_pic {
+    DISPLAY: inline; FLOAT: left; MARGIN: 10px 0px 0px 10px; OVERFLOW: hidden; WIDTH: 385px; POSITION: relative; HEIGHT: 225px
+;}
+#u_u4_ifocus_piclist {
+    POSITION: absolute;}
+#u_u4_ifocus_piclist UL{
+    PADDING-RIGHT: 0px; PADDING-LEFT: 0px; PADDING-BOTTOM: 0px; MARGIN: 0px; PADDING-TOP: 0px;}
+#u_u4_ifocus_piclist LI {
+    OVERFLOW: hidden; WIDTH: 385px; HEIGHT: 225px;
+    MARGIN-left: 0px;}
+#u_u4_ifocus_piclist IMG {
+    WIDTH: 385px; HEIGHT: 225px
+;}
+#u_u4_ifocus_btn {
+    DISPLAY: inline; FLOAT: right; MARGIN: 9px 9px 0px 0px; WIDTH: 91px
+;}
+#u_u4_ifocus_btn_ul {
+    MARGIN-left: 0px;MARGIN-top: 0px;padding-left:0px;}
+#u_u4_ifocus_btn LI {
+    FILTER: alpha(opacity=50); WIDTH: 91px; CURSOR: pointer; HEIGHT: 57px; opacity: 0.5; -moz-opacity: 0.5
+;}
+#u_u4_ifocus_btn IMG {
+    MARGIN: 7px 0px 0px 11px; WIDTH: 75px; HEIGHT: 45px
+;}
+#u_u4_ifocus_btn .current {
+    BACKGROUND: url(/system/resource/images/imagechangenews/ifocus_btn_bg.gif) no-repeat; FILTER: alpha(opacity=100); opacity: 1; -moz-opacity: 1
+;}
+#u_u4_ifocus_opdiv {
+    BACKGROUND: #000; FILTER: alpha(opacity=50); LEFT: 0px; WIDTH: 470px; BOTTOM: 0px; POSITION: absolute; HEIGHT: 35px; opacity: 0.5; -moz-opacity: 0.5
+;}
+#u_u4_ifocus_tx {
+    LEFT: 8px; COLOR: #fff; BOTTOM: 8px; POSITION: absolute;
+    PADDING-LEFT: 0px; PADDING-BOTTOM: 0px; MARGIN-left: 0px;}
+#u_u4_ifocus_tx_ul
+{
+    PADDING-RIGHT: 0px; PADDING-LEFT: 0px; PADDING-BOTTOM: 0px; MARGIN: 3px; PADDING-TOP: 0px;}
+#u_u4_ifocus_tx .normal {
+    DISPLAY: none
+;}
+</style>
+<script>
+function byid(id) { return document.getElementById(id); }
+
+function u_u4_addLoadEvent(func){
+    var oldonload = window.onload;
+    if (typeof window.onload != 'function') {
+        window.onload = func;
+    } else {
+        window.onload = function(){
+            oldonload();
+            func();
+        }
+    }
+}
+
+function u_u4_moveElement(elementID,final_x,final_y,interval) {
+  if (!document.getElementById) return false;
+  if (!document.getElementById(elementID)) return false;
+  var elem = document.getElementById(elementID);
+  if (elem.movement) {
+    clearTimeout(elem.movement);
+  }
+  if (!elem.style.left) {
+    elem.style.left = "0px";
+  }
+  if (!elem.style.top) {
+    elem.style.top = "0px";
+  }
+  var xpos = parseInt(elem.style.left);
+  var ypos = parseInt(elem.style.top);
+  if (xpos == final_x && ypos == final_y) {
+        return true;
+  }
+  if (xpos < final_x) {
+    var dist = Math.ceil((final_x - xpos)/10);
+    xpos = xpos + dist;
+  }
+  if (xpos > final_x) {
+    var dist = Math.ceil((xpos - final_x)/10);
+    xpos = xpos - dist;
+  }
+  if (ypos < final_y) {
+    var dist = Math.ceil((final_y - ypos)/10);
+    ypos = ypos + dist;
+  }
+  if (ypos > final_y) {
+    var dist = Math.ceil((ypos - final_y)/10);
+    ypos = ypos - dist;
+  }
+  elem.style.left = xpos + "px";
+  elem.style.top = ypos + "px";
+  var repeat = "u_u4_moveElement('"+elementID+"',"+final_x+","+final_y+","+interval+")";
+  elem.movement = setTimeout(repeat,interval);
+}
+
+function u_u4_classNormal(iFocusBtnID,iFocusTxID){
+    var iFocusBtns= byid(iFocusBtnID).getElementsByTagName('li');
+    var iFocusTxs = byid(iFocusTxID).getElementsByTagName('li');
+    for(var i=0; i<iFocusBtns.length; i++) {
+        iFocusBtns[i].className='normal';
+        iFocusTxs[i].className='normal';
+    }
+}
+
+function u_u4_classCurrent(iFocusBtnID,iFocusTxID,n){
+    var iFocusBtns= byid(iFocusBtnID).getElementsByTagName('li');
+    var iFocusTxs = byid(iFocusTxID).getElementsByTagName('li');
+    iFocusBtns[n].className='current';
+    iFocusTxs[n].className='current';
+}
+
+function u_u4_iFocusChange() {
+    if(!byid('u_u4_ifocus')) return false;
+    byid('u_u4_ifocus').onmouseover = function(){u_u4_atuokey = true};
+    byid('u_u4_ifocus').onmouseout = function(){u_u4_atuokey = false};
+    var iFocusBtns = byid('u_u4_ifocus_btn').getElementsByTagName('li');
+    var listLength = iFocusBtns.length;
+    iFocusBtns[0].onmouseover = function() {
+        u_u4_moveElement('u_u4_ifocus_piclist',0,0,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',0);
+    }
+    if (listLength>=2) {
+        iFocusBtns[1].onmouseover = function() {
+            u_u4_moveElement('u_u4_ifocus_piclist',0,-225,5);
+            u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+            u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',1);
+        }
+    }
+    if (listLength>=3) {
+        iFocusBtns[2].onmouseover = function() {
+            u_u4_moveElement('u_u4_ifocus_piclist',0,-450,5);
+            u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+            u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',2);
+        }
+    }
+    if (listLength>=4) {
+        iFocusBtns[3].onmouseover = function() {
+            u_u4_moveElement('u_u4_ifocus_piclist',0,-675,5);
+            u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+            u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',3);
+        }
+    }
+    if (listLength>=5) {
+        iFocusBtns[4].onmouseover = function() {
+            u_u4_moveElement('u_u4_ifocus_piclist',0,-900,5);
+            u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+            u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',4);
+        }
+    }
+    if (listLength>=6) {
+        iFocusBtns[5].onmouseover = function() {
+            u_u4_moveElement('u_u4_ifocus_piclist',0,-1125,5);
+            u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+            u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',5);
+        }
+    }
+}
+
+setInterval('u_u4_autoiFocus()',4000);
+var u_u4_atuokey = false;
+function u_u4_autoiFocus() {
+    if(!byid('u_u4_ifocus')) return false;
+    if(u_u4_atuokey) return false;
+    var focusBtnList = byid('u_u4_ifocus_btn').getElementsByTagName('li');
+    var listLength = focusBtnList.length;
+    for(var i=0; i<listLength; i++) {
+        if (focusBtnList[i].className == 'current') var currentNum = i;
+    }
+    if (currentNum==0&&listLength!=1 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,-225,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',1);
+    }
+    if (currentNum==1&&listLength!=2 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,-450,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',2);
+    }
+    if (currentNum==2&&listLength!=3 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,-675,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',3);
+    }
+    if (currentNum==3&&listLength!=4 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,-900,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',4);
+    }
+    if (currentNum==4&&listLength!=5 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,-1125,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',5);
+    }
+    if (currentNum==5 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,0,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',0);
+    }
+    if (currentNum==1&&listLength==2 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,0,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',0);
+    }
+    if (currentNum==2&&listLength==3 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,0,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',0);
+    }
+    if (currentNum==3&&listLength==4 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,0,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',0);
+    }
+    if (currentNum==4&&listLength==5 ){
+        u_u4_moveElement('u_u4_ifocus_piclist',0,0,5);
+        u_u4_classNormal('u_u4_ifocus_btn','u_u4_ifocus_tx');
+        u_u4_classCurrent('u_u4_ifocus_btn','u_u4_ifocus_tx',0);
+    }
+}
+u_u4_addLoadEvent(u_u4_iFocusChange);
+u_u4_autoiFocus();
+</script>
+</DIV>
+<DIV class="new_list new_lista new_lista1">
+
+<h3><a href="info/1161/2978.htm">聚焦优化提升 共谋生态迭代：四川省优化营商环境工作片区座谈...</a></h3>
+<p>​6月2日至3日，四川省营商环境评价专题解读研讨暨优化营商环境工作片区座谈会在眉山...[<span><a href="info/1161/2978.htm">详细信息</a></span>]</p>
+
+<ul class="dynamic_list dynamic_lista fr">
+<li style="margin-top:10px;"><a href="info/1161/3018.htm"><span>05/30</span><em>四川省营商环境评价专题解读研讨暨优化营商环境工作片区座谈...</em></a></li>
+<li style="margin-top:10px;"><a href="info/1161/2948.htm"><span>05/21</span><em>2025年度评价报告发布52%权重交给企业打分，企业诉求“接诉即...</em></a></li>
+<li style="margin-top:10px;"><a href="info/1161/3088.htm"><span>05/19</span><em>12城获评优等生！四川营商环境完成2.0到3.0进阶蜕变</em></a></li>
+<li style="margin-top:10px;"><a href="info/1161/3008.htm"><span>05/18</span><em>全省优化营商环境电视电话会议召开 持续推动营商环境从控成本...</em></a></li>
+</ul><!--script >_showDynClickBatch(['dynclicks_u6_1186','dynclicks_u6_1184','dynclicks_u6_1176','dynclicks_u6_1174','dynclicks_u6_1164','dynclicks_u6_1154','dynclicks_u6_1153','dynclicks_u6_1144'],[1186,1184,1176,1174,1164,1154,1153,1144],"wbnews", 1451319075)</script--><script>_showDynClickBatch(['dynclicks_u5_2978','dynclicks_u5_3018','dynclicks_u5_2948','dynclicks_u5_3088','dynclicks_u5_3008'],[2978,3018,2948,3088,3008],"wbnews", 1878060340)</script>
+</DIV></DIV></DIV><!--站内搜索-->
+</DIV>
+
+
+
+<DIV class="vsb-container container clearfix" columns="6" containerid="2"><!--通知公告-->
+<DIV class="vsb-space informBox informBoxd informBoxc1 fl" columns="6">                
+    <div class="dynamic dynamicb dynamice"><h2>通知公告</h2><span><a href="tzxw/tzgg.htm" target=""><img src="dfiles/16558/img/w_more.png"></a></span></div>
+    <div class="infor_list infor_lista">
+        
+
+<ul class="dynamic_list dynamic_listb dynamic_liste fr">
+
+<li style="margin-top:10px;"><a href="info/1160/3128.htm"><span>2026-06-06</span><em style="width:800px;">聚焦优化提升 共谋生态迭代：四川省优化营商环境工作片区座谈会在眉山召开</em></a>
+</li>    
+    
+<li style="margin-top:10px;"><a href="info/1160/3108.htm"><span>2026-05-30</span><em style="width:800px;">四川省营商环境评价专题解读研讨暨优化营商环境工作片区座谈会在巴中召开</em></a>
+</li>    
+    
+<li style="margin-top:10px;"><a href="info/1160/3098.htm"><span>2026-05-21</span><em style="width:800px;">2025年度评价报告发布52%权重交给企业打分，企业诉求“接诉即应”</em></a>
+</li>    
+    
+<li style="margin-top:10px;"><a href="info/1160/3078.htm"><span>2026-05-19</span><em style="width:800px;">12城获评优等生！四川营商环境完成2.0到3.0进阶蜕变</em></a>
+</li>    
+    
+<li style="margin-top:10px;"><a href="info/1160/3058.htm"><span>2026-05-18</span><em style="width:800px;">全省优化营商环境电视电话会议召开 持续推动营商环境从控成本向优生态迭代升级</em></a>
+</li>    
+    
+<li style="margin-top:10px;"><a href="info/1160/3028.htm"><span>2026-05-18</span><em style="width:800px;">经营主体满意度连续两年提升 2025年度四川省营商环境评价报告出炉</em></a>
+</li>    
+    
+<li style="margin-top:10px;"><a href="info/1160/2788.htm"><span>2025-08-12</span><em style="width:800px;">四川省营商环境咨询委员会章程（修订）</em></a>
+</li>    
+    
+<li style="margin-top:10px;"><a href="info/1160/2638.htm"><span>2025-07-10</span><em style="width:800px;">最新评价结果出炉，四川9个市获优秀等级→</em></a>
+</li>    
+    
+</ul><script>_showDynClickBatch(['dynclicks_u6_3128','dynclicks_u6_3108','dynclicks_u6_3098','dynclicks_u6_3078','dynclicks_u6_3058','dynclicks_u6_3028','dynclicks_u6_2788','dynclicks_u6_2638'],[3128,3108,3098,3078,3058,3028,2788,2638],"wbnews", 1878060340)</script>
+
+    </div>
+</DIV>
+</DIV><!--广告-->
+
+
+
+
+<!--link--> 
+<DIV class="vsb-container container clearfix" columns="6" containerid="2">
+<DIV class="vsb-space content contentf" columns="6">    <div class="link_tit">
+            <h3>友情链接<i>/LINK</i></h3>
+</div>
+<div class="link_two">           
+<ul>
+<li>
+<a href="https://www.swjtu.edu.cn" target="_blank" onclick="_addDynClicks(&#34;wbimage&#34;, 1878060340, 65447)"><img src="images/swjtu.jpg"></a>
+</li>
+<li>
+<a href="http://fgw.sc.gov.cn/" target="_blank" onclick="_addDynClicks(&#34;wbimage&#34;, 1878060340, 65448)"><img src="images/fgw.jpg"></a>
+</li>
+<li>
+<a href="https://www.scu.edu.cn/" target="_blank" onclick="_addDynClicks(&#34;wbimage&#34;, 1878060340, 65449)"><img src="images/scu.jpg"></a>
+</li>
+<li>
+<a href="https://www.uestc.edu.cn/" target="_blank" onclick="_addDynClicks(&#34;wbimage&#34;, 1878060340, 65450)"><img src="images/uestc.jpg"></a>
+</li>
+<li>
+<a href="https://www.swufe.edu.cn/" target="_blank" onclick="_addDynClicks(&#34;wbimage&#34;, 1878060340, 65451)"><img src="images/swufe.jpg"></a>
+</li>
+<li>
+<a href="https://www.idataway.com/" target="_blank" onclick="_addDynClicks(&#34;wbimage&#34;, 1878060340, 65452)"><img src="images/idataway.jpg"></a>
+</li>
+<li>
+<a href="http://www.yd-tec.com/" target="_blank" onclick="_addDynClicks(&#34;wbimage&#34;, 1878060340, 65453)"><img src="images/yd.jpg"></a>
+</li>
+<li>
+<a href="https://home.kpmg/cn/zh/home.html" target="_blank" onclick="_addDynClicks(&#34;wbimage&#34;, 1878060340, 65454)"><img src="images/kpmg.jpg"></a>
+</li>
+<li>
+<a href="http://www.cdwisdom.3see.com/member/company.php?show=1" target="_blank" onclick="_addDynClicks(&#34;wbimage&#34;, 1878060340, 65455)"><img src="images/dz.jpg"></a>
+</li>
+<li>
+<a href="http://sc.china.com.cn/" target="_blank" onclick="_addDynClicks(&#34;wbimage&#34;, 1878060340, 65440)"><img src="images/sc.jpg"></a>
+</li>
+</ul>
+</div>
+</DIV></DIV><!--广告--></DIV>
+<!--foot-->
+<DIV class="footWrap">
+<DIV class="footDiv_one">
+<DIV class="foot_one"><!-- 版权内容请在本组件"内容配置-版权"处填写 -->
+<p><!-- 版权内容请在本组件"内容配置-版权"处填写 -->
+<p>&nbsp;Copyright© 2022 All Rights Reserved. 四川省营商环境研究院&nbsp;<span style="font-family: 等线; font-size: 16px;">Sichuan Institute of Doing Business</span></p></p></DIV></DIV></DIV>
+
+
+
+<DIV></DIV>
+
+</BODY></HTML>
+
+<script type="text/javascript" src="js/jquery.js"></script>
+<script type="text/javascript" src="js/dh.js"></script>
+<script>
+$(function() {
+    // 悬浮窗口
+    $(".yb_conct").hover(function() {
+        $(".yb_conct").css("right", "5px");
+        $(".yb_bar .yb_ercode").css('height', '200px');
+    }, function() {
+        $(".yb_conct").css("right", "-127px");
+        $(".yb_bar .yb_ercode").css('height', '53px');
+    });
+    // 返回顶部
+    $(".yb_top").click(function() {
+        $("html,body").animate({
+            'scrollTop': '0px'
+        }, 300)
+    });
+});
+</script>
+<script type="text/javascript">
+$(function(){
+    $(".mainmenu dl").hide();
+    $("li.mainmenu").hover(function(){
+        $(this).find("dl").stop(true,true);
+        $(this).find("dl").slideDown();
+    },function(){
+        $(this).find("dl").stop(true,true);
+        $(this).find("dl").slideUp();
+    });
+})
+</script>
+<script type="text/javascript">
+$(function () {
+
+//切换对象为其他，这里为包含图片和标题的层
+    $('#change_32 div.changeDiv').soChange({//对象指向层，层内包含图片及标题
+        thumbObj:'#change_32 .ul_change_a2 span',
+        thumbNowClass:'on'//自定义导航对象当前class为on
+    });
+
+});
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

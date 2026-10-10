@@ -184,6 +184,31 @@ func TestXczxResourceBodyChecksTypeMagicAndShell(t *testing.T) {
 	}
 }
 
+func TestXczxColumnPageWithInformBoxDecorationParsesAsList(t *testing.T) {
+	// The column template reuses the informBox class on an empty sidebar
+	// decoration; the page must not be mistaken for the homepage.
+	raw := loadXczxFixture(t, "xczx_tzgg_live.html")
+	items, err := parseAdapter_xczxList(raw, "https://xczx.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 9 {
+		t.Fatalf("tzgg rows = %d, want 9: %#v", len(items), items)
+	}
+	first := items[0]
+	if first.Title != "关于开展西南交通大学“光彩2021”宣传展示工作的通知" || first.Date != "2021-11-25" {
+		t.Fatalf("first item = %#v", first)
+	}
+	if first.Type != "通知公告" {
+		t.Fatalf("first type = %q", first.Type)
+	}
+	for _, item := range items {
+		if !xczxArticleURL(item.URL, "https://xczx.swjtu.edu.cn") {
+			t.Fatalf("non-article URL leaked: %#v", item)
+		}
+	}
+}
+
 func TestXczxRejects404Shell(t *testing.T) {
 	if _, err := parseAdapter_xczxList(loadXczxFixture(t, "xczx_404.html"), "https://xczx.swjtu.edu.cn"); err == nil {
 		t.Fatal("404 shell was accepted as a list")

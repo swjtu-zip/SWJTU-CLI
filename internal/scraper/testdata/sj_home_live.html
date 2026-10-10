@@ -1,0 +1,701 @@
+﻿<!DOCTYPE html>
+<html lang="zh">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>西南交通大学审计处</title><meta name="pageType" content="1">
+<meta name="pageTitle" content="西南交通大学审计处">
+<META Name="keywords" Content="西南交通大学审计处,首页" />
+
+        <link href="2023/static/css/bootstrap.css" rel="stylesheet">
+        <link href="2023/static/css/style.css" rel="stylesheet">
+        <link href="2023/static/css/swiper-bundle.min.css" rel="stylesheet">
+      
+    <!--Announced by Visual SiteBuilder 9-->
+<script language="javascript" src="_sitegray/_sitegray.js"></script>
+<!-- CustomerNO:77656262657232307476475d51535742000300034452 -->
+<link rel="stylesheet" type="text/css" href="index.vsb.css" />
+<script type="text/javascript" src="/system/resource/js/vsbscreen.min.js" id="_vsbscreen" devices="pc|pad"></script>
+<script type="text/javascript" src="/system/resource/js/counter.js"></script>
+<script type="text/javascript">_jsq_(1001,'/index.jsp',-1,1416573935)</script>
+</head>
+    <body>
+        <header class="whole-bgt">
+            <div class="container flex-center flex-hc">
+                <div class="logo">
+<!-- 网站logo图片地址请在本组件"内容配置-网站logo"处填写 -->
+<a href="index.htm" title="审计处"><img src="2023/static/images/logo.png" width="270" height="70" border="0" alt="审计处" title="审计处"></a></div>
+                <div class="head-p">审计处</div>
+                <!-- 3.1.3版本 -->
+
+
+
+<script language="javascript" src="/system/resource/js/base64.js"></script><script language="javascript" src="/system/resource/js/jquery/jquery-latest.min.js"></script><script language="javascript" src="/system/resource/vue/vue.js"></script><script language="javascript" src="/system/resource/vue/bluebird.min.js"></script><script language="javascript" src="/system/resource/vue/axios.js"></script><script language="javascript" src="/system/resource/vue/polyfill.js"></script><script language="javascript" src="/system/resource/vue/token.js"></script><LINK href="/system/resource/vue/static/element/index.css" type="text/css" rel="stylesheet"><script language="javascript" src="/system/resource/vue/static/element/index.js"></script><script language="javascript" src="/system/resource/vue/static/public.js"></script><script language="javascript" src="/system/resource/openapp/search/js/containsHtmlTags.js"></script><script language="javascript" src="/system/resource/openapp/search/layui/layui.js"></script><style>
+    #appu1 .qwss{
+        height: 31px;
+        font-size: 12px;
+        min-width: 190px;
+        max-width: 600px;
+        width: 60%;
+        margin-top: -15px;
+        outline: none;
+        padding-left: 10px;
+        border-radius: 2px;
+        border: 1px solid #e4e7ed;}
+    #appu1 .tj{
+        padding-left: 6px;
+        letter-spacing: 5px;
+        color: white;
+        min-width: 53px;
+        max-width: 150px;
+        height: 32px;
+        border: 0;
+        border-radius: 2px;
+        background-color: #1890FF;
+        position: relative;
+        top: 1px;
+        width: 20%;
+        margin-top: -15px;}
+</style>
+<div id="divu1"></div>
+<script type="text/html" id="htmlu1">
+    <div id="appu1">
+        <div v-if="!isError">
+        
+         <div class="search flex-center">
+ <input   type="text" class="input flex-bd"  placeholder="请输入关键词进行搜索"  autocomplete=off v-model=query.keyWord @keyup.enter="onSubmit">
+<button class="btn search_btn"  v-on:click="onSubmit()"><img src=2023/static/images/search.png alt=""></button>
+ </div>
+        
+         
+        </div>
+        <div v-if="isError" style="color: #b30216; font-size:18px;text-align: center;padding:20px;">
+            应用维护中！
+        </div>
+    </div>
+</script>
+<script>
+    $("#divu1").html($("#htmlu1").text());
+</script>
+<script>
+    var appOwner = "1416573935";
+    var token = gettoken(10);
+    var urlPrefix = "/aop_component/";
+
+    jQuery.support.cors = true;
+    $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+    });
+
+    new Vue({
+        el: "#appu1",
+        data: function () {
+            return {
+                query: {
+                    keyWord: "",//搜索关键词
+                    owner: appOwner,
+                    token: token,
+                    urlPrefix: urlPrefix,
+                    lang:"i18n_zh_CN"
+                },
+                isError: false
+            }
+        },
+        mounted: function () {
+            var _this = this;
+            // _this.init();
+        },
+        methods: {
+            init: function(){
+                $.ajax({
+                    url: "/aop_component//webber/search/test",
+                    type: "get",
+                    success: function (response) {
+                        if (response.code == "0000") {
+                        } else if (response.code == "220") {
+                            _this.isError = true;
+                            console.log(response);
+                        } else if (!response.code) {
+                            _this.isError = true;
+                            console.log(response);
+                        }
+                    },
+                    error: function (response) {
+                        _this.isError = true;
+                    }
+                });
+            },
+            onSubmit: function (e) {
+                var url = "/aop_views/search/modules/resultpc/soso.html";
+                if ("10" == "1" || "10" == "2") {
+                    url = "" + url;
+                }
+                var _this = this;
+                var query = _this.query;
+                if (url.indexOf("?") > -1) {
+                    url = url.split("?")[0];
+                }
+                if (query.keyWord) {
+                    var query = new Base64().encode(JSON.stringify(query));
+                    window.open(url + "?query=" + query);
+                } else {
+                    alert("请填写搜索内容")
+                }
+            },
+        }
+    })
+</script>
+
+<script>
+   var appElementu1 = document.querySelector("#appu1");
+   if (appElementu1 && appElementu1.__vue__) {
+
+   } else {
+      $("#divu1").html($("#htmlu1").text());
+      var appOwner = "1416573935";   
+      var urlPrefix = "/aop_component/";
+      var ifLogin="";
+      var token = ifLogin=='true'?gettoken(10, true).trim():'tourist';
+      if (containsHtmlTags(token) || !token) { 
+         token = 'tourist';
+      }
+      jQuery.support.cors = true;
+      $.ajaxSetup({
+        beforeSend: function (request, settings) {
+            request.setRequestHeader("Authorization", token);
+            request.setRequestHeader("owner", appOwner);
+        }
+      });
+      var queryInfou1 = {
+        query: {
+            keyWord: "",//搜索关键词
+            owner: appOwner,
+            token: token,
+            urlPrefix: urlPrefix,
+            lang:"i18n_zh_CN"
+        },
+        isError: false
+      };
+      function keyUpFunu1(e){
+        var theEvent = e || window.event;
+        var keyCode = theEvent.keyCode || theEvent.which || theEvent.charCode;
+        if(keyCode == 13){
+          onSubmitu1();
+        }
+      };
+
+      function onSubmitu1(e) {
+        queryInfou1.query.keyWord= $("#appu1  .qwss").val();
+        
+        var url = "/aop_views/search/modules/resultpc/soso.html";      
+        if ("10" == "1" || "10" == "2") {
+           url = "" + url;
+        }
+        var query = queryInfou1.query;
+        if (url.indexOf("?") > -1) {
+            url = url.split("?")[0];
+        }
+        if (query.keyWord) {
+            var query = new Base64().encode(JSON.stringify(query));
+            window.open(url + "?query=" + query);
+        } else {
+            alert("请填写搜索内容")
+        }
+      };
+   }
+</script>
+            </div>
+        </header>
+        <nav>
+            <ul class="flex-center flex-hc"><li class="active">
+                    <a href="index.htm">
+                        <div class="nav-icon"><img src="2023/static/images/icon1.png" alt=""></div>
+                        <div class="nav-tt">首页</div>
+                    </a>
+                </li>
+                
+<li class="active">
+                    <a href="jgsz/bmjj.htm">
+                        <div class="nav-icon"><img src="2023/static/images/icon2.png" alt=""></div>
+                        <div class="nav-tt">机构设置</div>
+                    </a>
+                </li>
+                
+<li class="active">
+                    <a href="zbjs.htm">
+                        <div class="nav-icon"><img src="2023/static/images/icon3.png" alt=""></div>
+                        <div class="nav-tt">支部建设</div>
+                    </a>
+                </li>
+                
+<li class="active">
+                    <a href="zcfg/gjxgfgzd.htm">
+                        <div class="nav-icon"><img src="2023/static/images/icon8.png" alt=""></div>
+                        <div class="nav-tt">政策法规</div>
+                    </a>
+                </li>
+                
+<li class="active">
+                    <a href="gggs.htm">
+                        <div class="nav-icon"><img src="2023/static/images/icon4.png" alt=""></div>
+                        <div class="nav-tt">公告公示</div>
+                    </a>
+                </li>
+                
+<li class="active">
+                    <a href="gzcx/cwsj.htm">
+                        <div class="nav-icon"><img src="2023/static/images/icon6.png" alt=""></div>
+                        <div class="nav-tt">工作程序</div>
+                    </a>
+                </li>
+                
+<li class="active">
+                    <a href="zlxz/cwsjxgzl.htm">
+                        <div class="nav-icon"><img src="2023/static/images/icon9.png" alt=""></div>
+                        <div class="nav-tt">资料下载</div>
+                    </a>
+                </li>
+                
+<li class="active">
+                    <a href="xxyd.htm">
+                        <div class="nav-icon"><img src="2023/static/images/icon10.png" alt=""></div>
+                        <div class="nav-tt">学习园地</div>
+                    </a>
+                </li>
+                
+<li class="active">
+                    <a href="sjsy.htm">
+                        <div class="nav-icon"><img src="2023/static/images/icon6.png" alt=""></div>
+                        <div class="nav-tt">审计视野</div>
+                    </a>
+                </li>
+                
+</ul>
+        </nav>
+        <div class="warp">
+            <div class="container">
+                <div class="index-head flex">
+                    <div class="index-banner">
+                        <div class="swiper mySwiper">
+                            <div class="swiper-wrapper">
+
+<script language="javascript" src="/system/resource/js/dynclicks.js"></script><script language="javascript" src="/system/resource/js/centerCutImg.js"></script><script language="javascript" src="/system/resource/js/ajax.js"></script><div class="swiper-slide">
+                                    <div class="index_ban">
+                                        <img src="/__local/8/88/63/CABACB75D0F47B4BDD1C926BC63_712535BE_5CF75.jpg" alt="" class="index-ban-pic">
+                                        <div class="index-ban-tt"><a href="info/1025/3878.htm">学校召开大型仪器设备使用与共享绩效评价工作启动会</a></div>
+                                    </div>
+                                </div>
+                                
+<div class="swiper-slide">
+                                    <div class="index_ban">
+                                        <img src="/__local/C/62/CE/A2876269AC097173E46713F75B5_9662B1C0_55ECC.jpg" alt="" class="index-ban-pic">
+                                        <div class="index-ban-tt"><a href="info/1025/3858.htm">学校召开图书馆“巡审联动”工作启动会</a></div>
+                                    </div>
+                                </div>
+                                
+<div class="swiper-slide">
+                                    <div class="index_ban">
+                                        <img src="/__local/8/16/9E/331488B023C379EF167FED9EEA7_63A5460D_66302.jpg" alt="" class="index-ban-pic">
+                                        <div class="index-ban-tt"><a href="info/1025/3838.htm">学校召开“两重”建设项目内部控制评价工作进点会</a></div>
+                                    </div>
+                                </div>
+                                
+<div class="swiper-slide">
+                                    <div class="index_ban">
+                                        <img src="/__local/C/A7/AB/D25D36A0992F930A9BF41910791_74034E9D_2F116.jpg" alt="" class="index-ban-pic">
+                                        <div class="index-ban-tt"><a href="info/1025/3818.htm">学校召开2026年第1次内部控制领导小组会议  部署年度内部控制评价与报告编报工作</a></div>
+                                    </div>
+                                </div>
+                                
+<div class="swiper-slide">
+                                    <div class="index_ban">
+                                        <img src="/__local/6/C2/14/B3CE774D3B08CB4B1A90231F142_5CA686D7_421F5.jpg" alt="" class="index-ban-pic">
+                                        <div class="index-ban-tt"><a href="info/1025/3798.htm">西南交大部署五年审计工作 筑牢高质量发展屏障</a></div>
+                                    </div>
+                                </div>
+                                
+<script>_showDynClickBatch(['dynclicks_u3_3878','dynclicks_u3_3858','dynclicks_u3_3838','dynclicks_u3_3818','dynclicks_u3_3798'],[3878,3858,3838,3818,3798],"wbnews", 1416573935)</script>
+</div>
+                            <div class="swiper-pagination"></div>
+                        </div>
+                    </div>
+                    <div class="index-tabs flex-bd">
+                        <ul class="nav nav-tabs" role="tablist">
+                            <li role="presentation" class="active"><a href="#index" aria-controls="index" role="tab" data-toggle="tab">审计动态</a></li>
+                          
+                            <a href="index/xwdt.htm" class="index-tabs-more" target="">更多 +</a>
+                        </ul>
+                        <div class="tab-content">
+                            <div role="tabpanel" class="tab-pane active" id="index">
+                                <div class="index_grid">
+
+<div class="index-tabs-cell flex-center">
+                                        <div class="index-tabs-time">
+                                            <div class="index-tabs-day">02</div>
+                                            <div class="index-tabs-year">2026.06</div>
+                                        </div>
+                                        <div class="index-tabs-bd flex-bd">
+                                            <a href="info/1025/3878.htm" class="index-tabs-tt">学校召开大型仪器设备使用与共享绩效评价工作启动会</a>
+                                            <div class="index-tabs-text">为深入贯彻国家关于重大科研基础设施与大型科研仪器开放共享的部署要求，落实学校2026年“推动设备资产...</div>
+                                        </div>
+                                    </div>
+                                    
+<div class="index-tabs-cell flex-center">
+                                        <div class="index-tabs-time">
+                                            <div class="index-tabs-day">27</div>
+                                            <div class="index-tabs-year">2026.05</div>
+                                        </div>
+                                        <div class="index-tabs-bd flex-bd">
+                                            <a href="info/1025/3858.htm" class="index-tabs-tt">学校召开图书馆“巡审联动”工作启动会</a>
+                                            <div class="index-tabs-text">为进一步深化监督贯通协同，2026年5月26日下午，学校召开第十五届党委第六轮巡察第三巡察组巡察图书馆党...</div>
+                                        </div>
+                                    </div>
+                                    
+<div class="index-tabs-cell flex-center">
+                                        <div class="index-tabs-time">
+                                            <div class="index-tabs-day">20</div>
+                                            <div class="index-tabs-year">2026.04</div>
+                                        </div>
+                                        <div class="index-tabs-bd flex-bd">
+                                            <a href="info/1025/3838.htm" class="index-tabs-tt">学校召开“两重”建设项目内部控制评价工作进点会</a>
+                                            <div class="index-tabs-text">4月16日上午，学校召开“两重”建设项目内部控制评价工作进点会。校党委常委、副校长刘长军出席会议并讲...</div>
+                                        </div>
+                                    </div>
+                                    
+<div class="index-tabs-cell flex-center">
+                                        <div class="index-tabs-time">
+                                            <div class="index-tabs-day">17</div>
+                                            <div class="index-tabs-year">2026.03</div>
+                                        </div>
+                                        <div class="index-tabs-bd flex-bd">
+                                            <a href="info/1025/3818.htm" class="index-tabs-tt">学校召开2026年第1次内部控制领导小组会议  部署年度内部控制评价与报告编报工作</a>
+                                            <div class="index-tabs-text">3月10日下午，学校在犀浦校区综合楼603会议室召开2026年第1次内部控制领导小组会议。会议围绕教育部关于...</div>
+                                        </div>
+                                    </div>
+                                    
+<div class="index-tabs-cell flex-center">
+                                        <div class="index-tabs-time">
+                                            <div class="index-tabs-day">27</div>
+                                            <div class="index-tabs-year">2026.01</div>
+                                        </div>
+                                        <div class="index-tabs-bd flex-bd">
+                                            <a href="info/1025/3798.htm" class="index-tabs-tt">西南交大部署五年审计工作 筑牢高质量发展屏障</a>
+                                            <div class="index-tabs-text">1月22日下午，西南交通大学审计委员会2026年第1次会议在犀浦校区综合楼603会议室举行。校党委书记、审计...</div>
+                                        </div>
+                                    </div>
+                                    
+<script>_showDynClickBatch(['dynclicks_u4_3878','dynclicks_u4_3858','dynclicks_u4_3838','dynclicks_u4_3818','dynclicks_u4_3798'],[3878,3858,3838,3818,3798],"wbnews", 1416573935)</script>
+</div>
+                            </div>
+                          
+                        </div>
+                    </div>
+                </div>
+                <div class="index-col flex">
+                    <div class="index-news flex flex-zBetween flex-bd">
+                        <div class="index-tell">
+
+<div class="list-head"><img src="2023/static/images/list1.png" alt=""><p>审计公告</p></div>
+                            
+                                
+<div class="list-cell">
+                                <a href="info/1005/3708.htm" class="list-cell-tt">工程审计审结项目公告（2025年第三季度）</a>
+                                <div class="list-text">一、 结算审核序号项目名称送审单位送审金额（元）审定金额（元）1西南交通大学集成电路科学与...<span onclick="javascript:window.open('info/1005/3708.htm')" ">[详情]</span></div>
+                                <div class="list-time">2025-10-23</div>
+                            </div>
+                            <div class="list-box">
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1005/3658.htm" class="list-col-tt">工程审计审结项目公告（2025年第二季度）</a>
+                                    <div class="list-col-time">2025-07-17</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1005/3648.htm" class="list-col-tt">工程审计审结项目公告（2025年第一季度）</a>
+                                    <div class="list-col-time">2025-04-09</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1005/3488.htm" class="list-col-tt">工程审计审结项目公告（2024年第四季度）</a>
+                                    <div class="list-col-time">2025-01-17</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1005/3428.htm" class="list-col-tt">数智化审计平台上线了</a>
+                                    <div class="list-col-time">2024-12-25</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1005/3328.htm" class="list-col-tt">关于“新工程审计系统”上线试运行的通知</a>
+                                    <div class="list-col-time">2024-12-06</div>
+                                </div>
+                                
+                                
+                                
+</div><script>_showDynClickBatch(['dynclicks_u5_3708','dynclicks_u5_3658','dynclicks_u5_3648','dynclicks_u5_3488','dynclicks_u5_3428','dynclicks_u5_3328'],[3708,3658,3648,3488,3428,3328],"wbnews", 1416573935)</script>
+</div>
+                        <div class="index-tell">
+
+<div class="list-head"><img src="2023/static/images/list1.png" alt=""><p>支部建设</p></div>
+                            
+                                
+<div class="list-cell">
+                                <a href="info/1024/3898.htm" class="list-cell-tt">党建业务双融合 精准审计双赋能——两校审计处党支部联合开展主题党日共建活动</a>
+                                <div class="list-text">为深入学习贯彻党的二十届四中全会精神，牢牢把握新时代审计工作政治属性，以高质量党建引领内部审计高...<span onclick="javascript:window.open('info/1024/3898.htm')" ">[详情]</span></div>
+                                <div class="list-time">2026-07-14</div>
+                            </div>
+                            <div class="list-box">
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1024/3888.htm" class="list-col-tt">审计处党支部开展6月主题党日活动</a>
+                                    <div class="list-col-time">2026-06-15</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1024/3868.htm" class="list-col-tt">审计处党支部联合宜宾研究院党支部开展 “学习抗战精神 党建引领业务”联学联建主题党日活动</a>
+                                    <div class="list-col-time">2026-06-02</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1024/3848.htm" class="list-col-tt">审计处党支部开展5月主题党日学习</a>
+                                    <div class="list-col-time">2026-05-09</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1024/3828.htm" class="list-col-tt">审计处党支部开展4月主题党日学习</a>
+                                    <div class="list-col-time">2026-04-02</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1024/3808.htm" class="list-col-tt">审计处党支部召开2025年度组织生活会暨3月主题党日学习</a>
+                                    <div class="list-col-time">2026-03-11</div>
+                                </div>
+                                
+                                
+                                
+</div><script>_showDynClickBatch(['dynclicks_u6_3898','dynclicks_u6_3888','dynclicks_u6_3868','dynclicks_u6_3848','dynclicks_u6_3828','dynclicks_u6_3808'],[3898,3888,3868,3848,3828,3808],"wbnews", 1416573935)</script>
+</div>
+                        <div class="index-tell">
+
+<div class="list-head"><img src="2023/static/images/list1.png" alt=""><p>审计视野</p></div>
+                            
+                                
+<div class="list-cell">
+                                <a href="info/1057/2727.htm" class="list-cell-tt">2021年中秋、国庆期间"四风"问题中央纪委国家监委通...</a>
+                                   <div class="list-text">为锲而不舍落实中央八项规定及其实施细则精神，中央纪委国家监委网站推出“中秋、国庆期间‘四风’问题...<span onclick="javascript:window.open('info/1057/2727.htm')" ">[详情]</span></div>
+                                <div class="list-time">2021-09-29</div>
+                            </div>
+                            <div class="list-box">
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1057/2720.htm" class="list-col-tt">审计处党支部开展“全面从严治党”专题学习</a>
+                                    <div class="list-col-time">2023-07-10</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1057/2721.htm" class="list-col-tt">“服务大运·爱满交大”—审计处党支部开展主题教育志...</a>
+                                    <div class="list-col-time">2023-06-30</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1057/2722.htm" class="list-col-tt">审计处开展主题教育“支部书记讲党课”专题学习活动</a>
+                                    <div class="list-col-time">2023-06-30</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1057/2723.htm" class="list-col-tt">审计处党支部开展集中学习研讨活动</a>
+                                    <div class="list-col-time">2023-06-27</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1057/2724.htm" class="list-col-tt">审计处党支部开展“两个确立”“十个明确”“十四个...</a>
+                                    <div class="list-col-time">2023-06-20</div>
+                                </div>
+                                
+                                
+                                
+</div><script>_showDynClickBatch(['dynclicks_u7_2727','dynclicks_u7_2720','dynclicks_u7_2721','dynclicks_u7_2722','dynclicks_u7_2723','dynclicks_u7_2724'],[2727,2720,2721,2722,2723,2724],"wbnews", 1416573935)</script>
+</div>
+                        <div class="index-tell">
+
+<div class="list-head"><img src="2023/static/images/list1.png" alt=""><p>政策法规</p></div>
+                            
+                                
+<div class="list-cell">
+                                <a href="info/1020/3928.htm" class="list-cell-tt">西南交通大学审计整改与结果运用实施办法（...</a>
+                                  <div class="list-text">第一章 总则第一条 为规范学校审计整改与结果运用，强化审计监督实效，提升学校治理水平，根据《审计署...<span onclick="javascript:window.open('info/1020/3928.htm')" ">[详情]</span></div>
+                                <div class="list-time">2026-07-17</div>
+                            </div>
+                            <div class="list-box">
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1020/3918.htm" class="list-col-tt">西南交通大学内部控制评价实施办法（西交校...</a>
+                                    <div class="list-col-time">2026-07-17</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1020/3208.htm" class="list-col-tt">西南交通大学建设工程审计实施办法（西交校...</a>
+                                    <div class="list-col-time">2024-07-19</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1018/2908.htm" class="list-col-tt">教育部直属高校和直属单位主要领导人员经济...</a>
+                                    <div class="list-col-time">2023-11-28</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1020/2629.htm" class="list-col-tt">西南交通大学财务收支审计实施办法（西交校...</a>
+                                    <div class="list-col-time">2023-04-28</div>
+                                </div>
+                                
+                                
+                                
+                     <div class="list-col flex-center">
+                                    <a href="info/1020/2628.htm" class="list-col-tt">西南交通大学预算管理审计实施办法（西交校...</a>
+                                    <div class="list-col-time">2023-04-28</div>
+                                </div>
+                                
+                                
+                                
+</div><script>_showDynClickBatch(['dynclicks_u8_3928','dynclicks_u8_3918','dynclicks_u8_3208','dynclicks_u8_2908','dynclicks_u8_2629','dynclicks_u8_2628'],[3928,3918,3208,2908,2629,2628],"wbnews", 1416573935)</script>
+</div>
+                    </div>
+                    <div class="index-grid">
+                        <div class="index-sj flex"><a href="http://gcsj.swjtu.edu.cn" class="index-sj-col whole-bgt" target=""></a>
+                            <a href="http://auditsj.swjtu.edu.cn/ais/login/loginView.jsp" class="index-sj-col index-sj-col1 whole-bgt" target=""></a></div>
+                        <div class="index-zn">
+                            <div class="list-head"> <p>服务指南</p></div>
+                            <div class="index-zn-col">    <a href="zlxz/zxsjxgzl.htm" class="index-zn-a flex-center" onclick="_addDynClicks(&#34;wbimage&#34;, 1416573935, 71749)">
+                                    <img src="2023/static/images/index3.png" alt="">
+                                    <p>专项审计</p>
+                                </a>
+                                
+<a href="zlxz/cwsjxgzl.htm" class="index-zn-a flex-center" onclick="_addDynClicks(&#34;wbimage&#34;, 1416573935, 71750)">
+                                    <img src="2023/static/images/index8.png" alt="">
+                                    <p>财务审计</p>
+                                </a>
+                                
+<a href="zlxz/gcsjxgzl.htm" class="index-zn-a flex-center" onclick="_addDynClicks(&#34;wbimage&#34;, 1416573935, 71751)">
+                                    <img src="2023/static/images/index9.png" alt="">
+                                    <p>工程审计</p>
+                                </a>
+                                
+</div>
+                        </div>
+                        <div class="index-add">
+                            <div class="index-add-c whole-bgt flex-center">
+                                <div class="index-add-l"><img src="2023/static/images/index4.png" alt=""></div>
+                                <div class="index-add-r">
+                                   <a href="czxx.htm" target=""> <div class="index-add-r_tt">处长信箱</div>
+                                    <div class="index-add-r_text">Director's mailbox</div></a>
+                                </div>
+                               
+                            </div>
+                            <div class="index-add-c index-add-c1 whole-bgt flex-center">
+                                <div class="index-add-l index-add-l-l"><img src="2023/static/images/index5.png" alt=""></div>
+                                <div class="index-add-r">
+                                   <a href="lxwm.htm" target=""> <div class="index-add-r_tt">联系我们</div>
+                                    <div class="index-add-r_text">contact us</div></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <footer class="whole-bgt">
+            <div class="container flex-center flex-hc">
+                <div class="foot-logo"><img src="2023/static/images/foot-logo.png" alt=""></div>
+                <div class="foot-copy"><!-- 版权内容请在本组件"内容配置-版权"处填写 -->
+<p>版权所有©西南交通大学审计处</p>
+                    <p>地址：四川省成都市郫都区犀安路999号</p>
+                    <p>西南交大犀浦校区综合楼529房间</p>
+                    <p>邮编：611756</p></div>
+                <div class="foot-ewm">
+                    <img src="2023/static/images/ewm.png" alt="">
+                    <p>交大审计公众号</p>
+                </div>
+                <div class="foot-label flex-center"><script language="javascript" src="/system/resource/js/openlink.js"></script><p><a href="http://www.moe.gov.cn/" style="color:white;">中华人民共和国教育部</a></p>
+                    
+<p><a href="http://www.swjtu.edu.cn" style="color:white;">西南交通大学</a></p>
+                    
+<p><a href="http://www.ciia.com.cn" style="color:white;">中国内部审计协会</a></p>
+                    
+<p><a href="http://www.audit.gov.cn" style="color:white;">中华人民共和国审计署</a></p>
+                    
+<p><a href="http://www.cee.edu.cn" style="color:white;">中国教育经济信息网</a></p>
+                    
+<p><a href="https://fsac.cee.edu.cn/" style="color:white;">教育部经费监管事务中心</a></p>
+                    
+<p><a href="http://www.mof.gov.cn/index.htm" style="color:white;">中华人民共和国财政部</a></p>
+                    
+<p><a href="http://www.jysj.cee.edu.cn/" style="color:white;">中国教育审计网</a></p>
+                    
+<p><a href="http://www.scedu.net/p/8/?StId=st_app_news_i_x635778214356118413" style="color:white;">四川省教育厅审计工作处</a></p>
+                    
+</div>
+            </div>
+        </footer>
+        <script src="2023/static/js/jquery.min.js"></script>
+        <script src="2023/static/js/bootstrap.min.js"></script>
+        <script src="2023/static/js/swiper-bundle.min.js"></script>
+    </body>
+</html>
+<script>
+    var swiper = new Swiper(".mySwiper", {
+        pagination: {
+            el: ".swiper-pagination",
+            clickable :true,
+        },
+        loop : true,
+        autoplay : true,
+    });
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

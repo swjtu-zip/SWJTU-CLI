@@ -37,7 +37,7 @@ var (
 	xbArticlePathRE     = regexp.MustCompile(`(?i)^/info/\d+/\d+\.html?$`)
 	xbYearMonthRE       = regexp.MustCompile(`^(20\d{2})\s*[-/.]\s*(\d{1,2})$`)
 	xbPublicationDateRE = regexp.MustCompile(`发表时间\s*[:：]\s*([0-9]{4}\s*[-/.年]\s*[0-9]{1,2}\s*[-/.月]\s*[0-9]{1,2}\s*(?:日|号)?(?:[ Tt]+[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?)?)`)
-	xbErrorPageRE       = regexp.MustCompile(`(?i)404\s*(?:错误|not\s+found)?|页面未找到|访问被拒绝|请求被拦截|安全验证|人机验证|请输入验证码|cloudflare|just\s+a\s+moment|please\s+verify|access\s+denied|request\s+blocked|waf`)
+	xbErrorPageRE       = regexp.MustCompile(`(?i)404\s*(?:错误|not\s+found)|403\s+forbidden|500\s+(?:错误|error)|页面未找到|访问被拒绝|请求被拦截|安全验证|人机验证|请输入验证码|cloudflare|just\s+a\s+moment|please\s+verify|access\s+denied|request\s+blocked|\bwaf\b`)
 	xbResourceShellRE   = regexp.MustCompile(`(?is)<!doctype\s+html|<html(?:\s|>)|<head(?:\s|>)|<body(?:\s|>)|附件下载|请输入验证码|验证码下载附件|请先登录|请登录后|登录页面|页面不存在|您访问的页面不存在|无权限访问|安全验证|安全威胁|请求已被阻断|cloudflare|just\s+a\s+moment|please\s+verify|access\s+denied`)
 )
 
@@ -322,6 +322,9 @@ func xbDetailContent(doc *goquery.Document) *goquery.Selection {
 	for _, selector := range []string{
 		`form[name="_newscontent_fromname"] #vsb_content_501 .v_news_content`,
 		`form[name="_newscontent_fromname"] #vsb_content .v_news_content`,
+		// Legacy articles (pre-2023) suffix the wrapper id with an arbitrary
+		// column number, e.g. vsb_content_4.
+		`form[name="_newscontent_fromname"] div[id^="vsb_content"] .v_news_content`,
 	} {
 		if content := doc.Find(selector).First(); content.Length() > 0 {
 			return content

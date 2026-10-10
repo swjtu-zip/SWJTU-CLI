@@ -88,7 +88,11 @@ var (
 	sroArticlePathRE = regexp.MustCompile(`(?i)^/info/[0-9]+/[0-9]+\.html?$`)
 	sroColumnPathRE  = regexp.MustCompile(`(?i)^/info/([0-9]+)/[0-9]+\.html?$`)
 	sroPublicationRE = regexp.MustCompile(`(?:发布时间|发布日期|发表日期|发表时间|日期)\s*[:：]?\s*(20\d{2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日?(?:\s+(\d{1,2})\s*(?:时|点|:)\s*(\d{2})\s*(?:分)?(?:\s*(\d{1,2})\s*秒?)?)?`)
-	sroBlockedRE     = regexp.MustCompile(`(?is)安全验证|请输入验证码|验证码下载|access\s+denied|forbidden|cloudflare|just\s+a\s+moment|统一身份认证|应用维护中|页面不存在|<title>\s*(?:404|403|500)`)
+	// The source occasionally injects an "应用维护中" notice banner into
+	// otherwise normal pages, so blocked-page markers must be title-scoped:
+	// a genuine block, verification, or maintenance page names the problem in
+	// its <title>, while a real article or list never does.
+	sroBlockedRE = regexp.MustCompile(`(?is)<title>(?:[^<]*(?:安全验证|请输入验证码|人机验证|access\s+denied|forbidden|cloudflare|just\s+a\s+moment|统一身份认证|应用维护中|页面不存在)|\s*(?:404|403|500)(?:\s|not|forbidden|error|错误|[-—]))`)
 )
 
 const sroMaxResourceBytes = 32 << 20

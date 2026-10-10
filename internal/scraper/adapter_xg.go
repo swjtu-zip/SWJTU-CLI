@@ -48,7 +48,7 @@ var xgFeeds = map[string]xgFeedSpec{
 }
 
 var (
-	xgDetailPathRE  = regexp.MustCompile(`(?i)^/web/home/detail$`)
+	xgDetailPathRE  = regexp.MustCompile(`(?i)^/web/home/(?:detail|colourfulcollegedetail)$`)
 	xgFilePathRE    = regexp.MustCompile(`(?i)^/service/uploadserver/down/getfile$`)
 	xgDateTimeRE    = regexp.MustCompile(`(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})日?\s*(?:[Tt]|\s+)\s*(\d{1,2})[:：](\d{2})(?::(\d{2}))?`)
 	xgDateRE        = regexp.MustCompile(`(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})日?`)
@@ -97,6 +97,9 @@ func xgListPage(slug string, page int) ([]model.NewsItem, int, error) {
 		return nil, 0, fmt.Errorf("xg: list page must be positive: %d", page)
 	}
 	slug = xgFeedKey(slug)
+	if slug == "index" {
+		return xgHomepageList(page)
+	}
 	if _, ok := xgFeedSpecFor(slug); !ok {
 		return nil, 0, fmt.Errorf("xg: %q is not a supported dynamic list route", slug)
 	}
@@ -141,6 +144,41 @@ func xgListPage(slug string, page int) ([]model.NewsItem, int, error) {
 func xgFeedSpecForMust(slug string) xgFeedSpec {
 	spec, _ := xgFeedSpecFor(slug)
 	return spec
+}
+
+// The served /web homepage renders its section lists server-side. Only the
+// four boxes below carry article rows: 公示专栏 rows are javascript:
+// placeholders and 学生活动 rows are event cards with a location, so neither
+// is an article list. The page is not paginated.
+func xgHomepageList(page int) ([]model.NewsItem, int, error) {
+	if page > 1 {
+		return nil, 1, fmt.Errorf("xg: homepage has a single page")
+	}
+	baseURL := xgBaseURL()
+	body, err := fetch(baseURL)
+	if err != nil {
+		return nil, 0, fmt.Errorf("xg: fetch homepage: %w", err)
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
+	if err != nil {
+		return nil, 0, fmt.Errorf("xg: parse homepage: %w", err)
+	}
+	items := make([]model.NewsItem, 0)
+	seen := make(map[string]bool)
+	for _, selector := range []string{".notice-box", ".news-box", ".colorful-college", ".xg-box"} {
+		section := doc.Find(selector).First()
+		if section.Length() == 0 {
+			continue
+		}
+		typ := strings.TrimSpace(section.Find(".title-name").First().Text())
+		section.Find("ul > li").Each(func(_ int, row *goquery.Selection) {
+			xgAppendListItem(&items, seen, row.Find("a[href]").First(), row, typ, baseURL)
+		})
+	}
+	if len(items) == 0 {
+		return nil, 1, fmt.Errorf("xg: homepage contains no article entries")
+	}
+	return items, 1, nil
 }
 
 func xgSourcePageURL(doc *goquery.Document, firstURL string, page int) string {

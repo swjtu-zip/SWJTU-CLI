@@ -21,7 +21,7 @@ func readScyshjFixture(t *testing.T, name string) []byte {
 func TestScyshjAdapterRegistrationAndAuditedFeeds(t *testing.T) {
 	site := AllSites["scyshj"]
 	want := []string{
-		"tzxw/tzgg", "tzxw/xwdt", "xsjl", "zchj", "dxal",
+		"tzxw/tzgg", "tzxw/xwdt", "xsjl", "dxal",
 		"scsjczxwyh/wygd", "scsjczxwyh/hdly",
 	}
 	if site == nil || site.BaseURL != scyshjCanonicalBaseURL || site.ParseFunc == nil || site.ParseArticleFunc == nil || site.PageURL == nil || site.TotalPagesFunc == nil || site.ArticleFetchFunc == nil {
@@ -169,5 +169,124 @@ func TestScyshjResourceRejectsExternalAndPseudoURLs(t *testing.T) {
 		if got := scyshjResourceURL(base, raw); got != "" {
 			t.Errorf("resource %q resolved to %q", raw, got)
 		}
+	}
+}
+
+func TestScyshjHomepagePortalParsesDatedSectionRows(t *testing.T) {
+	items, err := parseAdapter_scyshjList(readScyshjFixture(t, "scyshj_home_portal.html"), scyshjCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Only the 通知公告 section rows carry full dates; the 新闻动态 preview
+	// rows show "05/30"-style tickers whose year cannot be determined, and
+	// those articles are still collected by the tzxw/xwdt feed itself.
+	if len(items) != 8 {
+		t.Fatalf("homepage items = %d, want 8 dated rows: %#v", len(items), items)
+	}
+	seen := make(map[string]bool, len(items))
+	for _, item := range items {
+		if seen[item.URL] {
+			t.Errorf("duplicate URL %q", item.URL)
+		}
+		seen[item.URL] = true
+		if !strings.HasPrefix(item.URL, scyshjCanonicalBaseURL+"/info/1160/") {
+			t.Errorf("non-通知公告 URL %q", item.URL)
+		}
+		if item.Type != "通知公告" {
+			t.Errorf("type = %q, want 通知公告", item.Type)
+		}
+		if item.Date == "" {
+			t.Errorf("item %q has no date", item.Title)
+		}
+		if strings.HasSuffix(item.Title, "...") {
+			t.Errorf("truncated title %q leaked into the feed", item.Title)
+		}
+	}
+}
+
+func TestScyshjPortalRowsTakeTheirSectionType(t *testing.T) {
+	const portalHTML = `<html><head><meta name="pageType" content="1"></head><body>
+<div class="vsb-space informBox fl">
+  <div class="dynamic"><h2>通知公告</h2><span><a href="tzxw/tzgg.htm">more</a></span></div>
+  <ul class="dynamic_list dynamic_listb fr">
+    <li><a href="info/1160/3128.htm"><span>2026-06-06</span><em>通知公告栏文章标题</em></a></li>
+  </ul>
+</div>
+<div class="vsb-space new_inforBox fl">
+  <div class="dynamic"><H2>学术交流</H2><SPAN><A href="xsjl.htm">more</A></SPAN></div>
+  <ul class="dynamic_list dynamic_lista fr">
+    <li><a href="info/1170/1000.htm"><span>2026-05-01</span><em>学术交流栏文章标题</em></a></li>
+  </ul>
+</div>
+</body></html>`
+	items, err := parseAdapter_scyshjList([]byte(portalHTML), scyshjCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("items = %#v", items)
+	}
+	if items[0].Type != "通知公告" || items[1].Type != "学术交流" {
+		t.Fatalf("section types = %q/%q", items[0].Type, items[1].Type)
+	}
+}
+
+func TestScyshjIndexFeedStaysOnThePortalPage(t *testing.T) {
+	portalHTML := readScyshjFixture(t, "scyshj_home_portal.html")
+	var requests []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests = append(requests, r.URL.Path)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(portalHTML)
+	}))
+	defer server.Close()
+
+	site := AllSites["scyshj"]
+	oldBase, oldNoCache := site.BaseURL, NoCache
+	ClearCache()
+	defer func() {
+		site.BaseURL, NoCache = oldBase, oldNoCache
+		ClearCache()
+	}()
+	site.BaseURL = server.URL
+	NoCache = true
+
+	items, err := site.ListNewsRange("index", "2020-01-01", "2030-01-01", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 8 {
+		t.Fatalf("index feed items = %d, want 8", len(items))
+	}
+	for _, path := range requests {
+		if path != "/index.htm" && path != "/index.html" {
+			t.Fatalf("index feed walked beyond the portal page: %v", requests)
+		}
+	}
+}
+
+func TestScyshjEmptyColumnPageIsNotAList(t *testing.T) {
+	// zchj.htm is a real column list page whose <ul> is empty; it stays
+	// rejected, which is why the zchj feed was dropped from SubPages.
+	if items, err := parseAdapter_scyshjList(readScyshjFixture(t, "scyshj_zchj_empty.html"), scyshjCanonicalBaseURL); err == nil || items != nil {
+		t.Fatalf("empty column page was accepted: items=%#v err=%v", items, err)
+	}
+}
+
+func TestScyshjArticleParsesCurrentMainContitTemplate(t *testing.T) {
+	// The live detail template now renders the headline in .main_contit and
+	// the byline in .main_contit p instead of .article h1 + .news_source.
+	article, err := parseAdapter_scyshjArticle(readScyshjFixture(t, "scyshj_article_main_contit.html"), scyshjCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title != "四川省营商环境咨询委员会章程（修订）" {
+		t.Errorf("title = %q", article.Title)
+	}
+	if article.Type != "通知公告" || article.Date != "2025-08-12" || article.PublishedAt != "2025-08-12 15:27:00" {
+		t.Errorf("type/date/published = %q/%q/%q", article.Type, article.Date, article.PublishedAt)
+	}
+	if !strings.Contains(article.Content, "第一章 总 则") || strings.Contains(article.Content, "导航噪声") {
+		t.Errorf("content = %q", article.Content)
 	}
 }

@@ -493,3 +493,150 @@ func TestScaiAdapterArticleSeparatesBodyAndAttachments(t *testing.T) {
 		t.Errorf("content HTML did not retain resolved resources = %s", article.ContentHTML)
 	}
 }
+
+func TestScaiDelegatedArticleSiteResolvesOwners(t *testing.T) {
+	scaiBase := "https://scai.swjtu.edu.cn"
+	if site, delegated, err := scaiDelegatedArticleSite("https://scai.swjtu.edu.cn/web/page-newsDetail.html?nid=abc", scaiBase); err != nil || delegated || site != nil {
+		t.Fatalf("same-host URL delegated: site=%v delegated=%v err=%v", site, delegated, err)
+	}
+	site, delegated, err := scaiDelegatedArticleSite("https://news.swjtu.edu.cn/info/1019/103815.htm", scaiBase)
+	if err != nil || !delegated || site != NewsSite {
+		t.Fatalf("news redirect resolved to %v delegated=%v err=%v", site, delegated, err)
+	}
+	site, delegated, err = scaiDelegatedArticleSite("http://jwc.swjtu.edu.cn/vatuu/WebAction?setAction=newsDetail&newsId=0F2CEABCE895D0BA", scaiBase)
+	if err != nil || !delegated || site != AllSites["jwc"] {
+		t.Fatalf("jwc redirect resolved to %v delegated=%v err=%v", site, delegated, err)
+	}
+	if _, _, err := scaiDelegatedArticleSite("https://example.com/info/1/2.htm", scaiBase); err == nil {
+		t.Fatal("unrecognized redirect host was not reported")
+	}
+}
+
+// scaiRedirectFixtureServer serves a scai detail endpoint that 302s to the
+// same test server under a different loopback hostname (127.0.0.1 vs
+// localhost), so hostname-based parser delegation can be exercised locally.
+func scaiRedirectFixtureServer(t *testing.T, detailPath, redirectPath string, fixture []byte) *httptest.Server {
+	t.Helper()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case detailPath:
+			location := "http://" + strings.Replace(r.Host, "127.0.0.1", "localhost", 1) + redirectPath
+			w.Header().Set("Location", location)
+			w.WriteHeader(http.StatusFound)
+		case redirectPath:
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write(fixture)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(server.Close)
+	return server
+}
+
+func TestScaiFetchArticleFollowsRedirectToNewsSite(t *testing.T) {
+	fixture, err := os.ReadFile("testdata/scai_redirect_news.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := scaiRedirectFixtureServer(t, "/web/page-newsDetail.html", "/info/1019/103815.htm", fixture)
+
+	site := AllSites["scai"]
+	oldScaiBase, oldNewsBase := site.BaseURL, NewsSite.BaseURL
+	defer func() {
+		site.BaseURL, NewsSite.BaseURL = oldScaiBase, oldNewsBase
+	}()
+	site.BaseURL = server.URL
+	NewsSite.BaseURL = strings.Replace(server.URL, "127.0.0.1", "localhost", 1)
+
+	article, raw, err := site.GetArticleSnapshot(server.URL + "/web/page-newsDetail.html?nid=26244774-deb8-40f2-a9b5-a68ae6a71d41")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(raw) == 0 {
+		t.Fatal("redirected article raw body was not retained")
+	}
+	if article.Title != "【创源大讲堂】释放城市数据要素价值、驱动时空智能" {
+		t.Errorf("title = %q", article.Title)
+	}
+	if article.Date != "2026-05-12" {
+		t.Errorf("date = %q", article.Date)
+	}
+	if !strings.Contains(article.Content, "讲座时间") {
+		t.Errorf("content = %q", article.Content)
+	}
+}
+
+func TestScaiFetchArticleFollowsRedirectToJwc(t *testing.T) {
+	fixture, err := os.ReadFile("testdata/scai_redirect_jwc.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := scaiRedirectFixtureServer(t, "/web/page-newsDetail.html", "/vatuu/WebAction", fixture)
+
+	site := AllSites["scai"]
+	jwc := AllSites["jwc"]
+	oldScaiBase, oldJwcBase := site.BaseURL, jwc.BaseURL
+	defer func() {
+		site.BaseURL, jwc.BaseURL = oldScaiBase, oldJwcBase
+	}()
+	site.BaseURL = server.URL
+	jwc.BaseURL = strings.Replace(server.URL, "127.0.0.1", "localhost", 1)
+
+	article, _, err := site.GetArticleSnapshot(server.URL + "/web/page-newsDetail.html?nid=d727f61b-4eaf-464e-826c-42ffac5efc4b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(article.Title, "市场调查与分析大赛") {
+		t.Errorf("title = %q", article.Title)
+	}
+	if article.Date == "" || !strings.Contains(article.Content, "全国大学生市场调查") {
+		t.Errorf("date/content = %q / %q", article.Date, article.Content)
+	}
+}
+
+func TestScaiFetchArticleKeepsSameHostDetail(t *testing.T) {
+	fixture, err := os.ReadFile("testdata/scai_article.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(fixture)
+	}))
+	defer server.Close()
+
+	site := AllSites["scai"]
+	oldBase := site.BaseURL
+	defer func() { site.BaseURL = oldBase }()
+	site.BaseURL = server.URL
+
+	article, _, err := site.GetArticleSnapshot(server.URL + "/web/page-newsDetail.html?nid=0b9fffc8-b75c-4632-affb-24c45f3438e0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title != "计算机与人工智能学院党委理论学习中心组召开专题学习会" {
+		t.Errorf("title = %q", article.Title)
+	}
+}
+
+func TestScaiFetchArticleRejectsDeadDetailShell(t *testing.T) {
+	fixture, err := os.ReadFile("testdata/scai_dead_shell.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(fixture)
+	}))
+	defer server.Close()
+
+	site := AllSites["scai"]
+	oldBase := site.BaseURL
+	defer func() { site.BaseURL = oldBase }()
+	site.BaseURL = server.URL
+
+	if _, _, err := site.GetArticleSnapshot(server.URL + "/web/page-newsDetail.html?nid=38584b19-9e4-49f2-9a58-39818a9a61f2"); !errors.Is(err, errScaiNoArticleDetail) {
+		t.Fatalf("dead shell error = %v, want %v", err, errScaiNoArticleDetail)
+	}
+}

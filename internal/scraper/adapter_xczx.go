@@ -78,8 +78,18 @@ func xczxIsHomepage(doc *goquery.Document) bool {
 	if doc == nil {
 		return false
 	}
-	return strings.TrimSpace(doc.Find(`meta[name="pageType"], meta[name="pagetype"]`).First().AttrOr("content", "")) == "1" ||
-		doc.Find(".new_inforBox, .informBox").Length() > 0
+	if strings.TrimSpace(doc.Find(`meta[name="pageType"], meta[name="pagetype"]`).First().AttrOr("content", "")) == "1" {
+		return true
+	}
+	// Column pages reuse the informBox class on an empty sidebar decoration,
+	// so the class-based fallback only applies when the page has no article
+	// list container and a box actually carries local article links.
+	if doc.Find(".main_conRCb").Length() > 0 {
+		return false
+	}
+	return doc.Find(".new_inforBox, .informBox").FilterFunction(func(_ int, box *goquery.Selection) bool {
+		return box.Find("a[href*='info/']").Length() > 0
+	}).Length() > 0
 }
 
 func xczxHomepageItems(doc *goquery.Document, baseURL string) []model.NewsItem {

@@ -61,10 +61,14 @@ var wkjscColumnTypes = map[string]string{
 	"1024": "其他",
 }
 
-// wkjsc.swjtu.edu.cn has four explicit news lists on its home page and uses
-// the same news_ul1 list shell for every archive page. The generic parser only
-// knows news_ul, and its fallback cannot see the legacy fanye counter.
+// wkjsc.swjtu.edu.cn redesigned its column pages in October 2026: the legacy
+// news_ul1 shell remains on the home-nested lists, while bszn/gzzd/xzzx now
+// render ul.dt-ul rows and xsdt renders ul.cg-ul cards. The homepage itself
+// only mirrors the 重要通知 carousel, so it is not a news feed.
 func init() {
+	if site := AllSites["wkjsc"]; site != nil {
+		site.NoIndexFeed = true
+	}
 	registerAdapter("wkjsc", SiteAdapter{
 		SubPages:     wkjscSubPages,
 		ParseList:    parseAdapter_wkjscList,
@@ -77,10 +81,11 @@ func init() {
 
 var wkjscArticlePathRE = regexp.MustCompile(`(?i)^/info/\d+/\d+\.html?$`)
 var (
-	wkjscDateRE     = regexp.MustCompile(`(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})\s*日?`)
-	wkjscSourceRE   = regexp.MustCompile(`来源\s*[:：]?\s*(.*?)(?:\s+(?:编辑|浏览)\b|\])`)
-	wkjscColumnIDRE = regexp.MustCompile(`(?i)_jsq_\(\s*(\d+)`)
-	wkjscPageTypeRE = regexp.MustCompile(`(?i)^\s*3\s*$`)
+	wkjscDateRE      = regexp.MustCompile(`(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})\s*日?`)
+	wkjscSourceRE    = regexp.MustCompile(`来源\s*[:：]?\s*(.*?)(?:\s+(?:编辑|浏览)\b|\])`)
+	wkjscColumnIDRE  = regexp.MustCompile(`(?i)_jsq_\(\s*(\d+)`)
+	wkjscPageTypeRE  = regexp.MustCompile(`(?i)^\s*3\s*$`)
+	wkjscYearMonthRE = regexp.MustCompile(`^(20\d{2})\s*/\s*(\d{1,2})$`)
 )
 
 const wkjscSiteName = "西南交通大学文科建设处"
@@ -99,10 +104,7 @@ func parseAdapter_wkjscList(html []byte, baseURL string) ([]model.NewsItem, erro
 	items := make([]model.NewsItem, 0)
 	seen := make(map[string]int)
 	listShell := doc.Find("ul.news_ul, ul.news_ul1")
-	if listShell.Length() == 0 {
-		return nil, fmt.Errorf("wkjsc: response has no news_ul/news_ul1 list shell")
-	}
-	add := func(anchor *goquery.Selection, scope *goquery.Selection, typ string) {
+	add := func(anchor *goquery.Selection, scope *goquery.Selection, typ, title, date string) {
 		if anchor == nil || anchor.Length() == 0 {
 			return
 		}
@@ -112,7 +114,9 @@ func parseAdapter_wkjscList(html []byte, baseURL string) ([]model.NewsItem, erro
 			return
 		}
 
-		title := strings.TrimSpace(anchor.AttrOr("title", ""))
+		if title == "" {
+			title = strings.TrimSpace(anchor.AttrOr("title", ""))
+		}
 		if title == "" {
 			title = strings.TrimSpace(anchor.Text())
 		}
@@ -120,7 +124,9 @@ func parseAdapter_wkjscList(html []byte, baseURL string) ([]model.NewsItem, erro
 		if title == "" || !isValidNewsTitle(title) || len([]rune(title)) > 100 {
 			return
 		}
-		date := wkjscDate(scope)
+		if date == "" {
+			date = wkjscDate(scope)
+		}
 		if index, ok := seen[fullURL]; ok {
 			if items[index].Date == "" && date != "" {
 				items[index].Date = date
@@ -138,15 +144,69 @@ func parseAdapter_wkjscList(html []byte, baseURL string) ([]model.NewsItem, erro
 		})
 	}
 
-	// These lists are the source of truth for the page's four visible feeds.
-	doc.Find("ul.news_ul li, ul.news_ul1 li").Each(func(_ int, row *goquery.Selection) {
-		typ := wkjscFeedTypeForRow(row)
-		if typ == "" {
-			typ = wkjscListType(doc)
+	if listShell.Length() > 0 {
+		// These lists are the source of truth for the page's four visible feeds.
+		doc.Find("ul.news_ul li, ul.news_ul1 li").Each(func(_ int, row *goquery.Selection) {
+			typ := wkjscFeedTypeForRow(row)
+			if typ == "" {
+				typ = wkjscListType(doc)
+			}
+			add(row.Find("a[href]").First(), row, typ, "", "")
+		})
+		return items, nil
+	}
+
+	// The redesigned bszn/gzzd/xzzx columns render ul.dt-ul: a date badge
+	// (day plus a YYYY/MM span), a .dt-ul-tt title, and no legacy fanye text.
+	if doc.Find("ul.dt-ul").Length() > 0 {
+		typ := wkjscListType(doc)
+		doc.Find("ul.dt-ul > li").Each(func(_ int, row *goquery.Selection) {
+			anchor := row.Find("a[href]").First()
+			title := strings.Join(strings.Fields(row.Find(".dt-ul-tt").First().Text()), " ")
+			add(anchor, row, typ, title, wkjscDTUlDate(row))
+		})
+		if len(items) > 0 {
+			return items, nil
 		}
-		add(row.Find("a[href]").First(), row, typ)
-	})
-	return items, nil
+	}
+
+	// The xsdt column renders ul.cg-ul cards with a .cg-ul-date line and a
+	// .cg-ul-bottom-tt title.
+	if doc.Find("ul.cg-ul").Length() > 0 {
+		typ := wkjscListType(doc)
+		doc.Find("ul.cg-ul > li").Each(func(_ int, row *goquery.Selection) {
+			anchor := row.Find("a[href]").First()
+			title := strings.Join(strings.Fields(row.Find(".cg-ul-bottom-tt").First().Text()), " ")
+			date, _ := wkjscDateValues(row.Find(".cg-ul-date").First().Text())
+			add(anchor, row, typ, title, date)
+		})
+		if len(items) > 0 {
+			return items, nil
+		}
+	}
+
+	return nil, fmt.Errorf("wkjsc: response has no recognized list shell")
+}
+
+// wkjscDTUlDate parses the dt-ul date badge: a bare day number followed by a
+// YYYY/MM span, e.g. "22 2024/04" → 2024-04-22.
+func wkjscDTUlDate(row *goquery.Selection) string {
+	if row == nil || row.Length() == 0 {
+		return ""
+	}
+	badge := row.Find(".dt-ul-date").First()
+	if badge.Length() == 0 {
+		return ""
+	}
+	yearMonth := strings.TrimSpace(badge.Find("span").First().Text())
+	day := strings.TrimSpace(strings.Join(strings.Fields(badge.Text()), " "))
+	day = strings.TrimSpace(strings.TrimPrefix(day, yearMonth))
+	day = strings.TrimSpace(strings.TrimSuffix(day, yearMonth))
+	match := wkjscYearMonthRE.FindStringSubmatch(yearMonth)
+	if match == nil || day == "" {
+		return ""
+	}
+	return normalizeDateParts(match[1], match[2], day)
 }
 
 func wkjscFeedTypeForRow(row *goquery.Selection) string {
@@ -169,7 +229,7 @@ func wkjscListType(doc *goquery.Document) string {
 	if doc == nil {
 		return ""
 	}
-	for _, selector := range []string{"#div_title1", ".news_title", ".list-title", ".list_tit", ".title h2", ".title h3", ".ny-title", ".position h1", "h1", "h2"} {
+	for _, selector := range []string{"#div_title1", ".right-top-tt", ".news_title", ".list-title", ".list_tit", ".title h2", ".title h3", ".ny-title", ".position h1", "h1", "h2"} {
 		candidate := strings.Join(strings.Fields(doc.Find(selector).First().Text()), " ")
 		if typ := wkjscTypeLabel(candidate); typ != "" {
 			return typ
@@ -216,15 +276,43 @@ func wkjscTotalPages(slug string) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("wkjsc: parse first page for %s: %w", slug, err)
 	}
-	if doc.Find("ul.news_ul, ul.news_ul1").Length() == 0 {
+	if doc.Find("ul.news_ul, ul.news_ul1, ul.dt-ul, ul.cg-ul").Length() == 0 {
 		return 0, fmt.Errorf("wkjsc: %s is not a news list page", slug)
 	}
 	if total := wkjscPageCount(doc); total > 0 {
 		return total, nil
 	}
+	if total := wkjscModernPageCount(doc); total > 0 {
+		return total, nil
+	}
 	// A recognized list with p_no_d and no numbered link is a legitimate
 	// one-page feed, including the small bszn/gzzd/xzzx archives.
 	return 1, nil
+}
+
+var wkjscLastPageHrefRE = regexp.MustCompile(`(?i)/(\d+)\.html?$`)
+
+// wkjscModernPageCount derives the total from the 尾页 link of a redesigned
+// dt-ul/cg-ul page.  Reverse-boda numbering maps the last page to slug/N.htm
+// with N = total-1; a single-page list links 尾页 back to the unnumbered
+// first page and yields no match.
+func wkjscModernPageCount(doc *goquery.Document) int {
+	if doc == nil {
+		return 0
+	}
+	href := strings.TrimSpace(doc.Find("a:contains(尾页)").First().AttrOr("href", ""))
+	if href == "" {
+		return 0
+	}
+	match := wkjscLastPageHrefRE.FindStringSubmatch(href)
+	if match == nil {
+		return 0
+	}
+	last, err := strconv.Atoi(match[1])
+	if err != nil || last < 1 {
+		return 0
+	}
+	return last + 1
 }
 
 var wkjscPageCountRE = regexp.MustCompile(`(?:^|[^0-9])\d+\s*/\s*(\d+)(?:[^0-9]|$)`)
@@ -235,7 +323,6 @@ func wkjscPageCount(doc *goquery.Document) int {
 	}
 	for _, value := range []string{
 		strings.Join(strings.Fields(doc.Find("[id^='fanye'], .fanye, .p_pages, .paging, .page").Text()), " "),
-		doc.Text(),
 	} {
 		if match := wkjscPageCountRE.FindStringSubmatch(value); match != nil {
 			var total int

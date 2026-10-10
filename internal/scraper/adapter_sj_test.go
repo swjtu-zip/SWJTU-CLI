@@ -83,6 +83,71 @@ func TestSjReversePaginationAndListFields(t *testing.T) {
 	}
 }
 
+func TestSjHomepageSectionsParseAsIndexFeed(t *testing.T) {
+	// The homepage (pageType 1) exposes real article rows: the 审计动态 tab
+	// pane with split day/year dates and four 首页栏目 blocks that reuse the
+	// column-page list-cell/list-col row shapes under .index-news.
+	items, err := parseAdapter_sjList(readSJFixture(t, "sj_home_live.html"), sjFixtureBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 29 {
+		t.Fatalf("homepage items = %d, want 29: %#v", len(items), items)
+	}
+	counts := map[string]int{}
+	for _, item := range items {
+		counts[item.Type]++
+		if item.Date == "" || item.Title == "" {
+			t.Fatalf("incomplete item: %#v", item)
+		}
+		if !strings.HasPrefix(item.URL, sjFixtureBaseURL+"/info/") {
+			t.Fatalf("non-local item URL: %#v", item)
+		}
+	}
+	want := map[string]int{"审计动态": 5, "审计公告": 6, "支部建设": 6, "审计视野": 6, "政策法规": 6}
+	for typ, n := range want {
+		if counts[typ] != n {
+			t.Fatalf("section %q rows = %d, want %d: %#v", typ, counts[typ], n, items)
+		}
+	}
+	first := items[0]
+	if first.Title != "学校召开大型仪器设备使用与共享绩效评价工作启动会" || first.Date != "2026-06-02" {
+		t.Fatalf("split-date item = %#v", first)
+	}
+	if first.PublishedAt != "" {
+		t.Fatalf("date-only homepage item invented a clock: %#v", first)
+	}
+}
+
+func TestSjIndexFeedFetchesHomepage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/index.htm" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(readSJFixture(t, "sj_home_live.html"))
+	}))
+	defer server.Close()
+
+	site := AllSites["sj"]
+	oldBase, oldClient, oldNoCache := site.BaseURL, defaultClient, NoCache
+	site.BaseURL, defaultClient, NoCache = server.URL, server.Client(), true
+	ClearCache()
+	t.Cleanup(func() {
+		site.BaseURL, defaultClient, NoCache = oldBase, oldClient, oldNoCache
+		ClearCache()
+	})
+
+	if total, err := site.GetTotalPages("index"); err != nil || total != 1 {
+		t.Fatalf("index total = %d, err=%v", total, err)
+	}
+	items, err := site.ListNewsPage("index", 1)
+	if err != nil || len(items) != 29 {
+		t.Fatalf("index items = %d, err=%v", len(items), err)
+	}
+}
+
 func TestSjArticleUsesFixedMetadataAndDateOnly(t *testing.T) {
 	article, err := parseAdapter_sjArticle(readSJFixture(t, "sj_article.html"), sjFixtureBaseURL)
 	if err != nil {

@@ -195,6 +195,14 @@ func talentAppendItem(items *[]model.NewsItem, seen map[string]bool, anchor, row
 	if title == "" {
 		title = strings.TrimSpace(anchor.Find(".title, .line1, .line2, .news-title, h3, h4").First().Text())
 	}
+	if title == "" && row != nil && row.Length() > 0 {
+		// The current list template nests a second <a> inside the row's main
+		// anchor (the MORE+ and date links), so the HTML parser closes the
+		// outer anchor before the .title box and the title becomes the
+		// anchor's sibling. Fall back to the row before using anchor text,
+		// which would otherwise be just the split date ("01.14 2026").
+		title = strings.TrimSpace(row.Find(".title, .line1, .line2, .news-title, h3, h4").First().Text())
+	}
 	if title == "" {
 		title = strings.TrimSpace(anchor.Text())
 	}

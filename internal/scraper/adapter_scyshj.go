@@ -24,12 +24,13 @@ const (
 
 // These are the article lists exposed by the live navigation and its linked
 // sub-navigation.  yjygk/yjtd and scsjczxwyh/zzgc are profile/static pages;
-// the parent scsjczxwyh page is also only a navigation shell.
+// the parent scsjczxwyh page is also only a navigation shell.  zchj used to
+// list 政策汇集 articles but its column page now renders an empty list, so
+// the feed is no longer registered.
 var scyshjSubPages = []string{
 	"tzxw/tzgg",
 	"tzxw/xwdt",
 	"xsjl",
-	"zchj",
 	"dxal",
 	"scsjczxwyh/wygd",
 	"scsjczxwyh/hdly",
@@ -96,15 +97,25 @@ func parseAdapter_scyshjList(raw []byte, baseURL string) ([]model.NewsItem, erro
 	if !scyshjIsListDocument(doc) {
 		return nil, fmt.Errorf("scyshj: response is not a recognized article list")
 	}
+	// The portal homepage (pageType 1) repeats several column sections; only
+	// its rows carry usable types, so a missing document-wide type is fine
+	// there but still an error for the single-column list template.
+	portal := scyshjIsPortalListDocument(doc)
 	typ := scyshjDocumentType(doc, baseURL)
-	if typ == "" {
+	if typ == "" && !portal {
 		return nil, fmt.Errorf("scyshj: list type is missing")
 	}
 	rows := scyshjListRows(doc)
 	items := make([]model.NewsItem, 0, rows.Length())
 	seen := make(map[string]bool, rows.Length())
 	rows.Each(func(_ int, row *goquery.Selection) {
-		item, ok := scyshjNewsItem(row, baseURL, typ)
+		rowType := typ
+		if portal {
+			if sectionType := scyshjRowFeedType(row, baseURL); sectionType != "" {
+				rowType = sectionType
+			}
+		}
+		item, ok := scyshjNewsItem(row, baseURL, rowType)
 		if !ok || seen[item.URL] {
 			return
 		}
@@ -122,7 +133,7 @@ func parseAdapter_scyshjArticle(raw []byte, baseURL string) (*model.Article, err
 	if err != nil {
 		return nil, fmt.Errorf("scyshj parse article: %w", err)
 	}
-	if pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"], meta[name="pagetype"]`).Last().AttrOr("content", "")); pageType != "" && pageType != "3" {
+	if pageType := scyshjPageType(doc); pageType != "" && pageType != "3" {
 		return nil, fmt.Errorf("scyshj: response is not an article page (pageType=%q)", pageType)
 	}
 	titleSel := scyshjArticleTitle(doc)
@@ -186,18 +197,69 @@ func scyshjBlockedDocument(doc *goquery.Document) bool {
 	return false
 }
 
+func scyshjPageType(doc *goquery.Document) string {
+	if doc == nil {
+		return ""
+	}
+	return strings.TrimSpace(doc.Find(`meta[name="pageType"], meta[name="pagetype"]`).Last().AttrOr("content", ""))
+}
+
 func scyshjIsListDocument(doc *goquery.Document) bool {
 	if doc == nil || scyshjBlockedDocument(doc) {
 		return false
 	}
-	pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"], meta[name="pagetype"]`).Last().AttrOr("content", ""))
-	if pageType != "" && pageType != "2" {
+	pageType := scyshjPageType(doc)
+	if pageType != "" && pageType != "1" && pageType != "2" {
 		return false
 	}
 	if doc.Find(".main_conRCb, .dynamic_list, .new_list").Length() == 0 {
 		return false
 	}
 	return doc.Find("a[href*='info/']").Length() > 0
+}
+
+// scyshjIsPortalListDocument reports the homepage-style layout: a pageType 1
+// portal whose article rows are grouped into per-column sections. List pages
+// stay pageType 2; article pages are pageType 3 and rejected above.
+func scyshjIsPortalListDocument(doc *goquery.Document) bool {
+	if doc == nil {
+		return false
+	}
+	if scyshjPageType(doc) != "1" {
+		return false
+	}
+	if doc.Find(".main_conRCb, .dynamic_list, .new_list").Length() == 0 {
+		return false
+	}
+	return doc.Find("a[href*='info/']").Length() > 0
+}
+
+// scyshjRowFeedType resolves a portal row's column from the "more" link of its
+// own section. The document-wide breadcrumb walk would label every homepage
+// row with whichever nav slug happens to sort last.
+func scyshjRowFeedType(row *goquery.Selection, baseURL string) string {
+	if row == nil || row.Length() == 0 {
+		return ""
+	}
+	container := row.Closest("div.vsb-space, div.vsb-container")
+	if container.Length() == 0 {
+		return ""
+	}
+	bestSlug, bestType := "", ""
+	container.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
+		resolved := cleanURL(resolveURL(baseURL, stdhtml.UnescapeString(strings.TrimSpace(anchor.AttrOr("href", "")))))
+		parsed, err := url.Parse(resolved)
+		if err != nil {
+			return
+		}
+		path := strings.Trim(strings.TrimSpace(parsed.Path), "/")
+		for slug, typ := range scyshjFeedTypes {
+			if (path == slug+".htm" || path == slug+".html") && len(slug) > len(bestSlug) {
+				bestSlug, bestType = slug, typ
+			}
+		}
+	})
+	return bestType
 }
 
 func scyshjListRows(doc *goquery.Document) *goquery.Selection {
@@ -286,14 +348,14 @@ func scyshjDateValues(raw string) (string, string) {
 	return value[:10], value
 }
 
-func scyshjDocumentType(doc *goquery.Document, baseURL string) string {
-	if doc == nil {
+// scyshjFeedTypeInSelection returns the longest feed slug linked inside the
+// given selection, mapping the link to its human-readable column name.
+func scyshjFeedTypeInSelection(sel *goquery.Selection, baseURL string) string {
+	if sel == nil || sel.Length() == 0 {
 		return ""
 	}
-	// A breadcrumb link to a known feed is the most reliable source and works
-	// on both list and article pages, including pages without a current class.
 	bestSlug, bestType := "", ""
-	doc.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
+	sel.Find("a[href]").Each(func(_ int, anchor *goquery.Selection) {
 		resolved := cleanURL(resolveURL(baseURL, stdhtml.UnescapeString(strings.TrimSpace(anchor.AttrOr("href", "")))))
 		parsed, err := url.Parse(resolved)
 		if err != nil {
@@ -306,8 +368,25 @@ func scyshjDocumentType(doc *goquery.Document, baseURL string) string {
 			}
 		}
 	})
-	if bestType != "" {
-		return bestType
+	return bestType
+}
+
+func scyshjDocumentType(doc *goquery.Document, baseURL string) string {
+	if doc == nil {
+		return ""
+	}
+	// A breadcrumb link to a known feed is the most reliable source and works
+	// on both list and article pages, including pages without a current class.
+	// The nav menu also links every feed slug, so matching document-wide first
+	// would label an 通知公告 article as 委员观点; scope the lookup to the
+	// breadcrumb containers and only then fall back to the whole document.
+	for _, selector := range []string{".main_titT", ".main_conLT", ".breadcrumb", ".location", ".loaction"} {
+		if value := scyshjFeedTypeInSelection(doc.Find(selector).First(), baseURL); value != "" {
+			return value
+		}
+	}
+	if value := scyshjFeedTypeInSelection(doc.Selection, baseURL); value != "" {
+		return value
 	}
 	for _, selector := range []string{
 		".main_conLT a.cur", ".main_conLT .cur", ".main_titT a.cur",
@@ -358,6 +437,12 @@ func scyshjTotalPages(slug string) (int, error) {
 			lastErr = fmt.Errorf("scyshj: %s is not an article list", slug)
 			continue
 		}
+		if strings.Trim(slug, "/") == "index" {
+			// The portal homepage is a single preview page. The fallback
+			// counter below scans the raw HTML and would misread the
+			// "05/30"-style ticker dates as a "/30" page count.
+			return 1, nil
+		}
 		if total := scyshjTotalPagesFromHTML(body); total > 0 {
 			return total, nil
 		}
@@ -397,7 +482,8 @@ func scyshjTotalPagesFromHTML(raw []byte) int {
 func scyshjArticleTitle(doc *goquery.Document) *goquery.Selection {
 	for _, selector := range []string{
 		".article h1", ".article h2", ".article h3", ".art-tit h1", ".art-tit h2",
-		".art-tit h3", "h1.news_tit", ".news_tit", ".article-title", ".arti-title", "h1",
+		".art-tit h3", "h1.news_tit", ".news_tit", ".article-title", ".arti-title",
+		".main_contit h1", ".main_contit h2", ".main_contit h3", "h1",
 	} {
 		if selection := doc.Find(selector).First(); selection.Length() > 0 && strings.TrimSpace(selection.Text()) != "" {
 			return selection
@@ -424,7 +510,7 @@ func scyshjArticleMeta(doc *goquery.Document) string {
 	for _, selector := range []string{
 		".article .news_source", ".article .source", ".article .article-source",
 		".article .article-info", ".news_source", ".articleAuthor", ".article-sm",
-		".art-info", ".source", ".article-info",
+		".art-info", ".source", ".article-info", ".main_contit p", ".main_contit",
 	} {
 		doc.Find(selector).Each(func(_ int, sel *goquery.Selection) {
 			value := strings.Join(strings.Fields(sel.Text()), " ")

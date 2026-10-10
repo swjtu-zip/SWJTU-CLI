@@ -3,6 +3,8 @@ package scraper
 import (
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 	"path"
 	"regexp"
@@ -27,6 +29,7 @@ func init() {
 		PageURL:      scaiPageURL,
 		ListPage:     scaiListPage,
 		TotalPages:   scaiTotalPages,
+		FetchArticle: scaiFetchArticle,
 	})
 }
 
@@ -682,6 +685,110 @@ func parseScaiArticle(html []byte, baseURL string) (*model.Article, error) {
 	}
 	article.Content, article.ContentHTML, article.Images, article.Attachments = scaiArticleContent(doc, baseURL)
 	return article, nil
+}
+
+// scaiFetchArticle owns the detail fetch because the origin now answers some
+// nid URLs with a 302 to the site that actually hosts the article — the
+// university news site (博达 template) or jwc's vatuu platform. The shared
+// fetch would follow the redirect and then hand the foreign markup to
+// parseScaiArticle, so the resolved host picks the parser here. Same-host
+// responses keep the scai parser, including its WAF/unavailable guards.
+func scaiFetchArticle(articleURL string) (*model.Article, []byte, error) {
+	baseURL := scaiSiteBaseURL()
+	canonical, ok := scaiArticleURL(baseURL, articleURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("scai: refusing non-local or non-detail URL %q", articleURL)
+	}
+	body, finalURL, err := scaiFetchDetail(canonical)
+	if err != nil {
+		return nil, nil, err
+	}
+	target, delegated, err := scaiDelegatedArticleSite(finalURL, baseURL)
+	if err != nil {
+		return nil, body, err
+	}
+	if delegated {
+		parse := parseBodaArticle
+		if target.ParseArticleFunc != nil {
+			parse = target.ParseArticleFunc
+		}
+		article, err := parse(body, target.BaseURL)
+		if err != nil {
+			return nil, body, fmt.Errorf("scai: parse redirected article %s: %w", finalURL, err)
+		}
+		return article, body, nil
+	}
+	article, err := parseScaiArticle(body, baseURL)
+	if err != nil {
+		return nil, body, err
+	}
+	return article, body, nil
+}
+
+func scaiSiteBaseURL() string {
+	if site := AllSites["scai"]; site != nil && strings.TrimSpace(site.BaseURL) != "" {
+		return strings.TrimRight(strings.TrimSpace(site.BaseURL), "/")
+	}
+	return "https://scai.swjtu.edu.cn"
+}
+
+// scaiFetchDetail follows redirects like the shared fetch but also reports
+// the final URL, which decides which parser owns the response. Article fetches
+// happen once per sync, so skipping the body cache here is cheaper than
+// risking a stale cache key hiding a redirect.
+func scaiFetchDetail(rawURL string) ([]byte, string, error) {
+	req, err := http.NewRequest(http.MethodGet, rawURL, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("scai: create article request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+
+	resp, err := defaultClient.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("scai: fetch article %s: %w", rawURL, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, "", fmt.Errorf("scai: fetch article %s: status %d", rawURL, resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, "", fmt.Errorf("scai: read article %s: %w", rawURL, err)
+	}
+	finalURL := rawURL
+	if resp.Request != nil && resp.Request.URL != nil {
+		finalURL = resp.Request.URL.String()
+	}
+	return body, finalURL, nil
+}
+
+// scaiDelegatedArticleSite maps the post-redirect URL to the site adapter that
+// owns its template. A same-host final URL is not delegated; an unrecognized
+// host is an explicit error instead of a misleading "no detail surface".
+func scaiDelegatedArticleSite(rawURL, scaiBaseURL string) (*BodaSite, bool, error) {
+	parsed, err := url.Parse(rawURL)
+	if err != nil || parsed.Hostname() == "" {
+		return nil, false, fmt.Errorf("scai: unparseable article URL %q", rawURL)
+	}
+	base, err := url.Parse(scaiBaseURL)
+	if err != nil || base.Hostname() == "" {
+		return nil, false, fmt.Errorf("scai: unparseable site base URL %q", scaiBaseURL)
+	}
+	if strings.EqualFold(parsed.Hostname(), base.Hostname()) {
+		return nil, false, nil
+	}
+	for _, site := range AllSites {
+		siteBase, siteErr := url.Parse(site.BaseURL)
+		if siteErr == nil && siteBase.Hostname() != "" && strings.EqualFold(parsed.Hostname(), siteBase.Hostname()) {
+			return site, true, nil
+		}
+	}
+	if newsBase, newsErr := url.Parse(NewsSite.BaseURL); newsErr == nil && strings.EqualFold(parsed.Hostname(), newsBase.Hostname()) {
+		return NewsSite, true, nil
+	}
+	return nil, false, fmt.Errorf("scai: article redirected to unrecognized host %q", parsed.Host)
 }
 
 func scaiHasArticleDetailSurface(doc *goquery.Document) bool {

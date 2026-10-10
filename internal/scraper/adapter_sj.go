@@ -7,6 +7,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -35,6 +36,11 @@ func init() {
 	})
 }
 
+var (
+	sjHomeYearMonthRE = regexp.MustCompile(`(20\d{2})\s*[./-]\s*(\d{1,2})`)
+	sjHomeDayRE       = regexp.MustCompile(`\d{1,2}`)
+)
+
 func parseAdapter_sjList(html []byte, baseURL string) ([]model.NewsItem, error) {
 	if err := sjResponseError(html); err != nil {
 		return nil, err
@@ -44,6 +50,13 @@ func parseAdapter_sjList(html []byte, baseURL string) ([]model.NewsItem, error) 
 		return nil, fmt.Errorf("sj: parse list: %w", err)
 	}
 	pageType := strings.TrimSpace(doc.Find(`meta[name="pageType"], meta[name="pagetype"]`).First().AttrOr("content", ""))
+	if pageType == "1" {
+		items := sjHomepageItems(doc, baseURL)
+		if len(items) == 0 {
+			return nil, fmt.Errorf("sj: homepage contains no article entries")
+		}
+		return items, nil
+	}
 	if pageType != "2" {
 		return nil, fmt.Errorf("sj: response is not an article list (pageType %q)", pageType)
 	}
@@ -55,26 +68,66 @@ func parseAdapter_sjList(html []byte, baseURL string) ([]model.NewsItem, error) 
 	items := make([]model.NewsItem, 0, rows.Length())
 	seen := make(map[string]bool, rows.Length())
 	rows.Each(func(_ int, row *goquery.Selection) {
-		anchor := row.Find(".list-cell-tt, .list-col-tt, a[href]").First()
-		if anchor.Length() == 0 {
-			return
-		}
-		fullURL := cleanURL(resolveURL(baseURL, anchor.AttrOr("href", "")))
-		if !isValidSiteNewsURL(fullURL, baseURL) || seen[fullURL] {
-			return
-		}
-		title := cleanTitle(strings.TrimSpace(anchor.AttrOr("title", "")))
-		if title == "" {
-			title = cleanTitle(anchor.Text())
-		}
-		if title == "" || !isValidNewsTitle(title) {
-			return
-		}
-		date, publishedAt := sjDateValues(row.Find(".list-time, .list-col-time, time, .date, .time").First().Text())
-		seen[fullURL] = true
-		items = append(items, model.NewsItem{Title: title, URL: fullURL, Date: date, PublishedAt: publishedAt, Type: typ, ParsedAt: time.Now()})
+		sjAppendListItem(&items, seen, row, typ, baseURL)
 	})
 	return items, nil
+}
+
+// The homepage (pageType 1) renders the same row shapes as the column pages
+// but scopes them per section: the 审计动态 tab pane uses index-tabs-cell
+// rows with a split day/year date, and each 首页栏目 block keeps its own
+// list-head. The swiper banner and the 服务指南 column cards are not feeds.
+func sjHomepageItems(doc *goquery.Document, baseURL string) []model.NewsItem {
+	items := make([]model.NewsItem, 0)
+	seen := make(map[string]bool)
+	newsTab := strings.TrimSpace(doc.Find(`ul[role="tablist"] .active a`).First().Text())
+	doc.Find(".index_grid .index-tabs-cell").Each(func(_ int, row *goquery.Selection) {
+		sjAppendListItem(&items, seen, row, newsTab, baseURL)
+	})
+	doc.Find(".index-news .list-cell, .index-news .list-box .list-col").Each(func(_ int, row *goquery.Selection) {
+		typ := strings.TrimSpace(row.Closest(".index-tell").Find(".list-head p").First().Text())
+		sjAppendListItem(&items, seen, row, typ, baseURL)
+	})
+	return items
+}
+
+func sjAppendListItem(items *[]model.NewsItem, seen map[string]bool, row *goquery.Selection, typ, baseURL string) {
+	anchor := row.Find(".list-cell-tt, .list-col-tt, .index-tabs-tt, a[href]").First()
+	if anchor.Length() == 0 {
+		return
+	}
+	fullURL := cleanURL(resolveURL(baseURL, anchor.AttrOr("href", "")))
+	if !isValidSiteNewsURL(fullURL, baseURL) || seen[fullURL] {
+		return
+	}
+	title := cleanTitle(strings.TrimSpace(anchor.AttrOr("title", "")))
+	if title == "" {
+		title = cleanTitle(anchor.Text())
+	}
+	if title == "" || !isValidNewsTitle(title) {
+		return
+	}
+	date, publishedAt := sjDateValues(row.Find(".list-time, .list-col-time, time, .date, .time").First().Text())
+	if date == "" {
+		date, publishedAt = sjSplitHomeDate(row)
+	}
+	seen[fullURL] = true
+	*items = append(*items, model.NewsItem{Title: title, URL: fullURL, Date: date, PublishedAt: publishedAt, Type: typ, ParsedAt: time.Now()})
+}
+
+// sjSplitHomeDate combines the homepage's split date boxes
+// (index-tabs-day "02" + index-tabs-year "2026.06").
+func sjSplitHomeDate(row *goquery.Selection) (string, string) {
+	if row == nil || row.Length() == 0 {
+		return "", ""
+	}
+	match := sjHomeYearMonthRE.FindStringSubmatch(strings.TrimSpace(row.Find(".index-tabs-year").First().Text()))
+	day := sjHomeDayRE.FindString(strings.TrimSpace(row.Find(".index-tabs-day").First().Text()))
+	if match == nil || day == "" {
+		return "", ""
+	}
+	date := normalizeDateParts(match[1], match[2], day)
+	return date, ""
 }
 
 func parseAdapter_sjArticle(html []byte, baseURL string) (*model.Article, error) {

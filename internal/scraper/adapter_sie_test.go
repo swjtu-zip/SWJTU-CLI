@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -35,6 +36,47 @@ func TestSieAdapterRegistrationAndAuditedRoutes(t *testing.T) {
 		if sieIsKnownSubPage(excluded) {
 			t.Errorf("static, empty, or external route was registered: %q", excluded)
 		}
+	}
+}
+
+func TestSieIndexRouteServesHomepageArticles(t *testing.T) {
+	// The homepage renders its 新闻中心/通知公告 blocks as real article rows,
+	// so the implicit index feed has a one-page route backed by index.htm.
+	if got := siePageURL(sieCanonicalBaseURL, "index", 1, 0, ".htm"); got != sieCanonicalBaseURL+"/index.htm" {
+		t.Fatalf("index page 1 URL = %q", got)
+	}
+	if got := siePageURL(sieCanonicalBaseURL, "index", 2, 2, ".htm"); got != "" {
+		t.Fatalf("index page 2 URL = %q", got)
+	}
+	if total, err := sieTotalPages("index"); err != nil || total != 1 {
+		t.Fatalf("index total = %d, err=%v", total, err)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/index.htm" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(readSieFixture(t, "sie.html"))
+	}))
+	defer server.Close()
+
+	site := AllSites["sie"]
+	oldBase, oldClient, oldNoCache := site.BaseURL, defaultClient, NoCache
+	site.BaseURL, defaultClient, NoCache = server.URL, server.Client(), true
+	ClearCache()
+	t.Cleanup(func() {
+		site.BaseURL, defaultClient, NoCache = oldBase, oldClient, oldNoCache
+		ClearCache()
+	})
+
+	items, err := site.ListNewsPage("index", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 7 {
+		t.Fatalf("index items = %#v", items)
 	}
 }
 
