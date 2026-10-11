@@ -164,3 +164,48 @@ func TestNewsParsersRejectHomepageShell(t *testing.T) {
 		t.Fatal("homepage shell was accepted as an article")
 	}
 }
+
+func TestNewsListParserSkipsFileResourceAndExternalRows(t *testing.T) {
+	html := loadTestHTML("news_list_file_rows.html")
+	items, err := parseAdapter_newsList(html, "https://news.swjtu.edu.cn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("got %d list items, want only the real articles: %#v", len(items), items)
+	}
+	for _, item := range items {
+		if strings.Contains(item.URL, "xgservice") || strings.Contains(item.URL, "getfile") || isNewsFileResourceURL(item.URL) {
+			t.Fatalf("file resource row became a feed item: %#v", item)
+		}
+		if isExternalURL(item.URL, "https://news.swjtu.edu.cn") {
+			t.Fatalf("external media row became a feed item: %#v", item)
+		}
+	}
+	if items[0].Title != "关于举办先进事迹报告会的通知" || items[1].Title != "西南交大学子暑期在全国体育赛事中斩获佳绩" {
+		t.Fatalf("wrong rows survived: %#v", items)
+	}
+}
+
+func TestNewsFileResourcePredicateMatchesOnlyFileURLs(t *testing.T) {
+	blocked := []string{
+		"https://xgservice.swjtu.edu.cn/service/uploadserver/down/getfile?file=files/a/1.pdf&name=流程.pdf",
+		"https://xgservice.swjtu.edu.cn/service/uploadserver/files/notice/guide.docx",
+		"https://news.swjtu.edu.cn/system/_content/download.jsp?urltype=news.DownloadAttachUrl&owner=1&wbfileid=abc",
+		"https://xgservice.swjtu.edu.cn/service/uploadserver/down/file.zip",
+	}
+	for _, href := range blocked {
+		if !isNewsFileResourceURL(href) {
+			t.Errorf("file resource URL was not recognized: %q", href)
+		}
+	}
+	allowed := []string{
+		"https://news.swjtu.edu.cn/info/1020/202676.htm",
+		"https://news.swjtu.edu.cn/info/1020/198746.htm?e=.pdf",
+	}
+	for _, href := range allowed {
+		if isNewsFileResourceURL(href) {
+			t.Errorf("article URL was mistaken for a file resource: %q", href)
+		}
+	}
+}

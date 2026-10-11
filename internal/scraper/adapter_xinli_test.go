@@ -543,3 +543,40 @@ func TestXinliArticleUsesDetailTitleInsteadOfSectionHeading(t *testing.T) {
 		t.Fatalf("article content was not extracted: %q", article.Content)
 	}
 }
+
+func TestXinliIndexFeedListsHomepage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/index.htm" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(loadXinliFixture(t, "xinli_home_live.html"))
+	}))
+	defer server.Close()
+
+	site := AllSites["xinli"]
+	oldBase, oldClient, oldNoCache := site.BaseURL, defaultClient, NoCache
+	site.BaseURL, defaultClient, NoCache = server.URL, server.Client(), true
+	ClearCache()
+	t.Cleanup(func() {
+		site.BaseURL, defaultClient, NoCache = oldBase, oldClient, oldNoCache
+		ClearCache()
+	})
+
+	items, err := site.ListNewsPage("index", 1)
+	if err != nil || len(items) == 0 {
+		t.Fatalf("index items = %d, err=%v", len(items), err)
+	}
+	for _, item := range items {
+		if !strings.HasPrefix(item.URL, server.URL+"/info/") {
+			t.Fatalf("non-local index item: %#v", item)
+		}
+	}
+	if total, err := site.GetTotalPages("index"); err != nil || total != 1 {
+		t.Fatalf("index total = %d, err=%v", total, err)
+	}
+	if _, err := site.ListNewsPage("index", 2); err == nil {
+		t.Fatal("index page 2 was accepted")
+	}
+}

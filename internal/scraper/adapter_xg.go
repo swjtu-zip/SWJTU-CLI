@@ -14,8 +14,11 @@ import (
 
 // xg is a separate ASP/Vue-style application mounted below /web. These are
 // the real list endpoints exposed by its current navigation. Static profile
-// pages (InfoShow/InstitutionSetting) are not feeds; File/DownloadList is
-// retained because its rows are the public downloadable resources.
+// pages (InfoShow/InstitutionSetting) are not feeds. The three 学生服务
+// download endpoints (办事流程/规章制度/表格下载) are deliberately absent:
+// their rows are direct xgservice getfile links to .doc/.pdf files, not
+// article pages, and every round fetched them as articles and failed. The
+// 规章制度 page now even requires a CAS login.
 var xgSubPages = []string{
 	"Home/PushNewsList?Lmk7LJw34Jmu=010j.shtml",
 	"Home/NewsList?LJw34Jmu=011e.shtml",
@@ -24,14 +27,10 @@ var xgSubPages = []string{
 	"Home/NewsList?xvw34vmu=010e.shtml",
 	"Publicity/List",
 	"Home/TroupeActive",
-	"File/DownloadList?LJw34Jmu=010c0d.shtml",
-	"Home/DTNewsList?LJw34Jmu=010c01.shtml",
-	"File/DownloadList?LJw34Jmu=010c0c.shtml",
 }
 
 type xgFeedSpec struct {
-	typ   string
-	files bool
+	typ string
 }
 
 var xgFeeds = map[string]xgFeedSpec{
@@ -42,9 +41,6 @@ var xgFeeds = map[string]xgFeedSpec{
 	"Home/NewsList?xvw34vmu=010e.shtml":                {typ: "学工之家"},
 	"Publicity/List":                                   {typ: "公示"},
 	"Home/TroupeActive":                                {typ: "学生活动"},
-	"File/DownloadList?LJw34Jmu=010c0d.shtml":          {typ: "办事流程", files: true},
-	"Home/DTNewsList?LJw34Jmu=010c01.shtml":            {typ: "规章制度", files: true},
-	"File/DownloadList?LJw34Jmu=010c0c.shtml":          {typ: "表格下载", files: true},
 }
 
 var (
@@ -56,6 +52,7 @@ var (
 	xgRecordCountRE = regexp.MustCompile(`总共有\s*(\d+)\s*条记录`)
 	xgLabelSourceRE = regexp.MustCompile(`(?:信息来源|来源)\s*[:：]\s*([^\s，。；;]+)`)
 	xgLabelTypeRE   = regexp.MustCompile(`(?:栏目|类型|类别|分类)\s*[:：]\s*([^\s，。；;]+)`)
+	xgOnclickHrefRE = regexp.MustCompile(`window\.location\.href\s*=\s*['"]([^'"]+)['"]`)
 )
 
 func init() {
@@ -228,6 +225,18 @@ func xgParseListHTML(raw []byte, baseURL, typ string) ([]model.NewsItem, error) 
 	items := make([]model.NewsItem, 0)
 	seen := make(map[string]bool)
 	recognized := false
+	// 菁华岁月 renders its photo galleries as ul.video-list cards whose rows
+	// carry the detail URL in an onclick handler instead of an anchor href.
+	if rows := doc.Find("ul.video-list > li"); rows.Length() > 0 {
+		recognized = true
+		rows.Each(func(_ int, row *goquery.Selection) {
+			match := xgOnclickHrefRE.FindStringSubmatch(row.AttrOr("onclick", ""))
+			if match == nil {
+				return
+			}
+			xgAppendOnclickListItem(&items, seen, row, match[1], typ, baseURL)
+		})
+	}
 	for _, selector := range []string{".block-ctxlist", ".block-list", ".news-list", ".list-item", ".activity-list", ".publicity-list"} {
 		blocks := doc.Find(selector)
 		if blocks.Length() == 0 {
@@ -249,7 +258,7 @@ func xgParseListHTML(raw []byte, baseURL, typ string) ([]model.NewsItem, error) 
 	// detail endpoint, never to arbitrary info/ links in the shell.
 	if !recognized {
 		links := doc.Find("a[href]").FilterFunction(func(_ int, link *goquery.Selection) bool {
-			return xgIsDetailURL(cleanURL(resolveURL(baseURL, link.AttrOr("href", "")))) || xgIsFileURL(cleanURL(resolveURL(baseURL, link.AttrOr("href", ""))))
+			return xgIsDetailURL(cleanURL(resolveURL(baseURL, link.AttrOr("href", ""))))
 		})
 		if links.Length() > 0 {
 			recognized = true
@@ -262,6 +271,32 @@ func xgParseListHTML(raw []byte, baseURL, typ string) ([]model.NewsItem, error) 
 		return nil, fmt.Errorf("xg: response has no dynamic list container")
 	}
 	return items, nil
+}
+
+// xgAppendOnclickListItem mirrors xgAppendListItem for the 菁华岁月 card rows,
+// whose URL lives in the row onclick rather than in an anchor href.
+func xgAppendOnclickListItem(items *[]model.NewsItem, seen map[string]bool, row *goquery.Selection, href, typ, baseURL string) {
+	if row == nil || row.Length() == 0 {
+		return
+	}
+	fullURL := cleanURL(resolveURL(baseURL, strings.TrimSpace(href)))
+	if href == "" || seen[fullURL] || !xgIsDetailURL(fullURL) {
+		return
+	}
+	title := strings.TrimSpace(row.AttrOr("title", ""))
+	if title == "" {
+		title = strings.TrimSpace(row.Find(".des-line span").First().Text())
+	}
+	if title == "" {
+		title = strings.TrimSpace(row.Text())
+	}
+	title = cleanTitle(title)
+	if title == "" || !isValidNewsTitle(title) || len([]rune(title)) > 240 {
+		return
+	}
+	date, publishedAt := xgRowDate(row)
+	seen[fullURL] = true
+	*items = append(*items, model.NewsItem{Title: title, URL: fullURL, Date: date, PublishedAt: publishedAt, Type: typ, ParsedAt: time.Now()})
 }
 
 func xgListRow(link, fallback *goquery.Selection) *goquery.Selection {
@@ -285,7 +320,10 @@ func xgAppendListItem(items *[]model.NewsItem, seen map[string]bool, link, row *
 	}
 	href := strings.TrimSpace(link.AttrOr("href", ""))
 	fullURL := cleanURL(resolveURL(baseURL, href))
-	if href == "" || seen[fullURL] || (!xgIsDetailURL(fullURL) && !xgIsFileURL(fullURL)) {
+	// getfile rows are downloadable resources, not articles; swjtu-archive
+	// fetches every feed item as an article, so file links must never become
+	// feed items (they failed every sync round as "no article shell").
+	if href == "" || seen[fullURL] || !xgIsDetailURL(fullURL) {
 		return
 	}
 	title := strings.TrimSpace(link.AttrOr("title", ""))
@@ -296,14 +334,7 @@ func xgAppendListItem(items *[]model.NewsItem, seen map[string]bool, link, row *
 		title = strings.TrimSpace(link.Text())
 	}
 	title = cleanTitle(title)
-	if xgIsFileURL(fullURL) {
-		if title == "" || xgIsDownloadLabel(title) {
-			title = xgFileName(link, fullURL)
-		}
-	} else if title == "" || !isValidNewsTitle(title) {
-		return
-	}
-	if title == "" || len([]rune(title)) > 240 {
+	if title == "" || !isValidNewsTitle(title) || len([]rune(title)) > 240 {
 		return
 	}
 	date, publishedAt := xgRowDate(row)
@@ -312,15 +343,6 @@ func xgAppendListItem(items *[]model.NewsItem, seen map[string]bool, link, row *
 	}
 	seen[fullURL] = true
 	*items = append(*items, model.NewsItem{Title: title, URL: fullURL, Date: date, PublishedAt: publishedAt, Type: typ, ParsedAt: time.Now()})
-}
-
-func xgIsDownloadLabel(value string) bool {
-	switch strings.TrimSpace(value) {
-	case "下载", "点击下载", "下载附件", "附件", "查看", "打开":
-		return true
-	default:
-		return false
-	}
 }
 
 func xgFileName(link *goquery.Selection, fullURL string) string {
@@ -404,7 +426,7 @@ func xgPageCount(doc *goquery.Document) int {
 		// is a valid one-page result; do not infer multiple pages from row count.
 		return 1
 	}
-	if doc.Find(".block-ctxlist, .block-list, .news-list, .list-item, .activity-list, .publicity-list").Length() > 0 {
+	if doc.Find(".block-ctxlist, .block-list, .news-list, .list-item, .activity-list, .publicity-list, ul.video-list").Length() > 0 {
 		return 1
 	}
 	return 0

@@ -1,6 +1,8 @@
 package scraper
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -72,5 +74,37 @@ func TestXunchaDetailLiveFixtureUsesFixedMetadataAndBody(t *testing.T) {
 func TestXunchaRejectsEmptyParentShell(t *testing.T) {
 	if _, err := parseAdapter_xunchaList(xunchaFixture(t, "xuncha_empty_parent_live.html"), xunchaCanonicalBaseURL); err == nil {
 		t.Fatal("empty jyjl parent shell was accepted as an article list")
+	}
+}
+
+func TestXunchaIndexFeedListsHomepage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/index.htm" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(xunchaFixture(t, "xuncha_home_live.html"))
+	}))
+	defer server.Close()
+
+	site := AllSites["xuncha"]
+	oldBase, oldClient, oldNoCache := site.BaseURL, defaultClient, NoCache
+	site.BaseURL, defaultClient, NoCache = server.URL, server.Client(), true
+	ClearCache()
+	t.Cleanup(func() {
+		site.BaseURL, defaultClient, NoCache = oldBase, oldClient, oldNoCache
+		ClearCache()
+	})
+
+	items, err := site.ListNewsPage("index", 1)
+	if err != nil || len(items) != 23 {
+		t.Fatalf("index items = %d, err=%v", len(items), err)
+	}
+	if total, err := site.GetTotalPages("index"); err != nil || total != 1 {
+		t.Fatalf("index total = %d, err=%v", total, err)
+	}
+	if _, err := site.ListNewsPage("index", 2); err == nil {
+		t.Fatal("index page 2 was accepted")
 	}
 }

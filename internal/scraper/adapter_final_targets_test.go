@@ -22,7 +22,9 @@ func TestFinalTargetAdaptersExposeAuditedFeeds(t *testing.T) {
 		"wkjsc":  {"tzgg", "wkxw", "xsdt", "wkpt", "gzzd", "gzzd/gj", "gzzd/jyb", "gzzd/qt", "xzzx", "xzzx/gj", "xzzx/jyb", "xzzx/qt", "bszn"},
 		"xb":     {"xxfb/tzgg", "xxfb/xwdt", "cyxz", "fwzn/gflc", "fwzn/glwj", "zdgf/bgswj", "zdgf/xjwj"},
 		"xczx":   {"tzxw/tzgg", "tzxw/xwdt"},
-		"xg":     xgSubPages,
+		"xg": {"Home/PushNewsList?Lmk7LJw34Jmu=010j.shtml", "Home/NewsList?LJw34Jmu=011e.shtml",
+			"Home/NewsList?LJw34Jmu=011c_8kL82P8kl=lzm4.shtml", "Home/ColourfulCollegeNewsList",
+			"Home/NewsList?xvw34vmu=010e.shtml", "Publicity/List", "Home/TroupeActive"},
 		"xgh":    {"xwzx1", "tzgg", "jcdt", "jgfc", "szyl", "ghdj", "gzzd", "hdyx1", "bszn", "xzzx"},
 		"xuncha": {"gzdt", "sjjs", "xxgongkai", "zcfg", "zcfg/tlztxx", "zcfg/dnfg", "zcfg/xxzd", "zyjh", "jyjl/tszs"},
 		"xyb":    {"xwdt1", "xwdt1/djgz", "xwdt1/tzgg", "xwdt1/xwzx", "xwdt1/xwzx/jj", "xwdt1/xwzx/xy", "xyzh/xyfc"},
@@ -260,8 +262,8 @@ func TestXGDynamicListPaginationDetailAndFileRows(t *testing.T) {
 	}
 
 	fileItems, err := parseAdapter_xgList([]byte(`<div class="block-list"><a href="/service/uploadserver/down/getfile?file=abc&amp;name=表格.xlsx">下载</a></div>`), site.BaseURL)
-	if err != nil || len(fileItems) != 1 || fileItems[0].Title != "表格.xlsx" {
-		t.Fatalf("file list = items=%#v err=%v", fileItems, err)
+	if err != nil || len(fileItems) != 0 {
+		t.Fatalf("getfile rows must not become feed items: items=%#v err=%v", fileItems, err)
 	}
 
 	articleURL := serverURL + "/web/Home/Detail?id=1"

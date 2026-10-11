@@ -277,3 +277,33 @@ func TestXybResourceGuardsRequireStatusTypeAndMagic(t *testing.T) {
 		}
 	}
 }
+
+func TestXybXyfcCardGridListParsesLocalArticles(t *testing.T) {
+	// xyzh/xyfc redesigned from a .list_con row list into a div.tpfylist
+	// card grid; the ul.list_consss sidebar must stay excluded.
+	items, err := parseAdapter_xybList(readXybFixture(t, "xyb_list_xyfc_live.html"), xybTestBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) == 0 {
+		t.Fatal("xyfc card grid yielded no items")
+	}
+	for _, item := range items {
+		if item.Type != "校友风采" {
+			t.Fatalf("xyfc item has wrong type: %#v", item)
+		}
+		if !strings.HasPrefix(item.URL, xybTestBaseURL+"/info/") {
+			t.Fatalf("non-local item URL leaked: %#v", item)
+		}
+		if strings.Contains(item.Title, "推荐") {
+			t.Fatalf("sidebar item leaked into the feed: %#v", item)
+		}
+	}
+	seen := make(map[string]bool)
+	for _, item := range items {
+		if seen[item.URL] {
+			t.Fatalf("duplicate card URL: %#v", item)
+		}
+		seen[item.URL] = true
+	}
+}

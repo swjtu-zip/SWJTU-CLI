@@ -128,3 +128,44 @@ func TestXGColourfulCollegeDetailIsAFetchableArticle(t *testing.T) {
 		t.Fatal("article body is empty")
 	}
 }
+
+func TestXGJinghuaVideoListParsesOnclickCards(t *testing.T) {
+	// 菁华岁月 renders graduation-photo galleries as ul.video-list cards
+	// whose rows carry the detail URL in an onclick handler, not in an
+	// anchor href.
+	items, err := xgParseListHTML(readXGFixture(t, "xg_jh_list_live.html"), "https://xg.swjtu.edu.cn/web", "菁华岁月")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 14 {
+		t.Fatalf("video list items = %d, want 14: %#v", len(items), items)
+	}
+	for _, item := range items {
+		if item.Type != "菁华岁月" || item.Title == "" {
+			t.Fatalf("incomplete item: %#v", item)
+		}
+		if !xgIsDetailURL(item.URL) {
+			t.Fatalf("non-detail URL leaked: %#v", item)
+		}
+	}
+	if _, ok := xgFeedSpecFor("Home/NewsList?LJw34Jmu=011c_8kL82P8kl=lzm4.shtml"); !ok {
+		t.Fatal("菁华岁月 feed is no longer registered")
+	}
+}
+
+func TestXGFileAndLoginRoutesAreNotFeeds(t *testing.T) {
+	// 办事流程/表格下载 are pure getfile tables and 规章制度 now requires a
+	// CAS login; none of them can ever archive as articles.
+	for _, slug := range []string{
+		"File/DownloadList?LJw34Jmu=010c0d.shtml",
+		"File/DownloadList?LJw34Jmu=010c0c.shtml",
+		"Home/DTNewsList?LJw34Jmu=010c01.shtml",
+	} {
+		if _, ok := xgFeedSpecFor(slug); ok {
+			t.Fatalf("removed xg feed %q is still registered", slug)
+		}
+		if _, _, err := xgListPage(slug, 1); err == nil {
+			t.Fatalf("removed xg feed %q still lists", slug)
+		}
+	}
+}

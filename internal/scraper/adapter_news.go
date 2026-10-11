@@ -175,7 +175,7 @@ func appendNewsListItem(items *[]model.NewsItem, seen map[string]bool, row *goqu
 	}
 
 	fullURL := cleanURL(resolveURL(baseURL, href))
-	if seen[fullURL] || !isValidNewsURL(fullURL) || isExternalURL(fullURL, baseURL) || !isNewsArticleURL(fullURL) {
+	if seen[fullURL] || !isValidNewsURL(fullURL) || isExternalURL(fullURL, baseURL) || isNewsFileResourceURL(fullURL) || !isNewsArticleURL(fullURL) {
 		return
 	}
 	seen[fullURL] = true
@@ -215,6 +215,33 @@ func isNewsArticleURL(href string) bool {
 		path = path[:query]
 	}
 	return strings.Contains(path, "/info/") && (strings.HasSuffix(path, ".htm") || strings.HasSuffix(path, ".html"))
+}
+
+// isNewsFileResourceURL recognizes list rows whose headline links straight to
+// a downloadable file instead of an article page. The news site has mixed
+// 学工服务流程图 PDF rows (xgservice getfile links) into its lists; archival
+// clients fetch every feed item as an article, and a file row only fails every
+// round ("no article shell", or the HTML parser blowing its element stack on
+// PDF bytes). Body attachment links are unaffected: this guard only runs on
+// the list-row URL.
+func isNewsFileResourceURL(href string) bool {
+	parsed, err := url.Parse(href)
+	if err != nil {
+		return false
+	}
+	path := strings.ToLower(parsed.Path)
+	for _, marker := range []string{"/getfile", "/uploadserver/", "/download/", "/download."} {
+		if strings.Contains(path, marker) {
+			return true
+		}
+	}
+	if index := strings.LastIndex(path, "."); index >= 0 {
+		switch path[index:] {
+		case ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".zip", ".rar", ".7z":
+			return true
+		}
+	}
+	return false
 }
 
 func newsListDate(row *goquery.Selection) (string, string) {

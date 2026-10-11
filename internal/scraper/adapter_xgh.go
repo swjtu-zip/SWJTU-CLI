@@ -433,6 +433,14 @@ func xghKnownFeed(slug string) bool {
 
 func xghPageURL(baseURL, slug string, page, totalPages int, extension string) string {
 	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if slug == "index" {
+		// The homepage is a real article feed (xghHomepageItems) and single
+		// page; expose it under /index.htm so the shared list fetch works.
+		if page == 1 {
+			return strings.TrimRight(strings.TrimSpace(baseURL), "/") + "/index.htm"
+		}
+		return ""
+	}
 	if !xghKnownFeed(slug) {
 		return ""
 	}
@@ -613,7 +621,10 @@ func xghFixedArticleFields(doc *goquery.Document) (title, typ, date, publishedAt
 	if wrapper := doc.Find(".news-list-wrap").First(); wrapper.Length() > 0 {
 		header := wrapper.ChildrenFiltered(".hd").First()
 		bd := wrapper.ChildrenFiltered(".bd").First()
-		titleBox := bd.ChildrenFiltered(".title").First()
+		// The current template nests .title inside <form
+		// name="_newscontent_fromname">, so a direct-child lookup misses it;
+		// search descendants within .bd instead.
+		titleBox := bd.Find(".title").First()
 		title = strings.Join(strings.Fields(titleBox.ChildrenFiltered("h3").First().Text()), " ")
 		typ = strings.Join(strings.Fields(header.ChildrenFiltered("h3").First().Text()), " ")
 		date, publishedAt, source = xghDetailInfo(titleBox.ChildrenFiltered(".info").First())

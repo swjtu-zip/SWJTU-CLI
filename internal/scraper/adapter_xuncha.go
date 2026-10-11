@@ -78,6 +78,15 @@ func xunchaIsKnownFeed(slug string) bool {
 }
 
 func xunchaPageURL(baseURL, slug string, page, totalPages int, extension string) string {
+	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if slug == "index" {
+		// The homepage exposes real article modules (xunchaParseHomepage) and
+		// is not paginated; serve it under /index.htm for the shared fetcher.
+		if page == 1 {
+			return strings.TrimRight(strings.TrimSpace(baseURL), "/") + "/index.htm"
+		}
+		return ""
+	}
 	if !xunchaIsKnownFeed(slug) {
 		return ""
 	}
@@ -281,6 +290,9 @@ func xunchaDateValues(value string) (string, string) {
 
 func xunchaTotalPages(slug string) (int, error) {
 	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if slug == "index" {
+		return 1, nil
+	}
 	if !xunchaIsKnownFeed(slug) {
 		return 0, fmt.Errorf("xuncha: %q is not an article-list route", slug)
 	}

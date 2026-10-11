@@ -288,9 +288,13 @@ func xinliFetchArticle(articleURL string) (*model.Article, []byte, error) {
 
 // xinliTotalPages keeps the shared reverse-page URL safe for one-page lists.
 // Those pages expose "共N条" but no numbered pagination link, which the
-// generic parser cannot distinguish from an unknown total.
+// generic parser cannot distinguish from an unknown total. The homepage is a
+// single-page feed as well.
 func xinliTotalPages(slug string) (int, error) {
 	slug = strings.Trim(strings.TrimSpace(slug), "/")
+	if slug == "index" {
+		return 1, nil
+	}
 	if !xinliKnownSubPage(slug) {
 		return 0, fmt.Errorf("xinli: %q is not an audited article-list route", slug)
 	}

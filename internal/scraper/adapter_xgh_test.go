@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"reflect"
 	"strings"
@@ -264,5 +265,53 @@ func TestXghFetchFiltersHTTPTypeMagicAndCaptchaResources(t *testing.T) {
 	}
 	if strings.Contains(article.ContentHTML, "bad.png") || strings.Contains(article.ContentHTML, "href=\"https://xgh.test/files/wrong.pdf\"") || strings.Contains(article.ContentHTML, "href=\"https://xgh.test/files/captcha.pdf\"") || strings.Contains(article.ContentHTML, "javascript:") {
 		t.Fatalf("invalid resources survived ContentHTML: %q", article.ContentHTML)
+	}
+}
+
+func TestXghArticleFormWrappedTitleBoxParsesFixedMetadata(t *testing.T) {
+	// The current live template nests .title inside
+	// <form name="_newscontent_fromname">, which the old direct-child lookup
+	// missed (every fresh article fetch failed with incomplete metadata).
+	article, err := parseAdapter_xghArticle(xghReadFixture(t, "xgh_article_form_wrapped_live.html"), xghCanonicalBaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if article.Title != "关于开展2026年新入职教职工团队素质拓展活动的通知" || article.Type != "通知公告" || article.Date != "2026-09-30" || article.PublishedAt != "2026-09-30 13:00:00" {
+		t.Fatalf("form-wrapped metadata = title=%q type=%q date=%q published=%q", article.Title, article.Type, article.Date, article.PublishedAt)
+	}
+	if !strings.Contains(article.Content, "各部门工会") {
+		t.Fatalf("form-wrapped article body missing: %q", article.Content)
+	}
+}
+
+func TestXghIndexFeedListsHomepage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/index.htm" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(xghReadFixture(t, "xgh_home_live.html"))
+	}))
+	defer server.Close()
+
+	site := AllSites["xgh"]
+	oldBase, oldClient, oldNoCache := site.BaseURL, defaultClient, NoCache
+	site.BaseURL, defaultClient, NoCache = server.URL, server.Client(), true
+	ClearCache()
+	t.Cleanup(func() {
+		site.BaseURL, defaultClient, NoCache = oldBase, oldClient, oldNoCache
+		ClearCache()
+	})
+
+	items, err := site.ListNewsPage("index", 1)
+	if err != nil || len(items) != 8 {
+		t.Fatalf("index items = %d, err=%v", len(items), err)
+	}
+	if total, err := site.GetTotalPages("index"); err != nil || total != 1 {
+		t.Fatalf("index total = %d, err=%v", total, err)
+	}
+	if _, err := site.ListNewsPage("index", 2); err == nil {
+		t.Fatal("index page 2 was accepted")
 	}
 }

@@ -181,7 +181,14 @@ func xybListContainer(doc *goquery.Document) *goquery.Selection {
 	if doc == nil {
 		return &goquery.Selection{}
 	}
-	return doc.Find(".list_con").First()
+	// 校友风采 now renders a card grid (div.tpfylist) instead of .list_con;
+	// the adjacent ul.list_consss is only the 推荐资讯 sidebar.
+	for _, selector := range []string{".n_right .tpfylist", ".tpfylist", ".list_con"} {
+		if container := doc.Find(selector).First(); container.Length() > 0 {
+			return container
+		}
+	}
+	return &goquery.Selection{}
 }
 
 func xybDocumentType(doc *goquery.Document) string {
@@ -217,6 +224,14 @@ func xybFeedTypeByName(value string) string {
 func xybParseRows(container *goquery.Selection, baseURL, typ string) []model.NewsItem {
 	items := make([]model.NewsItem, 0)
 	seen := make(map[string]bool)
+	if container.HasClass("tpfylist") {
+		// 校友风采 cards are bare divs; each card links its picture and its
+		// headline to the same article, and the shared seen set dedups them.
+		container.Children().Each(func(_ int, row *goquery.Selection) {
+			xybAppendItem(&items, seen, xybFirstArticleAnchor(row, baseURL), row, typ, baseURL)
+		})
+		return items
+	}
 	container.Find("li").Each(func(_ int, row *goquery.Selection) {
 		xybAppendItem(&items, seen, xybFirstArticleAnchor(row, baseURL), row, typ, baseURL)
 	})
