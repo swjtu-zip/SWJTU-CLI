@@ -640,3 +640,35 @@ func TestScaiFetchArticleRejectsDeadDetailShell(t *testing.T) {
 		t.Fatalf("dead shell error = %v, want %v", err, errScaiNoArticleDetail)
 	}
 }
+
+func TestScaiFetchArticleArchivesExternalRedirectNote(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/web/page-newsDetail.html":
+			w.Header().Set("Location", "https://tdxl.neea.edu.cn/some/exam/page")
+			w.WriteHeader(http.StatusFound)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	site := AllSites["scai"]
+	oldBase := site.BaseURL
+	defer func() { site.BaseURL = oldBase }()
+	site.BaseURL = server.URL
+
+	article, raw, err := site.GetArticleSnapshot(server.URL + "/web/page-newsDetail.html?nid=7b562bc1-2765-4d27-96b9-f4dee437726e")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(article.Title, "网页重定向到") || !strings.Contains(article.Title, "tdxl.neea.edu.cn") {
+		t.Errorf("title = %q", article.Title)
+	}
+	if !strings.Contains(article.Content, "https://tdxl.neea.edu.cn/some/exam/page") {
+		t.Errorf("content = %q", article.Content)
+	}
+	if len(raw) != 0 {
+		t.Errorf("raw = %d bytes, want none for an external redirect", len(raw))
+	}
+}

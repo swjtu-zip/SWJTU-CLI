@@ -705,6 +705,16 @@ func scaiFetchArticle(articleURL string) (*model.Article, []byte, error) {
 	}
 	target, delegated, err := scaiDelegatedArticleSite(finalURL, baseURL)
 	if err != nil {
+		// The article lives on an external site (a WeChat post, a government
+		// portal, ...). Archive a one-line redirect note instead of failing
+		// the fetch on every run; the raw body is dropped so an external
+		// page is never stored as this archive's source HTML.
+		if parsed, perr := url.Parse(finalURL); perr == nil && parsed.Hostname() != "" {
+			return &model.Article{
+				Title:   fmt.Sprintf("网页重定向到 %s", parsed.Host),
+				Content: fmt.Sprintf("网页重定向到 %s", finalURL),
+			}, nil, nil
+		}
 		return nil, body, err
 	}
 	if delegated {
@@ -733,9 +743,12 @@ func scaiSiteBaseURL() string {
 }
 
 // scaiFetchDetail follows redirects like the shared fetch but also reports
-// the final URL, which decides which parser owns the response. Article fetches
-// happen once per sync, so skipping the body cache here is cheaper than
-// risking a stale cache key hiding a redirect.
+// the final URL, which decides which parser owns the response. Redirects to
+// registered SWJTU hosts (news, jwc, ...) are followed for delegation;
+// redirects anywhere else stop at the 3xx so the caller can archive a
+// redirect note instead of pulling an external page into the archive.
+// Article fetches happen once per sync, so skipping the body cache here is
+// cheaper than risking a stale cache key hiding a redirect.
 func scaiFetchDetail(rawURL string) ([]byte, string, error) {
 	req, err := http.NewRequest(http.MethodGet, rawURL, nil)
 	if err != nil {
@@ -745,11 +758,36 @@ func scaiFetchDetail(rawURL string) ([]byte, string, error) {
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
 
-	resp, err := defaultClient.Do(req)
+	client := *defaultClient
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if len(via) == 0 || strings.EqualFold(next.URL.Hostname(), via[len(via)-1].URL.Hostname()) {
+			return nil
+		}
+		if _, known := scaiArticleHostOwner(next.URL.Hostname()); known {
+			return nil
+		}
+		return http.ErrUseLastResponse
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, "", fmt.Errorf("scai: fetch article %s: %w", rawURL, err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode >= http.StatusMultipleChoices && resp.StatusCode < http.StatusBadRequest {
+		location := strings.TrimSpace(resp.Header.Get("Location"))
+		if location == "" {
+			return nil, "", fmt.Errorf("scai: fetch article %s: redirect without Location (status %d)", rawURL, resp.StatusCode)
+		}
+		target, err := url.Parse(location)
+		if err != nil {
+			return nil, "", fmt.Errorf("scai: fetch article %s: unparseable redirect %q: %w", rawURL, location, err)
+		}
+		base, err := url.Parse(rawURL)
+		if err != nil {
+			return nil, "", fmt.Errorf("scai: fetch article %s: unparseable request URL: %w", rawURL, err)
+		}
+		return nil, base.ResolveReference(target).String(), nil
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, "", fmt.Errorf("scai: fetch article %s: status %d", rawURL, resp.StatusCode)
 	}
@@ -762,6 +800,23 @@ func scaiFetchDetail(rawURL string) ([]byte, string, error) {
 		finalURL = resp.Request.URL.String()
 	}
 	return body, finalURL, nil
+}
+
+// scaiArticleHostOwner returns the registered site whose base URL shares the
+// hostname, so cross-host article redirects can be delegated to the adapter
+// that owns the target template.
+func scaiArticleHostOwner(hostname string) (*BodaSite, bool) {
+	for _, site := range AllSites {
+		if siteBase, err := url.Parse(site.BaseURL); err == nil &&
+			siteBase.Hostname() != "" && strings.EqualFold(hostname, siteBase.Hostname()) {
+			return site, true
+		}
+	}
+	if newsBase, err := url.Parse(NewsSite.BaseURL); err == nil &&
+		strings.EqualFold(hostname, newsBase.Hostname()) {
+		return NewsSite, true
+	}
+	return nil, false
 }
 
 // scaiDelegatedArticleSite maps the post-redirect URL to the site adapter that
@@ -779,14 +834,8 @@ func scaiDelegatedArticleSite(rawURL, scaiBaseURL string) (*BodaSite, bool, erro
 	if strings.EqualFold(parsed.Hostname(), base.Hostname()) {
 		return nil, false, nil
 	}
-	for _, site := range AllSites {
-		siteBase, siteErr := url.Parse(site.BaseURL)
-		if siteErr == nil && siteBase.Hostname() != "" && strings.EqualFold(parsed.Hostname(), siteBase.Hostname()) {
-			return site, true, nil
-		}
-	}
-	if newsBase, newsErr := url.Parse(NewsSite.BaseURL); newsErr == nil && strings.EqualFold(parsed.Hostname(), newsBase.Hostname()) {
-		return NewsSite, true, nil
+	if site, ok := scaiArticleHostOwner(parsed.Hostname()); ok {
+		return site, true, nil
 	}
 	return nil, false, fmt.Errorf("scai: article redirected to unrecognized host %q", parsed.Host)
 }
